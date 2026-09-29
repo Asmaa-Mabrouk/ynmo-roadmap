@@ -1,0 +1,1135 @@
+<meta charset="utf-8">
+<title>Ynmo H2 Roadmap Gantt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* Layout: a planner table (feature, resources, status) on the left with collapsible squad groups, 18 weekly columns on the right (Oct 2026 to Jan 2027). Bar fill = squad or chosen color, bar pattern = status. */
+:root {
+  --bg: #faf9f5;
+  color-scheme: light;
+  --surface: #ffffff;
+  --surface-2: #eceef6;
+  --ink: #1b1f33;
+  --muted: #5a6180;
+  --line: #dcdfeb;
+  --focus: #563cca;
+  --on-bar: #ffffff;
+  --tifli: #563cca;
+  --plan: #0d8560;
+  --daycare: #5a6db5;
+  --ai: #c04a17;
+  --warn: #9a6400;
+  --p1: #2f6fb3; --p2: #0d8560; --p3: #9a6400; --p4: #b83280; --p5: #5a6180; --p6: #c04a17;
+  --font: "IBM Plex Sans Arabic", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --c1: 210px; --dw: 26px; --wkend: color-mix(in srgb, var(--ink) 7%, transparent);
+}
+@media (max-width: 640px) { :root { --c1: 150px; } }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 14px; line-height: 1.4; }
+.page { max-width: none; margin: 0; padding-inline: 12px; padding-block: 24px 48px; display: grid; gap: 16px; }
+h1 { font-size: 1.75rem; line-height: 1.15; margin: 0; font-weight: 700; text-wrap: balance; }
+.sub { color: var(--muted); margin: 6px 0 0; max-width: 78ch; }
+.summary { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: baseline; font-variant-numeric: tabular-nums; }
+.summary b { font-family: var(--mono); font-weight: 500; font-size: 1.05rem; }
+.summary span { color: var(--muted); }
+.controls, .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.chip { font: inherit; font-weight: 500; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 12px; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; }
+.chip i { width: 10px; height: 10px; border-radius: 3px; background: var(--c); display: inline-block; }
+.chip[aria-pressed="false"] { opacity: .5; }
+.chip[aria-pressed="true"] { border-color: var(--c); }
+select, input[type="search"], input[type="text"], textarea { font: inherit; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: 8px; padding: 6px 10px; min-width: 0; }
+input[type="search"] { width: 180px; max-width: 100%; }
+.btn { font: inherit; font-weight: 600; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+.btn.primary { background: var(--focus); border-color: var(--focus); color: var(--on-bar); }
+.btn.danger { color: var(--warn); border-color: var(--warn); }
+.btn:disabled, select:disabled, input:disabled, textarea:disabled { opacity: .55; cursor: not-allowed; }
+.save { color: var(--muted); font-size: 12.5px; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--muted); font-size: 12.5px; align-items: center; }
+.legend span { display: inline-flex; gap: 8px; align-items: center; }
+.sw { width: 34px; height: 14px; border-radius: 4px; display: inline-block; --c: var(--muted); }
+.st-planned { background: var(--c); color: var(--on-bar); }
+.st-decide { background: repeating-linear-gradient(135deg, var(--c) 0 6px, color-mix(in srgb, var(--c) 78%, var(--ink)) 6px 12px); color: var(--on-bar); }
+.st-contract { background: transparent; border: 2px dashed var(--c); color: var(--c); }
+.st-done { background: color-mix(in srgb, var(--c) 30%, var(--surface)); color: var(--ink); }
+
+.chartwrap { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: auto; max-height: 88vh; }
+.grid { display: grid; grid-template-columns: var(--c1) repeat(123, var(--dw)); width: max-content; min-width: 100%; }
+.hc, .mh, .wk { background: var(--surface-2); border-bottom: 1px solid var(--line); position: sticky; z-index: 5; color: var(--muted); font-size: 11.5px; font-weight: 600; }
+.hc { padding: 0 12px; display: flex; align-items: center; letter-spacing: .05em; text-transform: uppercase; }
+.hc.r1 { top: 0; height: 30px; text-transform: none; letter-spacing: 0; }
+.hc.r2 { top: 30px; height: 28px; }
+.hc.first { left: 0; z-index: 8; }
+.mh { top: 0; height: 30px; padding: 0 8px; display: flex; align-items: center; gap: 6px; white-space: nowrap; border-inline-start: 1px solid var(--line); color: var(--ink); }
+.mh small { color: var(--warn); font-weight: 500; font-size: 10.5px; }
+.wk { top: 30px; height: 28px; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 10.5px; font-weight: 400; border-inline-start: 1px solid var(--line); }
+.wk.we { background: color-mix(in srgb, var(--ink) 12%, var(--surface-2)); }
+.wk.offd { background: color-mix(in srgb, var(--warn) 30%, var(--surface-2)); color: var(--ink); }
+.mh > span { position: sticky; left: calc(var(--c1) + 12px); }
+.wk.today { background: var(--focus); color: var(--on-bar); font-weight: 500; }
+.grp { position: sticky; left: 0; z-index: 4; background: var(--surface-2); border: 0; border-bottom: 1px solid var(--line); font: inherit; color: var(--ink); text-align: start; padding: 8px 12px; cursor: pointer; display: flex; gap: 8px; align-items: center; font-weight: 700; }
+.grp i { width: 12px; height: 12px; border-radius: 3px; background: var(--c); flex: none; }
+.grp em { font-style: normal; font-weight: 400; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+.grp .car { font-family: var(--mono); color: var(--muted); width: 10px; }
+.gfill { background: var(--surface-2); border-bottom: 1px solid var(--line); padding: 8px 8px; color: var(--muted); font-size: 12px; grid-column: 2 / 4; display: flex; align-items: center; }
+.gbg { background: var(--surface-2); border-bottom: 1px solid var(--line); grid-column: 4 / -1; }
+.gsum { align-self: center; height: 10px; border-radius: 5px; background: color-mix(in srgb, var(--c) 55%, var(--surface-2)); margin-inline: 2px; z-index: 1; }
+.c1, .c2, .c3 { border-bottom: 1px solid var(--line); background: var(--surface); display: flex; align-items: center; min-width: 0; }
+.c1 { position: sticky; left: 0; z-index: 4; padding: 3px 4px 3px 6px; gap: 2px; border-inline-end: 1px solid var(--line); }
+.c1.sel { background: color-mix(in srgb, var(--focus) 10%, var(--surface)); }
+.c2 { padding: 3px 6px; }
+.c3 { padding: 3px 6px; }
+textarea.nm { flex: 1; min-width: 0; resize: none; overflow: hidden; border: 1.5px solid transparent; background: transparent; padding: 6px 8px; font-weight: 500; line-height: 1.3; height: 34px; }
+textarea.nm:hover:not(:disabled), textarea.nm:focus { border-color: var(--line); background: var(--surface); }
+.more { flex: none; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 16px; line-height: 1; border-radius: 6px; padding: 6px 7px; cursor: pointer; }
+.more:hover { background: var(--surface-2); color: var(--ink); }
+.res { width: 100%; text-align: start; font: inherit; color: var(--ink); background: transparent; border: 1.5px dashed transparent; border-radius: 8px; padding: 6px 8px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.res:hover:not(:disabled) { border-color: var(--line); background: var(--surface); }
+.res.none { color: var(--muted); }
+.stsel { width: 100%; font-size: 12.5px; font-weight: 600; padding: 5px 6px; }
+.stsel[data-st="decide"] { color: var(--warn); border-color: var(--warn); }
+.stsel[data-st="contract"] { border-style: dashed; color: var(--muted); }
+.stsel[data-st="done"] { color: var(--plan); }
+.rowbg { grid-column: 2 / -1; border-bottom: 1px solid var(--line);
+  background-image: linear-gradient(to right, transparent calc(100% - 1px), color-mix(in srgb, var(--line) 75%, transparent) calc(100% - 1px)), linear-gradient(to right, transparent 0, transparent calc(5 * var(--dw)), var(--wkend) calc(5 * var(--dw)), var(--wkend) calc(7 * var(--dw)));
+  background-size: var(--dw) 100%, calc(7 * var(--dw)) 100%; background-position: 0 0, calc(-4 * var(--dw)) 0; background-repeat: repeat-x; }
+.off { z-index: 0; pointer-events: none; background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--warn) 24%, transparent) 0 6px, transparent 6px 12px); border-inline: 1px solid color-mix(in srgb, var(--warn) 55%, transparent); }
+.pb { align-self: start; height: 30px; min-height: 0; margin-block-end: 0; padding-block: 2px; }
+.pb .nm2 { -webkit-line-clamp: 1; }
+.drop { background-color: color-mix(in srgb, var(--focus) 12%, var(--surface)); }
+.gbg.drop, .grp.drop { background-color: color-mix(in srgb, var(--focus) 22%, var(--surface-2)); }
+.bar { --c: var(--muted); position: relative; align-self: stretch; margin: 5px 2px; min-height: 32px; border-radius: 6px; font-size: 12px; line-height: 1.25; font-weight: 600; padding: 4px 11px; display: flex; align-items: center; z-index: 1; cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none; }
+.bar.ro { cursor: pointer; touch-action: auto; }
+.bar .nm2 { position: sticky; left: calc(var(--c1) + 14px); min-width: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.bar .tg { flex: none; font-size: 10px; font-weight: 700; border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; margin-inline-start: 6px; opacity: .9; }
+.bar[aria-expanded="true"] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink); }
+.bar.dragging { cursor: grabbing; z-index: 7; box-shadow: 0 8px 22px rgba(10, 12, 30, .3); opacity: .94; }
+.hd { position: absolute; top: 0; bottom: 0; width: 10px; cursor: ew-resize; }
+.hd.l { left: 0; } .hd.r { right: 0; }
+.hd::after { content: ""; position: absolute; top: 30%; bottom: 30%; left: 4px; width: 2px; border-radius: 2px; background: currentColor; opacity: .5; }
+.bar.ro .hd { display: none; }
+.detail { grid-column: 1 / -1; border-bottom: 1px solid var(--line); background: var(--bg); padding: 14px 12px 18px; }
+.detail-in { position: sticky; left: 12px; width: min(920px, calc(100vw - 72px)); display: grid; gap: 12px; }
+.detail p { margin: 0; max-width: 75ch; }
+.detail ul { margin: 0; padding-inline-start: 18px; max-width: 80ch; display: grid; gap: 4px; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.fields .wide { grid-column: 1 / -1; }
+.fields label > span, .lab { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; margin-bottom: 3px; }
+.fields input, .fields select, .fields textarea { width: 100%; }
+.fields textarea { resize: vertical; min-height: 56px; }
+.swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.swatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line); background: var(--c); cursor: pointer; padding: 0; }
+.swatch[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 2px var(--surface) inset; }
+.swatch.def { background: repeating-linear-gradient(45deg, var(--surface) 0 4px, var(--surface-2) 4px 8px); }
+.roles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px 16px; margin: 0; }
+.roles div { min-width: 0; }
+.roles dt { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; }
+.roles dd { margin: 2px 0 0; overflow-wrap: anywhere; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.meta { color: var(--muted); font-size: 12.5px; }
+.cf { color: var(--warn); }
+.empty { padding: 32px 16px; color: var(--muted); grid-column: 1 / -1; }
+.notes { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 8px; }
+.notes h2 { margin: 0; font-size: 1.05rem; }
+.notes ul { margin: 0; padding-inline-start: 18px; display: grid; gap: 6px; max-width: 90ch; }
+.sr { position: absolute; left: -9999px; }
+.seg { display: inline-flex; border: 1.5px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { font: inherit; font-weight: 600; padding: 6px 14px; background: var(--surface); color: var(--muted); border: 0; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--focus); color: var(--on-bar); }
+.grid.hov .bar:not(.same) { opacity: .35; }
+.bar.same { box-shadow: 0 0 0 2px var(--ink); }
+.pn i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--c); margin-inline-end: 8px; }
+.pn { flex-direction: column; align-items: flex-start; justify-content: center; padding: 8px 12px; gap: 2px; font-weight: 600; }
+.pn small { display: block; color: var(--muted); font-weight: 400; font-size: 12px; }
+.c2.pi, .c3.pi { flex-direction: column; align-items: flex-start; justify-content: center; padding: 8px 10px; font-size: 12.5px; color: var(--muted); gap: 2px; }
+.c3.pi b { color: var(--ink); font-weight: 600; }
+.c3.pi .warnx { color: var(--warn); font-weight: 600; }
+.ov { background: color-mix(in srgb, var(--warn) 11%, transparent); z-index: 0; pointer-events: none; }
+.rbtn { width: 100%; text-align: start; }
+.pop { position: fixed; z-index: 50; width: min(320px, calc(100vw - 16px)); max-height: min(440px, 70vh); overflow: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 34px rgba(10, 12, 30, .28); padding: 12px; display: grid; gap: 10px; }
+.ctx { position: fixed; z-index: 60; width: 232px; max-height: 92vh; overflow: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 34px rgba(10,12,30,.25); padding: 6px; }
+.ctx[hidden] { display: none; }
+.mi { display: block; width: 100%; text-align: start; border: 0; background: transparent; font: inherit; color: var(--ink); padding: 7px 10px; border-radius: 6px; cursor: pointer; }
+.mi:hover, .mi:focus-visible { background: var(--surface-2); }
+.mi.danger { color: var(--warn); }
+.msep { height: 1px; background: var(--line); margin: 5px 0; }
+.mlab { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; padding: 6px 10px 2px; }
+.mrow { display: flex; gap: 6px; padding: 4px 10px; flex-wrap: wrap; }
+.mrow input[type=date] { width: 100%; font-size: 12.5px; padding: 4px 6px; }
+.bar.editing { z-index: 9; cursor: text; overflow: visible; }
+.bi { font: inherit; font-weight: 600; color: var(--ink); background: var(--surface); border: 2px solid var(--focus); border-radius: 5px; padding: 1px 6px; width: max(100%, 220px); position: sticky; left: calc(var(--c1) + 10px); }
+.addrow { border-bottom: 1px solid var(--line); }
+.addp { font: inherit; font-weight: 600; color: var(--focus); background: transparent; border: 1.5px dashed var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+.addp:hover { border-color: var(--focus); }
+.gate { position: fixed; inset: 0; z-index: 100; background: var(--bg); display: grid; place-items: center; padding: 16px; }
+.gate[hidden] { display: none; }
+.gcard { width: min(380px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 24px; display: grid; gap: 12px; box-shadow: 0 8px 30px rgba(10,12,30,.08); }
+.gcard h2 { margin: 0; font-size: 1.25rem; }
+.gcard label > span { display: block; font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 3px; }
+.gcard input { width: 100%; }
+.pwwrap { position: relative; }
+.pwwrap input { padding-inline-end: 60px; }
+.pweye { position: absolute; inset-block: 3px; inset-inline-end: 3px; border: 0; background: var(--surface-2); color: var(--ink); font: inherit; font-size: 12.5px; font-weight: 600; padding: 0 10px; border-radius: 6px; cursor: pointer; }
+.gerr { color: var(--warn); font-size: 13px; min-height: 1.2em; }
+.link { background: none; border: 0; padding: 0; font: inherit; color: var(--focus); cursor: pointer; text-align: start; }
+.who { color: var(--muted); font-size: 12.5px; }
+.app-hidden { display: none; }
+.pop[hidden] { display: none; }
+.pop h3 { margin: 0; font-size: 14px; }
+.pop .sub2 { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.pop input[type="search"], .pop input[type="text"] { width: 100%; }
+.plist { display: grid; gap: 2px; max-height: 150px; overflow: auto; }
+.prow { display: flex; gap: 8px; align-items: center; padding: 5px 6px; border-radius: 6px; cursor: pointer; }
+.prow:hover { background: var(--surface-2); }
+.prow input { flex: none; width: 16px; height: 16px; accent-color: var(--focus); }
+.prow span { min-width: 0; overflow-wrap: anywhere; }
+.prow small { color: var(--muted); display: block; font-size: 11.5px; }
+.padd { display: grid; grid-template-columns: 1fr auto; gap: 6px; border-top: 1px solid var(--line); padding-top: 10px; }
+.padd select { grid-column: 1; }
+.padd .lab { grid-column: 1 / -1; margin: 0; }
+</style>
+
+<div class="gate" id="gate" hidden></div>
+<div class="page app-hidden" id="app">
+  <header>
+    <h1>Ynmo H2 Roadmap Gantt</h1>
+    <p class="sub">Double-click a bar to rename it. Right-click a bar for status, color, dates, people, duplicate or delete. Double-click an empty spot in a row, or right-click it, to insert a bar there. Drag a bar to move it, drag its ends to resize, drag it onto another person to hand it over. Use Add person at the bottom to add a row.</p>
+  </header>
+
+  <div class="summary" id="summary" aria-live="polite"></div>
+
+  <div class="controls" role="group" aria-label="Filters">
+    <span id="chips" style="display:contents"></span>
+    <label class="sr" for="status">Status</label>
+    <select id="status">
+      <option value="all">All statuses</option>
+      <option value="planned">Planned</option>
+      <option value="decide">Needs decision</option>
+      <option value="contract">Waiting on contract</option>
+      <option value="done">Done</option>
+    </select>
+    <label class="sr" for="person">Person</label>
+    <select id="person"><option value="all">Everyone</option></select>
+    <label class="sr" for="q">Search</label>
+    <input type="search" id="q" placeholder="Search features">
+    <button class="btn" id="clear" type="button">Clear filters</button>
+  </div>
+
+  <div class="toolbar">
+    <button class="btn primary" id="add" type="button">New feature</button>
+    <button class="btn" id="undo" type="button" disabled>Undo</button>
+    <button class="btn" id="daysoff" type="button">Days off</button>
+    <button class="btn" id="export" type="button">Export CSV</button>
+    <button class="btn" id="logout" type="button">Log out</button>
+    <span class="who" id="who"></span>
+    <button class="btn" id="reset" type="button">Restore roadmap</button>
+    <span class="save" id="save" aria-live="polite"></span>
+  </div>
+
+  <div class="legend" aria-label="Legend">
+    <span><i class="sw st-planned"></i>Planned</span>
+    <span><i class="sw st-decide"></i>Needs decision or clarification</span>
+    <span><i class="sw st-contract"></i>Waiting on Support contract</span>
+    <span><i class="sw st-done"></i>Done</span>
+  </div>
+
+  <div class="chartwrap" id="wrap"><div class="grid" id="grid"></div></div>
+
+</div>
+
+<div class="ctx" id="ctx" role="menu" hidden></div>
+<div class="pop" id="pop" role="dialog" aria-label="Assign team members" hidden></div>
+
+<script>
+/* ---------- time axis: one column per day, 1 Oct 2026 to 31 Jan 2027 (Fri and Sat are the weekend) ---------- */
+const DAY = 864e5, START = Date.UTC(2026, 9, 1), NDAYS = 123;
+const MN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const DN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAYS = [];
+for (let k = 0; k < NDAYS; k++) {
+  const d = new Date(START + k * DAY);
+  DAYS.push({ k: k, d: d, dow: d.getUTCDay(), we: d.getUTCDay() === 5 || d.getUTCDay() === 6, mo: d.getUTCFullYear() * 12 + d.getUTCMonth() });
+}
+const MGROUPS = [];
+DAYS.forEach(x => {
+  const last = MGROUPS[MGROUPS.length - 1];
+  if (last && last.mo === x.mo) last.to = x.k;
+  else MGROUPS.push({ mo: x.mo, from: x.k, to: x.k, n: MN[x.mo % 12] + ' ' + Math.floor(x.mo / 12) });
+});
+const MSTART = MGROUPS.map(m => m.from), MEND = MGROUPS.map(m => m.to);
+const LOWPRI = { 1: true, 2: true };   // Nov and Dec are marked LOW PRIORITY in the checkpoint
+const dlabel = k => DN[DAYS[k].dow] + ' ' + DAYS[k].d.getUTCDate() + ' ' + MN[DAYS[k].d.getUTCMonth()];
+const iso = k => DAYS[k].d.toISOString().slice(0, 10);
+const todayK = (function () { const k = Math.floor((Date.now() - START) / DAY); return k >= 0 && k < NDAYS ? k : -1; })();
+function dayFromIso(s) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); if (!m) return null;
+  const k = Math.round((Date.UTC(+m[1], +m[2] - 1, +m[3]) - START) / DAY);
+  return k >= 0 && k < NDAYS ? k : null;
+}
+
+const LANES = [
+  { k: 'tifli', n: 'Tifli', c: 'var(--tifli)' },
+  { k: 'ai', n: 'AI', c: 'var(--ai)' },
+  { k: 'plan', n: 'Plan · Warif · Sharjah', c: 'var(--plan)' },
+  { k: 'daycare', n: 'Daycare', c: 'var(--daycare)' }
+];
+const STATUS = { planned: 'Planned', decide: 'Needs decision', contract: 'Waiting on contract', done: 'Done' };
+const PRODUCTS = [
+  { v: 'tifli', n: 'Tifli', pr: ['tifli'] },
+  { v: 'plan', n: 'Plan', pr: ['plan'] },
+  { v: 'daycare', n: 'Daycare', pr: ['daycare'] },
+  { v: 'dp', n: 'Daycare and Plan', pr: ['daycare', 'plan'] }
+];
+const ROLES = { pm: 'PM', dev: 'Engineer', qa: 'Quality', ux: 'UX' };
+const COLORS = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'];
+
+const TEAMS = {
+  tifli:   { pm: ['Emad'], dev: ['Aya Fathy', 'Hamid Shahin', 'Mario'], qa: ['Mona'], ux: ['Mostafa'] },
+  plan:    { pm: ['Asmaa', 'Engy'], dev: ['Soliman', 'Amal', 'Waradny'], qa: ['Sherif', 'Zahran', 'Mwrohan'], ux: ['Saad', 'Khalid'] },
+  daycare: { pm: ['Engy'], dev: ['Wardany', 'Sayeh', 'Abdelhamid'], qa: ['Dina Mousa', 'Merihan'], ux: ['Saad', 'Khalid'] },
+  ai:      { pm: ['Asmaa'], dev: ['Tramsi', 'Aliaa', 'Sahdy'] }
+};
+
+const CP = 'September checkpoint', UR = 'Updated Roadmap (Shadow Teacher)';
+const WARIF = 'Coordinate under the Support contract. The checkpoint notes column also says "Stop".';
+
+const ITEMS = [
+  // Tifli
+  { id: 'hs1', t: 'Home Sessions: project setup', sq: 'tifli', pr: ['tifli'], s: 0, e: 0, st: 'planned', src: [UR], n: 'Prerequisite for Phase 1.' },
+  { id: 'hs2', t: 'Home Sessions: analysis and requirements', sq: 'tifli', pr: ['tifli'], s: 0, e: 0, st: 'planned', src: [UR], n: 'Business meetings to define all requirements clearly.' },
+  { id: 'hs3', t: 'Home Sessions: design finalization', sq: 'tifli', pr: ['tifli'], s: 0, e: 0, st: 'planned', src: [UR], n: 'Prerequisite for Phase 1.' },
+  { id: 'hs4', t: 'Home Sessions / shadow teacher, Phase 1', sq: 'tifli', pr: ['tifli'], s: 1, e: 3, st: 'planned', src: [UR, CP],
+    n: 'Staffing ask in the roadmap: 1 Mobile, 2 BE, 2 FE. Includes the checkpoint line "Home based/shadow teaching service automation".',
+    ws: [
+      'Practitioner supply layer: coverage areas, availability slots by location, search API, practitioner coverage and availability management, supervisor roles and permissions, shared table and filter components, API client and state for the new modules.',
+      'Request management and status (portal): assignment, unified request details page, paid tab that requires supervisor assignment, separate tab for search-for-specialist requests, no-coverage path with a 3-working-day reply, remove Assign Practitioner and add Assign Supervisor.',
+      'Mobile flow: four-stage request status after payment, practitioner profile (qualification, experience, nearest slot), draft auto-save and resume, child need and notes field, optional file upload with privacy controls, notifications to complete the request, new service-flow navigation, AR/EN RTL checks on new screens.',
+      '12h / 24h packages, then payment.'
+    ] },
+  { id: 't5', t: 'Chain of Recommendations', sq: 'tifli', pr: ['tifli'], s: 0, e: 0, st: 'planned', tag: 'High priority', hi: true, src: [CP, UR],
+    n: 'Lets the center specialist add a recommendation after the program ends, based on the child\'s latest report. Today recommendations exist only in the first consultation session.' },
+  { id: 't6', t: 'Paid assessment report and GCC expansion', sq: 'tifli', pr: ['tifli'], s: 0, e: 0, st: 'planned', src: [CP, UR] },
+  { id: 't7', t: 'Consultation and programs dashboard', sq: 'tifli', pr: ['tifli'], s: 0, e: 0, st: 'planned', src: [CP], n: 'Adds median time from assessment to consultation and from consultation to program.' },
+  { id: 't8', t: 'Separate availability: individual, group, programs', sq: 'tifli', pr: ['tifli'], s: 1, e: 1, st: 'planned', src: [CP], n: 'Availability improvements.' },
+  { id: 't9', t: 'Availability control for a specific day', sq: 'tifli', pr: ['tifli'], s: 1, e: 1, st: 'planned', src: [CP], n: 'For example every Wednesday. Availability improvements.' },
+  { id: 't10', t: 'Standalone assessment: website per assessment', sq: 'tifli', pr: ['tifli'], s: 1, e: 1, st: 'planned', src: [UR] },
+  { id: 't11', t: 'Standalone assessment marketplace: external users', sq: 'tifli', pr: ['tifli'], s: 2, e: 2, st: 'planned', src: [UR] },
+  { id: 't12', t: 'Standalone assessment: MVP release', sq: 'tifli', pr: ['tifli'], s: 2, e: 2, st: 'planned', src: [CP], n: 'Also affects the SCHS report sync in the Plan squad.' },
+  { id: 't13', t: 'Standalone assessment marketplace: portal users', sq: 'tifli', pr: ['tifli'], s: 3, e: 3, st: 'planned', src: [UR] },
+  { id: 't14', t: 'Blue zone and new norms (filter)', sq: 'tifli', pr: ['tifli'], s: 2, e: 2, st: 'planned', src: [CP], n: 'The checkpoint links this to "Roadmap enhancements: Dynamic Roadmap".' },
+  { id: 't15', t: 'Child journey: add diagnosis, in-center therapy, hearing screening', sq: 'tifli', pr: ['tifli'], s: 2, e: 2, st: 'decide', src: [CP], n: 'Under study.' },
+
+  // AI
+  { id: 'a1', t: 'AI lesson creation (Daycare)', sq: 'ai', pr: ['daycare'], s: 0, e: 0, st: 'planned', src: [UR, CP], n: 'Suggests learning or entertainment activities.',
+    cf: 'The Updated Roadmap puts this in October. The checkpoint says "move to Jan". Shown in October.' },
+  { id: 'a2', t: 'AI support agent (Daycare and Plan)', sq: 'ai', pr: ['daycare', 'plan'], s: 0, e: 0, st: 'planned', src: [UR] },
+  { id: 'a3', t: 'Tifli voice calling: batch calls', sq: 'ai', pr: ['tifli'], s: 0, e: 0, st: 'planned', src: [UR, CP] },
+  { id: 'a4', t: 'AI session notes (Daycare and Plan)', sq: 'ai', pr: ['daycare', 'plan'], s: 0, e: 0, st: 'decide', src: [CP], n: 'Built from submission data plus keywords the therapist enters. Ask the Operation team. The checkpoint says it is already covered by the AI message module.' },
+  { id: 'a5', t: 'Tifli voice calling: supported programs booking, Phase 1', sq: 'ai', pr: ['tifli'], s: 1, e: 1, st: 'planned', src: [UR, CP], n: 'Listed in the checkpoint as "AI agent for supported programs (50 SR), Phase 1".' },
+  { id: 'a6', t: 'AI sales agent on the landing page', sq: 'ai', pr: ['daycare', 'plan'], s: 1, e: 1, st: 'planned', src: [UR, CP], n: 'Low-touch design: the agent guides users to subscribe to Plan and Daycare. Moved from October to November.' },
+  { id: 'a7', t: 'AI dashboard (Tifli)', sq: 'ai', pr: ['tifli'], s: 0, e: 2, st: 'planned', src: [CP, UR],
+    cf: 'The checkpoint lists it in October and in November. The Updated Roadmap puts it in December. The bar covers October to December.' },
+  { id: 'a8', t: 'AI dashboard (Daycare)', sq: 'ai', pr: ['daycare'], s: 2, e: 2, st: 'planned', src: [CP] },
+  { id: 'a9', t: 'Simpler, clearer AI reports (Plan)', sq: 'ai', pr: ['plan'], s: 1, e: 1, st: 'planned', src: [CP], n: 'Report information needs to be simpler and clearer.' },
+  { id: 'a10', t: 'AI notifications for repeated absences (Daycare)', sq: 'ai', pr: ['daycare'], s: 1, e: 1, st: 'planned', tag: 'Low priority', src: [CP], n: 'Notifies parents to check on the child after repeated absences.' },
+  { id: 'a11', t: 'AI agent contacts family on absence (Daycare)', sq: 'ai', pr: ['daycare'], s: 2, e: 2, st: 'decide', src: [CP], n: 'Confirm with operations whether a WhatsApp message is enough.' },
+  { id: 'a12', t: 'AI agent contacts family on absence (Plan)', sq: 'ai', pr: ['plan'], s: 2, e: 2, st: 'decide', src: [CP], n: 'Confirm with operations whether email could work.' },
+
+  // Plan, Warif, Sharjah
+  { id: 'p1', t: 'Reception feature and unified file', sq: 'plan', pr: ['plan'], s: 0, e: 0, st: 'decide', src: [CP], n: 'Related to Elite Phase II. Priority not defined. It may be covered by the admission list, where a child is added to the child list once the center accepts. Confirm with Abdelrahman.' },
+  { id: 'p2', t: 'Attendance and absence counts with percentage in the schedule', sq: 'plan', pr: ['plan'], s: 0, e: 0, st: 'planned', src: [CP] },
+  { id: 'p3', t: 'Assessment templates: psychological assessments', sq: 'plan', pr: ['plan'], s: 1, e: 1, st: 'decide', src: [CP], n: 'Needs clarification. Get the assessment from the Plan team.' },
+  { id: 'p4', t: 'Search filter for family messages and phased plans', sq: 'plan', pr: ['plan'], s: 1, e: 1, st: 'planned', src: [CP], n: 'Filter by member name or a specific period.' },
+  { id: 'p5', t: 'Select all and multi-select in lists', sq: 'plan', pr: ['plan'], s: 1, e: 1, st: 'decide', src: [CP], n: 'Phased plans, beneficiaries, reports, messages. Confirm the priority with Abdelrahman.' },
+  { id: 'p6', t: 'Nudging system with CleverTap (Plan)', sq: 'plan', pr: ['plan'], s: 1, e: 1, st: 'planned', src: [CP, UR], n: 'CleverTap integration.' },
+  { id: 'p7', t: 'SCHS to YNMO report sync', sq: 'plan', pr: ['plan'], s: 2, e: 2, st: 'decide', src: [CP], n: 'YNMO receives the new SCHS reports. Affected by the standalone assessment scope.' },
+  { id: 'w1', t: 'Warif: Absent Justified and Absent Excused', sq: 'plan', pr: ['plan'], s: 0, e: 0, st: 'contract', tag: 'Warif', src: [CP], n: WARIF },
+  { id: 'w2', t: 'Warif: attendance reports in days, not only percentages', sq: 'plan', pr: ['plan'], s: 0, e: 0, st: 'contract', tag: 'Warif', src: [CP], n: WARIF },
+  { id: 'w3', t: 'Warif: header change on the health and educational plan', sq: 'plan', pr: ['plan'], s: 0, e: 0, st: 'done', tag: 'Warif', src: [CP], n: 'Replaces the question-and-answer rows with student information.' },
+  { id: 'w4', t: 'Warif: replace "beneficiary" with "student"', sq: 'plan', pr: ['plan'], s: 0, e: 0, st: 'contract', tag: 'Warif', src: [CP], n: WARIF + ' Applies to all sections, titles and tabs.' },
+  { id: 'w5', t: 'Warif: remove diagnosis from the IEP report intro', sq: 'plan', pr: ['plan'], s: 0, e: 0, st: 'contract', tag: 'Warif', src: [CP], n: WARIF },
+  { id: 'w6', t: 'Warif: notifications with several links, image plus link, PDF', sq: 'plan', pr: ['plan'], s: 0, e: 0, st: 'contract', tag: 'Warif', src: [CP], n: WARIF },
+
+  // Daycare
+  { id: 'd1', t: 'Payment link from the portal for child subscription', sq: 'daycare', pr: ['daycare'], s: 0, e: 0, st: 'planned', tag: 'New', src: [CP] },
+  { id: 'd2', t: 'Quood integration for nurseries', sq: 'daycare', pr: ['daycare'], s: 1, e: 1, st: 'planned', tag: 'New', src: [CP], n: 'Listed in October. The checkpoint says move to November.' },
+  { id: 'd3', t: 'Drop the required attendance and departure times', sq: 'daycare', pr: ['daycare'], s: 1, e: 1, st: 'planned', src: [CP] },
+  { id: 'd4', t: 'Permissions inside the messaging feature', sq: 'daycare', pr: ['daycare'], s: 1, e: 1, st: 'decide', src: [CP], n: 'Not defined yet. Follow up with Doaa.' },
+  { id: 'd5', t: 'Nudging system with CleverTap (Daycare)', sq: 'daycare', pr: ['daycare'], s: 1, e: 1, st: 'planned', src: [CP, UR], n: 'CleverTap integration.' },
+  { id: 'd6', t: 'Analyze parent engagement', sq: 'daycare', pr: ['daycare'], s: 2, e: 2, st: 'planned', src: [CP], n: 'Based on families\' interactions in the new activities module. With Doaa.' },
+  { id: 'd7', t: 'Staff self check-in in the Mahd app', sq: 'daycare', pr: ['daycare'], s: 2, e: 2, st: 'planned', src: [CP] },
+  { id: 'd8', t: 'Export data and reports across all features', sq: 'daycare', pr: ['daycare'], s: 2, e: 2, st: 'decide', src: [CP], n: 'Define the reports with Doaa.' }
+];
+
+
+
+const NOTES = [
+  'The two roadmap files only give months. Each feature starts as a bar covering its whole month (or months), so set the real dates here.',
+  'No Saudi public holidays fall between 1 Oct 2026 and 31 Jan 2027 (National Day was 23 Sep, Founding Day is 22 Feb 2027). Use Days off to shade team leave or company closures.',
+  'Each feature keeps one set of dates. When one person has two features at the same time they sit one above the other inside their row and those days are shaded and counted as overlap. Hover a bar to highlight the same feature on the other rows.',
+  'Resources start as the squad PM. Assign engineers, quality and UX per feature from the Resources column.',
+  'Home Sessions Phase 1 needs 1 Mobile, 2 BE and 2 FE engineers. The Tifli squad lists 3 engineers (Aya Fathy, Hamid Shahin, Mario), and Standalone Assessment runs in the same months.',
+  'The six Warif items have "To be coordinated according to the Support contract" as status and "Stop" as the note. They are shown as waiting on contract.',
+  '"Waradny" (Plan squad) and "Wardany" (Daycare squad) are spelled two ways in the team list and are shown as written.',
+  'Warif and Sharjah use the Plan UX pair (Saad and Khalid). Confirm if a different designer covers them.',
+  'Items under "Later 2027" in the checkpoint are not on this chart.',
+  'Edits are shared: anyone with edit access sees your changes. "Restore roadmap" puts every feature back where the two files placed it.'
+];
+
+const FIELDS = ['t', 'sq', 'pr', 'd0', 'd1', 'st', 'n', 'res', 'c', 'ord'];
+const base = new Map();
+LANES.forEach(l => {
+  ITEMS.map((it, i) => ({ it: it, i: i })).filter(x => x.it.sq === l.k)
+    .sort((a, b) => a.it.s - b.it.s || a.i - b.i)
+    .forEach((x, r) => base.set(x.it.id, Object.assign({}, x.it, { d0: MSTART[x.it.s], d1: MEND[x.it.e], ord: r })));
+});
+const state = { sq: new Set(LANES.map(l => l.k)), status: 'all', person: 'all', q: '', open: null, folded: new Set(), view: 'person' };
+let over = {}, extras = {}, daysoff = {}, history = [], offOpen = false;
+let db = null, dl = { save: async o => { const a = document.createElement('a'); const u = URL.createObjectURL(new Blob([o.data], { type: 'text/csv;charset=utf-8' })); a.href = u; a.download = o.filename; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 1000); } }, readonly = false, inflight = 0, dragging = false, confirmKey = null, confirmTimer = 0, picker = null;
+
+const $ = id => document.getElementById(id);
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+function prodKey(pr) { const k = (pr || []).slice().sort().join(','); const p = PRODUCTS.find(x => x.pr.slice().sort().join(',') === k); return p ? p.v : 'tifli'; }
+function canEdit() { return !readonly; }
+const byOrd = (a, b) => a.ord - b.ord || (a.id < b.id ? -1 : 1);
+
+function finish(it) {
+  it.d0 = Math.max(0, Math.min(NDAYS - 1, Math.round(it.d0)));
+  it.d1 = Math.max(it.d0, Math.min(NDAYS - 1, Math.round(it.d1)));
+  if (it.res === undefined) it.res = TEAMS[it.sq].pm.slice();
+  return it;
+}
+function items() {
+  const out = [];
+  base.forEach((b, id) => {
+    const o = over[id];
+    if (o && o.x) return;
+    const it = Object.assign({}, b);
+    if (o) {
+      FIELDS.forEach(f => { if (o[f] !== undefined) it[f] = o[f]; });
+      if (o.d0 === undefined) { if (typeof o.w0 === 'number') it.d0 = Math.max(0, 7 * o.w0 - 4); else if (typeof o.s === 'number') it.d0 = MSTART[o.s]; }
+      if (o.d1 === undefined) { if (typeof o.w1 === 'number') it.d1 = 7 * o.w1; else if (typeof o.e === 'number') it.d1 = MEND[o.e]; }
+    }
+    out.push(finish(it));
+  });
+  Object.keys(over).forEach(id => {
+    const o = over[id];
+    if (base.has(id) || !o.custom || o.x) return;
+    const it = Object.assign({ pr: ['tifli'], n: '', st: 'planned', d0: 0, d1: 13, ord: 0 }, o, { id: id, src: ['Added on this page'] });
+    if (o.d0 === undefined) { if (typeof o.w0 === 'number') it.d0 = Math.max(0, 7 * o.w0 - 4); else if (typeof o.s === 'number') it.d0 = MSTART[o.s]; }
+    if (o.d1 === undefined) { if (typeof o.w1 === 'number') it.d1 = 7 * o.w1; else if (typeof o.e === 'number') it.d1 = MEND[o.e]; }
+    out.push(finish(it));
+  });
+  return out;
+}
+function team(it) {
+  const own = TEAMS[it.sq], uniq = a => [...new Set(a)];
+  return { pm: own.pm, dev: own.dev, qa: uniq(it.pr.flatMap(p => TEAMS[p].qa)), ux: uniq(it.pr.flatMap(p => TEAMS[p].ux)) };
+}
+function directory() {
+  const map = new Map();
+  const add = (name, role, sq) => {
+    if (!map.has(name)) map.set(name, { name: name, roles: new Set(), sqs: new Set() });
+    const p = map.get(name); p.roles.add(role); p.sqs.add(sq);
+  };
+  Object.keys(TEAMS).forEach(sq => ['pm', 'dev', 'qa', 'ux'].forEach(r => (TEAMS[sq][r] || []).forEach(n => add(n, r, sq))));
+  Object.keys(extras).forEach(id => { const x = extras[id]; if (x && x.n) add(x.n, x.role || 'dev', x.sq || 'tifli'); });
+  return map;
+}
+function visible() {
+  const q = state.q.trim().toLowerCase();
+  return items().filter(it =>
+    state.sq.has(it.sq) &&
+    (state.status === 'all' || it.st === state.status) &&
+    (state.person === 'all' || it.res.includes(state.person)) &&
+    (!q || (it.t + ' ' + (it.n || '') + ' ' + it.res.join(' ')).toLowerCase().includes(q)));
+}
+
+/* ---------- saving ---------- */
+const SAVE_TEXT = {
+  ready: 'Edits save automatically and show for everyone with access.',
+  saving: 'Saving…', saved: 'Saved.',
+  local: 'Edits are not saved in this view and last until you reload.',
+  readonly: 'View only. Ask the owner for edit access to change the plan.',
+  error: 'The last change did not save. Try it again.'
+};
+function setSave(k) { $('save').textContent = SAVE_TEXT[k] || ''; }
+const queue = {};
+function write(path, data) {
+  if (!db) { setSave('local'); return; }
+  const ref = db.doc(path), copy = data ? clone(data) : null;
+  inflight++; setSave('saving');
+  queue[path] = (queue[path] || Promise.resolve()).then(async () => {
+    try { if (copy) await ref.set(copy); else await ref.delete(); setSave('saved'); }
+    catch (e) {
+      if (e && e.code === 'invalid_argument') { readonly = true; setSave('readonly'); render(); } else setSave('error');
+    } finally { inflight--; }
+  });
+}
+function persist(id) { write('items/' + id, over[id] || null); }
+function pushHistory() { history.push(JSON.stringify(over)); if (history.length > 60) history.shift(); }
+function commit(id, fields) {
+  pushHistory();
+  over[id] = Object.assign({}, over[id] || {}, fields);
+  state.refocus = document.activeElement && document.activeElement.id;
+  render(); persist(id);
+}
+function undo() {
+  if (!history.length || !canEdit()) return;
+  const cur = over; over = JSON.parse(history.pop());
+  closePicker(); render();
+  new Set(Object.keys(cur).concat(Object.keys(over))).forEach(id => { if (JSON.stringify(cur[id]) !== JSON.stringify(over[id])) persist(id); });
+}
+function removeItem(id) {
+  pushHistory();
+  if (base.has(id)) over[id] = Object.assign({}, over[id] || {}, { x: true }); else delete over[id];
+  render(); persist(id);
+}
+function addItem() { addAt('__none', todayK >= 0 ? todayK : 0); }
+async function restoreAll() {
+  over = {}; history = []; closePicker(); closeCtx(); render();
+  if (!db) { setSave('local'); return; }
+  try {
+    inflight++; setSave('saving');
+    const snap = await db.collection('items').get();
+    await Promise.all(snap.docs.map(d => db.doc('items/' + d.id).delete()));
+    setSave('saved');
+  } catch (e) { setSave(e && e.code === 'invalid_argument' ? 'readonly' : 'error'); } finally { inflight--; }
+}
+function onSnap(snap) {
+  if (dragging || inflight > 0 || state.edit) return;
+  const next = {};
+  snap.docs.forEach(d => { next[d.id] = d.data(); });
+  if (JSON.stringify(next) === JSON.stringify(over)) return;
+  over = clone(next); render();
+}
+function squadPatch(it, sq) {
+  let pr = it.pr;
+  if (sq === 'ai') pr = it.sq === 'ai' ? it.pr : [it.sq]; else pr = [sq];
+  return { sq: sq, pr: pr };
+}
+
+/* ---------- people ---------- */
+function fillPersons() {
+  const ps = $('person'), keep = state.person;
+  ps.textContent = '';
+  const a = el('option', '', 'Everyone'); a.value = 'all'; ps.append(a);
+  [...directory().keys()].sort((x, y) => x.localeCompare(y)).forEach(p => { const o = el('option', '', p); o.value = p; ps.append(o); });
+  ps.value = [...ps.options].some(o => o.value === keep) ? keep : 'all'; state.person = ps.value;
+}
+function offAt(k) { const ids = Object.keys(daysoff); for (let i = 0; i < ids.length; i++) { const x = daysoff[ids[i]]; if (x && typeof x.d0 === 'number' && k >= x.d0 && k <= x.d1) return x; } return null; }
+function closePicker() { picker = null; offOpen = false; const p = $('pop'); p.hidden = true; p.textContent = ''; }
+function placePop(anchor) {
+  const p = $('pop'), r = anchor.getBoundingClientRect(), w = Math.min(320, window.innerWidth - 16);
+  p.style.left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8)) + 'px';
+  p.style.top = Math.max(8, Math.min(r.bottom + 4, window.innerHeight - Math.min(p.offsetHeight, 440) - 8)) + 'px';
+}
+function openOff(anchor) {
+  if (!canEdit()) return;
+  picker = null; offOpen = true; $('pop').hidden = false; buildOff(); placePop(anchor);
+  const f = $('of-n'); if (f) f.focus();
+}
+function buildOff() {
+  const p = $('pop'); p.textContent = '';
+  p.append(el('h3', '', 'Days off'), el('div', 'sub2', 'Shade holidays or team leave across every row. No Saudi public holidays fall between 1 Oct 2026 and 31 Jan 2027, so this starts empty.'));
+  const ids = Object.keys(daysoff);
+  const list = el('div', 'plist');
+  if (!ids.length) list.append(el('div', 'sub2', 'No days off yet.'));
+  ids.sort((a, b) => daysoff[a].d0 - daysoff[b].d0).forEach(id => {
+    const x = daysoff[id], row = el('div', 'prow'), t = el('span'); t.append(document.createTextNode(x.n || 'Day off'), el('small', '', dlabel(x.d0) + (x.d1 > x.d0 ? ' to ' + dlabel(x.d1) : '')));
+    const rm = el('button', 'btn', 'Remove'); rm.type = 'button'; rm.style.marginInlineStart = 'auto';
+    rm.addEventListener('click', () => { delete daysoff[id]; write('daysoff/' + id, null); render(); buildOff(); });
+    row.append(t, rm); list.append(row);
+  });
+  const add = el('div', 'padd');
+  const nn = el('input'); nn.type = 'text'; nn.id = 'of-n'; nn.placeholder = 'Label, for example Team offsite'; nn.maxLength = 60;
+  const d0 = el('input'); d0.type = 'date'; d0.id = 'of-a'; d0.min = iso(0); d0.max = iso(NDAYS - 1);
+  const d1 = el('input'); d1.type = 'date'; d1.id = 'of-b'; d1.min = iso(0); d1.max = iso(NDAYS - 1);
+  const msg = el('div', 'sub2', '');
+  const ab = el('button', 'btn', 'Add'); ab.type = 'button';
+  ab.addEventListener('click', () => {
+    const a = dayFromIso(d0.value); let b = dayFromIso(d1.value || d0.value);
+    if (a === null || b === null) { msg.textContent = 'Pick dates between 1 Oct 2026 and 31 Jan 2027.'; return; }
+    if (b < a) b = a;
+    const id = 'o' + Date.now().toString(36), data = { n: nn.value.trim() || 'Day off', d0: a, d1: b };
+    daysoff[id] = data; write('daysoff/' + id, data); render(); buildOff();
+  });
+  add.append(el('span', 'lab', 'Add days off'), nn, d0, d1, ab, msg);
+  const done = el('button', 'btn primary', 'Done'); done.type = 'button'; done.addEventListener('click', closePicker);
+  p.append(list, add, done);
+}
+function openPicker(id, anchor) {
+  if (!canEdit()) return;
+  offOpen = false; picker = { id: id };
+  $('pop').hidden = false;
+  buildPicker(); placePop(anchor);
+  const s = $('pk-q'); if (s) s.focus();
+}
+function pickerItem() { return picker && items().find(i => i.id === picker.id); }
+function buildPicker() {
+  const it = pickerItem(), p = $('pop');
+  if (!it) { closePicker(); return; }
+  p.textContent = '';
+  p.append(el('h3', '', 'Assign team members'), el('div', 'sub2', it.t));
+  const q = el('input'); q.type = 'search'; q.id = 'pk-q'; q.placeholder = 'Search people';
+  const list = el('div', 'plist');
+  const draw = () => {
+    const cur = pickerItem(); if (!cur) return;
+    list.textContent = '';
+    const f = q.value.trim().toLowerCase();
+    const dir = [...directory().values()].filter(x => !f || x.name.toLowerCase().includes(f));
+    dir.sort((a, b) => (b.sqs.has(cur.sq) - a.sqs.has(cur.sq)) || a.name.localeCompare(b.name));
+    if (!dir.length) list.append(el('div', 'sub2', 'No one matches. Add them below.'));
+    dir.forEach(x => {
+      const row = el('label', 'prow'), cb = el('input'); cb.type = 'checkbox'; cb.checked = cur.res.includes(x.name);
+      cb.addEventListener('change', () => {
+        const now = pickerItem(); if (!now) return;
+        const nr = cb.checked ? now.res.concat([x.name]) : now.res.filter(n => n !== x.name);
+        commit(now.id, { res: [...new Set(nr)] });
+      });
+      const t = el('span'); t.append(document.createTextNode(x.name));
+      const sq = [...x.sqs].map(k => (LANES.find(l => l.k === k) || { n: k }).n).join(', ');
+      t.append(el('small', '', [...x.roles].map(r => ROLES[r]).join(', ') + ' · ' + sq));
+      row.append(cb, t); list.append(row);
+    });
+  };
+  q.addEventListener('input', draw);
+  const add = el('div', 'padd');
+  const nn = el('input'); nn.type = 'text'; nn.id = 'pk-new'; nn.placeholder = 'Add someone new'; nn.maxLength = 60;
+  const ab = el('button', 'btn', 'Add'); ab.type = 'button';
+  const rs = el('select'); rs.id = 'pk-role';
+  Object.keys(ROLES).forEach(k => { const o = el('option', '', ROLES[k]); o.value = k; if (k === 'dev') o.selected = true; rs.append(o); });
+  const doAdd = () => {
+    const name = nn.value.trim(); if (!name) { nn.focus(); return; }
+    const cur = pickerItem(); if (!cur) return;
+    if (!directory().has(name)) {
+      const pid = 'p' + Date.now().toString(36);
+      extras[pid] = { n: name, role: rs.value, sq: cur.sq };
+      write('people/' + pid, extras[pid]);
+      fillPersons();
+    }
+    commit(cur.id, { res: [...new Set(cur.res.concat([name]))] });
+    nn.value = ''; draw();
+  };
+  ab.addEventListener('click', doAdd);
+  nn.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doAdd(); } });
+  add.append(el('span', 'lab', 'New team member (also added to the people list)'), nn, ab, rs);
+  const done = el('button', 'btn primary', 'Done'); done.type = 'button'; done.addEventListener('click', closePicker);
+  p.append(q, list, add, done); draw();
+}
+document.addEventListener('pointerdown', e => {
+  if (!picker && !offOpen) return;
+  const p = $('pop');
+  if (!p.contains(e.target) && !(e.target.closest && (e.target.closest('.res') || e.target.closest('#ed-res') || e.target.closest('#daysoff')))) closePicker();
+});
+
+/* ---------- drag ---------- */
+function laneBoxes(g) {
+  const o = {};
+  LANES.forEach(l => {
+    const els = g.querySelectorAll('[data-lane="' + l.k + '"]');
+    if (!els.length) return;
+    let t = 1e9, b = -1e9;
+    els.forEach(x => { const r = x.getBoundingClientRect(); t = Math.min(t, r.top); b = Math.max(b, r.bottom); });
+    o[l.k] = { t: t, b: b };
+  });
+  return o;
+}
+function setDrop(g, key) {
+  g.querySelectorAll('.drop').forEach(x => x.classList.remove('drop'));
+  if (key) g.querySelectorAll('.rowbg[data-lane="' + key + '"], .gbg[data-lane="' + key + '"], .grp[data-lane="' + key + '"]').forEach(x => x.classList.add('drop'));
+}
+function personBoxes(g) {
+  const o = {};
+  g.querySelectorAll('[data-person]').forEach(x => {
+    const k = x.dataset.person, r = x.getBoundingClientRect();
+    if (!o[k]) o[k] = { t: 1e9, b: -1e9 };
+    o[k].t = Math.min(o[k].t, r.top); o[k].b = Math.max(o[k].b, r.bottom);
+  });
+  return o;
+}
+function setDropP(g, key) {
+  g.querySelectorAll('.drop').forEach(x => x.classList.remove('drop'));
+  if (key) g.querySelectorAll('.rowbg[data-person]').forEach(x => { if (x.dataset.person === key) x.classList.add('drop'); });
+}
+function newOrd(id, lane, y) {
+  const g = $('grid'), all = items().filter(i => i.sq === lane && i.id !== id).sort(byOrd);
+  const rows = [...g.querySelectorAll('.rowbg[data-lane="' + lane + '"]')].filter(x => x.dataset.id !== id);
+  if (!rows.length) return all.length ? all[all.length - 1].ord + 1 : 0;
+  let idx = rows.length;
+  for (let i = 0; i < rows.length; i++) { const r = rows[i].getBoundingClientRect(); if (y < r.top + r.height / 2) { idx = i; break; } }
+  const at = i => all.find(a => a.id === rows[i].dataset.id);
+  const before = idx < rows.length ? at(idx) : null, after = idx > 0 ? at(idx - 1) : null;
+  if (before && after) return (before.ord + after.ord) / 2;
+  if (before) return before.ord - 1;
+  return after.ord + 1;
+}
+function startDrag(ev, it, bar, mode) {
+  if (!canEdit() || (ev.button != null && ev.button !== 0)) return;
+  const g = $('grid'), wk = g.querySelector('.wk');
+  const mw = wk ? wk.getBoundingClientRect().width : 26;
+  const owner = bar.dataset.person || '';
+  const st = { x: ev.clientX, y: ev.clientY, lastY: ev.clientY, mode: mode, d0: it.d0, d1: it.d1, sq: it.sq, person: owner, moved: false, cur: { d0: it.d0, d1: it.d1, sq: it.sq, person: owner } };
+  bar.setPointerCapture(ev.pointerId);
+  const move = e => {
+    const dx = e.clientX - st.x, dy = e.clientY - st.y; st.lastY = e.clientY;
+    if (!st.moved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+    if (!st.moved) { st.moved = true; dragging = true; bar.classList.add('dragging'); }
+    const dm = Math.round(dx / mw);
+    let a = st.d0, b = st.d1;
+    if (mode === 'move') { const len = b - a; a = Math.max(0, Math.min(NDAYS - 1 - len, st.d0 + dm)); b = a + len; }
+    else if (mode === 'l') { a = Math.max(0, Math.min(st.d1, st.d0 + dm)); }
+    else { b = Math.min(NDAYS - 1, Math.max(st.d0, st.d1 + dm)); }
+    st.cur.d0 = a; st.cur.d1 = b;
+    bar.style.gridColumn = (a + 2) + ' / ' + (b + 3);
+    if (mode === 'move') {
+      bar.style.transform = 'translate(' + (dx - (a - st.d0) * mw) + 'px,' + dy + 'px)';
+      if (state.view === 'person') {
+        const boxes = personBoxes(g); let hit = st.cur.person;
+        Object.keys(boxes).forEach(k => { if (e.clientY >= boxes[k].t && e.clientY <= boxes[k].b) hit = k; });
+        st.cur.person = hit; setDropP(g, hit);
+      } else {
+        const boxes = laneBoxes(g); let hit = st.cur.sq;
+        Object.keys(boxes).forEach(k => { if (e.clientY >= boxes[k].t && e.clientY <= boxes[k].b) hit = k; });
+        st.cur.sq = hit; setDrop(g, hit);
+      }
+    } else bar.style.transform = '';
+  };
+  const up = () => {
+    bar.removeEventListener('pointermove', move); bar.removeEventListener('pointerup', up); bar.removeEventListener('pointercancel', up);
+    setDrop(g, null); setDropP(g, null); dragging = false;
+    if (!st.moved) return;
+    const patch = {};
+    if (st.cur.d0 !== st.d0) patch.d0 = st.cur.d0;
+    if (st.cur.d1 !== st.d1) patch.d1 = st.cur.d1;
+    if (state.view === 'person') {
+      if (st.cur.person !== st.person && st.cur.person !== '') {
+        let nr = it.res.filter(n => n !== st.person);
+        if (st.cur.person !== '__none') nr = [...new Set(nr.concat([st.cur.person]))];
+        patch.res = nr;
+      }
+    } else if (st.cur.sq !== st.sq) Object.assign(patch, squadPatch(it, st.cur.sq));
+    if (state.view !== 'person' && mode === 'move' && (st.cur.sq !== st.sq || Math.abs(st.lastY - st.y) > 20)) {
+      const o = newOrd(it.id, st.cur.sq, st.lastY);
+      if (o !== it.ord) patch.ord = o;
+    }
+    if (Object.keys(patch).length) commit(it.id, patch); else render();
+  };
+  bar.addEventListener('pointermove', move); bar.addEventListener('pointerup', up); bar.addEventListener('pointercancel', up);
+}
+
+/* ---------- render ---------- */
+function renderSummary(list) {
+  const s = $('summary'); s.textContent = '';
+  const cnt = k => list.filter(i => i.st === k).length;
+  [[list.length, 'features shown'], [cnt('planned'), 'planned'], [cnt('decide'), 'need a decision'], [cnt('contract'), 'wait on contract'], [cnt('done'), 'done']].forEach(function (p) {
+    const w = el('div'); w.append(el('b', '', String(p[0])), document.createTextNode(' '), el('span', '', p[1])); s.append(w);
+  });
+}
+function field(label, ctl, wide) { const w = el('label', wide ? 'wide' : ''); w.append(el('span', '', label), ctl); return w; }
+function select(id, opts, val, on) {
+  const s = el('select'); s.id = id; s.disabled = !canEdit();
+  opts.forEach(o => { const op = el('option', '', o[1]); op.value = o[0]; if (String(o[0]) === String(val)) op.selected = true; s.append(op); });
+  s.addEventListener('change', () => on(s.value)); return s;
+}
+function fit(t) { t.style.height = 'auto'; t.style.height = Math.max(34, t.scrollHeight + 2) + 'px'; }
+function filtersActive() { return state.sq.size < LANES.length || state.status !== 'all' || state.q.trim() !== ''; }
+function laneOf(k) { return LANES.find(l => l.k === k) || LANES[0]; }
+function buildBar(it, owner) {
+  const l = laneOf(it.sq), col = it.c ? 'var(--' + it.c + ')' : l.c;
+  const bar = el('div', 'bar st-' + it.st + (canEdit() ? '' : ' ro'));
+  bar.style.setProperty('--c', col); bar.dataset.person = owner || ''; bar.dataset.id = it.id;
+  bar.tabIndex = 0; bar.setAttribute('role', 'button'); 
+  bar.setAttribute('aria-label', it.t + ', ' + dlabel(it.d0) + ' to ' + dlabel(it.d1) + ', ' + STATUS[it.st]);
+  bar.title = it.t + ' · ' + l.n + ' · ' + dlabel(it.d0) + ' to ' + dlabel(it.d1) + ' · ' + STATUS[it.st];
+  const editing = state.edit === it.id + '|' + (owner || '');
+  if (editing) {
+    bar.classList.add('editing');
+    const inp = el('input', 'bi'); inp.type = 'text'; inp.value = it.t; inp.maxLength = 140; inp.setAttribute('aria-label', 'Feature name');
+    let done = false;
+    const fin = ok => { if (done) return; done = true; finishEdit(it, inp.value, ok); };
+    inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); fin(true); } else if (e.key === 'Escape') { e.preventDefault(); fin(false); } });
+    inp.addEventListener('blur', () => fin(true));
+    inp.addEventListener('pointerdown', e => e.stopPropagation());
+    inp.addEventListener('dblclick', e => e.stopPropagation());
+    bar.append(inp);
+  } else bar.append(el('span', 'nm2', (it.st === 'done' ? '✓ ' : '') + it.t));
+  if (it.tag) bar.append(el('span', 'tg', it.tag === 'High priority' ? 'High' : it.tag === 'Low priority' ? 'Low' : it.tag));
+  const hl = el('span', 'hd l'), hr = el('span', 'hd r'); bar.append(hl, hr);
+  bar.addEventListener('pointerdown', e => { if (e.target.tagName === 'INPUT') return; const mode = e.target === hl ? 'l' : e.target === hr ? 'r' : 'move'; if (canEdit()) startDrag(e, it, bar, mode); });
+  bar.addEventListener('pointerenter', () => { if (dragging) return; const g = $('grid'); g.classList.add('hov'); g.querySelectorAll('.bar').forEach(b => b.classList.toggle('same', b.dataset.id === it.id)); });
+  bar.addEventListener('pointerleave', () => { $('grid').classList.remove('hov'); });
+  bar.addEventListener('keydown', e => {
+    if (e.target !== bar) return;
+    if (e.key === 'Enter' || e.key === 'F2') { e.preventDefault(); startEdit(it, owner); return; }
+    if (!canEdit() || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+    e.preventDefault();
+    const d = e.key === 'ArrowRight' ? 1 : -1;
+    if (e.shiftKey) commit(it.id, { d1: Math.max(it.d0, Math.min(NDAYS - 1, it.d1 + d)) });
+    else { const len = it.d1 - it.d0, a = Math.max(0, Math.min(NDAYS - 1 - len, it.d0 + d)); commit(it.id, { d0: a, d1: a + len }); }
+    state.refocusBar = it.id;
+  });
+  return bar;
+}
+function render() {
+  const list = visible();
+  renderSummary(list);
+  $('undo').disabled = !history.length || !canEdit();
+  $('add').disabled = !canEdit();
+  const g = $('grid'); g.textContent = ''; g.classList.remove('hov');
+  const put = (n, row, col) => { n.style.gridRow = row; if (col) n.style.gridColumn = col; g.append(n); return n; };
+  put(el('div', 'hc r1 first', 'Ynmo H2 2026'), 1, 1);
+  MGROUPS.forEach((m, i) => {
+    const c = el('div', 'mh'); c.append(el('span', '', m.n));
+    if (LOWPRI[i]) { const s = el('small', '', 'low priority'); s.title = 'Marked LOW PRIORITY in the September checkpoint'; c.querySelector('span').append(document.createTextNode(' '), s); }
+    put(c, 1, (m.from + 2) + ' / ' + (m.to + 3));
+  });
+  put(el('div', 'hc r2 first', 'Team member'), 2, 1);
+  DAYS.forEach(x => {
+    const off = offAt(x.k);
+    const c = el('div', 'wk' + (x.we ? ' we' : '') + (x.k === todayK ? ' today' : '') + (off ? ' offd' : ''), String(x.d.getUTCDate()));
+    c.title = dlabel(x.k) + (x.k === todayK ? ' (today)' : '') + (off ? ' · ' + off.n : ''); put(c, 2, (x.k + 2) + '');
+  });
+  const end = renderPeople(g, put, list);
+  Object.keys(daysoff).forEach(id => { const x = daysoff[id]; if (!x || typeof x.d0 !== 'number') return; const o = el('div', 'off'); o.title = x.n || 'Day off'; put(o, '3 / ' + end, (x.d0 + 2) + ' / ' + (x.d1 + 3)); });
+  const ei = g.querySelector('input.bi');
+  if (ei && state.needFocus) { state.needFocus = false; ei.focus(); ei.select(); }
+  else if (state.refocusBar) { const b = [...g.querySelectorAll('.bar')].find(x => x.dataset.id === state.refocusBar); state.refocusBar = null; if (b) b.focus(); }
+  else if (state.refocus) { const f = $(state.refocus); if (f) f.focus(); }
+  state.refocus = null;
+}
+function pack(its) {
+  const ends = [], out = [];
+  its.slice().sort((a, b) => a.d0 - b.d0 || a.d1 - b.d1 || a.ord - b.ord).forEach(it => {
+    let i = ends.findIndex(e => e < it.d0);
+    if (i < 0) { i = ends.length; ends.push(-1); }
+    ends[i] = it.d1; out.push({ it: it, lane: i });
+  });
+  return { out: out, n: Math.max(1, ends.length) };
+}
+function renderPeople(g, put, list) {
+  const dir = directory(), map = new Map(), H = 34;
+  const ensure = n => { if (!map.has(n)) map.set(n, { name: n, its: [] }); return map.get(n); };
+  dir.forEach((p, n) => ensure(n));
+  list.forEach(it => { if (!it.res.length) ensure('__none').its.push(it); else it.res.forEach(n => ensure(n).its.push(it)); });
+  let people = [...map.values()].filter(p => p.name !== '__none');
+  if (state.person !== 'all') people = people.filter(p => p.name === state.person);
+  else if (filtersActive()) people = people.filter(p => p.its.length);
+  const primary = p => {
+    const d = dir.get(p.name);
+    const idx = d ? [...d.sqs].map(k => LANES.findIndex(l => l.k === k)).filter(i => i >= 0) : [];
+    return idx.length ? Math.min.apply(null, idx) : 0;
+  };
+  people.sort((a, b) => primary(a) - primary(b) || a.name.localeCompare(b.name));
+  let r = 3;
+  const block = (p, title, sub, color) => {
+    const pk = pack(p.its), n = pk.n, minH = (8 + n * H) + 'px';
+    const counts = new Array(NDAYS).fill(0);
+    p.its.forEach(it => { for (let k = it.d0; k <= it.d1; k++) counts[k]++; });
+    const over = counts.filter(c => c > 1).length;
+    const c1 = el('div', 'c1 pn'); c1.dataset.person = p.name; c1.style.minHeight = minH; c1.style.setProperty('--c', color);
+    const nm = el('span'); nm.append(el('i'), document.createTextNode(title)); c1.append(nm);
+    if (sub) c1.append(el('small', '', sub));
+    if (over) { const w = el('small', 'warnx', '⚠ ' + over + (over === 1 ? ' day' : ' days') + ' overlap'); w.title = 'Days where this person has more than one feature at the same time'; c1.append(w); }
+    put(c1, r, 1);
+    const bg = el('div', 'rowbg'); bg.dataset.person = p.name; bg.style.minHeight = minH; put(bg, r, null);
+    let k = 0;
+    while (k < NDAYS) {
+      if (counts[k] > 1) { let e = k; while (e + 1 < NDAYS && counts[e + 1] > 1) e++; const o = el('div', 'ov'); o.dataset.person = p.name; put(o, r, (k + 2) + ' / ' + (e + 3)); k = e + 1; } else k++;
+    }
+    pk.out.forEach(x => { const b = buildBar(x.it, p.name); b.classList.add('pb'); b.style.marginTop = (4 + x.lane * H) + 'px'; put(b, r, (x.it.d0 + 2) + ' / ' + (x.it.d1 + 3)); });
+    r++;
+  };
+  people.forEach(p => {
+    const d = dir.get(p.name);
+    const sub = d ? [...d.roles].map(x => ROLES[x]).join(', ') + ' · ' + [...d.sqs].map(k => laneOf(k).n).join(', ') : '';
+    block(p, p.name, sub, LANES[primary(p)].c);
+  });
+  const none = map.get('__none');
+  if (none && none.its.length && state.person === 'all') block(none, 'Unassigned', 'Features nobody owns yet', 'var(--muted)');
+  if (r === 3) { const e = el('div', 'empty', 'No one matches these filters.'); e.style.gridRow = '3'; g.append(e); r = 4; }
+  if (canEdit()) {
+    const ab = el('button', 'addp', '+ Add person'); ab.type = 'button'; ab.id = 'addp';
+    const c = el('div', 'c1 addrow'); c.append(ab); put(c, r, 1);
+    ab.addEventListener('click', () => openAddPerson(ab));
+    put(el('div', 'rowbg'), r, null).style.minHeight = '44px';
+  }
+  return r;
+}
+
+
+/* ---------- inline edit, context menu, people ---------- */
+function startEdit(it, owner) { if (!canEdit()) return; closeCtx(); state.edit = it.id + '|' + (owner || ''); state.needFocus = true; render(); }
+function finishEdit(it, val, ok) {
+  state.edit = null;
+  const v = (val || '').replace(/\s+/g, ' ').trim();
+  if (ok && v && v !== it.t) commit(it.id, { t: v }); else render();
+}
+function primarySq(name) {
+  const d = directory().get(name); if (!d) return 'tifli';
+  const idx = [...d.sqs].map(k => LANES.findIndex(l => l.k === k)).filter(i => i >= 0);
+  return LANES[idx.length ? Math.min.apply(null, idx) : 0].k;
+}
+function addAt(person, k) {
+  if (!canEdit()) return;
+  pushHistory();
+  const id = 'c' + Date.now().toString(36), none = !person || person === '__none';
+  const sq = none ? 'tifli' : primarySq(person);
+  const all = items().filter(i => i.sq === sq);
+  k = Math.max(0, Math.min(NDAYS - 1, k));
+  over[id] = { custom: true, t: 'New feature', sq: sq, pr: sq === 'ai' ? ['tifli'] : [sq], d0: k, d1: Math.min(NDAYS - 1, k + 6), st: 'planned', n: '', res: none ? [] : [person], ord: all.length ? Math.max.apply(null, all.map(i => i.ord)) + 1 : 0 };
+  state.edit = id + '|' + (none ? '__none' : person); state.needFocus = true;
+  render(); persist(id);
+}
+function duplicate(it) {
+  pushHistory();
+  const id = 'c' + Date.now().toString(36);
+  over[id] = { custom: true, t: it.t + ' (copy)', sq: it.sq, pr: it.pr.slice(), d0: it.d0, d1: it.d1, st: it.st, n: it.n || '', res: it.res.slice(), c: it.c || null, ord: it.ord + 0.5 };
+  render(); persist(id);
+}
+function dayAt(x) { const w = $('grid').querySelector('.wk'); if (!w) return 0; const r = w.getBoundingClientRect(); return Math.floor((x - r.left) / r.width); }
+function closeCtx() { const c = $('ctx'); c.hidden = true; c.textContent = ''; }
+function openCtx(x, y, build) {
+  closePicker();
+  const c = $('ctx'); c.textContent = ''; build(c); c.hidden = false;
+  c.style.left = Math.max(8, Math.min(x, window.innerWidth - c.offsetWidth - 8)) + 'px';
+  c.style.top = Math.max(8, Math.min(y, window.innerHeight - c.offsetHeight - 8)) + 'px';
+}
+function mi(c, label, fn, cls) { const b = el('button', 'mi' + (cls ? ' ' + cls : ''), label); b.type = 'button'; b.addEventListener('click', () => { fn(b); closeCtx(); }); c.append(b); return b; }
+function mlab(c, t) { c.append(el('div', 'mlab', t)); }
+function barMenu(it, owner, x, y) {
+  openCtx(x, y, c => {
+    mi(c, 'Rename', () => startEdit(it, owner));
+    mlab(c, 'Status');
+    Object.keys(STATUS).forEach(k => mi(c, (it.st === k ? '✓ ' : '') + STATUS[k], () => commit(it.id, { st: k })));
+    mlab(c, 'Bar color');
+    const row = el('div', 'mrow');
+    const def = el('button', 'swatch def'); def.type = 'button'; def.title = 'Product color'; def.setAttribute('aria-label', 'Product color'); def.setAttribute('aria-pressed', String(!it.c));
+    def.addEventListener('click', () => { closeCtx(); commit(it.id, { c: null }); }); row.append(def);
+    COLORS.forEach(k => { const b = el('button', 'swatch'); b.type = 'button'; b.style.setProperty('--c', 'var(--' + k + ')'); b.setAttribute('aria-label', 'Color ' + k.slice(1)); b.setAttribute('aria-pressed', String(it.c === k)); b.addEventListener('click', () => { closeCtx(); commit(it.id, { c: k }); }); row.append(b); });
+    c.append(row);
+    mlab(c, 'Dates');
+    const dr = el('div', 'mrow');
+    const dateIn = (val, on) => { const i = el('input'); i.type = 'date'; i.min = iso(0); i.max = iso(NDAYS - 1); i.value = iso(val); i.addEventListener('change', () => { const k = dayFromIso(i.value); if (k === null) return; closeCtx(); on(k); }); return i; };
+    dr.append(dateIn(it.d0, k => commit(it.id, { d0: k, d1: Math.max(k, it.d1) })), dateIn(it.d1, k => commit(it.id, { d1: k, d0: Math.min(k, it.d0) })));
+    c.append(dr);
+    c.append(el('div', 'msep'));
+    mi(c, 'Assign people…' + (it.res.length ? ' (' + it.res.length + ')' : ''), b => openPicker(it.id, b));
+    mi(c, 'Duplicate', () => duplicate(it));
+    mi(c, 'Delete', () => removeItem(it.id), 'danger');
+  });
+}
+function rowMenu(person, x, y, k) {
+  const none = person === '__none';
+  openCtx(x, y, c => {
+    mi(c, 'Insert bar here', () => addAt(person, k));
+    mi(c, 'Add person…', b => openAddPerson(b));
+    const id = Object.keys(extras).find(i => extras[i] && extras[i].n === person);
+    if (!none && id) mi(c, 'Remove ' + person, () => removePerson(id, person), 'danger');
+  });
+}
+function removePerson(id, name) {
+  pushHistory();
+  delete extras[id]; write('people/' + id, null);
+  Object.keys(items().reduce((o, i) => { if (i.res.includes(name)) o[i.id] = 1; return o; }, {})).forEach(iid => {
+    const it = items().find(i => i.id === iid);
+    over[iid] = Object.assign({}, over[iid] || {}, { res: it.res.filter(n => n !== name) }); persist(iid);
+  });
+  fillPersons(); render();
+}
+function openAddPerson(anchor) {
+  if (!canEdit()) return;
+  offOpen = false; picker = { add: true };
+  const p = $('pop'); p.hidden = false; p.textContent = '';
+  p.append(el('h3', '', 'Add person'), el('div', 'sub2', 'Adds a new row to the chart for everyone.'));
+  const nn = el('input'); nn.type = 'text'; nn.id = 'ap-n'; nn.placeholder = 'Name'; nn.maxLength = 60;
+  const rs = el('select'); rs.id = 'ap-role'; Object.keys(ROLES).forEach(k => { const o = el('option', '', ROLES[k]); o.value = k; if (k === 'dev') o.selected = true; rs.append(o); });
+  const sq = el('select'); sq.id = 'ap-sq'; LANES.forEach(l => { const o = el('option', '', l.n); o.value = l.k; sq.append(o); });
+  const msg = el('div', 'sub2', '');
+  const go = () => {
+    const name = nn.value.trim(); if (!name) { nn.focus(); return; }
+    if (directory().has(name)) { msg.textContent = name + ' is already on the chart.'; return; }
+    const pid = 'p' + Date.now().toString(36);
+    extras[pid] = { n: name, role: rs.value, sq: sq.value };
+    write('people/' + pid, extras[pid]);
+    closePicker(); fillPersons(); render();
+    const row = $('grid').querySelector('.c1.pn[data-person="' + name.replace(/"/g, '\\"') + '"]');
+    if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest' });
+  };
+  nn.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+  const ab = el('button', 'btn primary', 'Add'); ab.type = 'button'; ab.addEventListener('click', go);
+  const cb = el('button', 'btn', 'Cancel'); cb.type = 'button'; cb.addEventListener('click', closePicker);
+  const bx = el('div', 'padd'); bx.append(nn, rs, sq, msg, ab, cb);
+  bx.style.gridTemplateColumns = '1fr'; p.append(bx);
+  placePop(anchor); nn.focus();
+}
+
+/* ---------- export ---------- */
+function csvCell(v) { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+async function exportCsv() {
+  if (!dl) return;
+  const head = ['Squad', 'Feature', 'Resources', 'Status', 'Start', 'End', 'Notes'];
+  const lines = [head.map(csvCell).join(',')];
+  LANES.forEach(l => items().filter(i => i.sq === l.k).sort(byOrd).forEach(it => {
+    lines.push([l.n, it.t, it.res.join('; '), STATUS[it.st], iso(it.d0), iso(it.d1), it.n || ''].map(csvCell).join(','));
+  }));
+  try { await dl.save({ filename: 'ynmo-h2-roadmap.csv', data: '﻿' + lines.join('\n') }); } catch (e) { /* declined or unavailable: nothing to do */ }
+}
+
+/* ---------- setup ---------- */
+
+/* ---------- Supabase: sign in, shared storage, live updates ---------- */
+const SUPABASE_URL = 'https://avgkenwdehtwynrswsck.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_3R60HvqQDeGHcbvkZ2uABg_0sI5jvZ1';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+function makeDb() {
+  const err = e => { const x = new Error((e && e.message) || 'error'); x.code = (e && (e.code === '42501' || /row-level/i.test(e.message || ''))) ? 'invalid_argument' : ((e && e.code) || 'error'); return x; };
+  const load = async t => { const r = await sb.from(t).select('id,data'); if (r.error) throw err(r.error); return { docs: r.data.map(x => ({ id: x.id, data: () => x.data || {} })) }; };
+  return {
+    doc(path) {
+      const p = path.split('/'), t = p[0], id = p[1];
+      return {
+        async set(d) { const r = await sb.from(t).upsert({ id: id, data: d }); if (r.error) throw err(r.error); },
+        async delete() { const r = await sb.from(t).delete().eq('id', id); if (r.error) throw err(r.error); }
+      };
+    },
+    collection(t) {
+      return {
+        get: () => load(t),
+        onSnapshot(cb, ecb) {
+          const run = () => load(t).then(cb).catch(e => { if (ecb) ecb(e); });
+          run();
+          sb.channel('rt-' + t).on('postgres_changes', { event: '*', schema: 'public', table: t }, run).subscribe();
+          setInterval(run, 30000);
+        }
+      };
+    }
+  };
+}
+function gate(title, fields, action, note) {
+  const g = $('gate'); g.hidden = false; g.textContent = '';
+  const c = el('form', 'gcard'); c.append(el('h2', '', title));
+  if (note) c.append(el('div', 'meta', note));
+  const inputs = {};
+  fields.forEach(f => { const l = el('label'); const i = el('input'); i.type = f.type; i.autocomplete = f.ac; i.required = true; i.id = f.id; inputs[f.id] = i; l.append(el('span', '', f.label));
+    if (f.type === 'password') {
+      const w = el('div', 'pwwrap'), t = el('button', 'pweye', 'Show'); t.type = 'button'; t.setAttribute('aria-label', 'Show password'); t.setAttribute('aria-pressed', 'false');
+      t.addEventListener('click', () => { const show = i.type === 'password'; i.type = show ? 'text' : 'password'; t.textContent = show ? 'Hide' : 'Show'; t.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); t.setAttribute('aria-pressed', String(show)); i.focus(); });
+      w.append(i, t); l.append(w);
+    } else l.append(i);
+    c.append(l); });
+  const msg = el('div', 'gerr'); msg.setAttribute('aria-live', 'polite');
+  const go = el('button', 'btn primary', action.label); go.type = 'submit';
+  c.append(msg, go);
+  if (action.extra) c.append(action.extra(inputs, msg));
+  c.addEventListener('submit', async e => { e.preventDefault(); go.disabled = true; msg.textContent = ''; try { await action.run(inputs); } catch (x) { msg.textContent = x.message || 'Something went wrong. Try again.'; } go.disabled = false; });
+  g.append(c);
+  const first = c.querySelector('input'); if (first) first.focus();
+}
+function showLogin() {
+  gate('Ynmo H2 Roadmap', [{ id: 'em', type: 'email', ac: 'username', label: 'Work email' }, { id: 'pw', type: 'password', ac: 'current-password', label: 'Password' }],
+    { label: 'Sign in',
+      run: async f => { const r = await sb.auth.signInWithPassword({ email: f.em.value.trim(), password: f.pw.value }); if (r.error) throw new Error('Email or password is not right.'); start(r.data.session); },
+      extra: (f, msg) => { const b = el('button', 'link', 'Forgot or first time? Email me a link'); b.type = 'button'; b.addEventListener('click', async () => { const e = f.em.value.trim(); if (!e) { msg.textContent = 'Type your email first.'; return; } const r = await sb.auth.resetPasswordForEmail(e, { redirectTo: location.origin + location.pathname }); msg.textContent = r.error ? 'Could not send the link. Ask the admin.' : 'If this email is on the team, a link is on its way.'; }); return b; } });
+}
+function showSetPw() {
+  gate('Set your password', [{ id: 'p1', type: 'password', ac: 'new-password', label: 'New password (8 characters or more)' }, { id: 'p2', type: 'password', ac: 'new-password', label: 'Repeat password' }],
+    { label: 'Save and continue',
+      run: async f => { if (f.p1.value.length < 8) throw new Error('Use at least 8 characters.'); if (f.p1.value !== f.p2.value) throw new Error('The two passwords do not match.'); const r = await sb.auth.updateUser({ password: f.p1.value }); if (r.error) throw new Error(r.error.message); const s2 = await sb.auth.getSession(); history.replaceState(null, '', location.pathname); start(s2.data.session); } });
+}
+let started = false;
+function start(session) {
+  if (started || !session) return; started = true;
+  $('gate').hidden = true; $('app').classList.remove('app-hidden');
+  $('who').textContent = session.user.email || '';
+  db = makeDb();
+  db.collection('items').onSnapshot(onSnap, () => setSave('error'));
+  db.collection('daysoff').onSnapshot(s => {
+    if (dragging) return;
+    daysoff = {}; s.docs.forEach(d => { daysoff[d.id] = d.data(); });
+    render(); if (offOpen) buildOff();
+  }, () => {});
+  db.collection('people').onSnapshot(s => {
+    extras = {}; s.docs.forEach(d => { extras[d.id] = d.data(); });
+    fillPersons(); if (picker && picker.id) buildPicker(); render();
+  }, () => {});
+  setSave('ready'); render();
+}
+async function boot() {
+  const invited = /type=(invite|recovery|signup)/.test(location.hash);
+  let sess = null;
+  try { sess = (await sb.auth.getSession()).data.session; } catch (e) { /* offline */ }
+  sb.auth.onAuthStateChange(ev => { if (ev === 'PASSWORD_RECOVERY' && !started) showSetPw(); });
+  if (sess && invited) showSetPw(); else if (sess) start(sess); else showLogin();
+}
+
+function init() {
+  const chips = $('chips');
+  LANES.forEach(l => {
+    const b = el('button', 'chip'); b.type = 'button'; b.style.setProperty('--c', l.c);
+    b.append(el('i'), document.createTextNode(l.n)); b.setAttribute('aria-pressed', 'true');
+    b.addEventListener('click', () => {
+      state.sq.has(l.k) ? state.sq.delete(l.k) : state.sq.add(l.k);
+      b.setAttribute('aria-pressed', String(state.sq.has(l.k))); render();
+    });
+    chips.append(b);
+  });
+  fillPersons();
+  $('person').addEventListener('change', e => { state.person = e.target.value; render(); });
+  $('status').addEventListener('change', e => { state.status = e.target.value; render(); });
+  $('q').addEventListener('input', e => { state.q = e.target.value; render(); });
+  $('clear').addEventListener('click', () => {
+    state.sq = new Set(LANES.map(l => l.k)); state.status = 'all'; state.person = 'all'; state.q = '';
+    $('status').value = 'all'; $('person').value = 'all'; $('q').value = '';
+    chips.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', 'true')); render();
+  });
+  const gr = $('grid');
+  gr.addEventListener('contextmenu', e => {
+    if (!canEdit()) return;
+    const bar = e.target.closest('.bar');
+    if (bar) {
+      const it = items().find(i => i.id === bar.dataset.id);
+      if (it) { e.preventDefault(); barMenu(it, bar.dataset.person, e.clientX, e.clientY); }
+      return;
+    }
+    const row = e.target.closest('.rowbg[data-person], .c1.pn');
+    if (row) { e.preventDefault(); rowMenu(row.dataset.person, e.clientX, e.clientY, row.classList.contains('rowbg') ? dayAt(e.clientX) : (todayK >= 0 ? todayK : 0)); }
+  });
+  gr.addEventListener('dblclick', e => {
+    if (!canEdit() || e.target.tagName === 'INPUT') return;
+    const bar = e.target.closest('.bar');
+    if (bar) { const it = items().find(i => i.id === bar.dataset.id); if (it) startEdit(it, bar.dataset.person); return; }
+    const row = e.target.closest('.rowbg[data-person]');
+    if (row) addAt(row.dataset.person, dayAt(e.clientX));
+  });
+  $('wrap').addEventListener('scroll', closeCtx);
+  window.addEventListener('resize', closeCtx);
+  document.addEventListener('pointerdown', e => { const c = $('ctx'); if (!c.hidden && !c.contains(e.target)) closeCtx(); }, true);
+  $('add').addEventListener('click', () => { if (canEdit()) addItem(); });
+  $('undo').addEventListener('click', undo);
+  $('daysoff').addEventListener('click', e => openOff(e.currentTarget));
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeCtx(); if (picker || offOpen) closePicker(); }
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+      const t = e.target && e.target.tagName;
+      if (t === 'TEXTAREA' || t === 'INPUT' || t === 'SELECT') return;
+      e.preventDefault(); undo();
+    }
+  });
+  let armed = false, t2 = 0; const rb = $('reset');
+  rb.addEventListener('click', () => {
+    if (!canEdit()) return;
+    if (armed) { armed = false; rb.textContent = 'Restore roadmap'; restoreAll(); return; }
+    armed = true; rb.textContent = 'Click again to restore'; clearTimeout(t2); t2 = setTimeout(() => { armed = false; rb.textContent = 'Restore roadmap'; }, 3500);
+  });
+  render();
+  $('export').addEventListener('click', exportCsv);
+  $('logout').addEventListener('click', async () => { try { await sb.auth.signOut(); } catch (e) { /* ignore */ } location.reload(); });
+  boot();
+}
+init();
+</script>
