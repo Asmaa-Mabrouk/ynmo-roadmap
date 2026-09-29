@@ -339,13 +339,80 @@ button.pill { cursor: pointer; }
 .mgrid .day.lv.we { opacity: .6; }
 .tlbody .btn { width: auto; justify-self: start; }
 
+/* ===== YNMO product skin (rail, pills, soft cards) ===== */
+:root { --surface-2: #eef3f1; --shadow: 0 2px 12px rgba(35, 45, 90, .07); --rail: 76px; --slate: #55608a; --top-h: 68px; }
+body { background: var(--bg); }
+body::before { content: ""; position: fixed; inset-block-start: -140px; inset-inline-start: calc(var(--rail) + 18%); width: 760px; height: 760px; background: var(--wm, none) center / contain no-repeat; opacity: .055; pointer-events: none; z-index: 0; }
+#shell { position: relative; z-index: 1; }
+#shell main { padding-inline-start: var(--rail); }
+.rail { position: fixed; inset-block: 0; inset-inline-start: 0; width: var(--rail); z-index: 45; background: var(--surface); border-inline-end: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 10px; }
+.rail .brand { padding: 4px 0 8px; }
+.rail .logo { width: 44px; height: 44px; }
+.rail .nav { flex-direction: column; gap: 6px; overflow: visible; width: 100%; padding: 0 8px; }
+.rail .nav button { display: grid; justify-items: center; gap: 2px; padding: 9px 2px 7px; border-radius: 14px; color: var(--muted); }
+.rail .nav button svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.rail .nav .lbl { font-size: 10.5px; font-weight: 700; line-height: 1.1; }
+.rail .nav button[aria-current="page"] { color: #fff; background: var(--brand); box-shadow: 0 6px 14px color-mix(in srgb, var(--brand) 32%, transparent); }
+.rail .nav .dot { top: 2px; right: 8px; }
+.topbar { margin-inline-start: var(--rail); height: var(--top-h); padding: 0 24px; background: var(--surface); border-bottom: 1px solid var(--line); box-shadow: 0 1px 8px rgba(35, 45, 90, .04); backdrop-filter: none; }
+.ptitle { display: grid; line-height: 1.15; }
+.ptitle small { color: var(--muted); font-size: 12.5px; font-weight: 600; }
+.ptitle b { font-size: 1.35rem; }
+.avbtn { width: auto; height: 48px; border-radius: 14px; border: 0; background: var(--surface-2); padding: 5px 12px 5px 6px; gap: 8px; display: inline-flex; align-items: center; }
+.avbtn::after { content: ""; width: 12px; height: 12px; background: no-repeat center / contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 4.2 6 8l4-3.8' fill='none' stroke='%235a6180' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+.avbtn:hover, .avbtn[aria-expanded="true"] { background: color-mix(in srgb, var(--brand) 12%, var(--surface-2)); }
+.umenu { top: calc(var(--top-h) - 6px); inset-inline-end: 16px; right: auto; border: 0; box-shadow: 0 16px 40px rgba(20, 25, 60, .18); border-radius: 14px; }
+.page { padding-inline: 24px; }
+.pghead h1 { font-size: 1.6rem; }
+.drawer { top: var(--top-h); }
+/* pill buttons */
+.btn { border-radius: 999px; padding: 8px 18px; border-width: 1.5px; box-shadow: none; }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+.btn.primary:hover:not(:disabled) { background: color-mix(in srgb, var(--brand) 88%, #000); }
+.btn.sm { padding: 4px 12px; }
+#add::after, .btn.primary[type=submit]#x::after { content: ""; display: inline-block; width: 18px; height: 18px; margin-inline-start: 8px; vertical-align: -4px; background: no-repeat center / contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Ccircle cx='9' cy='9' r='7.6' fill='none' stroke='white' stroke-width='1.4'/%3E%3Cpath d='M9 5.5v7M5.5 9h7' stroke='white' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E"); }
+#ideasbtn, #daysoff { background: var(--slate); border-color: var(--slate); color: #fff; }
+#ideasbtn:hover, #daysoff:hover { background: color-mix(in srgb, var(--slate) 88%, #000); }
+/* filter-card selects */
+select { appearance: none; -webkit-appearance: none; border: 0; border-radius: 12px; box-shadow: var(--shadow); background: #fff no-repeat right 8px center / 22px 22px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 22'%3E%3Crect width='22' height='22' rx='6' fill='%230d8560'/%3E%3Cpath d='M6.5 9 11 13.5 15.5 9' fill='none' stroke='white' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); padding: 9px 38px 9px 14px; font-weight: 600; }
+select:disabled { box-shadow: none; }
+input[type="search"], input[type="text"], input[type="date"], input[type="number"], textarea { border: 0; border-radius: 12px; box-shadow: var(--shadow); padding: 9px 14px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.chip { border-radius: 999px; box-shadow: var(--shadow); border-color: transparent; background: #fff; font-weight: 600; }
+.chip[aria-pressed="true"] { border-color: var(--c); }
+/* cards */
+.card, .col { border: 0; border-radius: 16px; box-shadow: var(--shadow); }
+.col { background: color-mix(in srgb, var(--c) 7%, #fff); }
+.card h2 { color: var(--brand-2); }
+.icard { border: 0; border-radius: 14px; box-shadow: var(--shadow); }
+.chartwrap { border: 0; border-radius: 16px; box-shadow: var(--shadow); }
+.badge { border-radius: 999px; padding: 2px 10px; }
+.tbl th { text-transform: none; letter-spacing: 0; font-size: 12.5px; }
+.gate { position: relative; }
+@media (max-width: 720px) {
+  :root { --rail: 0px; --top-h: 60px; }
+  .rail { inset-block: auto 0; inset-inline: 0; width: auto; height: 62px; flex-direction: row; padding: 4px 6px; border-inline-end: 0; border-top: 1px solid var(--line); justify-content: center; }
+  .rail .brand { display: none; }
+  .rail .nav { flex-direction: row; justify-content: space-around; padding: 0; }
+  .rail .nav button { flex: 1; padding: 6px 0 4px; }
+  #shell main { padding-bottom: 76px; }
+  .topbar { padding: 0 14px; }
+  .page { padding-inline: 14px; }
+}
+body { margin: 0; }
+.rail .nav .lbl { font-size: 10px; letter-spacing: -.01em; }
+.topbar { margin-inline-start: 0; padding-inline-start: calc(var(--rail) + 24px); }
+
 </style>
 
 <div class="gate" id="gate" hidden></div>
 <div id="shell" class="app-hidden">
-<header class="topbar">
-  <div class="brand"><img class="logo" id="toplogo" alt="Ynmo"><span>Ynmo Roadmaps</span></div>
+<aside class="rail" aria-label="Main">
+  <div class="brand"><img class="logo" id="toplogo" alt="Ynmo"></div>
   <nav class="nav" id="nav" aria-label="Pages"></nav>
+</aside>
+<header class="topbar">
+  <div class="ptitle"><small>Ynmo Roadmaps</small><b id="ptitle">Roadmap</b></div>
   <div class="spacer"></div>
   <button class="avbtn" id="avbtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Account menu"></button>
 </header>
@@ -1974,12 +2041,21 @@ function showPage(p) {
   state.page = p; closeCtx(); closePicker();
   PAGES.forEach(x => { $('pg-' + x[0]).hidden = x[0] !== p; });
   document.querySelectorAll('#nav button').forEach(b => { if (b.dataset.p === p) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+  const pt = $('ptitle'); if (pt) pt.textContent = (PAGES.find(x => x[0] === p) || [0, ''])[1];
   if (location.hash !== '#/' + p) window.history.replaceState(null, '', '#/' + p);
   renderPage(p);
 }
+const NAV_ICONS = {
+  roadmap: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9M4 12h14M4 18h7" /><path d="M16 6h4M20 18h-6" /></svg>',
+  ideas: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2v.1h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z" /></svg>',
+  roadmaps: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5-9-5zM3 13l9 5 9-5M3 17.5 12 22l9-4.5" /></svg>',
+  resources: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 5.2a3.2 3.2 0 0 1 0 5.6M18 14.3c1.8.8 3 2.6 3 4.7" /></svg>',
+  vacations: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M8 3v4M16 3v4M3.5 10h17M9 15l2 2 4-4" /></svg>',
+  log: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>'
+};
 function buildNav() {
   const n = $('nav'); n.textContent = '';
-  PAGES.forEach(x => { const b = el('button', '', x[1]); b.type = 'button'; b.dataset.p = x[0]; if (x[0] === 'resources') { const d = el('span', 'dot', '0'); d.hidden = true; b.append(d); } b.addEventListener('click', () => showPage(x[0])); n.append(b); });
+  PAGES.forEach(x => { const b = el('button', ''); b.type = 'button'; b.dataset.p = x[0]; b.title = x[1]; b.setAttribute('aria-label', x[1]); b.insertAdjacentHTML('beforeend', NAV_ICONS[x[0]] || ''); b.append(el('span', 'lbl', x[1])); if (x[0] === 'resources') { const d = el('span', 'dot', '0'); d.hidden = true; b.append(d); } b.addEventListener('click', () => showPage(x[0])); n.append(b); });
 }
 let started = false;
 function start() {
@@ -2073,7 +2149,7 @@ function init() {
   });
   render();
   $('export').addEventListener('click', exportCsv);
-  $('toplogo').src = LOGO;
+  $('toplogo').src = LOGO; document.documentElement.style.setProperty('--wm', 'url(' + LOGO + ')');
   const av = $('avbtn'), um = $('umenu');
   av.addEventListener('click', e => { e.stopPropagation(); um.hidden = !um.hidden; av.setAttribute('aria-expanded', String(!um.hidden)); });
   document.addEventListener('pointerdown', e => { if (!um.hidden && !um.contains(e.target) && !av.contains(e.target)) { um.hidden = true; av.setAttribute('aria-expanded', 'false'); } });
