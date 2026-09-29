@@ -296,6 +296,15 @@ button.pill { cursor: pointer; }
 .gcard .formrow { justify-content: center; }
 .gcard .btn { width: 100%; margin-top: 8px; }
 
+.icard .ihead { display: flex; align-items: center; gap: 6px; }
+.icard .ihead .ititle { flex: 1; min-width: 0; }
+.kebab { flex: none; width: 32px; height: 32px; border-radius: 8px; border: 1.5px solid transparent; background: transparent; font-size: 20px; line-height: 1; font-weight: 800; color: var(--muted); cursor: pointer; }
+.kebab:hover:not(:disabled), .kebab:focus-visible { border-color: var(--line); background: var(--surface); color: var(--ink); }
+.padd { display: grid; gap: 10px; }
+.padd label { display: grid; gap: 4px; font-size: 12.5px; font-weight: 700; }
+.padd select, .padd input { width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; padding: 8px 10px; min-height: 36px; border: 1.5px solid var(--line, #d9d6cc); border-radius: 8px; background: var(--surface, #fff); color: var(--ink); }
+.padd + .btn, #pop .btn { width: 100%; margin-top: 6px; }
+
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -1582,25 +1591,49 @@ function openSchedule(id, anchor) {
 function ideaCard(id, i) {
   const c = el('div', 'icard' + (i.st === 'dropped' || i.st === 'scheduled' ? ' done' : ''));
   const ed = canEdit();
-  const t = el('input', 'ititle'); t.value = i.t; t.maxLength = 140; t.disabled = !ed; t.setAttribute('aria-label', 'Idea title');
-  t.addEventListener('change', () => { const v = t.value.trim(); if (v) saveIdea(id, { t: v }, 'idea', 'renamed idea "' + i.t + '" to "' + v + '"'); else t.value = i.t; });
-  const n = el('textarea'); n.value = i.n || ''; n.placeholder = 'Notes: why it matters, who asked, links'; n.disabled = !ed;
-  n.addEventListener('change', () => saveIdea(id, { n: n.value }, 'idea', 'edited notes of idea "' + i.t + '"'));
-  const r1 = el('div', 'row2');
-  const im = selOf(LMH, i.im || 2), ef = selOf(LMH, i.ef || 2), st = selOf(ISTAT, i.st || 'idea');
-  im.disabled = ef.disabled = st.disabled = !ed; im.setAttribute('aria-label', 'Impact'); ef.setAttribute('aria-label', 'Effort'); st.setAttribute('aria-label', 'Status');
-  im.addEventListener('change', () => { saveIdea(id, { im: +im.value }, 'idea', 'impact of "' + i.t + '": ' + im.selectedOptions[0].text); renderIdeas(true); });
-  ef.addEventListener('change', () => { saveIdea(id, { ef: +ef.value }, 'idea', 'effort of "' + i.t + '": ' + ef.selectedOptions[0].text); renderIdeas(true); });
-  st.addEventListener('change', () => { saveIdea(id, { st: st.value }, 'idea', 'status of "' + i.t + '": ' + st.selectedOptions[0].text); renderIdeas(true); });
-  const lab = (x, s) => { const w = el('label', 'hint'); w.append(document.createTextNode(x + ' '), s); return w; };
-  r1.append(lab('Impact', im), lab('Effort', ef));
-  const r2 = el('div', 'row2'); r2.append(st, el('span', 'score', 'Score ' + ideaScore(i)));
-  c.append(t, n, r1, r2);
+  const d = { t: i.t, n: i.n || '', im: i.im || 2, ef: i.ef || 2 };
+  const head = el('div', 'ihead');
+  const t = el('input', 'ititle'); t.value = d.t; t.maxLength = 140; t.disabled = !ed; t.setAttribute('aria-label', 'Idea title');
+  const more = el('button', 'kebab', '⋯'); more.type = 'button'; more.setAttribute('aria-label', 'More actions for ' + i.t); more.setAttribute('aria-haspopup', 'menu'); more.disabled = !ed;
+  head.append(t, more);
+  const n = el('textarea'); n.value = d.n; n.placeholder = 'Notes: why it matters, who asked, links'; n.disabled = !ed;
+  const im = selOf(LMH, d.im), ef = selOf(LMH, d.ef);
+  im.disabled = ef.disabled = !ed; im.setAttribute('aria-label', 'Impact'); ef.setAttribute('aria-label', 'Effort');
+  const lab = (x, sel) => { const w = el('label', 'hint'); w.append(document.createTextNode(x + ' '), sel); return w; };
+  const r1 = el('div', 'row2'); r1.append(lab('Impact', im), lab('Effort', ef));
+  const score = el('span', 'score', 'Score ' + ideaScore(i));
+  const stat = el('span', 'badge' + (i.st === 'scheduled' ? ' ok' : ''), (ISTAT.find(x => x[0] === (i.st || 'idea')) || ISTAT[0])[1]);
+  const save = el('button', 'btn primary sm', 'Save'); save.type = 'button'; save.hidden = true;
+  const saved = el('span', 'hint', ''); 
+  const r2 = el('div', 'row2'); r2.append(stat, score);
   const r3 = el('div', 'row2');
   if (i.st === 'scheduled') { const rr = allRoadmaps().find(x => x.id === i.rm); r3.append(el('span', 'badge ok', 'On ' + (rr ? rr.n : 'a roadmap'))); }
-  else if (ed) { const b = el('button', 'btn primary sm', 'Add to roadmap'); b.type = 'button'; b.addEventListener('click', () => openSchedule(id, b)); r3.append(b); }
-  if (ed) { let armed = false; const del = el('button', 'btn danger sm', 'Delete'); del.type = 'button'; del.style.marginInlineStart = 'auto'; del.addEventListener('click', () => { if (armed) { logAct('idea', 'deleted idea "' + i.t + '"'); delete ideas[id]; write('ideas/' + id, null); renderIdeas(true); renderDrawer(); return; } armed = true; del.textContent = 'Click again'; setTimeout(() => { armed = false; del.textContent = 'Delete'; }, 3000); }); r3.append(del); }
-  c.append(r3); return c;
+  r3.append(save, saved);
+  const dirty = () => t.value.trim() !== i.t || n.value !== (i.n || '') || +im.value !== (i.im || 2) || +ef.value !== (i.ef || 2);
+  const mark = () => { const dv = dirty(); save.hidden = !dv; saved.textContent = ''; score.textContent = 'Score ' + ideaScore({ im: +im.value, ef: +ef.value }); };
+  [t, n].forEach(x => x.addEventListener('input', mark)); [im, ef].forEach(x => x.addEventListener('change', mark));
+  const doSave = () => {
+    const v = t.value.trim(); if (!v) { t.focus(); return false; }
+    if (!dirty()) return true;
+    saveIdea(id, { t: v, n: n.value, im: +im.value, ef: +ef.value }, 'idea', 'saved idea "' + v + '"' + (v !== i.t ? ' (was "' + i.t + '")' : ''));
+    return true;
+  };
+  save.addEventListener('click', () => { if (doSave()) renderIdeas(true); });
+  c.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !save.hidden) { e.preventDefault(); save.click(); } });
+  more.addEventListener('click', e => {
+    e.stopPropagation(); const r = more.getBoundingClientRect();
+    openCtx(r.right - 190, r.bottom + 4, m => {
+      if (i.st !== 'scheduled') mi(m, 'Add to roadmap…', b => { if (!doSave()) return; openSchedule(id, more); });
+      else mi(m, 'Show on roadmap', () => { if (i.rm) useRoadmap(i.rm); showPage('roadmap'); });
+      if (i.st !== 'scheduled') {
+        mi(m, (i.st === 'shortlisted' ? '✓ ' : '') + 'Shortlist', () => { saveIdea(id, { st: i.st === 'shortlisted' ? 'idea' : 'shortlisted' }, 'idea', (i.st === 'shortlisted' ? 'unshortlisted "' : 'shortlisted "') + i.t + '"'); renderIdeas(true); });
+        mi(m, i.st === 'dropped' ? 'Reopen idea' : 'Drop idea', () => { saveIdea(id, { st: i.st === 'dropped' ? 'idea' : 'dropped' }, 'idea', (i.st === 'dropped' ? 'reopened "' : 'dropped "') + i.t + '"'); renderIdeas(true); });
+      }
+      m.append(el('div', 'msep'));
+      mi(m, 'Delete idea', () => { if (!window.confirm('Delete "' + i.t + '"?')) return; logAct('idea', 'deleted idea "' + i.t + '"'); delete ideas[id]; write('ideas/' + id, null); renderIdeas(true); renderDrawer(); }, 'danger');
+    });
+  });
+  c.append(head, n, r1, r2, r3); return c;
 }
 function renderIdeas(force) {
   const root = $('pg-ideas'), ae = document.activeElement;
