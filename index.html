@@ -1591,7 +1591,7 @@ function showSignup() {
   bindSubmit(c, async m => {
     if (pw.input.value.length < 8) throw new Error('Use at least 8 characters.');
     const r = await sb.auth.signUp({ email: em.input.value.trim(), password: pw.input.value, options: { data: { name: nm.input.value.trim(), role: jb.input.value, avatar: sel.v }, emailRedirectTo: location.origin + location.pathname } });
-    if (r.error) throw new Error(r.error.message);
+    if (r.error) throw new Error(/rate|limit|429/i.test(r.error.message || '') ? 'Too many sign-up emails were sent in the last hour, so Supabase paused new sign-ups. Nothing is wrong with your details. Please try again in about an hour, or ask the admin to add you directly.' : r.error.message);
     if (r.data && r.data.session) { await afterAuth(r.data.session); return; }
     showCheckEmail(em.input.value.trim());
   });
