@@ -507,6 +507,11 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 @keyframes slide { from { left: -35%; } to { left: 100%; } }
 @media (prefers-reduced-motion: reduce) { .ldgring::before, .ldgring img, .prog::after, .btn.busy::after { animation-duration: 3s; } }
 
+/* ideas cards: controls no longer collide */
+.row2 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.row2 label.hint { display: inline-flex; align-items: center; gap: 8px; margin: 0; white-space: nowrap; }
+.row2 select { width: 122px; padding: 7px 38px 7px 12px; font-size: 13.5px; }
+
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -2798,8 +2803,7 @@ function initExtras() {
     gb.title = 'Show where the saved baseline had each bar as a thin amber line';
     gb.addEventListener('click', () => { ghostOn = !ghostOn; try { localStorage.setItem('ynmo-ghost', ghostOn ? '1' : '0'); } catch (e) { /* storage unavailable */ } render(); });
     const sh = el('button', 'btn', 'Share'); sh.type = 'button'; sh.id = 'sharebtn'; sh.addEventListener('click', openShare);
-    const cl = el('button', 'btn danger', 'Clear all'); cl.type = 'button'; cl.id = 'clearbtn'; cl.title = 'Remove every feature from this roadmap'; cl.addEventListener('click', openClear);
-    today.after(gb, sh, cl);
+    today.after(gb, sh);
   }
   netBar(); netShow();
 }
