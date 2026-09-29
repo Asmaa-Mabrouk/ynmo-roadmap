@@ -63,9 +63,10 @@ export function renderCapacity() {
       if (c.pct === null) { lab = c.leave ? 'Leave' : '–'; cls = c.leave ? 'lv' : 'none'; }
       else if (c.pct === Infinity) { lab = 'Leave!'; cls = 'x3'; }
       else { lab = c.pct + '%'; cls = c.pct === 0 ? 'none' : c.pct <= 70 ? 'lo' : c.pct <= 100 ? 'ok' : c.pct <= 150 ? 'x2' : 'x3'; }
-      td.classList.add(cls); td.textContent = lab;
+      const part = c.leave > 0 && c.pct !== null && c.pct !== Infinity;   // some, not all, days on leave
+      td.classList.add(cls); td.textContent = lab + (part ? ' ⚑' : '');
       td.title = r.name + ': ' + c.sched + ' bar-days on ' + c.avail + ' available day(s)' + (c.leave ? ', ' + c.leave + ' on leave' : '') + (c.its.length ? '\n' + c.its.join('\n') : '');
-      td.setAttribute('aria-label', r.name + ' ' + lab + (c.its.length ? ', ' + c.its.join(', ') : '')); tr.append(td);
+      td.setAttribute('aria-label', r.name + ' ' + lab + (part ? ', ' + c.leave + ' leave day(s)' : '') + (c.its.length ? ', ' + c.its.join(', ') : '')); tr.append(td);
     });
     tb.append(tr);
   });

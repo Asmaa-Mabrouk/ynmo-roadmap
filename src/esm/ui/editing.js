@@ -5,11 +5,11 @@
  * Dependencies are explicit ES imports; shared mutable state lives in `S` (core/state.js).
  */
 import { S } from '../core/state.js';
-import { $, COLORS, LANES, NDAYS, ROLES, STATUS, canEdit, dayFromIso, directory, el, iso, items, state } from '../core/model.js';
+import { $, COLORS, LANES, NDAYS, ROLES, STATUS, canEdit, dayFromIso, dlabel, directory, el, iso, items, state } from '../core/model.js';
 import { lockCheck, trackPres } from '../features/presence.js';
 import { render } from './gantt-render.js';
 import { commit, persist, pushHistory, removeItem, write } from '../core/saving.js';
-import { logAct } from '../core/shared.js';
+import { logAct, toast } from '../core/shared.js';
 import { curRm } from '../pages/roadmaps.js';
 import { closePicker, fillPersons, openPicker, placePop } from './people-picker.js';
 import { depsOf, openDeps, toggleMilestone } from '../features/dependencies.js';
@@ -69,7 +69,9 @@ export function barMenu(it, owner, x, y) {
     mlab(c, 'Dates');
     const dr = el('div', 'mrow');
     const dateIn = (val, on) => { const i = el('input'); i.type = 'date'; i.min = iso(0); i.max = iso(NDAYS - 1); i.value = iso(val); i.addEventListener('change', () => { const k = dayFromIso(i.value); if (k === null) return; closeCtx(); on(k); }); return i; };
-    dr.append(dateIn(it.d0, k => commit(it.id, { d0: k, d1: Math.max(k, it.d1) })), dateIn(it.d1, k => commit(it.id, { d1: k, d0: Math.min(k, it.d0) })));
+    dr.append(
+      dateIn(it.d0, k => { if (k > it.d1) toast('Start is after the end, so the end moved to ' + dlabel(k) + '.'); commit(it.id, { d0: k, d1: Math.max(k, it.d1) }); }),
+      dateIn(it.d1, k => { if (k < it.d0) toast('End is before the start, so the start moved to ' + dlabel(k) + '.'); commit(it.id, { d1: k, d0: Math.min(k, it.d0) }); }));
     c.append(dr);
     c.append(el('div', 'msep'));
     mi(c, 'Assign people…' + (it.res.length ? ' (' + it.res.length + ')' : ''), b => openPicker(it.id, b));

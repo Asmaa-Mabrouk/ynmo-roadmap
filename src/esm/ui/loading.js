@@ -29,7 +29,8 @@ export function progress(on) {
 
 /* typing #/login, #/signup or #/forgot while signed out opens that screen */
 window.addEventListener('hashchange', () => {
-  if (started || S.SHARE) return;
+  if (S.SHARE) { if (!/^#\/share\//.test(location.hash)) location.reload(); return; }   // leaving a share view (or a dead link) = normal boot
+  if (started) return;
   const h = (location.hash.match(/^#\/(\w+)/) || [])[1];
   if (h === 'signup') showSignup(); else if (h === 'forgot') showForgot(); else if (h === 'login') showLogin();
 });

@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased – Engineering hygiene
+- **Fixes from the live QA run:** a realtime refresh could revert an edit that was still being saved (new roadmap not selected for Editors, column "Move left" appearing to do nothing) - now unsaved local documents are kept (`snapDocs`); deleting a roadmap returns its scheduled ideas to the backlog; leaving a dead share link by URL works; stale vacation notice cleared; "1 dependency" wording; partial-leave weeks flagged on Capacity (⚑); schedule/remove-column confirmations; reversed-date explanation; edit hint hidden for viewers/shared; rename box no longer clipped on narrow bars.
 - Test suite consolidated: `tests/run_all.sh` (build check, lint, feature scripts, CSP check on `dist/`, 88 scenarios) – all green.
 - **Native ES modules** (`src/esm`, 31 modules) with explicit imports/exports; shared mutable state consolidated in `core/state.js`; `lint.mjs` guards the module graph; esbuild bundles to the single-file deploy.
 - Fixed latent name clash: the undo stack was called `history` (shadowing `window.history`); now `S.undoStack`.

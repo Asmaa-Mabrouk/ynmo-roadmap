@@ -62,7 +62,7 @@ function removeCol(c) {
   const n = colCount(c.k);
   if (n) { toast('"' + c.n + '" still has ' + n + ' idea' + (n === 1 ? '' : 's') + '. Move or delete them first.'); return; }
   if (c.builtin) { saveIdea('cfg_' + c.k, { cfg: true, k: c.k, n: c.n, c: c.c, hidden: true }, 'idea', 'hid product column "' + c.n + '"'); }
-  else { logAct('idea', 'removed product column "' + c.n + '"'); delete S.ideas[c.k]; write('ideas/' + c.k, null); }
+  else { logAct('idea', 'removed product column "' + c.n + '"'); delete S.ideas[c.k]; write('ideas/' + c.k, null); toast('Removed column "' + c.n + '".'); }
   renderIdeas(true); renderDrawer();
 }
 function saveOrder(keys) { saveIdea('colorder', { cfg: true, ord: keys }, null); }

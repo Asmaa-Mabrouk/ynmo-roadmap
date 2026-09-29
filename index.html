@@ -525,6 +525,12 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .icard .grip { position: absolute; top: 2px; left: 50%; transform: translateX(-50%) rotate(90deg); font-size: 14px; line-height: 1; letter-spacing: -2px; color: var(--muted); cursor: grab; padding: 2px 10px; user-select: none; touch-action: none; }
 .icard .grip:hover { color: var(--brand); }
 
+
+/* read-only viewers and share-link visitors cannot edit, so the editing hint is hidden */
+.viewer .pghead .sub, .shared .pghead .sub { display: none; }
+
+/* a bar being renamed must show the whole input even when the bar is narrow (week/month zoom) */
+.bar:has(.bi) { overflow: visible; z-index: 40; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -1043,594 +1049,6 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     return s;
   }
 
-  // src/esm/pages/roadmaps.js
-  function allRoadmaps() {
-    return [H2].concat(Object.keys(S.roadmaps).map((id) => Object.assign({ id }, S.roadmaps[id])).filter((r) => r.a && r.b).sort((x, y) => x.a < y.a ? -1 : 1));
-  }
-  function curRm() {
-    return allRoadmaps().find((r) => r.id === state.rm) || H2;
-  }
-  function withRm(id, fn) {
-    const keep = state.rm, r = allRoadmaps().find((x) => x.id === id) || H2;
-    state.rm = r.id;
-    setRange(r.a, r.b);
-    try {
-      return fn();
-    } finally {
-      const k = allRoadmaps().find((x) => x.id === keep) || H2;
-      state.rm = k.id;
-      setRange(k.a, k.b);
-    }
-  }
-  function useRoadmap(id) {
-    const r = allRoadmaps().find((x) => x.id === id) || H2;
-    state.rm = r.id;
-    setRange(r.a, r.b);
-    state.open = null;
-    try {
-      localStorage.setItem("ynmo-rm", r.id);
-    } catch (e) {
-    }
-    fillRm();
-    render();
-  }
-  function fillRm() {
-    const s = $("rmsel");
-    s.textContent = "";
-    allRoadmaps().forEach((r) => {
-      const o = el("option", "", r.n);
-      o.value = r.id;
-      if (r.id === state.rm) o.selected = true;
-      s.append(o);
-    });
-    $("rmtitle").textContent = curRm().n + " roadmap";
-    const rs = $("reset");
-    if (rs) rs.textContent = state.rm === H2_ID ? "Restore roadmap" : "Clear roadmap";
-  }
-  function rangeFor(kind, year) {
-    const m = { Q1: [0, 2], Q2: [3, 5], Q3: [6, 8], Q4: [9, 11], H1: [0, 5], H2: [6, 11], Year: [0, 11] }[kind] || [0, 11], y = +year;
-    return [new Date(Date.UTC(y, m[0], 1)).toISOString().slice(0, 10), new Date(Date.UTC(y, m[1] + 1, 0)).toISOString().slice(0, 10)];
-  }
-  var KIND_LABEL = { Q1: "Q1", Q2: "Q2", Q3: "Q3", Q4: "Q4", H1: "H1", H2: "H2", Year: "Full year", Custom: "Custom" };
-  function createRoadmap(name, kind, a, b, copyFrom) {
-    const id = "r" + Date.now().toString(36);
-    let copies = [];
-    if (copyFrom) copies = withRm(copyFrom, () => items());
-    S.roadmaps[id] = { n: name, kind, a, b, by: S.me ? S.me.name : "" };
-    write("roadmaps/" + id, S.roadmaps[id]);
-    const nd = Math.round((parseIso(b) - parseIso(a)) / DAY) + 1;
-    copies.forEach((it, n) => {
-      if (it.d0 >= nd) return;
-      const nid = "c" + Date.now().toString(36) + n;
-      S.over[nid] = { custom: true, rm: id, t: it.t, n: it.n || "", sq: it.sq, pr: it.pr.slice(), d0: it.d0, d1: Math.min(it.d1, nd - 1), st: it.st === "done" ? "planned" : it.st, res: it.res.slice(), c: it.c || null, ord: it.ord };
-      persist(nid);
-    });
-    logAct("roadmap", 'created roadmap "' + name + '" (' + fmtIso(a) + " to " + fmtIso(b) + ")" + (copies.length ? " with " + copies.length + " features copied" : ""));
-    return id;
-  }
-  function deleteRoadmap(id) {
-    const r = S.roadmaps[id];
-    if (!r) return;
-    Object.keys(S.over).forEach((k) => {
-      if (!base.has(k) && S.over[k].rm === id) {
-        delete S.over[k];
-        persist(k);
-      }
-    });
-    delete S.roadmaps[id];
-    write("roadmaps/" + id, null);
-    logAct("roadmap", 'deleted roadmap "' + r.n + '"');
-    if (state.rm === id) useRoadmap(H2_ID);
-  }
-  function renderRoadmaps() {
-    const root = $("pg-roadmaps");
-    root.textContent = "";
-    root.append(pageHead("Roadmaps", "Create a roadmap for a quarter, half year or the whole year. Each roadmap has its own timeline; people, ideas and leave are shared."));
-    const f = el("form", "card");
-    f.append(el("h2", "", "New roadmap"));
-    const yr = selOf([2026, 2027, 2028, 2029], 2027), kd = selOf(Object.keys(KIND_LABEL).map((k) => [k, KIND_LABEL[k]]), "Q1");
-    const nm = el("input");
-    nm.type = "text";
-    nm.maxLength = 60;
-    nm.required = true;
-    const da = el("input");
-    da.type = "date";
-    const db2 = el("input");
-    db2.type = "date";
-    const cp = selOf([["", "Start empty"]].concat(allRoadmaps().map((r) => [r.id, "Copy features from " + r.n])), "");
-    const auto = () => {
-      if (nm.dataset.touched) return;
-      nm.value = kd.value === "Custom" ? "" : kd.value === "Year" ? "Full year " + yr.value : kd.value + " " + yr.value;
-    };
-    const sync = () => {
-      const cu = kd.value === "Custom";
-      da.parentElement.hidden = db2.parentElement.hidden = !cu;
-      if (!cu) {
-        const r = rangeFor(kd.value, yr.value);
-        da.value = r[0];
-        db2.value = r[1];
-      }
-      auto();
-    };
-    nm.addEventListener("input", () => {
-      nm.dataset.touched = "1";
-    });
-    yr.addEventListener("change", sync);
-    kd.addEventListener("change", sync);
-    const row = el("div", "formrow");
-    row.append(fld("Name", nm), fld("Year", yr), fld("Scope", kd), fld("From", da), fld("To", db2), fld("Features", cp));
-    const go = el("button", "btn primary", "Create roadmap");
-    go.type = "submit";
-    go.disabled = !canEdit();
-    const msg = el("div", "gerr");
-    f.append(row, msg, go);
-    sync();
-    f.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const a = da.value, b = db2.value;
-      if (parseIso(a) === null || parseIso(b) === null || parseIso(b) < parseIso(a)) {
-        msg.textContent = "Pick a valid date range.";
-        return;
-      }
-      if ((parseIso(b) - parseIso(a)) / DAY > 730) {
-        msg.textContent = "Keep a roadmap within two years.";
-        return;
-      }
-      const nmv = nm.value.trim();
-      if (!nmv) {
-        msg.textContent = "Give the roadmap a name.";
-        return;
-      }
-      if (allRoadmaps().some((r) => r.n.trim().toLowerCase() === nmv.toLowerCase())) {
-        msg.textContent = 'A roadmap called "' + nmv + '" already exists. Choose another name.';
-        return;
-      }
-      const id = createRoadmap(nmv, kd.value, a, b, cp.value);
-      useRoadmap(id);
-      showPage("roadmap");
-    });
-    root.append(f);
-    const g = el("div", "rmgrid");
-    allRoadmaps().forEach((r) => {
-      const c = el("div", "card rmcard" + (r.id === state.rm ? " on" : ""));
-      const n = withRm(r.id, () => items().length);
-      const linked = Object.values(S.ideas).filter((i) => i.rm === r.id && i.st === "scheduled").length;
-      c.append(el("h3", "", r.n), el("div", "meta", fmtIso(r.a) + " to " + fmtIso(r.b)), el("div", "meta", n + " features · " + linked + " from ideas"));
-      const act = el("div", "actions");
-      const open = el("button", "btn primary sm", r.id === state.rm ? "Open (current)" : "Open");
-      open.type = "button";
-      open.addEventListener("click", () => {
-        useRoadmap(r.id);
-        showPage("roadmap");
-      });
-      act.append(open);
-      if (!r.builtin && canEdit()) {
-        let armed = false;
-        const del = el("button", "btn danger sm", "Delete");
-        del.type = "button";
-        del.addEventListener("click", () => {
-          if (armed) {
-            deleteRoadmap(r.id);
-            renderRoadmaps();
-            return;
-          }
-          armed = true;
-          del.textContent = "Click again to delete";
-          setTimeout(() => {
-            armed = false;
-            del.textContent = "Delete";
-          }, 3500);
-        });
-        act.append(del);
-      }
-      c.append(act);
-      g.append(c);
-    });
-    root.append(g);
-  }
-
-  // src/esm/ui/export.js
-  function csvCell(v) {
-    v = String(v == null ? "" : v);
-    if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;
-    return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
-  }
-  async function exportCsv() {
-    if (!dl) return;
-    const head = ["Squad", "Feature", "Resources", "Status", "Start", "End", "Notes"];
-    const lines = [head.map(csvCell).join(",")];
-    LANES.forEach((l) => items().filter((i) => i.sq === l.k).sort(byOrd).forEach((it) => {
-      lines.push([l.n, it.t, it.res.join("; "), STATUS[it.st], iso(it.d0), iso(it.d1), it.n || ""].map(csvCell).join(","));
-    }));
-    try {
-      await dl.save({ filename: "ynmo-" + slug(curRm().n) + "-roadmap.csv", data: "\uFEFF" + lines.join("\n") });
-    } catch (e) {
-    }
-  }
-
-  // src/esm/features/log-tools.js
-  function allLogs() {
-    const seen = /* @__PURE__ */ new Set(), out = [];
-    S.logs.concat(S.logsOld).forEach((l) => {
-      if (!seen.has(l.id)) {
-        seen.add(l.id);
-        out.push(l);
-      }
-    });
-    return out.sort((a, b) => a.data.at < b.data.at ? 1 : -1);
-  }
-  async function loadOlderLogs() {
-    if (S.logsBusy) return;
-    S.logsBusy = true;
-    try {
-      const have = allLogs().length;
-      const r = await sb.from("activity").select("id,data").order("updated_at", { ascending: false }).range(have, have + ACTIVE_LOG_PAGE - 1);
-      if (r.error) throw new Error(r.error.message);
-      const rows = (r.data || []).map((x) => ({ id: x.id, data: x.data || {} }));
-      S.logsOld = S.logsOld.concat(rows);
-      S.logsMore = rows.length >= ACTIVE_LOG_PAGE;
-    } catch (e) {
-      toast("Could not load older entries. Try again.");
-    }
-    S.logsBusy = false;
-    if (state.page === "log") renderLog();
-  }
-  async function exportLog(rows) {
-    const lines = [["When", "Who", "Type", "Change", "Roadmap"].map(csvCell).join(",")];
-    rows.forEach((d) => lines.push([d.at, d.name, d.act, d.sum, d.rm || ""].map(csvCell).join(",")));
-    try {
-      await dl.save({ filename: "ynmo-log-" + todayIso() + ".csv", data: "\uFEFF" + lines.join("\n") });
-    } catch (e) {
-    }
-  }
-  function undoneSet() {
-    const s = /* @__PURE__ */ new Set();
-    allLogs().forEach((l) => {
-      if (l.data.ref) s.add(l.data.ref);
-    });
-    return s;
-  }
-  function canUndoRow(l, done) {
-    return canWrite() && l.data.u && !done.has(l.id);
-  }
-  function undoFromLog(l) {
-    const u = l.data.u;
-    if (!u || !canWrite()) return;
-    const cur = S.over[u.id], isSame = (a, b) => JSON.stringify(a === void 0 ? null : a) === JSON.stringify(b === void 0 ? null : b);
-    let clash = false;
-    if (u.after) Object.keys(u.after).forEach((k) => {
-      if (!isSame(cur && cur[k], u.after[k])) clash = true;
-    });
-    if (u.whole !== void 0 && u.after === void 0) clash = false;
-    const run = () => {
-      pushHistory();
-      if (u.after) {
-        const o = Object.assign({}, S.over[u.id] || {});
-        Object.keys(u.set || {}).forEach((k) => {
-          o[k] = u.set[k];
-        });
-        (u.unset || []).forEach((k) => {
-          delete o[k];
-        });
-        S.over[u.id] = o;
-        persist(u.id, (u.unset || []).length ? null : u.set);
-      } else if (u.whole) {
-        S.over[u.id] = u.whole;
-        persist(u.id);
-      } else {
-        delete S.over[u.id];
-        persist(u.id);
-      }
-      render();
-      const data = { at: (/* @__PURE__ */ new Date()).toISOString(), uid: S.me.id, name: S.me.name || S.me.email, av: S.me.avatar || "", act: "edit", sum: "undid: " + l.data.sum, rm: l.data.rm, ref: l.id };
-      const id = "l" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-      S.logs.unshift({ id, data });
-      sb.from("activity").insert({ id, data }).then(() => {
-      }, () => {
-      });
-      if (state.page === "log") renderLog();
-      toast("Change undone.");
-    };
-    if (!clash) {
-      run();
-      return;
-    }
-    openDlg("Undo this change?", (b) => {
-      b.append(el("p", "hint", "This bar was changed again after that entry. Undoing will put back the older values and replace what is there now."));
-      const ok = el("button", "btn primary", "Undo anyway");
-      ok.type = "button";
-      const no = el("button", "btn", "Keep current");
-      no.type = "button";
-      ok.addEventListener("click", () => {
-        closeDlg();
-        run();
-      });
-      no.addEventListener("click", closeDlg);
-      const row = el("div", "formrow");
-      row.append(ok, no);
-      b.append(row);
-    });
-  }
-  function rmPicker(after) {
-    const s = selOf(allRoadmaps().map((r) => [r.id, r.n]), state.rm);
-    s.setAttribute("aria-label", "Roadmap");
-    s.addEventListener("change", () => {
-      useRoadmap(s.value);
-      after();
-    });
-    return s;
-  }
-
-  // src/esm/pages/log.js
-  var logUI = { u: "all", a: "all" };
-  function renderLog() {
-    const root = $("pg-log");
-    root.textContent = "";
-    const every = allLogs(), done = undoneSet();
-    const users = [...new Set(every.map((l) => l.data.name))].sort();
-    const su = selOf([["all", "Everyone"]].concat(users.map((u) => [u, u])), logUI.u), sa = selOf([["all", "All changes"], ["edit", "Edits"], ["roadmap", "Roadmaps"], ["idea", "Ideas"], ["resource", "Resources"], ["vacation", "Vacations"], ["access", "Access"]], logUI.a);
-    su.setAttribute("aria-label", "Filter by person");
-    sa.setAttribute("aria-label", "Filter by type of change");
-    su.addEventListener("change", () => {
-      logUI.u = su.value;
-      renderLog();
-    });
-    sa.addEventListener("change", () => {
-      logUI.a = sa.value;
-      renderLog();
-    });
-    const rows = every.filter((l) => (logUI.u === "all" || l.data.name === logUI.u) && (logUI.a === "all" || l.data.act === logUI.a));
-    const ex = el("button", "btn", "Export CSV");
-    ex.type = "button";
-    ex.id = "logexport";
-    ex.addEventListener("click", () => exportLog(rows.map((l) => l.data)));
-    const tools = el("div", "formrow");
-    tools.append(su, sa, ex);
-    root.append(pageHead("Log", "Who changed what, and when. Newest first. Times show in your time zone. Undo puts an edit back the way it was.", tools));
-    const card = el("div", "card");
-    let day = "";
-    if (!rows.length) card.append(el("div", "hint", "No changes recorded yet."));
-    rows.forEach((l) => {
-      const d = l.data;
-      const dd = new Date(d.at).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-      if (dd !== day) {
-        day = dd;
-        card.append(el("div", "logday", dd));
-      }
-      const r = el("div", "logrow"), b = el("div", "lb");
-      const nm = el("b", "", d.name);
-      b.append(nm, document.createTextNode(" "), el("span", "badge", d.act), document.createTextNode(" " + d.sum));
-      if (done.has(l.id)) b.append(el("span", "badge undone", "undone"));
-      if (d.rm) b.append(el("div", "hint", d.rm));
-      const tm = el("div", "lt", ago(d.at));
-      tm.title = clock(d.at);
-      r.append(avatarEl(d.av, 34, d.name), b, tm);
-      if (canUndoRow(l, done)) {
-        const u = el("button", "btn sm undo", "Undo");
-        u.type = "button";
-        u.setAttribute("aria-label", "Undo: " + d.sum);
-        u.addEventListener("click", () => undoFromLog(l));
-        r.append(u);
-      }
-      card.append(r);
-    });
-    if (S.logsMore) {
-      const m = el("button", "btn", S.logsBusy ? "Loading…" : "Load older entries");
-      m.type = "button";
-      m.id = "logmore";
-      m.disabled = S.logsBusy;
-      m.addEventListener("click", loadOlderLogs);
-      card.append(m);
-    } else if (every.length > ACTIVE_LOG_PAGE) card.append(el("div", "hint", "That is everything."));
-    root.append(card);
-  }
-
-  // src/esm/core/shared.js
-  var ideaUI = { st: "open", q: "" };
-  var H2 = { id: H2_ID, n: "H2 2026", a: "2026-10-01", b: "2027-01-31", kind: "H2", builtin: true };
-  var PAGES = [["roadmap", "Roadmap"], ["ideas", "Ideas"], ["roadmaps", "Roadmaps"], ["resources", "Resources"], ["vacations", "Vacations"], ["capacity", "Capacity"], ["baselines", "Baselines"], ["log", "Log"], ["admin", "Approvals"]];
-  var DOMAINS = ["PM", "Mobile", "Backend", "Frontend", "Full-stack", "Engineering", "QA", "UX / Design", "AI / ML", "Other"];
-  var VTYPES = ["Annual leave", "Training", "Public holiday", "Other"];
-  var slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "x";
-  var fmtIso = (s) => {
-    const t = parseIso(s);
-    if (t === null) return s || "";
-    const d = new Date(t);
-    return DN[d.getUTCDay()] + " " + d.getUTCDate() + " " + MN[d.getUTCMonth()] + " " + d.getUTCFullYear();
-  };
-  function todayIso() {
-    const n = /* @__PURE__ */ new Date(), z = (v) => (v < 10 ? "0" : "") + v;
-    return n.getFullYear() + "-" + z(n.getMonth() + 1) + "-" + z(n.getDate());
-  }
-  function wdays(a, b) {
-    let n = 0;
-    for (let t = parseIso(a); t !== null && t <= parseIso(b); t += DAY) {
-      const w = new Date(t).getUTCDay();
-      if (w !== 5 && w !== 6) n++;
-    }
-    return n;
-  }
-  function kOfIso(s) {
-    const t = parseIso(s);
-    return t === null ? NaN : Math.round((t - START) / DAY);
-  }
-  function ago(iso3) {
-    const s = Math.max(0, (Date.now() - new Date(iso3).getTime()) / 1e3);
-    if (s < 60) return "just now";
-    if (s < 3600) return Math.floor(s / 60) + " min ago";
-    if (s < 86400) return Math.floor(s / 3600) + " h ago";
-    return Math.floor(s / 86400) + " d ago";
-  }
-  function clock(iso3) {
-    try {
-      return new Date(iso3).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
-    } catch (e) {
-      return iso3;
-    }
-  }
-  function fld(label, ctl) {
-    const l = el("label");
-    l.append(el("span", "", label), ctl);
-    return l;
-  }
-  function selOf(opts, val, cls) {
-    const s = el("select", cls || "");
-    opts.forEach((o) => {
-      const v = Array.isArray(o) ? o[0] : o, t = Array.isArray(o) ? o[1] : o;
-      const x = el("option", "", t);
-      x.value = v;
-      if (String(v) === String(val)) x.selected = true;
-      s.append(x);
-    });
-    return s;
-  }
-  function pageHead(t, sub, extra) {
-    const h = el("div", "pghead");
-    const d = el("div");
-    d.append(el("h1", "", t));
-    if (sub) d.append(el("p", "sub", sub));
-    h.append(d);
-    if (extra) h.append(extra);
-    return h;
-  }
-  function toast(t) {
-    $("save").textContent = t;
-  }
-  function logAct(act, sum, undo2) {
-    if (!S.me || !sum) return;
-    const id = "l" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-    const data = { at: (/* @__PURE__ */ new Date()).toISOString(), uid: S.me.id, name: S.me.name || S.me.email, av: S.me.avatar || "", act, sum, rm: curRm().n };
-    if (undo2) data.u = undo2;
-    S.logs.unshift({ id, data });
-    if (state.page === "log") renderLog();
-    sb.from("activity").insert({ id, data }).then(() => {
-    }, () => {
-    });
-  }
-  function describe(prev, f) {
-    if (!prev) return "";
-    const parts = [];
-    if (f.t !== void 0 && f.t !== prev.t) parts.push('renamed to "' + f.t + '"');
-    if (f.st !== void 0 && f.st !== prev.st) parts.push("status: " + STATUS[f.st]);
-    if (f.d0 !== void 0 && f.d0 !== prev.d0 || f.d1 !== void 0 && f.d1 !== prev.d1) parts.push("dates " + dlabel(f.d0 !== void 0 ? f.d0 : prev.d0) + " to " + dlabel(f.d1 !== void 0 ? f.d1 : prev.d1));
-    if (f.res) {
-      const a = f.res.filter((n) => !prev.res.includes(n)), r = prev.res.filter((n) => !f.res.includes(n));
-      if (a.length) parts.push("added " + a.join(", "));
-      if (r.length) parts.push("removed " + r.join(", "));
-    }
-    if (f.c !== void 0 && f.c !== (prev.c || null)) parts.push("color changed");
-    if (f.n !== void 0 && f.n !== (prev.n || "")) parts.push("notes edited");
-    if (f.sq && f.sq !== prev.sq) parts.push("product: " + laneOf(f.sq).n);
-    if (f.dep) parts.push("depends on " + (f.dep.length ? f.dep.length + " bar" + (f.dep.length === 1 ? "" : "s") : "nothing"));
-    if (f.ms !== void 0 && !!f.ms !== !!prev.ms) parts.push(f.ms ? "made a milestone" : "made a regular bar");
-    return parts.join("; ");
-  }
-
-  // src/esm/features/presence.js
-  var presT = 0;
-  var lockOverride = null;
-  var lockAt = 0;
-  function myPres() {
-    return { uid: S.me.id, name: S.me.name || S.me.email, av: S.me.avatar || "", page: state.page, rm: state.rm, edit: state.edit ? state.edit.split("|")[0] : null };
-  }
-  function trackPres() {
-    clearTimeout(presT);
-    presT = setTimeout(() => {
-      if (S.presCh && S.me) {
-        try {
-          S.presCh.track(myPres());
-        } catch (e) {
-        }
-      }
-    }, 120);
-  }
-  function startPresence() {
-    if (S.presCh || !sb.channel) return;
-    try {
-      S.presCh = sb.channel("ynmo-presence", { config: { private: true, presence: { key: S.me.id } } });
-      S.presCh.on("presence", { event: "sync" }, () => {
-        try {
-          S.pres = S.presCh.presenceState() || {};
-        } catch (e) {
-          S.pres = {};
-        }
-        drawPresence();
-        decorateLocks();
-      });
-      S.presCh.subscribe((s) => {
-        if (s === "SUBSCRIBED") trackPres();
-      });
-    } catch (e) {
-      S.presCh = null;
-    }
-  }
-  function others() {
-    const out = [];
-    Object.keys(S.pres).forEach((k) => {
-      if (k === (S.me && S.me.id)) return;
-      const m = (S.pres[k] || [])[0];
-      if (m) out.push(m);
-    });
-    return out;
-  }
-  function editorOf(id) {
-    const o = others().find((m) => m.edit === id);
-    return o || null;
-  }
-  function drawPresence() {
-    let box = $("presence");
-    if (!box) {
-      box = el("div", "presence");
-      box.id = "presence";
-      box.setAttribute("aria-label", "People online");
-      const av = $("avbtn");
-      av.parentNode.insertBefore(box, av);
-    }
-    box.textContent = "";
-    const o = others();
-    box.hidden = !o.length;
-    o.slice(0, 4).forEach((m) => {
-      const a = avatarEl(m.av, 28, m.name);
-      a.title = m.name + (m.edit ? " · editing" : " · online") + " · " + (m.page || "");
-      a.classList.add("pav");
-      box.append(a);
-    });
-    if (o.length > 4) box.append(el("span", "pmore", "+" + (o.length - 4)));
-    box.setAttribute("role", "group");
-    box.setAttribute("aria-label", o.length + (o.length === 1 ? " other person online: " : " others online: ") + o.map((m) => m.name).join(", "));
-  }
-  function decorateLocks() {
-    const g = $("grid");
-    if (!g) return;
-    g.querySelectorAll(".bar.locked").forEach((b) => {
-      b.classList.remove("locked");
-      const t = b.querySelector(".lockchip");
-      if (t) t.remove();
-    });
-    others().forEach((m) => {
-      if (!m.edit) return;
-      g.querySelectorAll(".bar").forEach((b) => {
-        if (b.dataset.id === m.edit && !b.classList.contains("editing")) {
-          b.classList.add("locked");
-          b.append(el("span", "lockchip", "✎ " + String(m.name).split(" ")[0]));
-          b.title += " · " + m.name + " is editing";
-        }
-      });
-    });
-  }
-  function lockCheck(it) {
-    const o = editorOf(it.id);
-    if (!o) return true;
-    if (lockOverride === it.id && Date.now() - lockAt < 6e3) {
-      lockOverride = null;
-      return true;
-    }
-    lockOverride = it.id;
-    lockAt = Date.now();
-    toast(o.name + ' is editing "' + it.t + '" right now. Try again within 6 seconds to edit anyway.');
-    return false;
-  }
-
   // src/esm/ui/people-picker.js
   function fillPersons() {
     const ps = $("person"), keep = state.person;
@@ -1857,6 +1275,202 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     if (!p.contains(e.target) && !(e.target.closest && (e.target.closest(".res") || e.target.closest("#ed-res") || e.target.closest("#daysoff")))) closePicker();
   });
 
+  // src/esm/ui/export.js
+  function csvCell(v) {
+    v = String(v == null ? "" : v);
+    if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;
+    return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  }
+  async function exportCsv() {
+    if (!dl) return;
+    const head = ["Squad", "Feature", "Resources", "Status", "Start", "End", "Notes"];
+    const lines = [head.map(csvCell).join(",")];
+    LANES.forEach((l) => items().filter((i) => i.sq === l.k).sort(byOrd).forEach((it) => {
+      lines.push([l.n, it.t, it.res.join("; "), STATUS[it.st], iso(it.d0), iso(it.d1), it.n || ""].map(csvCell).join(","));
+    }));
+    try {
+      await dl.save({ filename: "ynmo-" + slug(curRm().n) + "-roadmap.csv", data: "\uFEFF" + lines.join("\n") });
+    } catch (e) {
+    }
+  }
+
+  // src/esm/features/sharing.js
+  function shareFor(rm) {
+    const k = Object.keys(S.shares).find((t) => S.shares[t].rm === rm);
+    return k ? { token: k, data: S.shares[k] } : null;
+  }
+  function shareUrl(t) {
+    return location.origin + location.pathname + "#/share/" + t;
+  }
+  function openShare() {
+    if (!canWrite()) return;
+    const rmId = state.rm;
+    openDlg("Share " + curRm().n + " (read only)", (box) => {
+      box.append(el("p", "hint", "Anyone with the link can look at this roadmap without an account. They cannot change anything, and they do not see leave, ideas or the log. Stop sharing at any time and the link stops working."));
+      const area = el("div");
+      box.append(area);
+      const msg = el("div", "gerr");
+      msg.setAttribute("aria-live", "polite");
+      box.append(msg);
+      const close = el("button", "btn", "Close");
+      close.type = "button";
+      close.addEventListener("click", closeDlg);
+      const draw = () => {
+        area.textContent = "";
+        const s = shareFor(rmId);
+        if (!s) {
+          const mk = el("button", "btn primary", "Create share link");
+          mk.type = "button";
+          mk.addEventListener("click", async () => {
+            mk.disabled = true;
+            const t = (window.crypto && crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()).replace(/-/g, "");
+            const data = { rm: rmId, by: S.me.name || S.me.email, at: (/* @__PURE__ */ new Date()).toISOString() };
+            try {
+              await S.db.doc("share_links/" + t).set(data);
+              S.shares[t] = data;
+              logAct("access", "created a share link for " + curRm().n);
+              draw();
+            } catch (e) {
+              mk.disabled = false;
+              msg.textContent = "Could not create the link. Ask the admin to run setup v4.";
+            }
+          });
+          area.append(mk);
+        } else {
+          const inp = el("input");
+          inp.type = "text";
+          inp.readOnly = true;
+          inp.value = shareUrl(s.token);
+          inp.id = "shareurl";
+          inp.setAttribute("aria-label", "Share link");
+          inp.style.width = "100%";
+          inp.addEventListener("focus", () => inp.select());
+          const cp = el("button", "btn primary", "Copy link");
+          cp.type = "button";
+          cp.addEventListener("click", async () => {
+            try {
+              await navigator.clipboard.writeText(inp.value);
+              cp.textContent = "Copied";
+            } catch (e) {
+              inp.select();
+              cp.textContent = "Press Ctrl+C";
+            }
+          });
+          const stop = el("button", "btn danger", "Stop sharing");
+          stop.type = "button";
+          stop.addEventListener("click", async () => {
+            stop.disabled = true;
+            try {
+              await S.db.doc("share_links/" + s.token).delete();
+              delete S.shares[s.token];
+              logAct("access", "stopped sharing " + curRm().n);
+              draw();
+            } catch (e) {
+              stop.disabled = false;
+              msg.textContent = "Could not stop sharing. Try again.";
+            }
+          });
+          const row = el("div", "formrow");
+          row.append(cp, stop);
+          area.append(inp, row, el("div", "hint", "Shared by " + s.data.by + " on " + clock(s.data.at)));
+        }
+      };
+      draw();
+      box.append(close);
+    });
+  }
+  function applyShared(p) {
+    S.over = p.items || {};
+    S.extras = p.people || {};
+    S.daysoff = p.daysoff || {};
+    S.roadmaps = p.roadmap ? { [p.rm]: p.roadmap } : {};
+    if (state.rm !== p.rm) {
+      const r = allRoadmaps().find((x) => x.id === p.rm) || H2;
+      state.rm = r.id;
+      setRange(r.a, r.b);
+    }
+    fillRm();
+    render();
+  }
+  async function bootShared(token) {
+    S.SHARE = true;
+    S.readonly = true;
+    const r = await sb.rpc("shared_snapshot", { t: token });
+    if (r.error || !r.data) {
+      const c = gateCard("This link is not active", "The share link was stopped or is wrong. Ask the person who sent it for a new one.");
+      return;
+    }
+    $("gate").hidden = true;
+    $("shell").classList.remove("app-hidden");
+    $("shell").classList.add("shared");
+    document.body.classList.add("sharedview");
+    const nav = $("nav");
+    nav.textContent = "";
+    $("toplogo").src = LOGO;
+    PAGES.forEach((x) => {
+      const s = $("pg-" + x[0]);
+      if (s) s.hidden = x[0] !== "roadmap";
+    });
+    $("ptitle").textContent = "Shared roadmap";
+    const b = netBar();
+    b.classList.add("sharebar");
+    b.hidden = false;
+    b.textContent = "You are looking at a read-only shared roadmap. It updates by itself every minute.";
+    applyShared(r.data);
+    setSave("readonly");
+    $("save").textContent = "View only.";
+    let last = JSON.stringify(r.data);
+    setInterval(async () => {
+      try {
+        const n = await sb.rpc("shared_snapshot", { t: token });
+        if (n.data && JSON.stringify(n.data) !== last) {
+          last = JSON.stringify(n.data);
+          applyShared(n.data);
+        } else if (!n.data && !n.error) {
+          location.reload();
+        }
+      } catch (e) {
+      }
+    }, window.__sharePoll || 6e4);
+  }
+  function renderAccess(root) {
+    if (!(S.me && S.me.is_admin)) return;
+    const done = S.members.filter((m) => m.approved);
+    const c = el("div", "card");
+    c.append(el("h2", "", "Who can edit"));
+    c.append(el("div", "hint", "Editors change the plan. Viewers can look at the roadmap, capacity, snapshots and log, but cannot change anything."));
+    done.forEach((m) => {
+      const row = el("div", "formrow");
+      row.style.alignItems = "center";
+      const who = el("div");
+      who.append(el("b", "", m.name || m.email), el("div", "hint", (m.role ? m.role + " · " : "") + (m.email || "")));
+      row.append(avatarEl(m.avatar, 34, m.name), who);
+      if (m.is_admin) {
+        const a = el("span", "badge", "Admin");
+        a.style.marginInlineStart = "auto";
+        row.append(a);
+      } else {
+        const s = selOf([["editor", "Editor"], ["viewer", "Viewer"]], m.access === "viewer" ? "viewer" : "editor");
+        s.style.marginInlineStart = "auto";
+        s.setAttribute("aria-label", "Access for " + (m.name || m.email));
+        s.addEventListener("change", async () => {
+          const r = await sb.from("profiles").update({ access: s.value }).eq("id", m.id);
+          if (r.error) {
+            s.value = m.access === "viewer" ? "viewer" : "editor";
+            toast("Could not change access. Ask the admin to run setup v4.");
+            return;
+          }
+          m.access = s.value;
+          logAct("access", "set " + (m.name || m.email) + " as " + s.value);
+          toast((m.name || m.email) + " is now a " + s.value + ".");
+        });
+        row.append(s);
+      }
+      c.append(row);
+    });
+    root.append(c);
+  }
+
   // src/esm/features/dependencies.js
   function depsOf(it) {
     return Array.isArray(it.dep) ? it.dep : [];
@@ -1956,7 +1570,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     if (oldc) oldc.remove();
     const bad = issues.filter((x) => x.bad);
     if (sum && issues.length) {
-      const c = el("button", "depchip" + (bad.length ? " bad" : ""), bad.length ? "⛓ " + bad.length + (bad.length === 1 ? " dependency clash" : " dependency clashes") : "⛓ " + issues.length + " dependencies, all fine");
+      const c = el("button", "depchip" + (bad.length ? " bad" : ""), bad.length ? "⛓ " + bad.length + (bad.length === 1 ? " dependency clash" : " dependency clashes") : "⛓ " + issues.length + (issues.length === 1 ? " dependency, all fine" : " dependencies, all fine"));
       c.type = "button";
       c.title = bad.length ? bad.map((x) => '"' + x.to.t + '" starts before "' + x.from.t + '" ends').join("\n") : "Every dependent bar starts after its predecessor ends";
       c.addEventListener("click", () => {
@@ -2034,6 +1648,1537 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       gb.hidden = !b;
       gb.setAttribute("aria-pressed", String(S.ghostOn));
     }
+  }
+
+  // src/esm/pages/log.js
+  var logUI = { u: "all", a: "all" };
+  function renderLog() {
+    const root = $("pg-log");
+    root.textContent = "";
+    const every = allLogs(), done = undoneSet();
+    const users = [...new Set(every.map((l) => l.data.name))].sort();
+    const su = selOf([["all", "Everyone"]].concat(users.map((u) => [u, u])), logUI.u), sa = selOf([["all", "All changes"], ["edit", "Edits"], ["roadmap", "Roadmaps"], ["idea", "Ideas"], ["resource", "Resources"], ["vacation", "Vacations"], ["access", "Access"]], logUI.a);
+    su.setAttribute("aria-label", "Filter by person");
+    sa.setAttribute("aria-label", "Filter by type of change");
+    su.addEventListener("change", () => {
+      logUI.u = su.value;
+      renderLog();
+    });
+    sa.addEventListener("change", () => {
+      logUI.a = sa.value;
+      renderLog();
+    });
+    const rows = every.filter((l) => (logUI.u === "all" || l.data.name === logUI.u) && (logUI.a === "all" || l.data.act === logUI.a));
+    const ex = el("button", "btn", "Export CSV");
+    ex.type = "button";
+    ex.id = "logexport";
+    ex.addEventListener("click", () => exportLog(rows.map((l) => l.data)));
+    const tools = el("div", "formrow");
+    tools.append(su, sa, ex);
+    root.append(pageHead("Log", "Who changed what, and when. Newest first. Times show in your time zone. Undo puts an edit back the way it was.", tools));
+    const card = el("div", "card");
+    let day = "";
+    if (!rows.length) card.append(el("div", "hint", "No changes recorded yet."));
+    rows.forEach((l) => {
+      const d = l.data;
+      const dd = new Date(d.at).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+      if (dd !== day) {
+        day = dd;
+        card.append(el("div", "logday", dd));
+      }
+      const r = el("div", "logrow"), b = el("div", "lb");
+      const nm = el("b", "", d.name);
+      b.append(nm, document.createTextNode(" "), el("span", "badge", d.act), document.createTextNode(" " + d.sum));
+      if (done.has(l.id)) b.append(el("span", "badge undone", "undone"));
+      if (d.rm) b.append(el("div", "hint", d.rm));
+      const tm = el("div", "lt", ago(d.at));
+      tm.title = clock(d.at);
+      r.append(avatarEl(d.av, 34, d.name), b, tm);
+      if (canUndoRow(l, done)) {
+        const u = el("button", "btn sm undo", "Undo");
+        u.type = "button";
+        u.setAttribute("aria-label", "Undo: " + d.sum);
+        u.addEventListener("click", () => undoFromLog(l));
+        r.append(u);
+      }
+      card.append(r);
+    });
+    if (S.logsMore) {
+      const m = el("button", "btn", S.logsBusy ? "Loading…" : "Load older entries");
+      m.type = "button";
+      m.id = "logmore";
+      m.disabled = S.logsBusy;
+      m.addEventListener("click", loadOlderLogs);
+      card.append(m);
+    } else if (every.length > ACTIVE_LOG_PAGE) card.append(el("div", "hint", "That is everything."));
+    root.append(card);
+  }
+
+  // src/esm/features/log-tools.js
+  function allLogs() {
+    const seen = /* @__PURE__ */ new Set(), out = [];
+    S.logs.concat(S.logsOld).forEach((l) => {
+      if (!seen.has(l.id)) {
+        seen.add(l.id);
+        out.push(l);
+      }
+    });
+    return out.sort((a, b) => a.data.at < b.data.at ? 1 : -1);
+  }
+  async function loadOlderLogs() {
+    if (S.logsBusy) return;
+    S.logsBusy = true;
+    try {
+      const have = allLogs().length;
+      const r = await sb.from("activity").select("id,data").order("updated_at", { ascending: false }).range(have, have + ACTIVE_LOG_PAGE - 1);
+      if (r.error) throw new Error(r.error.message);
+      const rows = (r.data || []).map((x) => ({ id: x.id, data: x.data || {} }));
+      S.logsOld = S.logsOld.concat(rows);
+      S.logsMore = rows.length >= ACTIVE_LOG_PAGE;
+    } catch (e) {
+      toast("Could not load older entries. Try again.");
+    }
+    S.logsBusy = false;
+    if (state.page === "log") renderLog();
+  }
+  async function exportLog(rows) {
+    const lines = [["When", "Who", "Type", "Change", "Roadmap"].map(csvCell).join(",")];
+    rows.forEach((d) => lines.push([d.at, d.name, d.act, d.sum, d.rm || ""].map(csvCell).join(",")));
+    try {
+      await dl.save({ filename: "ynmo-log-" + todayIso() + ".csv", data: "\uFEFF" + lines.join("\n") });
+    } catch (e) {
+    }
+  }
+  function undoneSet() {
+    const s = /* @__PURE__ */ new Set();
+    allLogs().forEach((l) => {
+      if (l.data.ref) s.add(l.data.ref);
+    });
+    return s;
+  }
+  function canUndoRow(l, done) {
+    return canWrite() && l.data.u && !done.has(l.id);
+  }
+  function undoFromLog(l) {
+    const u = l.data.u;
+    if (!u || !canWrite()) return;
+    const cur = S.over[u.id], isSame = (a, b) => JSON.stringify(a === void 0 ? null : a) === JSON.stringify(b === void 0 ? null : b);
+    let clash = false;
+    if (u.after) Object.keys(u.after).forEach((k) => {
+      if (!isSame(cur && cur[k], u.after[k])) clash = true;
+    });
+    if (u.whole !== void 0 && u.after === void 0) clash = false;
+    const run = () => {
+      pushHistory();
+      if (u.after) {
+        const o = Object.assign({}, S.over[u.id] || {});
+        Object.keys(u.set || {}).forEach((k) => {
+          o[k] = u.set[k];
+        });
+        (u.unset || []).forEach((k) => {
+          delete o[k];
+        });
+        S.over[u.id] = o;
+        persist(u.id, (u.unset || []).length ? null : u.set);
+      } else if (u.whole) {
+        S.over[u.id] = u.whole;
+        persist(u.id);
+      } else {
+        delete S.over[u.id];
+        persist(u.id);
+      }
+      render();
+      const data = { at: (/* @__PURE__ */ new Date()).toISOString(), uid: S.me.id, name: S.me.name || S.me.email, av: S.me.avatar || "", act: "edit", sum: "undid: " + l.data.sum, rm: l.data.rm, ref: l.id };
+      const id = "l" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      S.logs.unshift({ id, data });
+      sb.from("activity").insert({ id, data }).then(() => {
+      }, () => {
+      });
+      if (state.page === "log") renderLog();
+      toast("Change undone.");
+    };
+    if (!clash) {
+      run();
+      return;
+    }
+    openDlg("Undo this change?", (b) => {
+      b.append(el("p", "hint", "This bar was changed again after that entry. Undoing will put back the older values and replace what is there now."));
+      const ok = el("button", "btn primary", "Undo anyway");
+      ok.type = "button";
+      const no = el("button", "btn", "Keep current");
+      no.type = "button";
+      ok.addEventListener("click", () => {
+        closeDlg();
+        run();
+      });
+      no.addEventListener("click", closeDlg);
+      const row = el("div", "formrow");
+      row.append(ok, no);
+      b.append(row);
+    });
+  }
+  function rmPicker(after) {
+    const s = selOf(allRoadmaps().map((r) => [r.id, r.n]), state.rm);
+    s.setAttribute("aria-label", "Roadmap");
+    s.addEventListener("change", () => {
+      useRoadmap(s.value);
+      after();
+    });
+    return s;
+  }
+
+  // src/esm/features/baselines.js
+  function snapItems() {
+    return items().map((i) => ({ id: i.id, t: i.t, sq: i.sq, d0: i.d0, d1: i.d1, st: i.st, res: i.res.slice(), ms: !!i.ms, dep: depsOf(i).slice() }));
+  }
+  function saveSnapshot(name, active) {
+    const id = "b" + Date.now().toString(36), rm = state.rm;
+    if (active) Object.keys(S.baselines).forEach((k) => {
+      if (S.baselines[k].rm === rm && S.baselines[k].active) {
+        const d = Object.assign({}, S.baselines[k], { active: false });
+        S.baselines[k] = d;
+        S.db.doc("baselines/" + k).set(d).catch(() => {
+        });
+      }
+    });
+    const data = { rm, rmName: curRm().n, name, at: (/* @__PURE__ */ new Date()).toISOString(), by: S.me.name || S.me.email, active: !!active, items: snapItems() };
+    S.baselines[id] = data;
+    return S.db.doc("baselines/" + id).set(data).then(() => {
+      logAct("roadmap", 'saved snapshot "' + name + '" of ' + curRm().n);
+    });
+  }
+  function setBaseline(id) {
+    const rm = S.baselines[id].rm;
+    Object.keys(S.baselines).forEach((k) => {
+      if (S.baselines[k].rm === rm) {
+        const want = k === id;
+        if (!!S.baselines[k].active !== want) {
+          const d = Object.assign({}, S.baselines[k], { active: want });
+          S.baselines[k] = d;
+          S.db.doc("baselines/" + k).set(d).catch(() => {
+          });
+        }
+      }
+    });
+    logAct("roadmap", 'set "' + S.baselines[id].name + '" as the baseline for ' + S.baselines[id].rmName);
+  }
+  function diffSnap(b) {
+    const now = items(), nm = new Map(now.map((i) => [i.id, i])), om = new Map((b.items || []).map((i) => [i.id, i]));
+    const out = { moved: [], added: [], removed: [], status: [], owners: [] };
+    now.forEach((i) => {
+      const o = om.get(i.id);
+      if (!o) {
+        out.added.push(i);
+        return;
+      }
+      if (o.d0 !== i.d0 || o.d1 !== i.d1) out.moved.push({ it: i, o, ds: i.d0 - o.d0, de: i.d1 - o.d1 });
+      if (o.st !== i.st) out.status.push({ it: i, o });
+      if (JSON.stringify((o.res || []).slice().sort()) !== JSON.stringify(i.res.slice().sort())) out.owners.push({ it: i, o });
+    });
+    (b.items || []).forEach((o) => {
+      if (!nm.has(o.id)) out.removed.push(o);
+    });
+    return out;
+  }
+  var cmpId = null;
+  function renderBaselines() {
+    const root = $("pg-baselines");
+    root.textContent = "";
+    root.append(pageHead("Baselines", 'Save the plan at a point in time, then compare it with today. Snapshots never change after they are saved. Turn on "Plan vs now" on the roadmap to see the old dates as thin amber bars under each bar.', rmPicker(renderBaselines)));
+    const mine = Object.keys(S.baselines).map((id) => Object.assign({ id }, S.baselines[id])).filter((b) => b.rm === state.rm).sort((a, b) => a.at < b.at ? 1 : -1);
+    if (canWrite()) {
+      const c = el("div", "card");
+      c.append(el("h2", "", "Save a snapshot of " + curRm().n));
+      const nm = el("input");
+      nm.type = "text";
+      nm.value = curRm().n + " · " + todayIso();
+      nm.maxLength = 80;
+      nm.setAttribute("aria-label", "Snapshot name");
+      const ck = el("input");
+      ck.type = "checkbox";
+      ck.checked = !mine.some((b) => b.active);
+      ck.id = "snapactive";
+      const cl = el("label", "chk");
+      cl.htmlFor = "snapactive";
+      cl.append(ck, document.createTextNode(" Use as the baseline to compare against"));
+      const go = el("button", "btn primary", "Save snapshot");
+      go.type = "button";
+      const msg = el("div", "gerr");
+      msg.setAttribute("aria-live", "polite");
+      go.addEventListener("click", async () => {
+        const n = nm.value.trim();
+        if (!n) {
+          msg.textContent = "Give the snapshot a name.";
+          return;
+        }
+        go.disabled = true;
+        try {
+          await saveSnapshot(n, ck.checked);
+          toast("Snapshot saved.");
+        } catch (e) {
+          msg.textContent = "Could not save. If this keeps happening, ask the admin to run setup v4.";
+        }
+        go.disabled = false;
+        renderBaselines();
+      });
+      const row = el("div", "formrow");
+      row.style.alignItems = "center";
+      row.append(nm, cl, go);
+      nm.style.flex = "1 1 260px";
+      c.append(row, msg);
+      root.append(c);
+    }
+    const lc = el("div", "card");
+    lc.append(el("h2", "", "Checkpoint history"));
+    if (!mine.length) lc.append(el("div", "hint", "No snapshots for this roadmap yet."));
+    mine.forEach((b) => {
+      const r = el("div", "formrow snaprow");
+      r.style.alignItems = "center";
+      const w = el("div");
+      const t = el("b", "", b.name);
+      if (b.active) t.append(el("span", "badge", "baseline"));
+      w.append(t, el("div", "hint", clock(b.at) + " · " + b.by + " · " + (b.items || []).length + " bars"));
+      const cmp = el("button", "btn sm" + (cmpId === b.id ? " primary" : ""), cmpId === b.id ? "Hide comparison" : "Compare with now");
+      cmp.type = "button";
+      cmp.style.marginInlineStart = "auto";
+      cmp.addEventListener("click", () => {
+        cmpId = cmpId === b.id ? null : b.id;
+        renderBaselines();
+      });
+      r.append(w, cmp);
+      if (canWrite() && !b.active) {
+        const mk = el("button", "btn sm", "Make baseline");
+        mk.type = "button";
+        mk.addEventListener("click", () => {
+          setBaseline(b.id);
+          renderBaselines();
+        });
+        r.append(mk);
+      }
+      if (canWrite() && S.me && S.me.is_admin) {
+        const dl2 = el("button", "btn sm danger", "Delete");
+        dl2.type = "button";
+        dl2.addEventListener("click", () => {
+          delete S.baselines[b.id];
+          S.db.doc("baselines/" + b.id).delete().catch(() => {
+          });
+          logAct("roadmap", 'deleted snapshot "' + b.name + '"');
+          renderBaselines();
+        });
+        r.append(dl2);
+      }
+      lc.append(r);
+      if (cmpId === b.id) lc.append(compareView(b));
+    });
+    root.append(lc);
+  }
+  function compareView(b) {
+    const d = diffSnap(b), w = el("div", "cmpbox");
+    const late = d.moved.filter((m) => m.de > 0).length, early = d.moved.filter((m) => m.de < 0).length, avg = d.moved.length ? Math.round(d.moved.reduce((s, m) => s + m.de, 0) / d.moved.length * 10) / 10 : 0;
+    const sm = el("div", "summary");
+    [[d.moved.length, "moved"], [late, "end later"], [early, "end earlier"], [d.added.length, "added"], [d.removed.length, "removed"], [d.status.length, "status changed"]].forEach((p) => {
+      const x = el("div");
+      x.append(el("b", "", String(p[0])), document.createTextNode(" "), el("span", "", p[1]));
+      sm.append(x);
+    });
+    w.append(sm);
+    if (d.moved.length) w.append(el("div", "hint", "Average end-date shift: " + (avg > 0 ? "+" : "") + avg + " days"));
+    const sec = (title, rows) => {
+      if (!rows.length) return;
+      const s = el("div", "cmpsec");
+      s.append(el("h3", "", title + " (" + rows.length + ")"));
+      rows.forEach((r) => s.append(el("div", "cmprow", r)));
+      w.append(s);
+    };
+    const sh = (n) => (n > 0 ? "+" : "") + n + "d";
+    sec("Moved", d.moved.sort((a, b2) => Math.abs(b2.de) - Math.abs(a.de)).map((m) => m.it.t + ": was " + dlabel(m.o.d0) + " to " + dlabel(m.o.d1) + ", now " + dlabel(m.it.d0) + " to " + dlabel(m.it.d1) + " (start " + sh(m.ds) + ", end " + sh(m.de) + ")"));
+    sec("Added since", d.added.map((i) => i.t + " · " + dlabel(i.d0) + " to " + dlabel(i.d1)));
+    sec("Removed since", d.removed.map((i) => i.t + " · was " + dlabel(i.d0) + " to " + dlabel(i.d1)));
+    sec("Status changed", d.status.map((m) => m.it.t + ": " + STATUS[m.o.st] + " → " + STATUS[m.it.st]));
+    sec("Owners changed", d.owners.map((m) => m.it.t + ": " + ((m.o.res || []).join(", ") || "nobody") + " → " + (m.it.res.join(", ") || "nobody")));
+    if (!d.moved.length && !d.added.length && !d.removed.length && !d.status.length && !d.owners.length) w.append(el("div", "hint", "Nothing has changed since this snapshot."));
+    return w;
+  }
+
+  // src/esm/app/extras-wiring.js
+  function initExtras() {
+    const today = $("today");
+    if (today && !$("sharebtn")) {
+      const gb = el("button", "btn", "Plan vs now");
+      gb.type = "button";
+      gb.id = "ghostbtn";
+      gb.hidden = true;
+      gb.setAttribute("aria-pressed", String(S.ghostOn));
+      gb.title = "Show where the saved baseline had each bar as a thin amber line";
+      gb.addEventListener("click", () => {
+        S.ghostOn = !S.ghostOn;
+        try {
+          localStorage.setItem("ynmo-ghost", S.ghostOn ? "1" : "0");
+        } catch (e) {
+        }
+        render();
+      });
+      const sh = el("button", "btn", "Share");
+      sh.type = "button";
+      sh.id = "sharebtn";
+      sh.addEventListener("click", openShare);
+      today.after(gb, sh);
+    }
+    netBar();
+    netShow();
+  }
+  function startExtras() {
+    $("shell").classList.toggle("viewer", isViewer());
+    if (isViewer()) S.readonly = true;
+    S.db.collection("baselines").onSnapshot((s) => {
+      const n = {};
+      s.docs.forEach((d) => {
+        n[d.id] = d.data();
+      });
+      if (same(n, S.baselines)) return;
+      S.baselines = n;
+      if (state.page === "baselines") renderBaselines();
+      softRender();
+    }, () => {
+    });
+    S.db.collection("share_links").onSnapshot((s) => {
+      const n = {};
+      s.docs.forEach((d) => {
+        n[d.id] = d.data();
+      });
+      S.shares = n;
+    }, () => {
+    });
+    startPresence();
+    startIdle();
+  }
+
+  // src/esm/pages/ideas-columns.js
+  var COL_COLORS = ["#0d8560", "#6d48a8", "#c04a17", "#5a6db5", "#b8860b", "#c2185b", "#00838f", "#55608a"];
+  var isMeta = (i) => !!(i && (i.col || i.cfg));
+  function ideaCols(withHidden) {
+    const built = LANES.map((l) => {
+      const o = S.ideas["cfg_" + l.k] || {};
+      return { k: l.k, n: o.n || l.n, c: /^#[0-9a-f]{6}$/i.test(o.c || "") ? o.c : l.c, hidden: !!o.hidden, builtin: true };
+    });
+    const custom = Object.keys(S.ideas).filter((id) => S.ideas[id] && S.ideas[id].col).sort((a, b) => (S.ideas[a].ts || 0) - (S.ideas[b].ts || 0)).map((id) => ({ k: id, n: S.ideas[id].n || "Untitled", c: /^#[0-9a-f]{6}$/i.test(S.ideas[id].c || "") ? S.ideas[id].c : "#55608a", custom: true }));
+    const ord = S.ideas.colorder && S.ideas.colorder.ord || [], all = built.concat(custom);
+    all.forEach((c, n) => {
+      const p = ord.indexOf(c.k);
+      c.o = p >= 0 ? p : 1e3 + n;
+    });
+    all.sort((a, b) => a.o - b.o);
+    return withHidden ? all : all.filter((c) => !c.hidden);
+  }
+  function ideaColName(k) {
+    const c = ideaCols(true).find((x) => x.k === k);
+    return c ? c.n : laneOf(k).n;
+  }
+  function colCount(k) {
+    return Object.keys(S.ideas).filter((id) => !isMeta(S.ideas[id]) && S.ideas[id].pr === k).length;
+  }
+  function colDialog(col) {
+    openDlg(col ? "Edit column" : "Add a product column", (box) => {
+      const nm = el("input");
+      nm.type = "text";
+      nm.maxLength = 40;
+      nm.placeholder = "Product name";
+      nm.setAttribute("aria-label", "Product name");
+      nm.style.width = "100%";
+      nm.value = col ? col.n : "";
+      const sel = { v: col ? col.c : COL_COLORS[ideaCols(true).length % COL_COLORS.length] };
+      const hex = (v) => /^#[0-9a-f]{6}$/i.test(v) ? v : "#55608a";
+      const sw = el("div", "mrow");
+      sw.setAttribute("role", "radiogroup");
+      sw.setAttribute("aria-label", "Color");
+      const paint = () => sw.querySelectorAll(".swatch").forEach((x) => {
+        const on = x.dataset.c === sel.v;
+        x.setAttribute("aria-pressed", String(on));
+        x.setAttribute("aria-checked", String(on));
+      });
+      COL_COLORS.forEach((c) => {
+        const b = el("button", "swatch");
+        b.type = "button";
+        b.dataset.c = c;
+        b.style.setProperty("--c", c);
+        b.setAttribute("role", "radio");
+        b.setAttribute("aria-label", "Color " + c);
+        b.addEventListener("click", () => {
+          sel.v = c;
+          cp.value = c;
+          paint();
+        });
+        sw.append(b);
+      });
+      const cp = el("input");
+      cp.type = "color";
+      cp.value = hex(sel.v);
+      cp.setAttribute("aria-label", "Custom color");
+      cp.style.cssText = "width:34px;height:34px;padding:0;border:0;background:none;cursor:pointer";
+      cp.addEventListener("input", () => {
+        sel.v = cp.value;
+        paint();
+      });
+      sw.append(cp);
+      paint();
+      const msg = el("div", "gerr");
+      msg.setAttribute("aria-live", "polite");
+      const go = el("button", "btn primary", col ? "Save" : "Add column");
+      go.type = "button";
+      const no = el("button", "btn", "Cancel");
+      no.type = "button";
+      no.addEventListener("click", closeDlg);
+      const submit = () => {
+        const n = nm.value.trim();
+        if (!n) {
+          msg.textContent = "Type a name.";
+          return;
+        }
+        if (ideaCols(true).some((c) => c.n.toLowerCase() === n.toLowerCase() && (!col || c.k !== col.k))) {
+          msg.textContent = "A column with this name already exists.";
+          return;
+        }
+        if (col && col.custom) saveIdea(col.k, { n, c: sel.v }, "idea", 'edited product column "' + col.n + '"' + (n !== col.n ? ' (now "' + n + '")' : ""));
+        else if (col) saveIdea("cfg_" + col.k, { cfg: true, k: col.k, n, c: sel.v, hidden: false }, "idea", 'edited product column "' + col.n + '"' + (n !== col.n ? ' (now "' + n + '")' : ""));
+        else {
+          const id = "col" + Date.now().toString(36);
+          saveIdea(id, { col: true, n, c: sel.v, ts: Date.now() }, "idea", 'added product column "' + n + '"');
+        }
+        closeDlg();
+        renderIdeas(true);
+        renderDrawer();
+      };
+      nm.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          submit();
+        }
+      });
+      go.addEventListener("click", submit);
+      const row = el("div", "formrow");
+      row.append(go, no);
+      box.append(nm, el("span", "lab", "Color"), sw, msg, row);
+    });
+  }
+  function removeCol(c) {
+    const n = colCount(c.k);
+    if (n) {
+      toast('"' + c.n + '" still has ' + n + " idea" + (n === 1 ? "" : "s") + ". Move or delete them first.");
+      return;
+    }
+    if (c.builtin) {
+      saveIdea("cfg_" + c.k, { cfg: true, k: c.k, n: c.n, c: c.c, hidden: true }, "idea", 'hid product column "' + c.n + '"');
+    } else {
+      logAct("idea", 'removed product column "' + c.n + '"');
+      delete S.ideas[c.k];
+      write("ideas/" + c.k, null);
+      toast('Removed column "' + c.n + '".');
+    }
+    renderIdeas(true);
+    renderDrawer();
+  }
+  function saveOrder(keys) {
+    saveIdea("colorder", { cfg: true, ord: keys }, null);
+  }
+  function moveCol(k, to) {
+    const keys = ideaCols(true).map((c) => c.k), from = keys.indexOf(k);
+    if (from < 0) return;
+    keys.splice(from, 1);
+    keys.splice(Math.max(0, Math.min(keys.length, to)), 0, k);
+    saveOrder(keys);
+    renderIdeas(true);
+    renderDrawer();
+  }
+  function decorateCol(col, h, l) {
+    if (!canEdit()) {
+      col.append(h);
+      return;
+    }
+    const more = el("button", "btn sm colmore", "⋯");
+    more.type = "button";
+    more.setAttribute("aria-label", "Column options for " + l.n);
+    more.title = "Column options";
+    more.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const r = more.getBoundingClientRect(), vis = ideaCols(true), pos = vis.findIndex((x) => x.k === l.k);
+      openCtx(r.right - 190, r.bottom + 4, (m) => {
+        mi(m, "Rename and color…", () => colDialog(l));
+        if (pos > 0) mi(m, "Move left", () => moveCol(l.k, pos - 1));
+        if (pos < vis.length - 1) mi(m, "Move right", () => moveCol(l.k, pos + 1));
+        m.append(el("div", "msep"));
+        mi(m, l.builtin ? "Hide column" : "Remove column", () => removeCol(l), "danger");
+      });
+    });
+    h.append(more);
+    h.style.cssText = "display:flex;align-items:center;gap:8px";
+    more.style.marginInlineStart = "auto";
+    h.draggable = true;
+    h.style.cursor = "grab";
+    h.title = "Drag to reorder columns";
+    h.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("text/col", l.k);
+      e.dataTransfer.effectAllowed = "move";
+      col.classList.add("dragcol");
+    });
+    h.addEventListener("dragend", () => {
+      document.querySelectorAll(".dragcol,.dropcol").forEach((x) => x.classList.remove("dragcol", "dropcol"));
+    });
+    col.append(h);
+  }
+  function wireCol(col, l) {
+    if (!canEdit()) return;
+    const ok = (e) => {
+      const t = [...e.dataTransfer ? e.dataTransfer.types : []];
+      return t.includes("text/ideacard") || t.includes("text/col");
+    };
+    col.addEventListener("dragover", (e) => {
+      if (!ok(e)) return;
+      e.preventDefault();
+      col.classList.add("dropcol");
+    });
+    col.addEventListener("dragleave", (e) => {
+      if (!col.contains(e.relatedTarget)) col.classList.remove("dropcol");
+    });
+    col.addEventListener("drop", (e) => {
+      col.classList.remove("dropcol");
+      const card = e.dataTransfer.getData("text/ideacard"), ck = e.dataTransfer.getData("text/col");
+      if (card && S.ideas[card] && S.ideas[card].pr !== l.k) {
+        e.preventDefault();
+        const t = S.ideas[card].t;
+        saveIdea(card, { pr: l.k }, "idea", 'moved idea "' + t + '" to ' + l.n);
+        renderIdeas(true);
+      } else if (ck && ck !== l.k) {
+        e.preventDefault();
+        const keys = ideaCols(true).map((c) => c.k);
+        moveCol(ck, keys.indexOf(l.k));
+      }
+    });
+  }
+  function dragCard(id, c) {
+    if (!canEdit()) return c;
+    const g = el("div", "grip", "⋮⋮");
+    g.title = "Drag to another product";
+    g.setAttribute("aria-hidden", "true");
+    c.prepend(g);
+    const on = () => {
+      c.draggable = true;
+    }, off = () => {
+      c.draggable = false;
+    };
+    g.addEventListener("pointerdown", on);
+    document.addEventListener("pointerup", off, true);
+    c.addEventListener("dragstart", (e) => {
+      if (!c.draggable) return;
+      e.dataTransfer.setData("text/ideacard", id);
+      e.dataTransfer.effectAllowed = "move";
+      c.classList.add("dragging");
+    });
+    c.addEventListener("dragend", () => {
+      off();
+      c.classList.remove("dragging");
+      document.querySelectorAll(".dropcol").forEach((x) => x.classList.remove("dropcol"));
+    });
+    return c;
+  }
+  function boardExtras(board) {
+    if (!canEdit()) return;
+    const ac = el("button", "addcol", "+ Add product");
+    ac.type = "button";
+    ac.id = "addcol";
+    ac.addEventListener("click", () => colDialog(null));
+    board.append(ac);
+    const hid = ideaCols(true).filter((c) => c.hidden);
+    if (hid.length) {
+      const b = el("button", "btn sm", "Show hidden columns (" + hid.length + ")");
+      b.type = "button";
+      b.id = "showhid";
+      b.style.alignSelf = "start";
+      b.addEventListener("click", () => {
+        hid.forEach((c) => saveIdea("cfg_" + c.k, { cfg: true, k: c.k, n: c.n, c: c.c, hidden: false }, null));
+        logAct("idea", "showed hidden product columns");
+        renderIdeas(true);
+        renderDrawer();
+      });
+      board.append(b);
+    }
+  }
+  function moveMenu(m, id, i) {
+    if (!canEdit()) return;
+    m.append(el("div", "mlab", "Move to product"));
+    ideaCols().forEach((c) => {
+      if (c.k === i.pr) return;
+      mi(m, c.n, () => {
+        saveIdea(id, { pr: c.k }, "idea", 'moved idea "' + i.t + '" to ' + c.n);
+        renderIdeas(true);
+      });
+    });
+  }
+  function init() {
+    const chips = $("chips");
+    LANES.forEach((l) => {
+      const b = el("button", "chip");
+      b.type = "button";
+      b.style.setProperty("--c", l.c);
+      b.append(el("i"), document.createTextNode(l.n));
+      b.setAttribute("aria-pressed", "true");
+      b.addEventListener("click", () => {
+        state.sq.has(l.k) ? state.sq.delete(l.k) : state.sq.add(l.k);
+        b.setAttribute("aria-pressed", String(state.sq.has(l.k)));
+        render();
+      });
+      chips.append(b);
+    });
+    fillPersons();
+    $("person").addEventListener("change", (e) => {
+      state.person = e.target.value;
+      render();
+    });
+    $("status").addEventListener("change", (e) => {
+      state.status = e.target.value;
+      render();
+    });
+    $("q").addEventListener("input", (e) => {
+      state.q = e.target.value;
+      render();
+    });
+    $("clear").addEventListener("click", () => {
+      state.sq = new Set(LANES.map((l) => l.k));
+      state.status = "all";
+      state.person = "all";
+      state.q = "";
+      $("status").value = "all";
+      $("person").value = "all";
+      $("q").value = "";
+      chips.querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", "true"));
+      render();
+    });
+    const gr = $("grid");
+    gr.addEventListener("contextmenu", (e) => {
+      if (!canEdit()) return;
+      const bar = e.target.closest(".bar");
+      if (bar) {
+        const it = items().find((i) => i.id === bar.dataset.id);
+        if (it) {
+          e.preventDefault();
+          barMenu(it, bar.dataset.person, e.clientX, e.clientY);
+        }
+        return;
+      }
+      const row = e.target.closest(".rowbg[data-person], .c1.pn");
+      if (row) {
+        e.preventDefault();
+        rowMenu(row.dataset.person, e.clientX, e.clientY, row.classList.contains("rowbg") ? dayAt(e.clientX) : todayK >= 0 ? todayK : 0);
+      }
+    });
+    gr.addEventListener("dblclick", (e) => {
+      if (!canEdit() || e.target.tagName === "INPUT") return;
+      const bar = e.target.closest(".bar");
+      if (bar) {
+        const it = items().find((i) => i.id === bar.dataset.id);
+        if (it) startEdit(it, bar.dataset.person);
+        return;
+      }
+      const row = e.target.closest(".rowbg[data-person]");
+      if (row) addAt(row.dataset.person, dayAt(e.clientX));
+    });
+    $("wrap").addEventListener("scroll", closeCtx);
+    window.addEventListener("resize", closeCtx);
+    document.addEventListener("pointerdown", (e) => {
+      const c = $("ctx");
+      if (!c.hidden && !c.contains(e.target)) closeCtx();
+    }, true);
+    $("add").addEventListener("click", () => {
+      if (canEdit()) addItem();
+    });
+    $("undo").addEventListener("click", undo);
+    $("daysoff").addEventListener("click", (e) => openOff(e.currentTarget));
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        closeCtx();
+        if (S.picker || S.offOpen) closePicker();
+      }
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === "z" || e.key === "Z")) {
+        const t = e.target && e.target.tagName;
+        if (t === "TEXTAREA" || t === "INPUT" || t === "SELECT") return;
+        e.preventDefault();
+        undo();
+      }
+    });
+    let armed = false, t2 = 0;
+    const rb = $("reset") || document.createElement("button");
+    rb.addEventListener("click", () => {
+      if (!canEdit()) return;
+      if (armed) {
+        armed = false;
+        rb.textContent = "Restore roadmap";
+        restoreAll();
+        return;
+      }
+      armed = true;
+      rb.textContent = "Click again to restore";
+      clearTimeout(t2);
+      t2 = setTimeout(() => {
+        armed = false;
+        rb.textContent = "Restore roadmap";
+      }, 3500);
+    });
+    render();
+    $("export").addEventListener("click", exportCsv);
+    initExtras();
+    $("toplogo").src = LOGO;
+    const av = $("avbtn"), um = $("umenu");
+    av.addEventListener("click", (e) => {
+      e.stopPropagation();
+      um.hidden = !um.hidden;
+      av.setAttribute("aria-expanded", String(!um.hidden));
+    });
+    document.addEventListener("pointerdown", (e) => {
+      if (!um.hidden && !um.contains(e.target) && !av.contains(e.target)) {
+        um.hidden = true;
+        av.setAttribute("aria-expanded", "false");
+      }
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !um.hidden) {
+        um.hidden = true;
+        av.setAttribute("aria-expanded", "false");
+        av.focus();
+      }
+    });
+    $("rmsel").addEventListener("change", (e) => useRoadmap(e.target.value));
+    try {
+      const z = localStorage.getItem("ynmo-zoom");
+      if (ZOOM[z]) {
+        state.zoom = z;
+        $("zoom").value = z;
+      }
+    } catch (e) {
+    }
+    $("zoom").addEventListener("change", (e) => {
+      state.zoom = e.target.value;
+      try {
+        localStorage.setItem("ynmo-zoom", state.zoom);
+      } catch (x) {
+      }
+      render();
+    });
+    $("today").addEventListener("click", () => {
+      if (todayK < 0) {
+        toast("Today is outside this roadmap.");
+        return;
+      }
+      const w = $("wrap");
+      w.scrollLeft = Math.max(0, (todayK - 3) * (ZOOM[state.zoom] || 26));
+    });
+    $("ideasbtn").addEventListener("click", () => {
+      S.drawerOpen = !S.drawerOpen;
+      renderDrawer();
+    });
+    const rowAt = (e) => document.elementsFromPoint(e.clientX, e.clientY).find((x) => x.matches && x.matches(".rowbg[data-person]")) || null;
+    const clearDrop = () => gr.querySelectorAll(".drop").forEach((x) => x.classList.remove("drop"));
+    gr.addEventListener("dragover", (e) => {
+      if (!e.dataTransfer || ![...e.dataTransfer.types].includes("text/idea")) return;
+      clearDrop();
+      const r = rowAt(e);
+      if (r) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
+        r.classList.add("drop");
+      }
+    });
+    gr.addEventListener("dragleave", (e) => {
+      if (!gr.contains(e.relatedTarget)) clearDrop();
+    });
+    gr.addEventListener("drop", (e) => {
+      const id = e.dataTransfer && e.dataTransfer.getData("text/idea");
+      const r = rowAt(e);
+      clearDrop();
+      if (!id || !r) return;
+      e.preventDefault();
+      scheduleIdea(id, r.dataset.person, dayAt(e.clientX), 14);
+    });
+    boot();
+  }
+
+  // src/esm/pages/ideas.js
+  var LMH = [[1, "Low"], [2, "Medium"], [3, "High"]];
+  var ISTAT = [["idea", "Idea"], ["shortlisted", "Shortlisted"], ["scheduled", "On a roadmap"], ["dropped", "Dropped"]];
+  var ideaScore = (i) => Math.round((i.im || 2) / (i.ef || 2) * 10) / 10;
+  function saveIdea(id, patch, act, sum) {
+    S.ideas[id] = Object.assign({}, S.ideas[id] || {}, patch);
+    write("ideas/" + id, S.ideas[id]);
+    if (act) logAct(act, sum);
+    renderDrawer();
+  }
+  function addIdea(pr, title) {
+    const id = "i" + Date.now().toString(36) + Math.random().toString(36).slice(2, 4);
+    saveIdea(id, { t: title, n: "", pr, im: 2, ef: 2, st: "idea", by: S.me ? S.me.name : "", ts: Date.now() }, "idea", 'added idea "' + title + '" to ' + ideaColName(pr));
+  }
+  function scheduleIdea(id, person, k, days) {
+    const i = S.ideas[id];
+    if (!i || !canEdit()) return;
+    pushHistory();
+    const nid = "c" + Date.now().toString(36), sq = LANES.some((l) => l.k === i.pr) ? i.pr : person && person !== "__none" ? primarySq(person) : "tifli", none = !person || person === "__none";
+    k = Math.max(0, Math.min(NDAYS - 1, k));
+    const all = items().filter((x) => x.sq === sq);
+    S.over[nid] = { custom: true, rm: state.rm, t: i.t, n: i.n || "", sq, pr: sq === "ai" ? ["tifli"] : [sq], d0: k, d1: Math.min(NDAYS - 1, k + Math.max(1, days) - 1), st: "planned", res: none ? [] : [person], ord: all.length ? Math.max.apply(null, all.map((x) => x.ord)) + 1 : 0, idea: id };
+    persist(nid);
+    saveIdea(id, { st: "scheduled", rm: state.rm, itemId: nid }, "roadmap", 'scheduled idea "' + i.t + '" on ' + curRm().n + (none ? "" : " for " + person));
+    render();
+    if (state.page === "ideas") renderIdeas(true);
+    toast('Scheduled "' + i.t + '" on ' + curRm().n + ".");
+  }
+  function openSchedule(id, anchor) {
+    const i = S.ideas[id];
+    if (!i || !canEdit()) return;
+    S.offOpen = false;
+    S.picker = { add: true };
+    const p = $("pop");
+    p.hidden = false;
+    p.textContent = "";
+    const r = curRm();
+    p.append(el("h3", "", "Add to " + r.n), el("div", "sub2", i.t));
+    const names = [...directory().keys()].sort((x, y) => x.localeCompare(y));
+    const who = selOf([["__none", "Unassigned"]].concat(names.map((n2) => [n2, n2])), "__none");
+    const d = el("input");
+    d.type = "date";
+    d.min = r.a;
+    d.max = r.b;
+    const td = todayIso();
+    d.value = td >= r.a && td <= r.b ? td : r.a;
+    const n = el("input");
+    n.type = "number";
+    n.min = 1;
+    n.max = 365;
+    n.value = 14;
+    const box = el("div", "padd");
+    box.style.gridTemplateColumns = "1fr";
+    box.append(fld("Person", who), fld("Starts", d), fld("Duration in days", n));
+    const ok = el("button", "btn primary", "Add to roadmap");
+    ok.type = "button";
+    ok.addEventListener("click", () => {
+      const k = kOfIso(d.value);
+      if (isNaN(k)) return;
+      closePicker();
+      scheduleIdea(id, who.value, k, +n.value || 14);
+    });
+    const cx = el("button", "btn", "Cancel");
+    cx.type = "button";
+    cx.addEventListener("click", closePicker);
+    box.append(ok, cx);
+    p.append(box);
+    placePop(anchor);
+  }
+  function ideaCard(id, i) {
+    const c = el("div", "icard" + (i.st === "dropped" || i.st === "scheduled" ? " done" : ""));
+    const ed = canEdit();
+    const d = { t: i.t, n: i.n || "", im: i.im || 2, ef: i.ef || 2 };
+    const head = el("div", "ihead");
+    const t = el("input", "ititle");
+    t.value = d.t;
+    t.maxLength = 140;
+    t.disabled = !ed;
+    t.setAttribute("aria-label", "Idea title");
+    const more = el("button", "kebab", "⋯");
+    more.type = "button";
+    more.setAttribute("aria-label", "More actions for " + i.t);
+    more.setAttribute("aria-haspopup", "menu");
+    more.disabled = !ed;
+    head.append(t, more);
+    const n = el("textarea");
+    n.value = d.n;
+    n.placeholder = "Notes: why it matters, who asked, links";
+    n.disabled = !ed;
+    const im = selOf(LMH, d.im), ef = selOf(LMH, d.ef);
+    im.disabled = ef.disabled = !ed;
+    im.setAttribute("aria-label", "Impact");
+    ef.setAttribute("aria-label", "Effort");
+    const lab = (x, sel) => {
+      const w = el("label", "hint");
+      w.append(document.createTextNode(x + " "), sel);
+      return w;
+    };
+    const r1 = el("div", "row2");
+    r1.append(lab("Impact", im), lab("Effort", ef));
+    const score = el("span", "score", "Score " + ideaScore(i));
+    const stat = el("span", "badge" + (i.st === "scheduled" ? " ok" : ""), (ISTAT.find((x) => x[0] === (i.st || "idea")) || ISTAT[0])[1]);
+    const save = el("button", "btn primary sm", "Save");
+    save.type = "button";
+    save.hidden = true;
+    const saved = el("span", "hint", "");
+    const r2 = el("div", "row2");
+    r2.append(stat, score);
+    const r3 = el("div", "row2");
+    if (i.st === "scheduled") {
+      const rr = allRoadmaps().find((x) => x.id === i.rm);
+      r3.append(el("span", "badge ok", "On " + (rr ? rr.n : "a roadmap")));
+    }
+    r3.append(save, saved);
+    const dirty = () => t.value.trim() !== i.t || n.value !== (i.n || "") || +im.value !== (i.im || 2) || +ef.value !== (i.ef || 2);
+    const mark = () => {
+      const dv = dirty();
+      save.hidden = !dv;
+      saved.textContent = "";
+      score.textContent = "Score " + ideaScore({ im: +im.value, ef: +ef.value });
+    };
+    [t, n].forEach((x) => x.addEventListener("input", mark));
+    [im, ef].forEach((x) => x.addEventListener("change", mark));
+    const doSave = () => {
+      const v = t.value.trim();
+      if (!v) {
+        t.focus();
+        return false;
+      }
+      if (!dirty()) return true;
+      saveIdea(id, { t: v, n: n.value, im: +im.value, ef: +ef.value }, "idea", 'saved idea "' + v + '"' + (v !== i.t ? ' (was "' + i.t + '")' : ""));
+      return true;
+    };
+    save.addEventListener("click", () => {
+      if (doSave()) renderIdeas(true);
+    });
+    c.addEventListener("keydown", (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !save.hidden) {
+        e.preventDefault();
+        save.click();
+      }
+    });
+    more.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const r = more.getBoundingClientRect();
+      openCtx(r.right - 190, r.bottom + 4, (m) => {
+        if (i.st !== "scheduled") mi(m, "Add to roadmap…", (b) => {
+          if (!doSave()) return;
+          openSchedule(id, more);
+        });
+        else mi(m, "Show on roadmap", () => {
+          if (i.rm) useRoadmap(i.rm);
+          showPage("roadmap");
+        });
+        if (i.st !== "scheduled") {
+          mi(m, (i.st === "shortlisted" ? "✓ " : "") + "Shortlist", () => {
+            saveIdea(id, { st: i.st === "shortlisted" ? "idea" : "shortlisted" }, "idea", (i.st === "shortlisted" ? 'unshortlisted "' : 'shortlisted "') + i.t + '"');
+            renderIdeas(true);
+          });
+          mi(m, i.st === "dropped" ? "Reopen idea" : "Drop idea", () => {
+            saveIdea(id, { st: i.st === "dropped" ? "idea" : "dropped" }, "idea", (i.st === "dropped" ? 'reopened "' : 'dropped "') + i.t + '"');
+            renderIdeas(true);
+          });
+        }
+        moveMenu(m, id, i);
+        m.append(el("div", "msep"));
+        mi(m, "Delete idea", () => {
+          if (!window.confirm('Delete "' + i.t + '"?')) return;
+          logAct("idea", 'deleted idea "' + i.t + '"');
+          delete S.ideas[id];
+          write("ideas/" + id, null);
+          renderIdeas(true);
+          renderDrawer();
+        }, "danger");
+      });
+    });
+    c.append(head, n, r1, r2, r3);
+    return c;
+  }
+  function renderIdeas(force) {
+    const root = $("pg-ideas"), ae = document.activeElement;
+    if (!force && ae && root.contains(ae) && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) return;
+    root.textContent = "";
+    const tools = el("div", "formrow");
+    const q = el("input");
+    q.type = "search";
+    q.placeholder = "Search ideas";
+    q.value = ideaUI.q;
+    q.addEventListener("input", () => {
+      ideaUI.q = q.value;
+      renderIdeas(true);
+      const s = root.querySelector("input[type=search]");
+      if (s) {
+        s.focus();
+        s.setSelectionRange(s.value.length, s.value.length);
+      }
+    });
+    const fs = selOf([["open", "Open ideas"], ["scheduled", "On a roadmap"], ["dropped", "Dropped"], ["all", "All"]], ideaUI.st);
+    fs.setAttribute("aria-label", "Show ideas by status");
+    fs.addEventListener("change", () => {
+      ideaUI.st = fs.value;
+      renderIdeas(true);
+    });
+    tools.append(q, fs);
+    root.append(pageHead("Ideas", "Capture thoughts per product first. When one is ready, press Add to roadmap here, or drag it from the Ideas drawer onto a person on the roadmap.", tools));
+    const board = el("div", "board");
+    ideaCols().forEach((l) => {
+      const col = el("div", "col");
+      col.style.setProperty("--c", l.c);
+      const all = Object.keys(S.ideas).filter((id) => S.ideas[id].pr === l.k);
+      const fq = ideaUI.q.trim().toLowerCase();
+      const list = all.filter((id) => {
+        const i = S.ideas[id], s = i.st || "idea";
+        const okS = ideaUI.st === "all" || (ideaUI.st === "open" ? s === "idea" || s === "shortlisted" : s === ideaUI.st);
+        return okS && (!fq || (i.t + " " + (i.n || "")).toLowerCase().includes(fq));
+      }).sort((a, b) => ideaScore(S.ideas[b]) - ideaScore(S.ideas[a]) || (S.ideas[b].ts || 0) - (S.ideas[a].ts || 0));
+      const h = el("h2");
+      h.append(document.createTextNode(l.n), el("span", "badge", String(list.length)));
+      decorateCol(col, h, l);
+      wireCol(col, l);
+      if (canEdit()) {
+        const inp = el("input");
+        inp.type = "text";
+        inp.placeholder = "Add an idea and press Enter";
+        inp.maxLength = 140;
+        inp.setAttribute("aria-label", "New idea for " + l.n);
+        inp.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            const v = inp.value.trim();
+            if (v) {
+              addIdea(l.k, v);
+              renderIdeas(true);
+              const n = root.querySelectorAll(".col input[type=text]")[ideaCols().findIndex((x) => x.k === l.k)];
+              if (n) n.focus();
+            }
+          }
+        });
+        col.append(inp);
+      }
+      list.forEach((id) => col.append(dragCard(id, ideaCard(id, S.ideas[id]))));
+      if (!list.length) col.append(el("div", "hint", "Nothing here yet."));
+      board.append(col);
+    });
+    boardExtras(board);
+    root.append(board);
+  }
+  function renderDrawer() {
+    const d = $("drawer");
+    d.hidden = !S.drawerOpen;
+    if (!S.drawerOpen) return;
+    d.textContent = "";
+    const h = el("div", "formrow");
+    h.append(el("h3", "", "Ideas backlog"));
+    const x = el("button", "btn sm", "Close");
+    x.type = "button";
+    x.style.marginInlineStart = "auto";
+    x.addEventListener("click", () => {
+      S.drawerOpen = false;
+      renderDrawer();
+    });
+    h.append(x);
+    d.append(h, el("div", "hint", "Drag an idea onto a person and a day. It becomes a bar and stays linked."));
+    const list = el("div", "dl");
+    const open = Object.keys(S.ideas).filter((id) => !isMeta(S.ideas[id]) && (S.ideas[id].st || "idea") === "idea" || S.ideas[id].st === "shortlisted");
+    ideaCols().forEach((l) => {
+      const mine = open.filter((id) => S.ideas[id].pr === l.k).sort((a, b) => ideaScore(S.ideas[b]) - ideaScore(S.ideas[a]));
+      if (!mine.length) return;
+      list.append(el("div", "lab", l.n));
+      mine.forEach((id) => {
+        const i = S.ideas[id], c = el("div", "dcard");
+        c.draggable = canEdit();
+        c.style.setProperty("--c", l.c);
+        c.append(el("b", "", i.t), el("small", "", "Score " + ideaScore(i) + (i.st === "shortlisted" ? " · Shortlisted" : "")));
+        c.addEventListener("dragstart", (e) => {
+          e.dataTransfer.setData("text/idea", id);
+          e.dataTransfer.effectAllowed = "copy";
+        });
+        list.append(c);
+      });
+    });
+    if (!open.length) list.append(el("div", "hint", "No open ideas. Add some on the Ideas page."));
+    d.append(list);
+  }
+
+  // src/esm/pages/roadmaps.js
+  function allRoadmaps() {
+    return [H2].concat(Object.keys(S.roadmaps).map((id) => Object.assign({ id }, S.roadmaps[id])).filter((r) => r.a && r.b).sort((x, y) => x.a < y.a ? -1 : 1));
+  }
+  function curRm() {
+    return allRoadmaps().find((r) => r.id === state.rm) || H2;
+  }
+  function withRm(id, fn) {
+    const keep = state.rm, r = allRoadmaps().find((x) => x.id === id) || H2;
+    state.rm = r.id;
+    setRange(r.a, r.b);
+    try {
+      return fn();
+    } finally {
+      const k = allRoadmaps().find((x) => x.id === keep) || H2;
+      state.rm = k.id;
+      setRange(k.a, k.b);
+    }
+  }
+  function useRoadmap(id) {
+    const r = allRoadmaps().find((x) => x.id === id) || H2;
+    state.rm = r.id;
+    setRange(r.a, r.b);
+    state.open = null;
+    try {
+      localStorage.setItem("ynmo-rm", r.id);
+    } catch (e) {
+    }
+    fillRm();
+    render();
+  }
+  function fillRm() {
+    const s = $("rmsel");
+    s.textContent = "";
+    allRoadmaps().forEach((r) => {
+      const o = el("option", "", r.n);
+      o.value = r.id;
+      if (r.id === state.rm) o.selected = true;
+      s.append(o);
+    });
+    $("rmtitle").textContent = curRm().n + " roadmap";
+    const rs = $("reset");
+    if (rs) rs.textContent = state.rm === H2_ID ? "Restore roadmap" : "Clear roadmap";
+  }
+  function rangeFor(kind, year) {
+    const m = { Q1: [0, 2], Q2: [3, 5], Q3: [6, 8], Q4: [9, 11], H1: [0, 5], H2: [6, 11], Year: [0, 11] }[kind] || [0, 11], y = +year;
+    return [new Date(Date.UTC(y, m[0], 1)).toISOString().slice(0, 10), new Date(Date.UTC(y, m[1] + 1, 0)).toISOString().slice(0, 10)];
+  }
+  var KIND_LABEL = { Q1: "Q1", Q2: "Q2", Q3: "Q3", Q4: "Q4", H1: "H1", H2: "H2", Year: "Full year", Custom: "Custom" };
+  function createRoadmap(name, kind, a, b, copyFrom) {
+    const id = "r" + Date.now().toString(36);
+    let copies = [];
+    if (copyFrom) copies = withRm(copyFrom, () => items());
+    S.roadmaps[id] = { n: name, kind, a, b, by: S.me ? S.me.name : "" };
+    write("roadmaps/" + id, S.roadmaps[id]);
+    const nd = Math.round((parseIso(b) - parseIso(a)) / DAY) + 1;
+    copies.forEach((it, n) => {
+      if (it.d0 >= nd) return;
+      const nid = "c" + Date.now().toString(36) + n;
+      S.over[nid] = { custom: true, rm: id, t: it.t, n: it.n || "", sq: it.sq, pr: it.pr.slice(), d0: it.d0, d1: Math.min(it.d1, nd - 1), st: it.st === "done" ? "planned" : it.st, res: it.res.slice(), c: it.c || null, ord: it.ord };
+      persist(nid);
+    });
+    logAct("roadmap", 'created roadmap "' + name + '" (' + fmtIso(a) + " to " + fmtIso(b) + ")" + (copies.length ? " with " + copies.length + " features copied" : ""));
+    return id;
+  }
+  function deleteRoadmap(id) {
+    const r = S.roadmaps[id];
+    if (!r) return;
+    Object.keys(S.over).forEach((k) => {
+      if (!base.has(k) && S.over[k].rm === id) {
+        delete S.over[k];
+        persist(k);
+      }
+    });
+    Object.keys(S.ideas).forEach((iid) => {
+      const i = S.ideas[iid];
+      if (i && !i.col && !i.cfg && i.rm === id && i.st === "scheduled") saveIdea(iid, { st: "idea", rm: null, itemId: null }, null);
+    });
+    delete S.roadmaps[id];
+    write("roadmaps/" + id, null);
+    logAct("roadmap", 'deleted roadmap "' + r.n + '"');
+    if (state.rm === id) useRoadmap(H2_ID);
+  }
+  function renderRoadmaps() {
+    const root = $("pg-roadmaps");
+    root.textContent = "";
+    root.append(pageHead("Roadmaps", "Create a roadmap for a quarter, half year or the whole year (choose Scope > Custom for your own dates). Each roadmap has its own timeline; people, ideas and leave are shared."));
+    const f = el("form", "card");
+    f.append(el("h2", "", "New roadmap"));
+    const yr = selOf([2026, 2027, 2028, 2029], 2027), kd = selOf(Object.keys(KIND_LABEL).map((k) => [k, KIND_LABEL[k]]), "Q1");
+    const nm = el("input");
+    nm.type = "text";
+    nm.maxLength = 60;
+    nm.required = true;
+    const da = el("input");
+    da.type = "date";
+    const db2 = el("input");
+    db2.type = "date";
+    const cp = selOf([["", "Start empty"]].concat(allRoadmaps().map((r) => [r.id, "Copy features from " + r.n])), "");
+    const auto = () => {
+      if (nm.dataset.touched) return;
+      nm.value = kd.value === "Custom" ? "" : kd.value === "Year" ? "Full year " + yr.value : kd.value + " " + yr.value;
+    };
+    const sync = () => {
+      const cu = kd.value === "Custom";
+      da.parentElement.hidden = db2.parentElement.hidden = !cu;
+      if (!cu) {
+        const r = rangeFor(kd.value, yr.value);
+        da.value = r[0];
+        db2.value = r[1];
+      }
+      auto();
+    };
+    nm.addEventListener("input", () => {
+      nm.dataset.touched = "1";
+    });
+    yr.addEventListener("change", sync);
+    kd.addEventListener("change", sync);
+    const row = el("div", "formrow");
+    row.append(fld("Name", nm), fld("Year", yr), fld("Scope", kd), fld("From", da), fld("To", db2), fld("Features", cp));
+    const go = el("button", "btn primary", "Create roadmap");
+    go.type = "submit";
+    go.disabled = !canEdit();
+    const msg = el("div", "gerr");
+    f.append(row, msg, go);
+    sync();
+    f.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const a = da.value, b = db2.value;
+      if (parseIso(a) === null || parseIso(b) === null || parseIso(b) < parseIso(a)) {
+        msg.textContent = "Pick a valid date range.";
+        return;
+      }
+      if ((parseIso(b) - parseIso(a)) / DAY > 730) {
+        msg.textContent = "Keep a roadmap within two years.";
+        return;
+      }
+      const nmv = nm.value.trim();
+      if (!nmv) {
+        msg.textContent = "Give the roadmap a name.";
+        return;
+      }
+      if (allRoadmaps().some((r) => r.n.trim().toLowerCase() === nmv.toLowerCase())) {
+        msg.textContent = 'A roadmap called "' + nmv + '" already exists. Choose another name.';
+        return;
+      }
+      const id = createRoadmap(nmv, kd.value, a, b, cp.value);
+      useRoadmap(id);
+      showPage("roadmap");
+    });
+    root.append(f);
+    const g = el("div", "rmgrid");
+    allRoadmaps().forEach((r) => {
+      const c = el("div", "card rmcard" + (r.id === state.rm ? " on" : ""));
+      const n = withRm(r.id, () => items().length);
+      const linked = Object.values(S.ideas).filter((i) => i.rm === r.id && i.st === "scheduled").length;
+      c.append(el("h3", "", r.n), el("div", "meta", fmtIso(r.a) + " to " + fmtIso(r.b)), el("div", "meta", n + " features · " + linked + " from ideas"));
+      const act = el("div", "actions");
+      const open = el("button", "btn primary sm", r.id === state.rm ? "Open (current)" : "Open");
+      open.type = "button";
+      open.addEventListener("click", () => {
+        useRoadmap(r.id);
+        showPage("roadmap");
+      });
+      act.append(open);
+      if (!r.builtin && canEdit()) {
+        let armed = false;
+        const del = el("button", "btn danger sm", "Delete");
+        del.type = "button";
+        del.addEventListener("click", () => {
+          if (armed) {
+            deleteRoadmap(r.id);
+            renderRoadmaps();
+            return;
+          }
+          armed = true;
+          del.textContent = "Click again to delete";
+          setTimeout(() => {
+            armed = false;
+            del.textContent = "Delete";
+          }, 3500);
+        });
+        act.append(del);
+      }
+      c.append(act);
+      g.append(c);
+    });
+    root.append(g);
+  }
+
+  // src/esm/core/shared.js
+  var ideaUI = { st: "open", q: "" };
+  var H2 = { id: H2_ID, n: "H2 2026", a: "2026-10-01", b: "2027-01-31", kind: "H2", builtin: true };
+  var PAGES = [["roadmap", "Roadmap"], ["ideas", "Ideas"], ["roadmaps", "Roadmaps"], ["resources", "Resources"], ["vacations", "Vacations"], ["capacity", "Capacity"], ["baselines", "Baselines"], ["log", "Log"], ["admin", "Approvals"]];
+  var DOMAINS = ["PM", "Mobile", "Backend", "Frontend", "Full-stack", "Engineering", "QA", "UX / Design", "AI / ML", "Other"];
+  var VTYPES = ["Annual leave", "Training", "Public holiday", "Other"];
+  var slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "x";
+  var fmtIso = (s) => {
+    const t = parseIso(s);
+    if (t === null) return s || "";
+    const d = new Date(t);
+    return DN[d.getUTCDay()] + " " + d.getUTCDate() + " " + MN[d.getUTCMonth()] + " " + d.getUTCFullYear();
+  };
+  function todayIso() {
+    const n = /* @__PURE__ */ new Date(), z = (v) => (v < 10 ? "0" : "") + v;
+    return n.getFullYear() + "-" + z(n.getMonth() + 1) + "-" + z(n.getDate());
+  }
+  function wdays(a, b) {
+    let n = 0;
+    for (let t = parseIso(a); t !== null && t <= parseIso(b); t += DAY) {
+      const w = new Date(t).getUTCDay();
+      if (w !== 5 && w !== 6) n++;
+    }
+    return n;
+  }
+  function kOfIso(s) {
+    const t = parseIso(s);
+    return t === null ? NaN : Math.round((t - START) / DAY);
+  }
+  function ago(iso3) {
+    const s = Math.max(0, (Date.now() - new Date(iso3).getTime()) / 1e3);
+    if (s < 60) return "just now";
+    if (s < 3600) return Math.floor(s / 60) + " min ago";
+    if (s < 86400) return Math.floor(s / 3600) + " h ago";
+    return Math.floor(s / 86400) + " d ago";
+  }
+  function clock(iso3) {
+    try {
+      return new Date(iso3).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
+    } catch (e) {
+      return iso3;
+    }
+  }
+  function fld(label, ctl) {
+    const l = el("label");
+    l.append(el("span", "", label), ctl);
+    return l;
+  }
+  function selOf(opts, val, cls) {
+    const s = el("select", cls || "");
+    opts.forEach((o) => {
+      const v = Array.isArray(o) ? o[0] : o, t = Array.isArray(o) ? o[1] : o;
+      const x = el("option", "", t);
+      x.value = v;
+      if (String(v) === String(val)) x.selected = true;
+      s.append(x);
+    });
+    return s;
+  }
+  function pageHead(t, sub, extra) {
+    const h = el("div", "pghead");
+    const d = el("div");
+    d.append(el("h1", "", t));
+    if (sub) d.append(el("p", "sub", sub));
+    h.append(d);
+    if (extra) h.append(extra);
+    return h;
+  }
+  function toast(t) {
+    $("save").textContent = t;
+  }
+  function logAct(act, sum, undo2) {
+    if (!S.me || !sum) return;
+    const id = "l" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const data = { at: (/* @__PURE__ */ new Date()).toISOString(), uid: S.me.id, name: S.me.name || S.me.email, av: S.me.avatar || "", act, sum, rm: curRm().n };
+    if (undo2) data.u = undo2;
+    S.logs.unshift({ id, data });
+    if (state.page === "log") renderLog();
+    sb.from("activity").insert({ id, data }).then(() => {
+    }, () => {
+    });
+  }
+  function describe(prev, f) {
+    if (!prev) return "";
+    const parts = [];
+    if (f.t !== void 0 && f.t !== prev.t) parts.push('renamed to "' + f.t + '"');
+    if (f.st !== void 0 && f.st !== prev.st) parts.push("status: " + STATUS[f.st]);
+    if (f.d0 !== void 0 && f.d0 !== prev.d0 || f.d1 !== void 0 && f.d1 !== prev.d1) parts.push("dates " + dlabel(f.d0 !== void 0 ? f.d0 : prev.d0) + " to " + dlabel(f.d1 !== void 0 ? f.d1 : prev.d1));
+    if (f.res) {
+      const a = f.res.filter((n) => !prev.res.includes(n)), r = prev.res.filter((n) => !f.res.includes(n));
+      if (a.length) parts.push("added " + a.join(", "));
+      if (r.length) parts.push("removed " + r.join(", "));
+    }
+    if (f.c !== void 0 && f.c !== (prev.c || null)) parts.push("color changed");
+    if (f.n !== void 0 && f.n !== (prev.n || "")) parts.push("notes edited");
+    if (f.sq && f.sq !== prev.sq) parts.push("product: " + laneOf(f.sq).n);
+    if (f.dep) parts.push("depends on " + (f.dep.length ? f.dep.length + " bar" + (f.dep.length === 1 ? "" : "s") : "nothing"));
+    if (f.ms !== void 0 && !!f.ms !== !!prev.ms) parts.push(f.ms ? "made a milestone" : "made a regular bar");
+    return parts.join("; ");
+  }
+
+  // src/esm/features/presence.js
+  var presT = 0;
+  var lockOverride = null;
+  var lockAt = 0;
+  function myPres() {
+    return { uid: S.me.id, name: S.me.name || S.me.email, av: S.me.avatar || "", page: state.page, rm: state.rm, edit: state.edit ? state.edit.split("|")[0] : null };
+  }
+  function trackPres() {
+    clearTimeout(presT);
+    presT = setTimeout(() => {
+      if (S.presCh && S.me) {
+        try {
+          S.presCh.track(myPres());
+        } catch (e) {
+        }
+      }
+    }, 120);
+  }
+  function startPresence() {
+    if (S.presCh || !sb.channel) return;
+    try {
+      S.presCh = sb.channel("ynmo-presence", { config: { private: true, presence: { key: S.me.id } } });
+      S.presCh.on("presence", { event: "sync" }, () => {
+        try {
+          S.pres = S.presCh.presenceState() || {};
+        } catch (e) {
+          S.pres = {};
+        }
+        drawPresence();
+        decorateLocks();
+      });
+      S.presCh.subscribe((s) => {
+        if (s === "SUBSCRIBED") trackPres();
+      });
+    } catch (e) {
+      S.presCh = null;
+    }
+  }
+  function others() {
+    const out = [];
+    Object.keys(S.pres).forEach((k) => {
+      if (k === (S.me && S.me.id)) return;
+      const m = (S.pres[k] || [])[0];
+      if (m) out.push(m);
+    });
+    return out;
+  }
+  function editorOf(id) {
+    const o = others().find((m) => m.edit === id);
+    return o || null;
+  }
+  function drawPresence() {
+    let box = $("presence");
+    if (!box) {
+      box = el("div", "presence");
+      box.id = "presence";
+      box.setAttribute("aria-label", "People online");
+      const av = $("avbtn");
+      av.parentNode.insertBefore(box, av);
+    }
+    box.textContent = "";
+    const o = others();
+    box.hidden = !o.length;
+    o.slice(0, 4).forEach((m) => {
+      const a = avatarEl(m.av, 28, m.name);
+      a.title = m.name + (m.edit ? " · editing" : " · online") + " · " + (m.page || "");
+      a.classList.add("pav");
+      box.append(a);
+    });
+    if (o.length > 4) box.append(el("span", "pmore", "+" + (o.length - 4)));
+    box.setAttribute("role", "group");
+    box.setAttribute("aria-label", o.length + (o.length === 1 ? " other person online: " : " others online: ") + o.map((m) => m.name).join(", "));
+  }
+  function decorateLocks() {
+    const g = $("grid");
+    if (!g) return;
+    g.querySelectorAll(".bar.locked").forEach((b) => {
+      b.classList.remove("locked");
+      const t = b.querySelector(".lockchip");
+      if (t) t.remove();
+    });
+    others().forEach((m) => {
+      if (!m.edit) return;
+      g.querySelectorAll(".bar").forEach((b) => {
+        if (b.dataset.id === m.edit && !b.classList.contains("editing")) {
+          b.classList.add("locked");
+          b.append(el("span", "lockchip", "✎ " + String(m.name).split(" ")[0]));
+          b.title += " · " + m.name + " is editing";
+        }
+      });
+    });
+  }
+  function lockCheck(it) {
+    const o = editorOf(it.id);
+    if (!o) return true;
+    if (lockOverride === it.id && Date.now() - lockAt < 6e3) {
+      lockOverride = null;
+      return true;
+    }
+    lockOverride = it.id;
+    lockAt = Date.now();
+    toast(o.name + ' is editing "' + it.t + '" right now. Try again within 6 seconds to edit anyway.');
+    return false;
   }
 
   // src/esm/ui/editing.js
@@ -2160,7 +3305,16 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
         });
         return i;
       };
-      dr.append(dateIn(it.d0, (k) => commit(it.id, { d0: k, d1: Math.max(k, it.d1) })), dateIn(it.d1, (k) => commit(it.id, { d1: k, d0: Math.min(k, it.d0) })));
+      dr.append(
+        dateIn(it.d0, (k) => {
+          if (k > it.d1) toast("Start is after the end, so the end moved to " + dlabel(k) + ".");
+          commit(it.id, { d0: k, d1: Math.max(k, it.d1) });
+        }),
+        dateIn(it.d1, (k) => {
+          if (k < it.d0) toast("End is before the start, so the start moved to " + dlabel(k) + ".");
+          commit(it.id, { d1: k, d0: Math.min(k, it.d0) });
+        })
+      );
       c.append(dr);
       c.append(el("div", "msep"));
       mi(c, "Assign people…" + (it.res.length ? " (" + it.res.length + ")" : ""), (b) => openPicker(it.id, b));
@@ -2637,6 +3791,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
           rm.type = "button";
           rm.addEventListener("click", () => {
             delete S.vacs[v.id];
+            if (S.vacNotice && S.vacNotice.id === v.id) S.vacNotice = null;
             write("vacations/" + v.id, null);
             logAct("vacation", "removed leave of " + v.p + " (" + fmtIso(v.a0) + ")");
             render();
@@ -2944,1139 +4099,6 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       put(el("div", "rowbg"), r, null).style.minHeight = "44px";
     }
     return r;
-  }
-
-  // src/esm/features/sharing.js
-  function shareFor(rm) {
-    const k = Object.keys(S.shares).find((t) => S.shares[t].rm === rm);
-    return k ? { token: k, data: S.shares[k] } : null;
-  }
-  function shareUrl(t) {
-    return location.origin + location.pathname + "#/share/" + t;
-  }
-  function openShare() {
-    if (!canWrite()) return;
-    const rmId = state.rm;
-    openDlg("Share " + curRm().n + " (read only)", (box) => {
-      box.append(el("p", "hint", "Anyone with the link can look at this roadmap without an account. They cannot change anything, and they do not see leave, ideas or the log. Stop sharing at any time and the link stops working."));
-      const area = el("div");
-      box.append(area);
-      const msg = el("div", "gerr");
-      msg.setAttribute("aria-live", "polite");
-      box.append(msg);
-      const close = el("button", "btn", "Close");
-      close.type = "button";
-      close.addEventListener("click", closeDlg);
-      const draw = () => {
-        area.textContent = "";
-        const s = shareFor(rmId);
-        if (!s) {
-          const mk = el("button", "btn primary", "Create share link");
-          mk.type = "button";
-          mk.addEventListener("click", async () => {
-            mk.disabled = true;
-            const t = (window.crypto && crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()).replace(/-/g, "");
-            const data = { rm: rmId, by: S.me.name || S.me.email, at: (/* @__PURE__ */ new Date()).toISOString() };
-            try {
-              await S.db.doc("share_links/" + t).set(data);
-              S.shares[t] = data;
-              logAct("access", "created a share link for " + curRm().n);
-              draw();
-            } catch (e) {
-              mk.disabled = false;
-              msg.textContent = "Could not create the link. Ask the admin to run setup v4.";
-            }
-          });
-          area.append(mk);
-        } else {
-          const inp = el("input");
-          inp.type = "text";
-          inp.readOnly = true;
-          inp.value = shareUrl(s.token);
-          inp.id = "shareurl";
-          inp.setAttribute("aria-label", "Share link");
-          inp.style.width = "100%";
-          inp.addEventListener("focus", () => inp.select());
-          const cp = el("button", "btn primary", "Copy link");
-          cp.type = "button";
-          cp.addEventListener("click", async () => {
-            try {
-              await navigator.clipboard.writeText(inp.value);
-              cp.textContent = "Copied";
-            } catch (e) {
-              inp.select();
-              cp.textContent = "Press Ctrl+C";
-            }
-          });
-          const stop = el("button", "btn danger", "Stop sharing");
-          stop.type = "button";
-          stop.addEventListener("click", async () => {
-            stop.disabled = true;
-            try {
-              await S.db.doc("share_links/" + s.token).delete();
-              delete S.shares[s.token];
-              logAct("access", "stopped sharing " + curRm().n);
-              draw();
-            } catch (e) {
-              stop.disabled = false;
-              msg.textContent = "Could not stop sharing. Try again.";
-            }
-          });
-          const row = el("div", "formrow");
-          row.append(cp, stop);
-          area.append(inp, row, el("div", "hint", "Shared by " + s.data.by + " on " + clock(s.data.at)));
-        }
-      };
-      draw();
-      box.append(close);
-    });
-  }
-  function applyShared(p) {
-    S.over = p.items || {};
-    S.extras = p.people || {};
-    S.daysoff = p.daysoff || {};
-    S.roadmaps = p.roadmap ? { [p.rm]: p.roadmap } : {};
-    if (state.rm !== p.rm) {
-      const r = allRoadmaps().find((x) => x.id === p.rm) || H2;
-      state.rm = r.id;
-      setRange(r.a, r.b);
-    }
-    fillRm();
-    render();
-  }
-  async function bootShared(token) {
-    S.SHARE = true;
-    S.readonly = true;
-    const r = await sb.rpc("shared_snapshot", { t: token });
-    if (r.error || !r.data) {
-      const c = gateCard("This link is not active", "The share link was stopped or is wrong. Ask the person who sent it for a new one.");
-      return;
-    }
-    $("gate").hidden = true;
-    $("shell").classList.remove("app-hidden");
-    $("shell").classList.add("shared");
-    document.body.classList.add("sharedview");
-    const nav = $("nav");
-    nav.textContent = "";
-    $("toplogo").src = LOGO;
-    PAGES.forEach((x) => {
-      const s = $("pg-" + x[0]);
-      if (s) s.hidden = x[0] !== "roadmap";
-    });
-    $("ptitle").textContent = "Shared roadmap";
-    const b = netBar();
-    b.classList.add("sharebar");
-    b.hidden = false;
-    b.textContent = "You are looking at a read-only shared roadmap. It updates by itself every minute.";
-    applyShared(r.data);
-    setSave("readonly");
-    $("save").textContent = "View only.";
-    let last = JSON.stringify(r.data);
-    setInterval(async () => {
-      try {
-        const n = await sb.rpc("shared_snapshot", { t: token });
-        if (n.data && JSON.stringify(n.data) !== last) {
-          last = JSON.stringify(n.data);
-          applyShared(n.data);
-        } else if (!n.data && !n.error) {
-          location.reload();
-        }
-      } catch (e) {
-      }
-    }, window.__sharePoll || 6e4);
-  }
-  function renderAccess(root) {
-    if (!(S.me && S.me.is_admin)) return;
-    const done = S.members.filter((m) => m.approved);
-    const c = el("div", "card");
-    c.append(el("h2", "", "Who can edit"));
-    c.append(el("div", "hint", "Editors change the plan. Viewers can look at the roadmap, capacity, snapshots and log, but cannot change anything."));
-    done.forEach((m) => {
-      const row = el("div", "formrow");
-      row.style.alignItems = "center";
-      const who = el("div");
-      who.append(el("b", "", m.name || m.email), el("div", "hint", (m.role ? m.role + " · " : "") + (m.email || "")));
-      row.append(avatarEl(m.avatar, 34, m.name), who);
-      if (m.is_admin) {
-        const a = el("span", "badge", "Admin");
-        a.style.marginInlineStart = "auto";
-        row.append(a);
-      } else {
-        const s = selOf([["editor", "Editor"], ["viewer", "Viewer"]], m.access === "viewer" ? "viewer" : "editor");
-        s.style.marginInlineStart = "auto";
-        s.setAttribute("aria-label", "Access for " + (m.name || m.email));
-        s.addEventListener("change", async () => {
-          const r = await sb.from("profiles").update({ access: s.value }).eq("id", m.id);
-          if (r.error) {
-            s.value = m.access === "viewer" ? "viewer" : "editor";
-            toast("Could not change access. Ask the admin to run setup v4.");
-            return;
-          }
-          m.access = s.value;
-          logAct("access", "set " + (m.name || m.email) + " as " + s.value);
-          toast((m.name || m.email) + " is now a " + s.value + ".");
-        });
-        row.append(s);
-      }
-      c.append(row);
-    });
-    root.append(c);
-  }
-
-  // src/esm/features/baselines.js
-  function snapItems() {
-    return items().map((i) => ({ id: i.id, t: i.t, sq: i.sq, d0: i.d0, d1: i.d1, st: i.st, res: i.res.slice(), ms: !!i.ms, dep: depsOf(i).slice() }));
-  }
-  function saveSnapshot(name, active) {
-    const id = "b" + Date.now().toString(36), rm = state.rm;
-    if (active) Object.keys(S.baselines).forEach((k) => {
-      if (S.baselines[k].rm === rm && S.baselines[k].active) {
-        const d = Object.assign({}, S.baselines[k], { active: false });
-        S.baselines[k] = d;
-        S.db.doc("baselines/" + k).set(d).catch(() => {
-        });
-      }
-    });
-    const data = { rm, rmName: curRm().n, name, at: (/* @__PURE__ */ new Date()).toISOString(), by: S.me.name || S.me.email, active: !!active, items: snapItems() };
-    S.baselines[id] = data;
-    return S.db.doc("baselines/" + id).set(data).then(() => {
-      logAct("roadmap", 'saved snapshot "' + name + '" of ' + curRm().n);
-    });
-  }
-  function setBaseline(id) {
-    const rm = S.baselines[id].rm;
-    Object.keys(S.baselines).forEach((k) => {
-      if (S.baselines[k].rm === rm) {
-        const want = k === id;
-        if (!!S.baselines[k].active !== want) {
-          const d = Object.assign({}, S.baselines[k], { active: want });
-          S.baselines[k] = d;
-          S.db.doc("baselines/" + k).set(d).catch(() => {
-          });
-        }
-      }
-    });
-    logAct("roadmap", 'set "' + S.baselines[id].name + '" as the baseline for ' + S.baselines[id].rmName);
-  }
-  function diffSnap(b) {
-    const now = items(), nm = new Map(now.map((i) => [i.id, i])), om = new Map((b.items || []).map((i) => [i.id, i]));
-    const out = { moved: [], added: [], removed: [], status: [], owners: [] };
-    now.forEach((i) => {
-      const o = om.get(i.id);
-      if (!o) {
-        out.added.push(i);
-        return;
-      }
-      if (o.d0 !== i.d0 || o.d1 !== i.d1) out.moved.push({ it: i, o, ds: i.d0 - o.d0, de: i.d1 - o.d1 });
-      if (o.st !== i.st) out.status.push({ it: i, o });
-      if (JSON.stringify((o.res || []).slice().sort()) !== JSON.stringify(i.res.slice().sort())) out.owners.push({ it: i, o });
-    });
-    (b.items || []).forEach((o) => {
-      if (!nm.has(o.id)) out.removed.push(o);
-    });
-    return out;
-  }
-  var cmpId = null;
-  function renderBaselines() {
-    const root = $("pg-baselines");
-    root.textContent = "";
-    root.append(pageHead("Baselines", 'Save the plan at a point in time, then compare it with today. Snapshots never change after they are saved. Turn on "Plan vs now" on the roadmap to see the old dates as thin amber bars under each bar.', rmPicker(renderBaselines)));
-    const mine = Object.keys(S.baselines).map((id) => Object.assign({ id }, S.baselines[id])).filter((b) => b.rm === state.rm).sort((a, b) => a.at < b.at ? 1 : -1);
-    if (canWrite()) {
-      const c = el("div", "card");
-      c.append(el("h2", "", "Save a snapshot of " + curRm().n));
-      const nm = el("input");
-      nm.type = "text";
-      nm.value = curRm().n + " · " + todayIso();
-      nm.maxLength = 80;
-      nm.setAttribute("aria-label", "Snapshot name");
-      const ck = el("input");
-      ck.type = "checkbox";
-      ck.checked = !mine.some((b) => b.active);
-      ck.id = "snapactive";
-      const cl = el("label", "chk");
-      cl.htmlFor = "snapactive";
-      cl.append(ck, document.createTextNode(" Use as the baseline to compare against"));
-      const go = el("button", "btn primary", "Save snapshot");
-      go.type = "button";
-      const msg = el("div", "gerr");
-      msg.setAttribute("aria-live", "polite");
-      go.addEventListener("click", async () => {
-        const n = nm.value.trim();
-        if (!n) {
-          msg.textContent = "Give the snapshot a name.";
-          return;
-        }
-        go.disabled = true;
-        try {
-          await saveSnapshot(n, ck.checked);
-          toast("Snapshot saved.");
-        } catch (e) {
-          msg.textContent = "Could not save. If this keeps happening, ask the admin to run setup v4.";
-        }
-        go.disabled = false;
-        renderBaselines();
-      });
-      const row = el("div", "formrow");
-      row.style.alignItems = "center";
-      row.append(nm, cl, go);
-      nm.style.flex = "1 1 260px";
-      c.append(row, msg);
-      root.append(c);
-    }
-    const lc = el("div", "card");
-    lc.append(el("h2", "", "Checkpoint history"));
-    if (!mine.length) lc.append(el("div", "hint", "No snapshots for this roadmap yet."));
-    mine.forEach((b) => {
-      const r = el("div", "formrow snaprow");
-      r.style.alignItems = "center";
-      const w = el("div");
-      const t = el("b", "", b.name);
-      if (b.active) t.append(el("span", "badge", "baseline"));
-      w.append(t, el("div", "hint", clock(b.at) + " · " + b.by + " · " + (b.items || []).length + " bars"));
-      const cmp = el("button", "btn sm" + (cmpId === b.id ? " primary" : ""), cmpId === b.id ? "Hide comparison" : "Compare with now");
-      cmp.type = "button";
-      cmp.style.marginInlineStart = "auto";
-      cmp.addEventListener("click", () => {
-        cmpId = cmpId === b.id ? null : b.id;
-        renderBaselines();
-      });
-      r.append(w, cmp);
-      if (canWrite() && !b.active) {
-        const mk = el("button", "btn sm", "Make baseline");
-        mk.type = "button";
-        mk.addEventListener("click", () => {
-          setBaseline(b.id);
-          renderBaselines();
-        });
-        r.append(mk);
-      }
-      if (canWrite() && S.me && S.me.is_admin) {
-        const dl2 = el("button", "btn sm danger", "Delete");
-        dl2.type = "button";
-        dl2.addEventListener("click", () => {
-          delete S.baselines[b.id];
-          S.db.doc("baselines/" + b.id).delete().catch(() => {
-          });
-          logAct("roadmap", 'deleted snapshot "' + b.name + '"');
-          renderBaselines();
-        });
-        r.append(dl2);
-      }
-      lc.append(r);
-      if (cmpId === b.id) lc.append(compareView(b));
-    });
-    root.append(lc);
-  }
-  function compareView(b) {
-    const d = diffSnap(b), w = el("div", "cmpbox");
-    const late = d.moved.filter((m) => m.de > 0).length, early = d.moved.filter((m) => m.de < 0).length, avg = d.moved.length ? Math.round(d.moved.reduce((s, m) => s + m.de, 0) / d.moved.length * 10) / 10 : 0;
-    const sm = el("div", "summary");
-    [[d.moved.length, "moved"], [late, "end later"], [early, "end earlier"], [d.added.length, "added"], [d.removed.length, "removed"], [d.status.length, "status changed"]].forEach((p) => {
-      const x = el("div");
-      x.append(el("b", "", String(p[0])), document.createTextNode(" "), el("span", "", p[1]));
-      sm.append(x);
-    });
-    w.append(sm);
-    if (d.moved.length) w.append(el("div", "hint", "Average end-date shift: " + (avg > 0 ? "+" : "") + avg + " days"));
-    const sec = (title, rows) => {
-      if (!rows.length) return;
-      const s = el("div", "cmpsec");
-      s.append(el("h3", "", title + " (" + rows.length + ")"));
-      rows.forEach((r) => s.append(el("div", "cmprow", r)));
-      w.append(s);
-    };
-    const sh = (n) => (n > 0 ? "+" : "") + n + "d";
-    sec("Moved", d.moved.sort((a, b2) => Math.abs(b2.de) - Math.abs(a.de)).map((m) => m.it.t + ": was " + dlabel(m.o.d0) + " to " + dlabel(m.o.d1) + ", now " + dlabel(m.it.d0) + " to " + dlabel(m.it.d1) + " (start " + sh(m.ds) + ", end " + sh(m.de) + ")"));
-    sec("Added since", d.added.map((i) => i.t + " · " + dlabel(i.d0) + " to " + dlabel(i.d1)));
-    sec("Removed since", d.removed.map((i) => i.t + " · was " + dlabel(i.d0) + " to " + dlabel(i.d1)));
-    sec("Status changed", d.status.map((m) => m.it.t + ": " + STATUS[m.o.st] + " → " + STATUS[m.it.st]));
-    sec("Owners changed", d.owners.map((m) => m.it.t + ": " + ((m.o.res || []).join(", ") || "nobody") + " → " + (m.it.res.join(", ") || "nobody")));
-    if (!d.moved.length && !d.added.length && !d.removed.length && !d.status.length && !d.owners.length) w.append(el("div", "hint", "Nothing has changed since this snapshot."));
-    return w;
-  }
-
-  // src/esm/app/extras-wiring.js
-  function initExtras() {
-    const today = $("today");
-    if (today && !$("sharebtn")) {
-      const gb = el("button", "btn", "Plan vs now");
-      gb.type = "button";
-      gb.id = "ghostbtn";
-      gb.hidden = true;
-      gb.setAttribute("aria-pressed", String(S.ghostOn));
-      gb.title = "Show where the saved baseline had each bar as a thin amber line";
-      gb.addEventListener("click", () => {
-        S.ghostOn = !S.ghostOn;
-        try {
-          localStorage.setItem("ynmo-ghost", S.ghostOn ? "1" : "0");
-        } catch (e) {
-        }
-        render();
-      });
-      const sh = el("button", "btn", "Share");
-      sh.type = "button";
-      sh.id = "sharebtn";
-      sh.addEventListener("click", openShare);
-      today.after(gb, sh);
-    }
-    netBar();
-    netShow();
-  }
-  function startExtras() {
-    $("shell").classList.toggle("viewer", isViewer());
-    if (isViewer()) S.readonly = true;
-    S.db.collection("baselines").onSnapshot((s) => {
-      const n = {};
-      s.docs.forEach((d) => {
-        n[d.id] = d.data();
-      });
-      if (same(n, S.baselines)) return;
-      S.baselines = n;
-      if (state.page === "baselines") renderBaselines();
-      softRender();
-    }, () => {
-    });
-    S.db.collection("share_links").onSnapshot((s) => {
-      const n = {};
-      s.docs.forEach((d) => {
-        n[d.id] = d.data();
-      });
-      S.shares = n;
-    }, () => {
-    });
-    startPresence();
-    startIdle();
-  }
-
-  // src/esm/pages/ideas-columns.js
-  var COL_COLORS = ["#0d8560", "#6d48a8", "#c04a17", "#5a6db5", "#b8860b", "#c2185b", "#00838f", "#55608a"];
-  var isMeta = (i) => !!(i && (i.col || i.cfg));
-  function ideaCols(withHidden) {
-    const built = LANES.map((l) => {
-      const o = S.ideas["cfg_" + l.k] || {};
-      return { k: l.k, n: o.n || l.n, c: /^#[0-9a-f]{6}$/i.test(o.c || "") ? o.c : l.c, hidden: !!o.hidden, builtin: true };
-    });
-    const custom = Object.keys(S.ideas).filter((id) => S.ideas[id] && S.ideas[id].col).sort((a, b) => (S.ideas[a].ts || 0) - (S.ideas[b].ts || 0)).map((id) => ({ k: id, n: S.ideas[id].n || "Untitled", c: /^#[0-9a-f]{6}$/i.test(S.ideas[id].c || "") ? S.ideas[id].c : "#55608a", custom: true }));
-    const ord = S.ideas.colorder && S.ideas.colorder.ord || [], all = built.concat(custom);
-    all.forEach((c, n) => {
-      const p = ord.indexOf(c.k);
-      c.o = p >= 0 ? p : 1e3 + n;
-    });
-    all.sort((a, b) => a.o - b.o);
-    return withHidden ? all : all.filter((c) => !c.hidden);
-  }
-  function ideaColName(k) {
-    const c = ideaCols(true).find((x) => x.k === k);
-    return c ? c.n : laneOf(k).n;
-  }
-  function colCount(k) {
-    return Object.keys(S.ideas).filter((id) => !isMeta(S.ideas[id]) && S.ideas[id].pr === k).length;
-  }
-  function colDialog(col) {
-    openDlg(col ? "Edit column" : "Add a product column", (box) => {
-      const nm = el("input");
-      nm.type = "text";
-      nm.maxLength = 40;
-      nm.placeholder = "Product name";
-      nm.setAttribute("aria-label", "Product name");
-      nm.style.width = "100%";
-      nm.value = col ? col.n : "";
-      const sel = { v: col ? col.c : COL_COLORS[ideaCols(true).length % COL_COLORS.length] };
-      const hex = (v) => /^#[0-9a-f]{6}$/i.test(v) ? v : "#55608a";
-      const sw = el("div", "mrow");
-      sw.setAttribute("role", "radiogroup");
-      sw.setAttribute("aria-label", "Color");
-      const paint = () => sw.querySelectorAll(".swatch").forEach((x) => {
-        const on = x.dataset.c === sel.v;
-        x.setAttribute("aria-pressed", String(on));
-        x.setAttribute("aria-checked", String(on));
-      });
-      COL_COLORS.forEach((c) => {
-        const b = el("button", "swatch");
-        b.type = "button";
-        b.dataset.c = c;
-        b.style.setProperty("--c", c);
-        b.setAttribute("role", "radio");
-        b.setAttribute("aria-label", "Color " + c);
-        b.addEventListener("click", () => {
-          sel.v = c;
-          cp.value = c;
-          paint();
-        });
-        sw.append(b);
-      });
-      const cp = el("input");
-      cp.type = "color";
-      cp.value = hex(sel.v);
-      cp.setAttribute("aria-label", "Custom color");
-      cp.style.cssText = "width:34px;height:34px;padding:0;border:0;background:none;cursor:pointer";
-      cp.addEventListener("input", () => {
-        sel.v = cp.value;
-        paint();
-      });
-      sw.append(cp);
-      paint();
-      const msg = el("div", "gerr");
-      msg.setAttribute("aria-live", "polite");
-      const go = el("button", "btn primary", col ? "Save" : "Add column");
-      go.type = "button";
-      const no = el("button", "btn", "Cancel");
-      no.type = "button";
-      no.addEventListener("click", closeDlg);
-      const submit = () => {
-        const n = nm.value.trim();
-        if (!n) {
-          msg.textContent = "Type a name.";
-          return;
-        }
-        if (ideaCols(true).some((c) => c.n.toLowerCase() === n.toLowerCase() && (!col || c.k !== col.k))) {
-          msg.textContent = "A column with this name already exists.";
-          return;
-        }
-        if (col && col.custom) saveIdea(col.k, { n, c: sel.v }, "idea", 'edited product column "' + col.n + '"' + (n !== col.n ? ' (now "' + n + '")' : ""));
-        else if (col) saveIdea("cfg_" + col.k, { cfg: true, k: col.k, n, c: sel.v, hidden: false }, "idea", 'edited product column "' + col.n + '"' + (n !== col.n ? ' (now "' + n + '")' : ""));
-        else {
-          const id = "col" + Date.now().toString(36);
-          saveIdea(id, { col: true, n, c: sel.v, ts: Date.now() }, "idea", 'added product column "' + n + '"');
-        }
-        closeDlg();
-        renderIdeas(true);
-        renderDrawer();
-      };
-      nm.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          submit();
-        }
-      });
-      go.addEventListener("click", submit);
-      const row = el("div", "formrow");
-      row.append(go, no);
-      box.append(nm, el("span", "lab", "Color"), sw, msg, row);
-    });
-  }
-  function removeCol(c) {
-    const n = colCount(c.k);
-    if (n) {
-      toast('"' + c.n + '" still has ' + n + " idea" + (n === 1 ? "" : "s") + ". Move or delete them first.");
-      return;
-    }
-    if (c.builtin) {
-      saveIdea("cfg_" + c.k, { cfg: true, k: c.k, n: c.n, c: c.c, hidden: true }, "idea", 'hid product column "' + c.n + '"');
-    } else {
-      logAct("idea", 'removed product column "' + c.n + '"');
-      delete S.ideas[c.k];
-      write("ideas/" + c.k, null);
-    }
-    renderIdeas(true);
-    renderDrawer();
-  }
-  function saveOrder(keys) {
-    saveIdea("colorder", { cfg: true, ord: keys }, null);
-  }
-  function moveCol(k, to) {
-    const keys = ideaCols(true).map((c) => c.k), from = keys.indexOf(k);
-    if (from < 0) return;
-    keys.splice(from, 1);
-    keys.splice(Math.max(0, Math.min(keys.length, to)), 0, k);
-    saveOrder(keys);
-    renderIdeas(true);
-    renderDrawer();
-  }
-  function decorateCol(col, h, l) {
-    if (!canEdit()) {
-      col.append(h);
-      return;
-    }
-    const more = el("button", "btn sm colmore", "⋯");
-    more.type = "button";
-    more.setAttribute("aria-label", "Column options for " + l.n);
-    more.title = "Column options";
-    more.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const r = more.getBoundingClientRect(), vis = ideaCols(true), pos = vis.findIndex((x) => x.k === l.k);
-      openCtx(r.right - 190, r.bottom + 4, (m) => {
-        mi(m, "Rename and color…", () => colDialog(l));
-        if (pos > 0) mi(m, "Move left", () => moveCol(l.k, pos - 1));
-        if (pos < vis.length - 1) mi(m, "Move right", () => moveCol(l.k, pos + 1));
-        m.append(el("div", "msep"));
-        mi(m, l.builtin ? "Hide column" : "Remove column", () => removeCol(l), "danger");
-      });
-    });
-    h.append(more);
-    h.style.cssText = "display:flex;align-items:center;gap:8px";
-    more.style.marginInlineStart = "auto";
-    h.draggable = true;
-    h.style.cursor = "grab";
-    h.title = "Drag to reorder columns";
-    h.addEventListener("dragstart", (e) => {
-      e.dataTransfer.setData("text/col", l.k);
-      e.dataTransfer.effectAllowed = "move";
-      col.classList.add("dragcol");
-    });
-    h.addEventListener("dragend", () => {
-      document.querySelectorAll(".dragcol,.dropcol").forEach((x) => x.classList.remove("dragcol", "dropcol"));
-    });
-    col.append(h);
-  }
-  function wireCol(col, l) {
-    if (!canEdit()) return;
-    const ok = (e) => {
-      const t = [...e.dataTransfer ? e.dataTransfer.types : []];
-      return t.includes("text/ideacard") || t.includes("text/col");
-    };
-    col.addEventListener("dragover", (e) => {
-      if (!ok(e)) return;
-      e.preventDefault();
-      col.classList.add("dropcol");
-    });
-    col.addEventListener("dragleave", (e) => {
-      if (!col.contains(e.relatedTarget)) col.classList.remove("dropcol");
-    });
-    col.addEventListener("drop", (e) => {
-      col.classList.remove("dropcol");
-      const card = e.dataTransfer.getData("text/ideacard"), ck = e.dataTransfer.getData("text/col");
-      if (card && S.ideas[card] && S.ideas[card].pr !== l.k) {
-        e.preventDefault();
-        const t = S.ideas[card].t;
-        saveIdea(card, { pr: l.k }, "idea", 'moved idea "' + t + '" to ' + l.n);
-        renderIdeas(true);
-      } else if (ck && ck !== l.k) {
-        e.preventDefault();
-        const keys = ideaCols(true).map((c) => c.k);
-        moveCol(ck, keys.indexOf(l.k));
-      }
-    });
-  }
-  function dragCard(id, c) {
-    if (!canEdit()) return c;
-    const g = el("div", "grip", "⋮⋮");
-    g.title = "Drag to another product";
-    g.setAttribute("aria-hidden", "true");
-    c.prepend(g);
-    const on = () => {
-      c.draggable = true;
-    }, off = () => {
-      c.draggable = false;
-    };
-    g.addEventListener("pointerdown", on);
-    document.addEventListener("pointerup", off, true);
-    c.addEventListener("dragstart", (e) => {
-      if (!c.draggable) return;
-      e.dataTransfer.setData("text/ideacard", id);
-      e.dataTransfer.effectAllowed = "move";
-      c.classList.add("dragging");
-    });
-    c.addEventListener("dragend", () => {
-      off();
-      c.classList.remove("dragging");
-      document.querySelectorAll(".dropcol").forEach((x) => x.classList.remove("dropcol"));
-    });
-    return c;
-  }
-  function boardExtras(board) {
-    if (!canEdit()) return;
-    const ac = el("button", "addcol", "+ Add product");
-    ac.type = "button";
-    ac.id = "addcol";
-    ac.addEventListener("click", () => colDialog(null));
-    board.append(ac);
-    const hid = ideaCols(true).filter((c) => c.hidden);
-    if (hid.length) {
-      const b = el("button", "btn sm", "Show hidden columns (" + hid.length + ")");
-      b.type = "button";
-      b.id = "showhid";
-      b.style.alignSelf = "start";
-      b.addEventListener("click", () => {
-        hid.forEach((c) => saveIdea("cfg_" + c.k, { cfg: true, k: c.k, n: c.n, c: c.c, hidden: false }, null));
-        logAct("idea", "showed hidden product columns");
-        renderIdeas(true);
-        renderDrawer();
-      });
-      board.append(b);
-    }
-  }
-  function moveMenu(m, id, i) {
-    if (!canEdit()) return;
-    m.append(el("div", "mlab", "Move to product"));
-    ideaCols().forEach((c) => {
-      if (c.k === i.pr) return;
-      mi(m, c.n, () => {
-        saveIdea(id, { pr: c.k }, "idea", 'moved idea "' + i.t + '" to ' + c.n);
-        renderIdeas(true);
-      });
-    });
-  }
-  function init() {
-    const chips = $("chips");
-    LANES.forEach((l) => {
-      const b = el("button", "chip");
-      b.type = "button";
-      b.style.setProperty("--c", l.c);
-      b.append(el("i"), document.createTextNode(l.n));
-      b.setAttribute("aria-pressed", "true");
-      b.addEventListener("click", () => {
-        state.sq.has(l.k) ? state.sq.delete(l.k) : state.sq.add(l.k);
-        b.setAttribute("aria-pressed", String(state.sq.has(l.k)));
-        render();
-      });
-      chips.append(b);
-    });
-    fillPersons();
-    $("person").addEventListener("change", (e) => {
-      state.person = e.target.value;
-      render();
-    });
-    $("status").addEventListener("change", (e) => {
-      state.status = e.target.value;
-      render();
-    });
-    $("q").addEventListener("input", (e) => {
-      state.q = e.target.value;
-      render();
-    });
-    $("clear").addEventListener("click", () => {
-      state.sq = new Set(LANES.map((l) => l.k));
-      state.status = "all";
-      state.person = "all";
-      state.q = "";
-      $("status").value = "all";
-      $("person").value = "all";
-      $("q").value = "";
-      chips.querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", "true"));
-      render();
-    });
-    const gr = $("grid");
-    gr.addEventListener("contextmenu", (e) => {
-      if (!canEdit()) return;
-      const bar = e.target.closest(".bar");
-      if (bar) {
-        const it = items().find((i) => i.id === bar.dataset.id);
-        if (it) {
-          e.preventDefault();
-          barMenu(it, bar.dataset.person, e.clientX, e.clientY);
-        }
-        return;
-      }
-      const row = e.target.closest(".rowbg[data-person], .c1.pn");
-      if (row) {
-        e.preventDefault();
-        rowMenu(row.dataset.person, e.clientX, e.clientY, row.classList.contains("rowbg") ? dayAt(e.clientX) : todayK >= 0 ? todayK : 0);
-      }
-    });
-    gr.addEventListener("dblclick", (e) => {
-      if (!canEdit() || e.target.tagName === "INPUT") return;
-      const bar = e.target.closest(".bar");
-      if (bar) {
-        const it = items().find((i) => i.id === bar.dataset.id);
-        if (it) startEdit(it, bar.dataset.person);
-        return;
-      }
-      const row = e.target.closest(".rowbg[data-person]");
-      if (row) addAt(row.dataset.person, dayAt(e.clientX));
-    });
-    $("wrap").addEventListener("scroll", closeCtx);
-    window.addEventListener("resize", closeCtx);
-    document.addEventListener("pointerdown", (e) => {
-      const c = $("ctx");
-      if (!c.hidden && !c.contains(e.target)) closeCtx();
-    }, true);
-    $("add").addEventListener("click", () => {
-      if (canEdit()) addItem();
-    });
-    $("undo").addEventListener("click", undo);
-    $("daysoff").addEventListener("click", (e) => openOff(e.currentTarget));
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        closeCtx();
-        if (S.picker || S.offOpen) closePicker();
-      }
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === "z" || e.key === "Z")) {
-        const t = e.target && e.target.tagName;
-        if (t === "TEXTAREA" || t === "INPUT" || t === "SELECT") return;
-        e.preventDefault();
-        undo();
-      }
-    });
-    let armed = false, t2 = 0;
-    const rb = $("reset") || document.createElement("button");
-    rb.addEventListener("click", () => {
-      if (!canEdit()) return;
-      if (armed) {
-        armed = false;
-        rb.textContent = "Restore roadmap";
-        restoreAll();
-        return;
-      }
-      armed = true;
-      rb.textContent = "Click again to restore";
-      clearTimeout(t2);
-      t2 = setTimeout(() => {
-        armed = false;
-        rb.textContent = "Restore roadmap";
-      }, 3500);
-    });
-    render();
-    $("export").addEventListener("click", exportCsv);
-    initExtras();
-    $("toplogo").src = LOGO;
-    const av = $("avbtn"), um = $("umenu");
-    av.addEventListener("click", (e) => {
-      e.stopPropagation();
-      um.hidden = !um.hidden;
-      av.setAttribute("aria-expanded", String(!um.hidden));
-    });
-    document.addEventListener("pointerdown", (e) => {
-      if (!um.hidden && !um.contains(e.target) && !av.contains(e.target)) {
-        um.hidden = true;
-        av.setAttribute("aria-expanded", "false");
-      }
-    });
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && !um.hidden) {
-        um.hidden = true;
-        av.setAttribute("aria-expanded", "false");
-        av.focus();
-      }
-    });
-    $("rmsel").addEventListener("change", (e) => useRoadmap(e.target.value));
-    try {
-      const z = localStorage.getItem("ynmo-zoom");
-      if (ZOOM[z]) {
-        state.zoom = z;
-        $("zoom").value = z;
-      }
-    } catch (e) {
-    }
-    $("zoom").addEventListener("change", (e) => {
-      state.zoom = e.target.value;
-      try {
-        localStorage.setItem("ynmo-zoom", state.zoom);
-      } catch (x) {
-      }
-      render();
-    });
-    $("today").addEventListener("click", () => {
-      if (todayK < 0) {
-        toast("Today is outside this roadmap.");
-        return;
-      }
-      const w = $("wrap");
-      w.scrollLeft = Math.max(0, (todayK - 3) * (ZOOM[state.zoom] || 26));
-    });
-    $("ideasbtn").addEventListener("click", () => {
-      S.drawerOpen = !S.drawerOpen;
-      renderDrawer();
-    });
-    const rowAt = (e) => document.elementsFromPoint(e.clientX, e.clientY).find((x) => x.matches && x.matches(".rowbg[data-person]")) || null;
-    const clearDrop = () => gr.querySelectorAll(".drop").forEach((x) => x.classList.remove("drop"));
-    gr.addEventListener("dragover", (e) => {
-      if (!e.dataTransfer || ![...e.dataTransfer.types].includes("text/idea")) return;
-      clearDrop();
-      const r = rowAt(e);
-      if (r) {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "copy";
-        r.classList.add("drop");
-      }
-    });
-    gr.addEventListener("dragleave", (e) => {
-      if (!gr.contains(e.relatedTarget)) clearDrop();
-    });
-    gr.addEventListener("drop", (e) => {
-      const id = e.dataTransfer && e.dataTransfer.getData("text/idea");
-      const r = rowAt(e);
-      clearDrop();
-      if (!id || !r) return;
-      e.preventDefault();
-      scheduleIdea(id, r.dataset.person, dayAt(e.clientX), 14);
-    });
-    boot();
-  }
-
-  // src/esm/pages/ideas.js
-  var LMH = [[1, "Low"], [2, "Medium"], [3, "High"]];
-  var ISTAT = [["idea", "Idea"], ["shortlisted", "Shortlisted"], ["scheduled", "On a roadmap"], ["dropped", "Dropped"]];
-  var ideaScore = (i) => Math.round((i.im || 2) / (i.ef || 2) * 10) / 10;
-  function saveIdea(id, patch, act, sum) {
-    S.ideas[id] = Object.assign({}, S.ideas[id] || {}, patch);
-    write("ideas/" + id, S.ideas[id]);
-    if (act) logAct(act, sum);
-    renderDrawer();
-  }
-  function addIdea(pr, title) {
-    const id = "i" + Date.now().toString(36) + Math.random().toString(36).slice(2, 4);
-    saveIdea(id, { t: title, n: "", pr, im: 2, ef: 2, st: "idea", by: S.me ? S.me.name : "", ts: Date.now() }, "idea", 'added idea "' + title + '" to ' + ideaColName(pr));
-  }
-  function scheduleIdea(id, person, k, days) {
-    const i = S.ideas[id];
-    if (!i || !canEdit()) return;
-    pushHistory();
-    const nid = "c" + Date.now().toString(36), sq = LANES.some((l) => l.k === i.pr) ? i.pr : person && person !== "__none" ? primarySq(person) : "tifli", none = !person || person === "__none";
-    k = Math.max(0, Math.min(NDAYS - 1, k));
-    const all = items().filter((x) => x.sq === sq);
-    S.over[nid] = { custom: true, rm: state.rm, t: i.t, n: i.n || "", sq, pr: sq === "ai" ? ["tifli"] : [sq], d0: k, d1: Math.min(NDAYS - 1, k + Math.max(1, days) - 1), st: "planned", res: none ? [] : [person], ord: all.length ? Math.max.apply(null, all.map((x) => x.ord)) + 1 : 0, idea: id };
-    persist(nid);
-    saveIdea(id, { st: "scheduled", rm: state.rm, itemId: nid }, "roadmap", 'scheduled idea "' + i.t + '" on ' + curRm().n + (none ? "" : " for " + person));
-    render();
-    if (state.page === "ideas") renderIdeas(true);
-  }
-  function openSchedule(id, anchor) {
-    const i = S.ideas[id];
-    if (!i || !canEdit()) return;
-    S.offOpen = false;
-    S.picker = { add: true };
-    const p = $("pop");
-    p.hidden = false;
-    p.textContent = "";
-    const r = curRm();
-    p.append(el("h3", "", "Add to " + r.n), el("div", "sub2", i.t));
-    const names = [...directory().keys()].sort((x, y) => x.localeCompare(y));
-    const who = selOf([["__none", "Unassigned"]].concat(names.map((n2) => [n2, n2])), "__none");
-    const d = el("input");
-    d.type = "date";
-    d.min = r.a;
-    d.max = r.b;
-    const td = todayIso();
-    d.value = td >= r.a && td <= r.b ? td : r.a;
-    const n = el("input");
-    n.type = "number";
-    n.min = 1;
-    n.max = 365;
-    n.value = 14;
-    const box = el("div", "padd");
-    box.style.gridTemplateColumns = "1fr";
-    box.append(fld("Person", who), fld("Starts", d), fld("Duration in days", n));
-    const ok = el("button", "btn primary", "Add to roadmap");
-    ok.type = "button";
-    ok.addEventListener("click", () => {
-      const k = kOfIso(d.value);
-      if (isNaN(k)) return;
-      closePicker();
-      scheduleIdea(id, who.value, k, +n.value || 14);
-    });
-    const cx = el("button", "btn", "Cancel");
-    cx.type = "button";
-    cx.addEventListener("click", closePicker);
-    box.append(ok, cx);
-    p.append(box);
-    placePop(anchor);
-  }
-  function ideaCard(id, i) {
-    const c = el("div", "icard" + (i.st === "dropped" || i.st === "scheduled" ? " done" : ""));
-    const ed = canEdit();
-    const d = { t: i.t, n: i.n || "", im: i.im || 2, ef: i.ef || 2 };
-    const head = el("div", "ihead");
-    const t = el("input", "ititle");
-    t.value = d.t;
-    t.maxLength = 140;
-    t.disabled = !ed;
-    t.setAttribute("aria-label", "Idea title");
-    const more = el("button", "kebab", "⋯");
-    more.type = "button";
-    more.setAttribute("aria-label", "More actions for " + i.t);
-    more.setAttribute("aria-haspopup", "menu");
-    more.disabled = !ed;
-    head.append(t, more);
-    const n = el("textarea");
-    n.value = d.n;
-    n.placeholder = "Notes: why it matters, who asked, links";
-    n.disabled = !ed;
-    const im = selOf(LMH, d.im), ef = selOf(LMH, d.ef);
-    im.disabled = ef.disabled = !ed;
-    im.setAttribute("aria-label", "Impact");
-    ef.setAttribute("aria-label", "Effort");
-    const lab = (x, sel) => {
-      const w = el("label", "hint");
-      w.append(document.createTextNode(x + " "), sel);
-      return w;
-    };
-    const r1 = el("div", "row2");
-    r1.append(lab("Impact", im), lab("Effort", ef));
-    const score = el("span", "score", "Score " + ideaScore(i));
-    const stat = el("span", "badge" + (i.st === "scheduled" ? " ok" : ""), (ISTAT.find((x) => x[0] === (i.st || "idea")) || ISTAT[0])[1]);
-    const save = el("button", "btn primary sm", "Save");
-    save.type = "button";
-    save.hidden = true;
-    const saved = el("span", "hint", "");
-    const r2 = el("div", "row2");
-    r2.append(stat, score);
-    const r3 = el("div", "row2");
-    if (i.st === "scheduled") {
-      const rr = allRoadmaps().find((x) => x.id === i.rm);
-      r3.append(el("span", "badge ok", "On " + (rr ? rr.n : "a roadmap")));
-    }
-    r3.append(save, saved);
-    const dirty = () => t.value.trim() !== i.t || n.value !== (i.n || "") || +im.value !== (i.im || 2) || +ef.value !== (i.ef || 2);
-    const mark = () => {
-      const dv = dirty();
-      save.hidden = !dv;
-      saved.textContent = "";
-      score.textContent = "Score " + ideaScore({ im: +im.value, ef: +ef.value });
-    };
-    [t, n].forEach((x) => x.addEventListener("input", mark));
-    [im, ef].forEach((x) => x.addEventListener("change", mark));
-    const doSave = () => {
-      const v = t.value.trim();
-      if (!v) {
-        t.focus();
-        return false;
-      }
-      if (!dirty()) return true;
-      saveIdea(id, { t: v, n: n.value, im: +im.value, ef: +ef.value }, "idea", 'saved idea "' + v + '"' + (v !== i.t ? ' (was "' + i.t + '")' : ""));
-      return true;
-    };
-    save.addEventListener("click", () => {
-      if (doSave()) renderIdeas(true);
-    });
-    c.addEventListener("keydown", (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !save.hidden) {
-        e.preventDefault();
-        save.click();
-      }
-    });
-    more.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const r = more.getBoundingClientRect();
-      openCtx(r.right - 190, r.bottom + 4, (m) => {
-        if (i.st !== "scheduled") mi(m, "Add to roadmap…", (b) => {
-          if (!doSave()) return;
-          openSchedule(id, more);
-        });
-        else mi(m, "Show on roadmap", () => {
-          if (i.rm) useRoadmap(i.rm);
-          showPage("roadmap");
-        });
-        if (i.st !== "scheduled") {
-          mi(m, (i.st === "shortlisted" ? "✓ " : "") + "Shortlist", () => {
-            saveIdea(id, { st: i.st === "shortlisted" ? "idea" : "shortlisted" }, "idea", (i.st === "shortlisted" ? 'unshortlisted "' : 'shortlisted "') + i.t + '"');
-            renderIdeas(true);
-          });
-          mi(m, i.st === "dropped" ? "Reopen idea" : "Drop idea", () => {
-            saveIdea(id, { st: i.st === "dropped" ? "idea" : "dropped" }, "idea", (i.st === "dropped" ? 'reopened "' : 'dropped "') + i.t + '"');
-            renderIdeas(true);
-          });
-        }
-        moveMenu(m, id, i);
-        m.append(el("div", "msep"));
-        mi(m, "Delete idea", () => {
-          if (!window.confirm('Delete "' + i.t + '"?')) return;
-          logAct("idea", 'deleted idea "' + i.t + '"');
-          delete S.ideas[id];
-          write("ideas/" + id, null);
-          renderIdeas(true);
-          renderDrawer();
-        }, "danger");
-      });
-    });
-    c.append(head, n, r1, r2, r3);
-    return c;
-  }
-  function renderIdeas(force) {
-    const root = $("pg-ideas"), ae = document.activeElement;
-    if (!force && ae && root.contains(ae) && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) return;
-    root.textContent = "";
-    const tools = el("div", "formrow");
-    const q = el("input");
-    q.type = "search";
-    q.placeholder = "Search ideas";
-    q.value = ideaUI.q;
-    q.addEventListener("input", () => {
-      ideaUI.q = q.value;
-      renderIdeas(true);
-      const s = root.querySelector("input[type=search]");
-      if (s) {
-        s.focus();
-        s.setSelectionRange(s.value.length, s.value.length);
-      }
-    });
-    const fs = selOf([["open", "Open ideas"], ["scheduled", "On a roadmap"], ["dropped", "Dropped"], ["all", "All"]], ideaUI.st);
-    fs.setAttribute("aria-label", "Show ideas by status");
-    fs.addEventListener("change", () => {
-      ideaUI.st = fs.value;
-      renderIdeas(true);
-    });
-    tools.append(q, fs);
-    root.append(pageHead("Ideas", "Capture thoughts per product first. When one is ready, press Add to roadmap here, or drag it from the Ideas drawer onto a person on the roadmap.", tools));
-    const board = el("div", "board");
-    ideaCols().forEach((l) => {
-      const col = el("div", "col");
-      col.style.setProperty("--c", l.c);
-      const all = Object.keys(S.ideas).filter((id) => S.ideas[id].pr === l.k);
-      const fq = ideaUI.q.trim().toLowerCase();
-      const list = all.filter((id) => {
-        const i = S.ideas[id], s = i.st || "idea";
-        const okS = ideaUI.st === "all" || (ideaUI.st === "open" ? s === "idea" || s === "shortlisted" : s === ideaUI.st);
-        return okS && (!fq || (i.t + " " + (i.n || "")).toLowerCase().includes(fq));
-      }).sort((a, b) => ideaScore(S.ideas[b]) - ideaScore(S.ideas[a]) || (S.ideas[b].ts || 0) - (S.ideas[a].ts || 0));
-      const h = el("h2");
-      h.append(document.createTextNode(l.n), el("span", "badge", String(list.length)));
-      decorateCol(col, h, l);
-      wireCol(col, l);
-      if (canEdit()) {
-        const inp = el("input");
-        inp.type = "text";
-        inp.placeholder = "Add an idea and press Enter";
-        inp.maxLength = 140;
-        inp.setAttribute("aria-label", "New idea for " + l.n);
-        inp.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            const v = inp.value.trim();
-            if (v) {
-              addIdea(l.k, v);
-              renderIdeas(true);
-              const n = root.querySelectorAll(".col input[type=text]")[ideaCols().findIndex((x) => x.k === l.k)];
-              if (n) n.focus();
-            }
-          }
-        });
-        col.append(inp);
-      }
-      list.forEach((id) => col.append(dragCard(id, ideaCard(id, S.ideas[id]))));
-      if (!list.length) col.append(el("div", "hint", "Nothing here yet."));
-      board.append(col);
-    });
-    boardExtras(board);
-    root.append(board);
-  }
-  function renderDrawer() {
-    const d = $("drawer");
-    d.hidden = !S.drawerOpen;
-    if (!S.drawerOpen) return;
-    d.textContent = "";
-    const h = el("div", "formrow");
-    h.append(el("h3", "", "Ideas backlog"));
-    const x = el("button", "btn sm", "Close");
-    x.type = "button";
-    x.style.marginInlineStart = "auto";
-    x.addEventListener("click", () => {
-      S.drawerOpen = false;
-      renderDrawer();
-    });
-    h.append(x);
-    d.append(h, el("div", "hint", "Drag an idea onto a person and a day. It becomes a bar and stays linked."));
-    const list = el("div", "dl");
-    const open = Object.keys(S.ideas).filter((id) => !isMeta(S.ideas[id]) && (S.ideas[id].st || "idea") === "idea" || S.ideas[id].st === "shortlisted");
-    ideaCols().forEach((l) => {
-      const mine = open.filter((id) => S.ideas[id].pr === l.k).sort((a, b) => ideaScore(S.ideas[b]) - ideaScore(S.ideas[a]));
-      if (!mine.length) return;
-      list.append(el("div", "lab", l.n));
-      mine.forEach((id) => {
-        const i = S.ideas[id], c = el("div", "dcard");
-        c.draggable = canEdit();
-        c.style.setProperty("--c", l.c);
-        c.append(el("b", "", i.t), el("small", "", "Score " + ideaScore(i) + (i.st === "shortlisted" ? " · Shortlisted" : "")));
-        c.addEventListener("dragstart", (e) => {
-          e.dataTransfer.setData("text/idea", id);
-          e.dataTransfer.effectAllowed = "copy";
-        });
-        list.append(c);
-      });
-    });
-    if (!open.length) list.append(el("div", "hint", "No open ideas. Add some on the Ideas page."));
-    d.append(list);
   }
 
   // src/esm/pages/resources.js
@@ -4411,10 +4433,11 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
           lab = c.pct + "%";
           cls = c.pct === 0 ? "none" : c.pct <= 70 ? "lo" : c.pct <= 100 ? "ok" : c.pct <= 150 ? "x2" : "x3";
         }
+        const part = c.leave > 0 && c.pct !== null && c.pct !== Infinity;
         td.classList.add(cls);
-        td.textContent = lab;
+        td.textContent = lab + (part ? " ⚑" : "");
         td.title = r.name + ": " + c.sched + " bar-days on " + c.avail + " available day(s)" + (c.leave ? ", " + c.leave + " on leave" : "") + (c.its.length ? "\n" + c.its.join("\n") : "");
-        td.setAttribute("aria-label", r.name + " " + lab + (c.its.length ? ", " + c.its.join(", ") : ""));
+        td.setAttribute("aria-label", r.name + " " + lab + (part ? ", " + c.leave + " leave day(s)" : "") + (c.its.length ? ", " + c.its.join(", ") : ""));
         tr.append(td);
       });
       tb.append(tr);
@@ -4468,7 +4491,11 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     b.hidden = !on;
   }
   window.addEventListener("hashchange", () => {
-    if (started || S.SHARE) return;
+    if (S.SHARE) {
+      if (!/^#\/share\//.test(location.hash)) location.reload();
+      return;
+    }
+    if (started) return;
     const h = (location.hash.match(/^#\/(\w+)/) || [])[1];
     if (h === "signup") showSignup();
     else if (h === "forgot") showForgot();
@@ -4566,10 +4593,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       setSave("error");
     });
     S.db.collection("daysoff").onSnapshot((s) => {
-      const n = {};
-      s.docs.forEach((d) => {
-        n[d.id] = d.data();
-      });
+      const n = snapDocs("daysoff", s, S.daysoff);
       if (same(n, S.daysoff)) return;
       S.daysoff = n;
       softRender();
@@ -4577,10 +4601,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     }, () => {
     });
     S.db.collection("people").onSnapshot((s) => {
-      const n = {};
-      s.docs.forEach((d) => {
-        n[d.id] = d.data();
-      });
+      const n = snapDocs("people", s, S.extras);
       if (same(n, S.extras)) return;
       S.extras = n;
       fillPersons();
@@ -4591,10 +4612,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     }, () => {
     });
     S.db.collection("roadmaps").onSnapshot((s) => {
-      const n = {};
-      s.docs.forEach((d) => {
-        n[d.id] = d.data();
-      });
+      const n = snapDocs("roadmaps", s, S.roadmaps);
       if (same(n, S.roadmaps)) return;
       S.roadmaps = n;
       if (S.wantRm && allRoadmaps().some((r) => r.id === S.wantRm)) {
@@ -4607,10 +4625,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     }, () => {
     });
     S.db.collection("ideas").onSnapshot((s) => {
-      const n = {};
-      s.docs.forEach((d) => {
-        n[d.id] = d.data();
-      });
+      const n = snapDocs("ideas", s, S.ideas);
       if (same(n, S.ideas)) return;
       S.ideas = n;
       renderDrawer();
@@ -4619,10 +4634,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     }, () => {
     });
     S.db.collection("vacations").onSnapshot((s) => {
-      const n = {};
-      s.docs.forEach((d) => {
-        n[d.id] = d.data();
-      });
+      const n = snapDocs("vacations", s, S.vacs);
       if (same(n, S.vacs)) return;
       S.vacs = n;
       softRender();
@@ -5269,6 +5281,20 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     progress(k === "saving");
   }
   var queue = {};
+  var pendingPaths = /* @__PURE__ */ new Map();
+  function snapDocs(table, snap, local) {
+    const n = {};
+    snap.docs.forEach((d) => {
+      n[d.id] = d.data();
+    });
+    pendingPaths.forEach((_, path) => {
+      if (!path.startsWith(table + "/")) return;
+      const id = path.slice(table.length + 1);
+      if (local[id] === void 0) delete n[id];
+      else n[id] = local[id];
+    });
+    return n;
+  }
   function write(path, data, fields) {
     if (!S.db) {
       setSave("local");
@@ -5276,6 +5302,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     }
     const ref = S.db.doc(path), copy = data ? clone(data) : null, part = fields ? clone(fields) : null;
     S.inflight++;
+    pendingPaths.set(path, (pendingPaths.get(path) || 0) + 1);
     setSave("saving");
     queue[path] = (queue[path] || Promise.resolve()).then(async () => {
       for (let tryN = 0; tryN < 6; tryN++) {
@@ -5298,6 +5325,9 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
         }
       }
       S.inflight--;
+      const left = (pendingPaths.get(path) || 1) - 1;
+      if (left) pendingPaths.set(path, left);
+      else pendingPaths.delete(path);
     });
   }
   function persist(id, fields) {
@@ -5536,6 +5566,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     commit,
     removeItem,
     render,
+    scheduleIdea,
     get NDAYS() {
       return NDAYS;
     },

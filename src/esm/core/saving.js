@@ -24,6 +24,24 @@ const SAVE_TEXT = {
 };
 export function setSave(k) { $('save').textContent = SAVE_TEXT[k] || ''; if (k === 'error') netMark(false); else if (k === 'saved') netMark(true); progress(k === 'saving'); }
 const queue = {};
+/** path -> number of writes not yet acknowledged; lets snapshot handlers keep local edits that are still in flight. */
+const pendingPaths = new Map();
+/**
+ * Build a {id: data} map from a realtime snapshot but keep the local copy of every document that has an unsaved write,
+ * so a refresh triggered by an earlier write can never revert a newer edit (e.g. column order, renames).
+ * @param {string} table collection name
+ * @param {{docs: Array}} snap snapshot from the db adapter
+ * @param {object} local current local map for that collection
+ */
+export function snapDocs(table, snap, local) {
+  const n = {}; snap.docs.forEach(d => { n[d.id] = d.data(); });
+  pendingPaths.forEach((_, path) => {
+    if (!path.startsWith(table + '/')) return;
+    const id = path.slice(table.length + 1);
+    if (local[id] === undefined) delete n[id]; else n[id] = local[id];
+  });
+  return n;
+}
 /**
  * Queue a write for one document. Writes to the same path run in order; network errors retry up to 6 times
  * (1.5 s doubling, max 15 s). A permission error (RLS) flips the app to read-only.
@@ -34,7 +52,7 @@ const queue = {};
 export function write(path, data, fields) {
   if (!S.db) { setSave('local'); return; }
   const ref = S.db.doc(path), copy = data ? clone(data) : null, part = fields ? clone(fields) : null;
-  S.inflight++; setSave('saving');
+  S.inflight++; pendingPaths.set(path, (pendingPaths.get(path) || 0) + 1); setSave('saving');
   queue[path] = (queue[path] || Promise.resolve()).then(async () => {
     for (let tryN = 0; tryN < 6; tryN++) {
       try {
@@ -46,7 +64,7 @@ export function write(path, data, fields) {
         await new Promise(r => setTimeout(r, Math.min(15000, 1500 * Math.pow(2, tryN))));
       }
     }
-    S.inflight--;
+    S.inflight--; const left = (pendingPaths.get(path) || 1) - 1; if (left) pendingPaths.set(path, left); else pendingPaths.delete(path);
   });
 }
 export function persist(id, fields) { if (curEntry) curEntry.ids.add(id); write('items/' + id, S.over[id] || null, fields && S.over[id] ? fields : null); }

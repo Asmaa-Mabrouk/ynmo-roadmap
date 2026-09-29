@@ -63,7 +63,7 @@ function drawOverlay() {
   const sum = $('summary'); const oldc = sum && sum.querySelector('.depchip'); if (oldc) oldc.remove();
   const bad = issues.filter(x => x.bad);
   if (sum && issues.length) {
-    const c = el('button', 'depchip' + (bad.length ? ' bad' : ''), bad.length ? '⛓ ' + bad.length + (bad.length === 1 ? ' dependency clash' : ' dependency clashes') : '⛓ ' + issues.length + ' dependencies, all fine'); c.type = 'button';
+    const c = el('button', 'depchip' + (bad.length ? ' bad' : ''), bad.length ? '⛓ ' + bad.length + (bad.length === 1 ? ' dependency clash' : ' dependency clashes') : '⛓ ' + issues.length + (issues.length === 1 ? ' dependency, all fine' : ' dependencies, all fine')); c.type = 'button';
     c.title = bad.length ? bad.map(x => '"' + x.to.t + '" starts before "' + x.from.t + '" ends').join('\n') : 'Every dependent bar starts after its predecessor ends';
     c.addEventListener('click', () => { const x = bad[0]; if (!x) return; const b = [...g.querySelectorAll('.bar')].find(y => y.dataset.id === x.to.id); if (b) { b.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' }); b.classList.add('flash'); setTimeout(() => b.classList.remove('flash'), 1600); } });
     sum.append(c);

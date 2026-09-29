@@ -7,6 +7,7 @@ import { S } from './core/state.js';
 import * as model from './core/model.js';
 import { commit, removeItem } from './core/saving.js';
 import { render } from './ui/gantt-render.js';
+import { scheduleIdea } from './pages/ideas.js';
 import { allRoadmaps } from './pages/roadmaps.js';
 import './core/saving.js';
 import './ui/people-picker.js';
@@ -39,7 +40,7 @@ import { init } from './pages/ideas-columns.js';
 
 /** Handles for automated tests and console debugging (the app itself never reads window.__ynmo). */
 window.__ynmo = {
-  S, state: model.state, items: model.items, directory: model.directory, allRoadmaps, commit, removeItem, render,
+  S, state: model.state, items: model.items, directory: model.directory, allRoadmaps, commit, removeItem, render, scheduleIdea,
   get NDAYS() { return model.NDAYS; },
   get vacs() { return S.vacs; },
 };

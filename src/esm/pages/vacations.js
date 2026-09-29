@@ -134,7 +134,7 @@ export function renderVacations(force) {
       const aff = affectedBy(v), tr = el('tr');
       tr.append(el('td', '', v.p), el('td', '', fmtIso(v.a0) + (v.a1 > v.a0 ? ' to ' + fmtIso(v.a1) : '')), el('td', '', v.t + (v.n ? ' · ' + v.n : '')), el('td', '', String(wdays(v.a0, v.a1 || v.a0))));
       const c = el('td'); c.append(aff.length ? el('span', 'badge warn', '⚑ ' + aff.length + ' on ' + curRm().n) : el('span', 'hint', 'none'));
-      const x = el('td'); if (canEdit()) { const rm = el('button', 'btn danger sm', 'Remove'); rm.type = 'button'; rm.addEventListener('click', () => { delete S.vacs[v.id]; write('vacations/' + v.id, null); logAct('vacation', 'removed leave of ' + v.p + ' (' + fmtIso(v.a0) + ')'); render(); renderVacations(true); }); x.append(rm); }
+      const x = el('td'); if (canEdit()) { const rm = el('button', 'btn danger sm', 'Remove'); rm.type = 'button'; rm.addEventListener('click', () => { delete S.vacs[v.id]; if (S.vacNotice && S.vacNotice.id === v.id) S.vacNotice = null; write('vacations/' + v.id, null); logAct('vacation', 'removed leave of ' + v.p + ' (' + fmtIso(v.a0) + ')'); render(); renderVacations(true); }); x.append(rm); }
       tr.append(c, x); tb.append(tr);
     });
     t.append(tb); const sc = el('div', 'tscroll'); sc.append(t); card.append(sc);

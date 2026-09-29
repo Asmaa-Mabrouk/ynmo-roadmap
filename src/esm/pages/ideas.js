@@ -5,7 +5,7 @@
  * Dependencies are explicit ES imports; shared mutable state lives in `S` (core/state.js).
  */
 import { S } from '../core/state.js';
-import { fld, ideaUI, kOfIso, logAct, pageHead, selOf, todayIso } from '../core/shared.js';
+import { fld, ideaUI, kOfIso, logAct, pageHead, selOf, toast, todayIso } from '../core/shared.js';
 import { persist, pushHistory, write } from '../core/saving.js';
 import { boardExtras, decorateCol, dragCard, ideaColName, ideaCols, isMeta, moveMenu, wireCol } from './ideas-columns.js';
 import { $, LANES, NDAYS, canEdit, directory, el, items, state } from '../core/model.js';
@@ -37,6 +37,7 @@ export function scheduleIdea(id, person, k, days) {
   persist(nid);
   saveIdea(id, { st: 'scheduled', rm: state.rm, itemId: nid }, 'roadmap', 'scheduled idea "' + i.t + '" on ' + curRm().n + (none ? '' : ' for ' + person));
   render(); if (state.page === 'ideas') renderIdeas(true);
+  toast('Scheduled "' + i.t + '" on ' + curRm().n + '.');
 }
 function openSchedule(id, anchor) {
   const i = S.ideas[id]; if (!i || !canEdit()) return;

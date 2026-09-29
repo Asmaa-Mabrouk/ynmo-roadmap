@@ -9,6 +9,7 @@ import { H2, fld, fmtIso, logAct, pageHead, selOf } from '../core/shared.js';
 import { $, DAY, H2_ID, base, canEdit, el, items, parseIso, setRange, state } from '../core/model.js';
 import { render } from '../ui/gantt-render.js';
 import { persist, write } from '../core/saving.js';
+import { saveIdea } from './ideas.js';
 import { showPage } from '../app/shell.js';
 
 /* ---------- roadmaps ---------- */
@@ -57,13 +58,14 @@ function createRoadmap(name, kind, a, b, copyFrom) {
 function deleteRoadmap(id) {
   const r = S.roadmaps[id]; if (!r) return;
   Object.keys(S.over).forEach(k => { if (!base.has(k) && S.over[k].rm === id) { delete S.over[k]; persist(k); } });
+  Object.keys(S.ideas).forEach(iid => { const i = S.ideas[iid]; if (i && !i.col && !i.cfg && i.rm === id && i.st === 'scheduled') saveIdea(iid, { st: 'idea', rm: null, itemId: null }, null); });   // ideas scheduled here go back to the backlog
   delete S.roadmaps[id]; write('roadmaps/' + id, null);
   logAct('roadmap', 'deleted roadmap "' + r.n + '"');
   if (state.rm === id) useRoadmap(H2_ID);
 }
 export function renderRoadmaps() {
   const root = $('pg-roadmaps'); root.textContent = '';
-  root.append(pageHead('Roadmaps', 'Create a roadmap for a quarter, half year or the whole year. Each roadmap has its own timeline; people, ideas and leave are shared.'));
+  root.append(pageHead('Roadmaps', 'Create a roadmap for a quarter, half year or the whole year (choose Scope > Custom for your own dates). Each roadmap has its own timeline; people, ideas and leave are shared.'));
   const f = el('form', 'card'); f.append(el('h2', '', 'New roadmap'));
   const yr = selOf([2026, 2027, 2028, 2029], 2027), kd = selOf(Object.keys(KIND_LABEL).map(k => [k, KIND_LABEL[k]]), 'Q1');
   const nm = el('input'); nm.type = 'text'; nm.maxLength = 60; nm.required = true;
