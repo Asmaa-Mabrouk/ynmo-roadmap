@@ -490,6 +490,7 @@ body { margin: 0; }
 <section class="pg page" id="pg-resources" hidden></section>
 <section class="pg page" id="pg-vacations" hidden></section>
 <section class="pg page" id="pg-log" hidden></section>
+<section class="pg page" id="pg-admin" hidden></section>
 </main>
 <aside class="drawer" id="drawer" hidden aria-label="Ideas backlog"></aside>
 </div>
@@ -1557,7 +1558,7 @@ function drawAvatar() {
 /* ---------- shared state for pages ---------- */
 let me = null, roadmaps = {}, ideas = {}, vacs = {}, logs = [], members = [], wantRm = null, vacNotice = null, ideaUI = { st: 'open', q: '' }, drawerOpen = false;
 const H2 = { id: H2_ID, n: 'H2 2026', a: '2026-10-01', b: '2027-01-31', kind: 'H2', builtin: true };
-const PAGES = [['roadmap', 'Roadmap'], ['ideas', 'Ideas'], ['roadmaps', 'Roadmaps'], ['resources', 'Resources'], ['vacations', 'Vacations'], ['log', 'Log']];
+const PAGES = [['roadmap', 'Roadmap'], ['ideas', 'Ideas'], ['roadmaps', 'Roadmaps'], ['resources', 'Resources'], ['vacations', 'Vacations'], ['log', 'Log'], ['admin', 'Approvals']];
 const DOMAINS = ['PM', 'Mobile', 'Backend', 'Frontend', 'Full-stack', 'Engineering', 'QA', 'UX / Design', 'AI / ML', 'Other'];
 const VTYPES = ['Annual leave', 'Training', 'Public holiday', 'Other'];
 const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'x';
@@ -1865,8 +1866,8 @@ async function loadMembers() {
   const r = await sb.from('profiles').select('*').order('created_at', { ascending: true });
   if (!r.error && r.data) members = r.data;
   const pend = members.filter(m => !m.approved).length;
-  const b = document.querySelector('#nav [data-p="resources"] .dot'); if (b) { b.hidden = !(me.is_admin && pend); b.textContent = pend; }
-  if (state.page === 'resources') renderResources();
+  const b = document.querySelector('#nav [data-p="admin"] .dot'); if (b) { b.hidden = !(me.is_admin && pend); b.textContent = pend; }
+  if (state.page === 'admin') renderAdmin();
 }
 function renderResources() {
   const root = $('pg-resources'), ae = document.activeElement;
@@ -1906,9 +1907,14 @@ function renderResources() {
     hidden.forEach(i => { const r = el('div', 'formrow'); r.append(el('span', '', extras[i].n)); const b = el('button', 'btn sm', 'Restore'); b.type = 'button'; b.addEventListener('click', () => { const nmn = extras[i].n; delete extras[i]; write('people/' + i, null); logAct('resource', 'restored ' + nmn + ' to the chart'); fillPersons(); render(); renderResources(); }); r.append(b); hc.append(r); });
     root.append(hc);
   }
+}
+
+function renderAdmin() {
+  const root = $('pg-admin'); root.textContent = '';
+  root.append(pageHead('Approvals', 'People who registered wait here until you approve them. They get an email when you do, and their waiting screen opens the tool by itself.'));
   const pend = members.filter(m => !m.approved);
-  if (me && me.is_admin && pend.length) {
-    const ac = el('div', 'card'); ac.append(el('h2', '', 'Waiting for your approval (' + pend.length + ')'), el('div', 'hint', 'These people registered and cannot open the tool until you approve them. They get an email when you do.'));
+  const ac = el('div', 'card'); ac.append(el('h2', '', pend.length ? 'Waiting for your approval (' + pend.length + ')' : 'Nobody is waiting'));
+  if (!pend.length) ac.append(el('div', 'hint', 'New registrations show up here.'));
     pend.forEach(m => {
       const row = el('div', 'formrow'); row.style.alignItems = 'center';
       const who = el('div'); who.append(el('b', '', m.name || m.email), el('div', 'hint', (m.role ? m.role + ' · ' : '') + (m.email || '')));
@@ -1916,12 +1922,11 @@ function renderResources() {
       ok.addEventListener('click', async () => {
         ok.disabled = true; const r = await sb.from('profiles').update({ approved: true }).eq('id', m.id);
         if (r.error) { ok.disabled = false; toast('Could not approve: ' + r.error.message); return; }
-        logAct('access', 'approved ' + (m.name || m.email)); toast('Approved. ' + (m.name || m.email) + ' will get an email.'); await loadMembers();
+        logAct('access', 'approved ' + (m.name || m.email)); toast('Approved. ' + (m.name || m.email) + ' can now open the tool.'); await loadMembers();
       });
       row.append(avatarEl(m.avatar, 36, m.name), who, ok); ac.append(row);
     });
-    root.insertBefore(ac, f);
-  }
+  root.append(ac);
 }
 
 /* ---------- vacations ---------- */
@@ -2080,9 +2085,9 @@ function renderLog() {
 
 /* ---------- shell: navigation and start ---------- */
 function refreshPage() { renderPage(state.page); }
-function renderPage(p) { ({ roadmap: render, ideas: () => renderIdeas(true), roadmaps: renderRoadmaps, resources: () => { loadMembers(); renderResources(); }, vacations: () => renderVacations(true), log: renderLog })[p](); }
+function renderPage(p) { ({ roadmap: render, ideas: () => renderIdeas(true), roadmaps: renderRoadmaps, resources: renderResources, admin: () => { loadMembers(); renderAdmin(); }, vacations: () => renderVacations(true), log: renderLog })[p](); }
 function showPage(p) {
-  if (!PAGES.some(x => x[0] === p)) p = 'roadmap';
+  if (!PAGES.some(x => x[0] === p) || (p === 'admin' && !(me && me.is_admin))) p = 'roadmap';
   state.page = p; closeCtx(); closePicker();
   PAGES.forEach(x => { $('pg-' + x[0]).hidden = x[0] !== p; });
   document.querySelectorAll('#nav button').forEach(b => { if (b.dataset.p === p) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
@@ -2096,11 +2101,12 @@ const NAV_ICONS = {
   roadmaps: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5-9-5zM3 13l9 5 9-5M3 17.5 12 22l9-4.5" /></svg>',
   resources: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 5.2a3.2 3.2 0 0 1 0 5.6M18 14.3c1.8.8 3 2.6 3 4.7" /></svg>',
   vacations: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M8 3v4M16 3v4M3.5 10h17M9 15l2 2 4-4" /></svg>',
+  admin: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.4 2.9 8.3 7 10 4.1-1.7 7-5.6 7-10V6l-7-3z" /><path d="m9 12 2 2 4-4" /></svg>',
   log: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>'
 };
 function buildNav() {
   const n = $('nav'); n.textContent = '';
-  PAGES.forEach(x => { const b = el('button', ''); b.type = 'button'; b.dataset.p = x[0]; b.title = x[1]; b.setAttribute('aria-label', x[1]); b.insertAdjacentHTML('beforeend', NAV_ICONS[x[0]] || ''); b.append(el('span', 'lbl', x[1])); if (x[0] === 'resources') { const d = el('span', 'dot', '0'); d.hidden = true; b.append(d); } b.addEventListener('click', () => showPage(x[0])); n.append(b); });
+  PAGES.filter(x => x[0] !== 'admin' || (me && me.is_admin)).forEach(x => { const b = el('button', ''); b.type = 'button'; b.dataset.p = x[0]; b.title = x[1]; b.setAttribute('aria-label', x[1]); b.insertAdjacentHTML('beforeend', NAV_ICONS[x[0]] || ''); b.append(el('span', 'lbl', x[1])); if (x[0] === 'admin') { const d = el('span', 'dot', '0'); d.hidden = true; b.append(d); } b.addEventListener('click', () => showPage(x[0])); n.append(b); });
 }
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 let needRender = false;
@@ -2124,7 +2130,7 @@ function start() {
   db.collection('vacations').onSnapshot(s => { const n = {}; s.docs.forEach(d => { n[d.id] = d.data(); }); if (same(n, vacs)) return; vacs = n; softRender(); if (state.page === 'vacations') renderVacations(); }, () => {});
   db.collection('activity').onSnapshot(s => { logs = s.docs.map(d => ({ id: d.id, data: d.data() })).sort((a, b) => a.data.at < b.data.at ? 1 : -1); if (state.page === 'log') renderLog(); }, () => {});
   setSave('ready'); fillRm();
-  loadMembers(); setInterval(loadMembers, 60000);
+  loadMembers(); setInterval(loadMembers, 20000);
   showPage((location.hash.match(/^#\/(\w+)/) || [])[1] || 'roadmap');
 }
 async function boot() {
