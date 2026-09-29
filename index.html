@@ -509,8 +509,12 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
 /* ideas cards: controls no longer collide */
 .row2 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
-.row2 label.hint { display: inline-flex; align-items: center; gap: 8px; margin: 0; white-space: nowrap; }
+.row2 label.hint { display: grid; grid-template-columns: 50px 122px; align-items: center; gap: 8px; margin: 0; white-space: nowrap; }
 .row2 select { width: 122px; padding: 7px 38px 7px 12px; font-size: 13.5px; }
+
+.col[style*="--c"] { border-top-color: var(--c); }
+.addcol { min-height: 120px; border: 2px dashed color-mix(in srgb, var(--brand) 40%, #fff); border-radius: 16px; background: transparent; color: var(--brand); font-weight: 700; font-size: 1rem; cursor: pointer; }
+.addcol:hover { background: color-mix(in srgb, var(--brand) 6%, #fff); }
 
 </style>
 
@@ -1816,12 +1820,12 @@ function saveIdea(id, patch, act, sum) {
 }
 function addIdea(pr, title) {
   const id = 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4);
-  saveIdea(id, { t: title, n: '', pr: pr, im: 2, ef: 2, st: 'idea', by: me ? me.name : '', ts: Date.now() }, 'idea', 'added idea "' + title + '" to ' + laneOf(pr).n);
+  saveIdea(id, { t: title, n: '', pr: pr, im: 2, ef: 2, st: 'idea', by: me ? me.name : '', ts: Date.now() }, 'idea', 'added idea "' + title + '" to ' + ideaColName(pr));
 }
 function scheduleIdea(id, person, k, days) {
   const i = ideas[id]; if (!i || !canEdit()) return;
   pushHistory();
-  const nid = 'c' + Date.now().toString(36), sq = i.pr, none = !person || person === '__none';
+  const nid = 'c' + Date.now().toString(36), sq = LANES.some(l => l.k === i.pr) ? i.pr : (person && person !== '__none' ? primarySq(person) : 'tifli'), none = !person || person === '__none';
   k = Math.max(0, Math.min(NDAYS - 1, k));
   const all = items().filter(x => x.sq === sq);
   over[nid] = { custom: true, rm: state.rm, t: i.t, n: i.n || '', sq: sq, pr: sq === 'ai' ? ['tifli'] : [sq], d0: k, d1: Math.min(NDAYS - 1, k + Math.max(1, days) - 1), st: 'planned', res: none ? [] : [person], ord: all.length ? Math.max.apply(null, all.map(x => x.ord)) + 1 : 0, idea: id };
@@ -1904,7 +1908,7 @@ function renderIdeas(force) {
   tools.append(q, fs);
   root.append(pageHead('Ideas', 'Capture thoughts per product first. When one is ready, press Add to roadmap here, or drag it from the Ideas drawer onto a person on the roadmap.', tools));
   const board = el('div', 'board');
-  LANES.forEach(l => {
+  ideaCols().forEach(l => {
     const col = el('div', 'col'); col.style.setProperty('--c', l.c);
     const all = Object.keys(ideas).filter(id => ideas[id].pr === l.k);
     const fq = ideaUI.q.trim().toLowerCase();
@@ -1913,16 +1917,19 @@ function renderIdeas(force) {
       const okS = ideaUI.st === 'all' || (ideaUI.st === 'open' ? (s === 'idea' || s === 'shortlisted') : s === ideaUI.st);
       return okS && (!fq || (i.t + ' ' + (i.n || '')).toLowerCase().includes(fq));
     }).sort((a, b) => ideaScore(ideas[b]) - ideaScore(ideas[a]) || (ideas[b].ts || 0) - (ideas[a].ts || 0));
-    const h = el('h2'); h.append(document.createTextNode(l.n), el('span', 'badge', String(list.length))); col.append(h);
+    const h = el('h2'); h.append(document.createTextNode(l.n), el('span', 'badge', String(list.length)));
+    if (l.custom && canEdit()) { const rn = el('button', 'btn sm', 'Rename'); rn.type = 'button'; rn.style.marginInlineStart = 'auto'; rn.addEventListener('click', () => colDialog(l)); const rm = el('button', 'btn sm', 'Remove'); rm.type = 'button'; rm.addEventListener('click', () => removeCol(l)); h.append(rn, rm); h.style.display = 'flex'; h.style.flexWrap = 'wrap'; h.style.alignItems = 'center'; h.style.gap = '6px 8px'; }
+    col.append(h);
     if (canEdit()) {
       const inp = el('input'); inp.type = 'text'; inp.placeholder = 'Add an idea and press Enter'; inp.maxLength = 140; inp.setAttribute('aria-label', 'New idea for ' + l.n);
-      inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); const v = inp.value.trim(); if (v) { addIdea(l.k, v); renderIdeas(true); const n = root.querySelectorAll('.col input[type=text]')[LANES.indexOf(l)]; if (n) n.focus(); } } });
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); const v = inp.value.trim(); if (v) { addIdea(l.k, v); renderIdeas(true); const n = root.querySelectorAll('.col input[type=text]')[ideaCols().findIndex(x => x.k === l.k)]; if (n) n.focus(); } } });
       col.append(inp);
     }
     list.forEach(id => col.append(ideaCard(id, ideas[id])));
     if (!list.length) col.append(el('div', 'hint', 'Nothing here yet.'));
     board.append(col);
   });
+  if (canEdit()) { const ac = el('button', 'addcol', '+ Add product'); ac.type = 'button'; ac.id = 'addcol'; ac.addEventListener('click', () => colDialog(null)); board.append(ac); }
   root.append(board);
 }
 function renderDrawer() {
@@ -1933,8 +1940,8 @@ function renderDrawer() {
   h.append(x);
   d.append(h, el('div', 'hint', 'Drag an idea onto a person and a day. It becomes a bar and stays linked.'));
   const list = el('div', 'dl');
-  const open = Object.keys(ideas).filter(id => (ideas[id].st || 'idea') === 'idea' || ideas[id].st === 'shortlisted');
-  LANES.forEach(l => {
+  const open = Object.keys(ideas).filter(id => !ideas[id].col && (ideas[id].st || 'idea') === 'idea' || ideas[id].st === 'shortlisted');
+  ideaCols().forEach(l => {
     const mine = open.filter(id => ideas[id].pr === l.k).sort((a, b) => ideaScore(ideas[b]) - ideaScore(ideas[a]));
     if (!mine.length) return;
     list.append(el('div', 'lab', l.n));
@@ -2913,6 +2920,41 @@ function openClear() {
     });
     const row = el('div', 'formrow'); row.append(go, no); box.append(row);
   });
+}
+
+/* ---------- ideas: your own product columns ---------- */
+const COL_COLORS = ['#0d8560', '#6d48a8', '#c04a17', '#5a6db5', '#b8860b', '#c2185b', '#00838f', '#55608a'];
+function ideaCols() {
+  const custom = Object.keys(ideas).filter(id => ideas[id] && ideas[id].col).map(id => ({ k: id, n: ideas[id].n || 'Untitled', c: ideas[id].c || '#55608a', custom: true })).sort((a, b) => (ideas[a.k].ts || 0) - (ideas[b.k].ts || 0));
+  return LANES.map(l => ({ k: l.k, n: l.n, c: l.c })).concat(custom);
+}
+function ideaColName(k) { const c = ideaCols().find(x => x.k === k); return c ? c.n : laneOf(k).n; }
+function colDialog(existing) {
+  openDlg(existing ? 'Rename product column' : 'Add a product column', box => {
+    const nm = el('input'); nm.type = 'text'; nm.maxLength = 40; nm.placeholder = 'Product name'; nm.setAttribute('aria-label', 'Product name'); nm.style.width = '100%'; nm.value = existing ? existing.n : '';
+    const sel = { v: existing ? existing.c : COL_COLORS[(ideaCols().length) % COL_COLORS.length] };
+    const sw = el('div', 'mrow'); sw.setAttribute('role', 'radiogroup'); sw.setAttribute('aria-label', 'Color');
+    COL_COLORS.forEach(c => { const b = el('button', 'swatch'); b.type = 'button'; b.style.setProperty('--c', c); b.setAttribute('role', 'radio'); b.setAttribute('aria-label', 'Color ' + c); b.setAttribute('aria-pressed', String(sel.v === c)); b.setAttribute('aria-checked', String(sel.v === c)); b.addEventListener('click', () => { sel.v = c; sw.querySelectorAll('.swatch').forEach(x => { const on = x === b; x.setAttribute('aria-pressed', String(on)); x.setAttribute('aria-checked', String(on)); }); }); sw.append(b); });
+    const msg = el('div', 'gerr'); msg.setAttribute('aria-live', 'polite');
+    const go = el('button', 'btn primary', existing ? 'Save' : 'Add column'); go.type = 'button';
+    const no = el('button', 'btn', 'Cancel'); no.type = 'button'; no.addEventListener('click', closeDlg);
+    const submit = () => {
+      const n = nm.value.trim(); if (!n) { msg.textContent = 'Type a name.'; return; }
+      if (ideaCols().some(c => c.n.toLowerCase() === n.toLowerCase() && (!existing || c.k !== existing.k))) { msg.textContent = 'A column with this name already exists.'; return; }
+      if (existing) { saveIdea(existing.k, { n: n, c: sel.v }, 'idea', 'renamed product column "' + existing.n + '" to "' + n + '"'); }
+      else { const id = 'col' + Date.now().toString(36); saveIdea(id, { col: true, n: n, c: sel.v, ts: Date.now() }, 'idea', 'added product column "' + n + '"'); }
+      closeDlg(); renderIdeas(true); renderDrawer();
+    };
+    nm.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
+    go.addEventListener('click', submit);
+    const row = el('div', 'formrow'); row.append(go, no);
+    box.append(nm, el('span', 'lab', 'Color'), sw, msg, row);
+  });
+}
+function removeCol(c) {
+  const n = Object.keys(ideas).filter(id => ideas[id].pr === c.k).length;
+  if (n) { toast('"' + c.n + '" still has ' + n + ' idea' + (n === 1 ? '' : 's') + '. Move or delete them first.'); return; }
+  logAct('idea', 'removed product column "' + c.n + '"'); delete ideas[c.k]; write('ideas/' + c.k, null); renderIdeas(true); renderDrawer();
 }
 
 function init() {
