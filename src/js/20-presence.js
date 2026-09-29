@@ -1,0 +1,48 @@
+/**
+ * @module presence
+ * Who is online and soft edit locks.
+ * Supabase Realtime presence on the PRIVATE channel `ynmo-presence` (requires the realtime policies in supabase-setup-v5-security.sql). Shows avatars and warns when someone else is editing the same bar.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
+/* ---------- 2. presence + soft lock ---------- */
+let presT = 0, lockOverride = null, lockAt = 0;
+function myPres() { return { uid: me.id, name: me.name || me.email, av: me.avatar || '', page: state.page, rm: state.rm, edit: state.edit ? state.edit.split('|')[0] : null }; }
+function trackPres() {
+  clearTimeout(presT);
+  presT = setTimeout(() => { if (presCh && me) { try { presCh.track(myPres()); } catch (e) { /* not connected */ } } }, 120);
+}
+function startPresence() {
+  if (presCh || !sb.channel) return;
+  try {
+    presCh = sb.channel('ynmo-presence', { config: { private: true, presence: { key: me.id } } });
+    presCh.on('presence', { event: 'sync' }, () => { try { pres = presCh.presenceState() || {}; } catch (e) { pres = {}; } drawPresence(); decorateLocks(); });
+    presCh.subscribe(s => { if (s === 'SUBSCRIBED') trackPres(); });
+  } catch (e) { presCh = null; }
+}
+function others() { const out = []; Object.keys(pres).forEach(k => { if (k === (me && me.id)) return; const m = (pres[k] || [])[0]; if (m) out.push(m); }); return out; }
+function editorOf(id) { const o = others().find(m => m.edit === id); return o || null; }
+function drawPresence() {
+  let box = $('presence');
+  if (!box) { box = el('div', 'presence'); box.id = 'presence'; box.setAttribute('aria-label', 'People online'); const av = $('avbtn'); av.parentNode.insertBefore(box, av); }
+  box.textContent = '';
+  const o = others(); box.hidden = !o.length;
+  o.slice(0, 4).forEach(m => { const a = avatarEl(m.av, 28, m.name); a.title = m.name + (m.edit ? ' · editing' : ' · online') + ' · ' + (m.page || ''); a.classList.add('pav'); box.append(a); });
+  if (o.length > 4) box.append(el('span', 'pmore', '+' + (o.length - 4)));
+  box.setAttribute('role', 'group'); box.setAttribute('aria-label', o.length + (o.length === 1 ? ' other person online: ' : ' others online: ') + o.map(m => m.name).join(', '));
+}
+function decorateLocks() {
+  const g = $('grid'); if (!g) return;
+  g.querySelectorAll('.bar.locked').forEach(b => { b.classList.remove('locked'); const t = b.querySelector('.lockchip'); if (t) t.remove(); });
+  others().forEach(m => {
+    if (!m.edit) return;
+    g.querySelectorAll('.bar').forEach(b => { if (b.dataset.id === m.edit && !b.classList.contains('editing')) { b.classList.add('locked'); b.append(el('span', 'lockchip', '✎ ' + String(m.name).split(' ')[0])); b.title += ' · ' + m.name + ' is editing'; } });
+  });
+}
+function lockCheck(it) {
+  const o = editorOf(it.id); if (!o) return true;
+  if (lockOverride === it.id && Date.now() - lockAt < 6000) { lockOverride = null; return true; }
+  lockOverride = it.id; lockAt = Date.now();
+  toast(o.name + ' is editing "' + it.t + '" right now. Try again within 6 seconds to edit anyway.');
+  return false;
+}
+

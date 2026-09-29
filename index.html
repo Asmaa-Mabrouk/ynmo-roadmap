@@ -605,6 +605,12 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 <div class="pop" id="pop" role="dialog" aria-label="Assign team members" hidden></div>
 
 <script>
+/**
+ * @module time-and-lanes
+ * Time axis, static reference data and the data model.
+ * Day-based timeline (setRange), squads/lanes, seed feature list (ITEMS), the `over` overlay of user edits on top of the seed, and the selectors items()/visible()/team()/directory() every view reads from.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- time axis: one column per day, rebuilt for each roadmap (Fri and Sat are the weekend) ---------- */
 const DAY = 864e5, H2_ID = 'h2-2026', H2_START = Date.UTC(2026, 9, 1);
 let START = H2_START, NDAYS = 123, STARTDOW = 4, todayK = -1;
@@ -827,6 +833,12 @@ function visible() {
     (!q || (it.t + ' ' + (it.n || '') + ' ' + it.res.join(' ')).toLowerCase().includes(q)));
 }
 
+/**
+ * @module saving
+ * Persistence and undo.
+ * Per-document serial write queue to Supabase with exponential-backoff retry (persist/write), the save-status pill, and in-session undo history capped at 60 steps (commit/undo). Every user edit goes through commit().
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- saving ---------- */
 const SAVE_TEXT = {
   ready: 'Edits save automatically and show for everyone with access.',
@@ -837,6 +849,13 @@ const SAVE_TEXT = {
 };
 function setSave(k) { $('save').textContent = SAVE_TEXT[k] || ''; if (k === 'error') netMark(false); else if (k === 'saved') netMark(true); progress(k === 'saving'); }
 const queue = {};
+/**
+ * Queue a write for one document. Writes to the same path run in order; network errors retry up to 6 times
+ * (1.5 s doubling, max 15 s). A permission error (RLS) flips the app to read-only.
+ * @param {string} path  'table/id'
+ * @param {?object} data full document, or null to delete
+ * @param {?object} fields changed fields only (enables server-side merge)
+ */
 function write(path, data, fields) {
   if (!db) { setSave('local'); return; }
   const ref = db.doc(path), copy = data ? clone(data) : null, part = fields ? clone(fields) : null;
@@ -855,7 +874,6 @@ function write(path, data, fields) {
     inflight--;
   });
 }
-window.addEventListener('online', () => { if (typeof loadMembers === 'function') { /* retries run on their own timer */ } });
 function persist(id, fields) { if (curEntry) curEntry.ids.add(id); write('items/' + id, over[id] || null, fields && over[id] ? fields : null); }
 let curEntry = null;
 function pushHistory() { curEntry = { snap: JSON.stringify(over), ids: new Set() }; history.push(curEntry); if (history.length > 60) history.shift(); }
@@ -917,6 +935,12 @@ function squadPatch(it, sq) {
   return { sq: sq, pr: pr };
 }
 
+/**
+ * @module people
+ * People picker and time-off popovers.
+ * Popover used to assign team members to a feature and to record a person's time off on the timeline.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- people ---------- */
 function fillPersons() {
   const ps = $('person'), keep = state.person;
@@ -1039,6 +1063,12 @@ document.addEventListener('pointerdown', e => {
   if (!p.contains(e.target) && !(e.target.closest && (e.target.closest('.res') || e.target.closest('#ed-res') || e.target.closest('#daysoff')))) closePicker();
 });
 
+/**
+ * @module drag
+ * Drag & drop on the Gantt.
+ * Moving/resizing bars in time and moving rows between squads or people (startDrag). Handles drop-target highlighting and ordering (`ord`).
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- drag ---------- */
 function laneBoxes(g) {
   const o = {};
@@ -1136,6 +1166,12 @@ function startDrag(ev, it, bar, mode) {
   bar.addEventListener('pointermove', move); bar.addEventListener('pointerup', up); bar.addEventListener('pointercancel', up);
 }
 
+/**
+ * @module render
+ * Main roadmap rendering.
+ * Summary strip, filters, zoom, bar construction (buildBar), row packing so bars do not overlap (pack) and the by-person view.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- render ---------- */
 function renderSummary(list) {
   const s = $('summary'); s.textContent = '';
@@ -1301,6 +1337,12 @@ function renderPeople(g, put, list) {
 }
 
 
+/**
+ * @module editing
+ * Inline editing and context menus.
+ * Cell editing (startEdit/finishEdit), add/duplicate rows, right-click bar/row menus (barMenu/rowMenu) and add-person dialog.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- inline edit, context menu, people ---------- */
 function startEdit(it, owner) { if (!canEdit() || !lockCheck(it)) return; closeCtx(); state.edit = it.id + '|' + (owner || ''); state.needFocus = true; render(); trackPres(); }
 function finishEdit(it, val, ok) {
@@ -1411,6 +1453,12 @@ function openAddPerson(anchor) {
   placePop(anchor); nn.focus();
 }
 
+/**
+ * @module export
+ * CSV export of the current roadmap.
+ * Escapes cells safely (csvCell) and downloads the file.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- export ---------- */
 function csvCell(v) { v = String(v == null ? '' : v); if (/^[=+\-@\t\r]/.test(v)) v = "'" + v; return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
 async function exportCsv() {
@@ -1425,6 +1473,12 @@ async function exportCsv() {
 
 /* ---------- setup ---------- */
 
+/**
+ * @module supabase
+ * Supabase client and storage adapter.
+ * Only the PUBLISHABLE key lives here (safe by design; access is enforced by Row Level Security). makeDb() wraps generic id/data(jsonb) tables behind a small get/set/delete/subscribe API used by the whole app.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- Supabase: shared storage, sign in, sign up, profiles ---------- */
 const SUPABASE_URL = 'https://avgkenwdehtwynrswsck.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_3R60HvqQDeGHcbvkZ2uABg_0sI5jvZ1';
@@ -1468,6 +1522,12 @@ function makeDb() {
   };
 }
 
+/**
+ * @module avatars
+ * Built-in avatar set.
+ * Local SVG avatars so no external image host is needed (also keeps the CSP strict).
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- avatars: local, professional, no external images ---------- */
 const AV_BG = ['#d9f2ea', '#e6e0f7', '#dfe6f8', '#fde6da', '#fbeec9', '#e4eaf2'];
 const AVATARS = [
@@ -1506,6 +1566,12 @@ function avatarEl(id, size, name) {
   return s;
 }
 
+/**
+ * @module gate
+ * Authentication screens.
+ * Login, sign-up, forgot/set password, pending-approval and check-email screens; hash routes (#/login, #/signup, ...); logout. Password strength meter comes from the extras module.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- gate screens ---------- */
 const JOBS = ['Product Manager', 'Engineer', 'QA', 'UX / Design', 'CEO', 'CTO', 'Executive', 'Other'];
 function gateCard(title, sub) {
@@ -1633,6 +1699,12 @@ function showSetPw() {
 }
 async function doLogout() { try { await sb.auth.signOut(); } catch (e) { /* ignore */ } location.reload(); }
 
+/**
+ * @module profile
+ * Profile loading and editing.
+ * Reads the `profiles` row after sign-in (approval, admin, access role), profile edit dialog and avatar drawing.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- profile ---------- */
 async function loadProfile() {
   const s = (await sb.auth.getSession()).data.session; if (!s) return null;
@@ -1677,6 +1749,12 @@ function drawAvatar() {
   m.append(e, o, ev);
 }
 
+/**
+ * @module shared-state-and-log
+ * Shared state, small utilities and the activity log.
+ * `me` (current user), page registry, date helpers, toast, the form-field helpers, logAct() (append-only audit trail with optional undo payload) and describe() (human sentence for a log entry).
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- shared state for pages ---------- */
 let me = null, roadmaps = {}, ideas = {}, vacs = {}, logs = [], members = [], wantRm = null, vacNotice = null, ideaUI = { st: 'open', q: '' }, drawerOpen = false;
 const H2 = { id: H2_ID, n: 'H2 2026', a: '2026-10-01', b: '2027-01-31', kind: 'H2', builtin: true };
@@ -1723,6 +1801,12 @@ function describe(prev, f) {
   return parts.join('; ');
 }
 
+/**
+ * @module page-roadmaps
+ * Roadmaps page.
+ * Create/rename/delete roadmaps (each with its own date range) and switch the current roadmap.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- roadmaps ---------- */
 function allRoadmaps() {
   return [H2].concat(Object.keys(roadmaps).map(id => Object.assign({ id: id }, roadmaps[id])).filter(r => r.a && r.b).sort((x, y) => x.a < y.a ? -1 : 1));
@@ -1819,6 +1903,12 @@ function renderRoadmaps() {
   root.append(g);
 }
 
+/**
+ * @module page-ideas
+ * Ideas page and drawer.
+ * Trello-style board of ideas per product with scoring (impact/effort), scheduling an idea onto the roadmap, and the backlog drawer. Column management is in ideas-columns.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- ideas ---------- */
 const LMH = [[1, 'Low'], [2, 'Medium'], [3, 'High']];
 const ISTAT = [['idea', 'Idea'], ['shortlisted', 'Shortlisted'], ['scheduled', 'On a roadmap'], ['dropped', 'Dropped']];
@@ -1965,6 +2055,12 @@ function renderDrawer() {
   d.append(list);
 }
 
+/**
+ * @module page-resources
+ * Resources (team) and Approvals pages.
+ * Team members directory CRUD and the admin Approvals screen (approve as Editor/Viewer, revoke).
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- resources ---------- */
 function personDocId(name) { return Object.keys(extras).find(i => extras[i] && extras[i].n === name && !extras[i].hidden); }
 function savePerson(name, patch, sum) {
@@ -2059,6 +2155,12 @@ function renderAdmin() {
   renderAccess(root);
 }
 
+/**
+ * @module page-vacations
+ * Vacations page.
+ * Leave calendar, per-person stats and the features affected by a person's time off.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- vacations ---------- */
 const vacsOf = name => Object.keys(vacs).map(id => Object.assign({ id: id }, vacs[id])).filter(v => v.p === name && v.a0);
 function affectedBy(v) {
@@ -2189,6 +2291,12 @@ function renderVacations(force) {
   root.append(card);
 }
 
+/**
+ * @module page-log
+ * Activity log page.
+ * Filterable log view; export/undo/load-older helpers live in log-tools.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- log ---------- */
 let logUI = { u: 'all', a: 'all' };
 function renderLog() {
@@ -2221,6 +2329,12 @@ function renderLog() {
   root.append(card);
 }
 
+/**
+ * @module shell
+ * App shell: navigation and startup.
+ * Page registry rendering, role-aware navigation (viewers only see read-only pages), start() which subscribes to realtime data, and boot() which decides between auth gate, shared read-only link, or the app.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- shell: navigation and start ---------- */
 function refreshPage() { renderPage(state.page); }
 function renderPage(p) { ({ roadmap: render, ideas: () => renderIdeas(true), roadmaps: renderRoadmaps, resources: renderResources, admin: () => { loadMembers(); renderAdmin(); }, vacations: () => renderVacations(true), log: renderLog, capacity: renderCapacity, baselines: renderBaselines })[p](); }
@@ -2287,6 +2401,12 @@ async function bootInner() {
   if (sess && invited) showSetPw(); else if (sess) { await afterAuth(sess); if (confirmed && !started) { const n = document.querySelector('#gate .meta'); if (n) n.textContent = 'Email confirmed. ' + n.textContent; } } else showLogin();
 }
 
+/**
+ * @module dialogs-offline-hardening
+ * Cross-cutting safety UI.
+ * Accessible modal dialogs (openDlg), offline banner, password-strength meter, idle auto-logout (30 min, warning at 60 s) and sign-out-everywhere. Also the `canWrite()`/`isViewer()` permission helpers used before every mutation.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ================= v4 extras: network banner, session safety, presence, dependencies, capacity, baselines, sharing ================= */
 let SHARE = false, presCh = null, pres = {}, shares = {}, baselines = {}, logsOld = [], logsMore = false, logsBusy = false;
 const ACTIVE_LOG_PAGE = 300;
@@ -2397,6 +2517,12 @@ async function signOutEverywhere() {
   location.reload();
 }
 
+/**
+ * @module presence
+ * Who is online and soft edit locks.
+ * Supabase Realtime presence on the PRIVATE channel `ynmo-presence` (requires the realtime policies in supabase-setup-v5-security.sql). Shows avatars and warns when someone else is editing the same bar.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- 2. presence + soft lock ---------- */
 let presT = 0, lockOverride = null, lockAt = 0;
 function myPres() { return { uid: me.id, name: me.name || me.email, av: me.avatar || '', page: state.page, rm: state.rm, edit: state.edit ? state.edit.split('|')[0] : null }; }
@@ -2439,6 +2565,12 @@ function lockCheck(it) {
   return false;
 }
 
+/**
+ * @module dependencies
+ * Milestones, dependencies and overlay.
+ * Finish-to-start dependencies between bars with conflict detection (depIssues), milestone toggle, and the SVG overlay that draws arrows and ghost baseline bars.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- 3. milestones and dependencies ---------- */
 function depsOf(it) { return Array.isArray(it.dep) ? it.dep : []; }
 function dependents(id, all) { const out = new Set(), walk = x => all.forEach(i => { if (depsOf(i).includes(x) && !out.has(i.id)) { out.add(i.id); walk(i.id); } }); walk(id); return out; }
@@ -2534,6 +2666,12 @@ function afterRender() {
   const gb = $('ghostbtn'); if (gb) { const b = activeBaseline(); gb.hidden = !b; gb.setAttribute('aria-pressed', String(ghostOn)); }
 }
 
+/**
+ * @module log-tools
+ * Activity-log tooling.
+ * Paged loading, CSV/JSON export and undo of logged actions via the stored undo payload; also the roadmap picker used by pages that follow the current roadmap.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- 6. log: export, load older, undo ---------- */
 function allLogs() {
   const seen = new Set(), out = [];
@@ -2593,6 +2731,12 @@ function rmPicker(after) {
   s.addEventListener('change', () => { useRoadmap(s.value); after(); }); return s;
 }
 
+/**
+ * @module capacity
+ * Capacity page.
+ * Per-person weekly load heat-map computed from assignments minus leave days.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- 4. capacity ---------- */
 function weekCols() {
   const cols = [];
@@ -2657,6 +2801,12 @@ function renderCapacity() {
   card.append(lg); root.append(card);
 }
 
+/**
+ * @module baselines
+ * Baselines / snapshots.
+ * Immutable checkpoints of a roadmap, marking one active, and the 'Plan vs now' comparison. The DB trigger guard_baseline enforces immutability server-side.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- 5. baselines ---------- */
 function snapItems() { return items().map(i => ({ id: i.id, t: i.t, sq: i.sq, d0: i.d0, d1: i.d1, st: i.st, res: i.res.slice(), ms: !!i.ms, dep: depsOf(i).slice() })); }
 function saveSnapshot(name, active) {
@@ -2732,6 +2882,12 @@ function compareView(b) {
   return w;
 }
 
+/**
+ * @module sharing
+ * Read-only share links and access roles.
+ * Generate/revoke public links (#/share/<token>) served through the shared_snapshot RPC, apply a shared snapshot without login, and the Editor/Viewer access UI.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- 1. sharing and viewer access ---------- */
 function shareFor(rm) { const k = Object.keys(shares).find(t => shares[t].rm === rm); return k ? { token: k, data: shares[k] } : null; }
 function shareUrl(t) { return location.origin + location.pathname + '#/share/' + t; }
@@ -2810,6 +2966,12 @@ function renderAccess(root) {
   root.append(c);
 }
 
+/**
+ * @module wiring
+ * Extras wiring.
+ * initExtras() (one-time listeners) and startExtras() (after login) hook the extras into the core.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- wiring ---------- */
 function initExtras() {
   // toolbar buttons
@@ -2831,6 +2993,12 @@ function startExtras() {
   startPresence(); startIdle();
 }
 
+/**
+ * @module dropdowns
+ * Custom dropdown popup.
+ * Replaces the OS list of any native <select> with a styled popup while keeping the native element as source of truth (value, change events, forms, tests).
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- elegant dropdowns: the native select stays (value, change, forms), its list is replaced ---------- */
 let cpop = null, cpopSel = null, cpopIdx = -1;
 function cpopClose(refocus) {
@@ -2883,6 +3051,12 @@ document.addEventListener('keydown', e => {
 window.addEventListener('resize', () => cpopClose());
 window.addEventListener('scroll', e => { if (cpop && !cpop.contains(e.target)) cpopClose(); }, true);
 
+/**
+ * @module loading
+ * Loading indicators.
+ * Full-screen loader with progress so the UI never looks frozen during boot.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- loading states ---------- */
 let ldgN = 0;
 function showLoading(msg) {
@@ -2907,30 +3081,12 @@ window.addEventListener('hashchange', () => {
   if (h === 'signup') showSignup(); else if (h === 'forgot') showForgot(); else if (h === 'login') showLogin();
 });
 
-/* ---------- clear the whole roadmap ---------- */
-function openClear() {
-  if (!canWrite()) return;
-  const n = items().length, rm = curRm();
-  openDlg('Clear ' + rm.n + '?', box => {
-    box.append(el('p', '', 'This removes all ' + n + ' features from "' + rm.n + '" for everyone. People, leave, ideas and other roadmaps are not touched.'));
-    box.append(el('p', 'hint', 'A snapshot called "Before clearing" is saved first as a record. Undo brings everything back only until you reload the page, so be sure.'));
-    const t = el('input'); t.type = 'text'; t.placeholder = 'Type CLEAR to confirm'; t.setAttribute('aria-label', 'Type CLEAR to confirm'); t.style.width = '100%'; box.append(t);
-    const go = el('button', 'btn danger', 'Remove all features'); go.type = 'button'; go.disabled = true;
-    const no = el('button', 'btn', 'Cancel'); no.type = 'button'; no.addEventListener('click', closeDlg);
-    t.addEventListener('input', () => { go.disabled = t.value.trim().toUpperCase() !== 'CLEAR'; });
-    go.addEventListener('click', async () => {
-      go.disabled = true;
-      try { if (n) await saveSnapshot('Before clearing · ' + todayIso(), false); } catch (e) { /* snapshot is best effort */ }
-      closeDlg(); pushHistory();
-      const ids = [];
-      items().forEach(i => { ids.push(i.id); if (base.has(i.id)) over[i.id] = Object.assign({}, over[i.id] || {}, { x: true }); else delete over[i.id]; });
-      logAct('roadmap', 'cleared all ' + ids.length + ' features from ' + rm.n);
-      render(); ids.forEach(id => persist(id)); toast('All features removed. Undo brings them back.');
-    });
-    const row = el('div', 'formrow'); row.append(go, no); box.append(row);
-  });
-}
-
+/**
+ * @module ideas-columns
+ * Editable Ideas columns and app entry point.
+ * Custom/built-in column CRUD, colour, drag-reorder and moving cards between products (meta docs `col…`, `cfg_…`, `colorder` are hidden from cards by isMeta()). This is the LAST file: it ends with init(), which starts the app.
+ * NOTE: all src/js files share one global scope (concatenated by build.mjs).
+ */
 /* ---------- ideas: editable, colourable, re-orderable product columns (like Trello) ---------- */
 const COL_COLORS = ['#0d8560', '#6d48a8', '#c04a17', '#5a6db5', '#b8860b', '#c2185b', '#00838f', '#55608a'];
 const isMeta = i => !!(i && (i.col || i.cfg));
