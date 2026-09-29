@@ -57,10 +57,14 @@ alter table public.profiles add constraint profiles_len_chk
 
 -- 5) Presence channel is private: only approved signed-in members can join it.
 --    Also turn OFF "Allow public access" in Supabase > Realtime > Settings.
-alter table realtime.messages enable row level security;
-drop policy if exists "ynmo presence read" on realtime.messages;
-drop policy if exists "ynmo presence write" on realtime.messages;
-create policy "ynmo presence read" on realtime.messages for select to authenticated
-  using (realtime.topic() = 'ynmo-presence' and public.is_approved());
-create policy "ynmo presence write" on realtime.messages for insert to authenticated
-  with check (realtime.topic() = 'ynmo-presence' and public.is_approved());
+do $$
+begin
+  execute 'drop policy if exists "ynmo presence read" on realtime.messages';
+  execute 'drop policy if exists "ynmo presence write" on realtime.messages';
+  execute $p$create policy "ynmo presence read" on realtime.messages for select to authenticated
+    using (realtime.topic() = 'ynmo-presence' and public.is_approved())$p$;
+  execute $p$create policy "ynmo presence write" on realtime.messages for insert to authenticated
+    with check (realtime.topic() = 'ynmo-presence' and public.is_approved())$p$;
+exception when others then
+  raise notice 'Skipped realtime policies (%). Add them from Dashboard > Realtime > Policies.', sqlerrm;
+end $$;
