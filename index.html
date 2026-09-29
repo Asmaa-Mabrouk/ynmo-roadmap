@@ -305,6 +305,40 @@ button.pill { cursor: pointer; }
 .padd select, .padd input { width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; padding: 8px 10px; min-height: 36px; border: 1.5px solid var(--line, #d9d6cc); border-radius: 8px; background: var(--surface, #fff); color: var(--ink); }
 .padd + .btn, #pop .btn { width: 100%; margin-top: 6px; }
 
+.vhead { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 6px; }
+.vhead strong { font-size: 17px; }
+.tlrow { border-top: 1px solid var(--line); }
+.tlrow:first-of-type { margin-top: 8px; }
+.tlhead { width: 100%; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; text-align: start; background: none; border: 0; font: inherit; color: var(--ink); padding: 12px 4px; cursor: pointer; border-radius: 8px; }
+.tlhead:hover, .tlhead:focus-visible { background: var(--surface-2, #f3f2ec); }
+.tlhead .chev { width: 14px; color: var(--muted); }
+.tlbody { padding: 4px 4px 16px; display: grid; gap: 14px; }
+.tltiles { display: flex; flex-wrap: wrap; gap: 10px; }
+.tltile { min-width: 110px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); display: grid; }
+.tltile b { font-size: 22px; line-height: 1.1; }
+.tltile span { font-size: 12px; color: var(--muted); }
+.mcals { display: flex; flex-wrap: wrap; gap: 16px; }
+.mcal { width: 210px; }
+.mcal h4 { margin: 0 0 6px; font-size: 13px; }
+.mgrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; font-size: 12px; }
+.mgrid .dh { color: var(--muted); font-size: 11px; font-weight: 700; }
+.mgrid .day { padding: 5px 0; border-radius: 6px; }
+.mgrid .day.we { background: #efeee8; color: var(--muted); }
+.mgrid .day.out { opacity: .45; }
+.mgrid .day.today { outline: 2px solid #d6336c; outline-offset: -2px; }
+.mgrid .day.lv { color: #fff; font-weight: 800; }
+.lv.t0, .legend2 i.t0 { background: var(--brand-2); }
+.lv.t1, .legend2 i.t1 { background: #3b6fb6; }
+.lv.t2, .legend2 i.t2 { background: #a87400; }
+.lv.t3, .legend2 i.t3 { background: #5a6172; }
+.legend2 { font-size: 12.5px; color: var(--muted); }
+.legend2 i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-inline: 4px 4px; vertical-align: -1px; }
+.tlist { margin: 0; padding-inline-start: 18px; font-size: 13px; }
+.mgrid .day.lv.t0 { background: var(--brand-2); color: #fff; } .mgrid .day.lv.t1 { background: #3b6fb6; color: #fff; }
+.mgrid .day.lv.t2 { background: #a87400; color: #fff; } .mgrid .day.lv.t3 { background: #5a6172; color: #fff; }
+.mgrid .day.lv.we { opacity: .6; }
+.tlbody .btn { width: auto; justify-self: start; }
+
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -1784,13 +1818,79 @@ function affectedBy(v) {
   const ka = kOfIso(v.a0), kb = kOfIso(v.a1 || v.a0);
   return items().filter(it => it.res.includes(v.p) && it.d1 >= ka && it.d0 <= kb).map(it => ({ it: it, lost: Math.min(it.d1, kb) - Math.max(it.d0, ka) + 1 }));
 }
+
+const vacUI = { open: new Set() };
+const VT_CLASS = t => 't' + Math.max(0, VTYPES.indexOf(t));
+function personStats(name) {
+  const list = vacsOf(name).sort((x, y) => x.a0 < y.a0 ? -1 : 1), td = new Date().toISOString().slice(0, 10);
+  let cal = 0, work = 0, taken = 0, upcoming = null; const byType = {};
+  list.forEach(v => {
+    const a1 = v.a1 || v.a0, w = wdays(v.a0, a1);
+    cal += Math.round((parseIso(a1) - parseIso(v.a0)) / DAY) + 1; work += w; byType[v.t] = (byType[v.t] || 0) + w;
+    if (a1 < td) taken += w; else if (!upcoming) upcoming = v;
+  });
+  return { list: list, cal: cal, work: work, taken: taken, byType: byType, upcoming: upcoming };
+}
+function leaveCalendar(list) {
+  const r = curRm(); let a = r.a, b = r.b;
+  list.forEach(v => { if (v.a0 < a) a = v.a0; if ((v.a1 || v.a0) > b) b = v.a1 || v.a0; });
+  const map = {}; list.forEach(v => { for (let t = parseIso(v.a0); t <= parseIso(v.a1 || v.a0); t += DAY) map[new Date(t).toISOString().slice(0, 10)] = v; });
+  const wrap = el('div', 'mcals'), td = new Date().toISOString().slice(0, 10), pad = n => (n < 10 ? '0' : '') + n;
+  let y = +a.slice(0, 4), m = +a.slice(5, 7) - 1; const ey = +b.slice(0, 4), em = +b.slice(5, 7) - 1;
+  for (let n = 0; n < 14 && y * 12 + m <= ey * 12 + em; n++) {
+    const box = el('div', 'mcal'); box.append(el('h4', '', MN[m] + ' ' + y));
+    const g = el('div', 'mgrid'); ['S', 'M', 'T', 'W', 'T', 'F', 'S'].forEach(x => g.append(el('span', 'dh', x)));
+    const first = new Date(Date.UTC(y, m, 1)).getUTCDay(), dim = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    for (let i = 0; i < first; i++) g.append(el('span', 'blank'));
+    for (let d = 1; d <= dim; d++) {
+      const key = y + '-' + pad(m + 1) + '-' + pad(d), dow = (first + d - 1) % 7, v = map[key];
+      const c = el('span', 'day' + (dow === 5 || dow === 6 ? ' we' : '') + (key < r.a || key > r.b ? ' out' : '') + (key === td ? ' today' : '') + (v ? ' lv ' + VT_CLASS(v.t) : ''), String(d));
+      if (v) c.title = v.t + (v.n ? ' · ' + v.n : '') + ' · ' + fmtIso(v.a0) + (v.a1 > v.a0 ? ' to ' + fmtIso(v.a1) : '');
+      g.append(c);
+    }
+    box.append(g); wrap.append(box);
+    m++; if (m > 11) { m = 0; y++; }
+  }
+  return wrap;
+}
+function renderTeamLeave(root) {
+  const names = [...new Set(Object.keys(vacs).map(id => vacs[id]).filter(v => v.a0).map(v => v.p))].sort((x, y) => x.localeCompare(y));
+  if (!names.length) return;
+  const card = el('div', 'card'); card.append(el('h2', '', 'Team leave'), el('div', 'hint', 'Select a person to see their leave stats and calendar.'));
+  const td = new Date().toISOString().slice(0, 10);
+  names.forEach(nm => {
+    const st = personStats(nm), open = vacUI.open.has(nm), row = el('div', 'tlrow');
+    const hb = el('button', 'tlhead'); hb.type = 'button'; hb.setAttribute('aria-expanded', String(open));
+    const onLeave = st.list.some(v => v.a0 <= td && (v.a1 || v.a0) >= td);
+    hb.append(el('span', 'chev', open ? '▾' : '▸'), el('strong', '', nm), el('span', 'hint', st.list.length + ' period' + (st.list.length > 1 ? 's' : '') + ' · ' + st.work + ' working days'),
+      st.upcoming ? el('span', 'badge', (st.upcoming.a0 <= td ? 'Now until ' + fmtIso(st.upcoming.a1 || st.upcoming.a0) : 'Next ' + fmtIso(st.upcoming.a0))) : el('span', 'hint', 'none upcoming'));
+    if (onLeave) hb.append(el('span', 'badge warn', 'On leave today'));
+    hb.addEventListener('click', () => { if (vacUI.open.has(nm)) vacUI.open.delete(nm); else vacUI.open.add(nm); renderVacations(true); });
+    row.append(hb);
+    if (open) {
+      const body = el('div', 'tlbody'), tiles = el('div', 'tltiles');
+      const tile = (n, l) => { const t = el('div', 'tltile'); t.append(el('b', '', String(n)), el('span', '', l)); return t; };
+      tiles.append(tile(st.work, 'working days off'), tile(st.cal, 'calendar days'), tile(st.taken, 'already taken'), tile(Math.max(0, st.work - st.taken), 'still ahead'));
+      Object.keys(st.byType).forEach(k => tiles.append(tile(st.byType[k], k)));
+      const aff = new Set(); st.list.forEach(v => affectedBy(v).forEach(x => aff.add(x.it.id)));
+      tiles.append(tile(aff.size, 'features on ' + curRm().n + ' overlap'));
+      body.append(tiles, leaveCalendar(st.list));
+      const leg = el('div', 'legend2'); VTYPES.forEach(t => { const i = el('i', VT_CLASS(t)); leg.append(i, document.createTextNode(t + '  ')); }); body.append(leg);
+      const ul = el('ul', 'tlist'); st.list.forEach(v => ul.append(el('li', '', fmtIso(v.a0) + (v.a1 > v.a0 ? ' to ' + fmtIso(v.a1) : '') + ' · ' + v.t + (v.n ? ' · ' + v.n : '') + ' · ' + wdays(v.a0, v.a1 || v.a0) + ' working days'))); body.append(ul);
+      const go = el('button', 'btn sm', 'Show on roadmap'); go.type = 'button'; go.addEventListener('click', () => showPage('roadmap')); body.append(go);
+      row.append(body);
+    }
+    card.append(row);
+  });
+  root.append(card);
+}
 function addVacation(p, a0, a1, type, note) {
   const id = 'v' + Date.now().toString(36);
   vacs[id] = { p: p, a0: a0, a1: a1, t: type, n: note, by: me ? me.name : '' };
   write('vacations/' + id, vacs[id]);
   logAct('vacation', p + ': ' + type + ' ' + fmtIso(a0) + (a1 > a0 ? ' to ' + fmtIso(a1) : ''));
   const aff = affectedBy(vacs[id]);
-  vacNotice = { id: id, p: p, aff: aff.map(x => ({ id: x.it.id, t: x.it.t, lost: x.lost })) };
+  vacNotice = { id: id, p: p, a0: a0, a1: a1, ty: type, aff: aff.map(x => ({ id: x.it.id, t: x.it.t, lost: x.lost })) };
   render(); renderVacations(true);
 }
 function renderVacations(force) {
@@ -1800,16 +1900,18 @@ function renderVacations(force) {
   root.append(pageHead('Vacations', 'Leave shows on the person\'s row in every roadmap with a ⚑ flag. Features that overlap the leave get a flag too, so you can move them or extend them.'));
   const f = el('form', 'card'); f.append(el('h2', '', 'Add leave'));
   const names = [...directory().keys()].sort((x, y) => x.localeCompare(y));
-  const who = selOf(names, names[0]), a = el('input'), b = el('input'), ty = selOf(VTYPES, 'Annual leave'), nt = el('input');
+  const who = selOf([['', 'Choose a person…']].concat(names.map(n => [n, n])), ''), a = el('input'), b = el('input'), ty = selOf(VTYPES, 'Annual leave'), nt = el('input');
+  who.required = true; who.setAttribute('aria-label', 'Person');
   a.type = b.type = 'date'; a.required = true; nt.type = 'text'; nt.maxLength = 80; nt.placeholder = 'Optional note';
   const td = new Date().toISOString().slice(0, 10); a.value = td;
   const r1 = el('div', 'formrow'); r1.append(fld('Person', who), fld('From', a), fld('To', b), fld('Type', ty), fld('Note', nt));
   const msg = el('div', 'gerr'), go = el('button', 'btn primary', 'Add leave'); go.type = 'submit'; go.disabled = !canEdit();
   f.append(r1, msg, go);
-  f.addEventListener('submit', e => { e.preventDefault(); const x0 = a.value, x1 = b.value || a.value; if (parseIso(x0) === null || parseIso(x1) < parseIso(x0)) { msg.textContent = 'Pick a valid date range.'; return; } addVacation(who.value, x0, x1, ty.value, nt.value.trim()); });
+  f.addEventListener('submit', e => { e.preventDefault(); if (!who.value) { msg.textContent = 'Choose a person first.'; who.focus(); return; } const x0 = a.value, x1 = b.value || a.value; if (parseIso(x0) === null || parseIso(x1) < parseIso(x0)) { msg.textContent = 'Pick a valid date range.'; return; } addVacation(who.value, x0, x1, ty.value, nt.value.trim()); });
   root.append(f);
   if (vacNotice) {
     const c = el('div', 'card'); c.style.borderColor = 'var(--brand-2)';
+    const hd = el('div', 'vhead'); hd.append(el('strong', '', vacNotice.p), el('span', '', fmtIso(vacNotice.a0) + (vacNotice.a1 > vacNotice.a0 ? ' to ' + fmtIso(vacNotice.a1) : '')), el('span', 'badge', vacNotice.ty || 'Leave')); c.append(hd);
     c.append(el('h3', '', vacNotice.aff.length ? vacNotice.aff.length + ' feature' + (vacNotice.aff.length > 1 ? 's' : '') + ' on ' + curRm().n + ' overlap this leave' : 'No features on ' + curRm().n + ' overlap this leave'));
     if (vacNotice.aff.length) {
       const ul = el('ul'); vacNotice.aff.forEach(x => ul.append(el('li', '', x.t + ' (' + x.lost + ' day' + (x.lost > 1 ? 's' : '') + ' inside the leave)'))); c.append(ul);
@@ -1821,6 +1923,7 @@ function renderVacations(force) {
     }
     root.append(c);
   }
+  renderTeamLeave(root);
   const card = el('div', 'card'); card.append(el('h2', '', 'All leave'));
   const list = Object.keys(vacs).map(id => Object.assign({ id: id }, vacs[id])).filter(v => v.a0).sort((x, y) => x.a0 < y.a0 ? -1 : 1);
   if (!list.length) card.append(el('div', 'hint', 'No leave added yet.'));
