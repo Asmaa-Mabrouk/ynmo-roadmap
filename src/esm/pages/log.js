@@ -5,7 +5,7 @@
  * Dependencies are explicit ES imports; shared mutable state lives in `S` (core/state.js).
  */
 import { S } from '../core/state.js';
-import { $, el } from '../core/model.js';
+import { $, canEdit, el } from '../core/model.js';
 import { allLogs, canUndoRow, exportLog, loadOlderLogs, undoFromLog, undoneSet } from '../features/log-tools.js';
 import { ago, clock, pageHead, selOf } from '../core/shared.js';
 import { avatarEl } from '../ui/avatars.js';
@@ -22,7 +22,7 @@ export function renderLog() {
   const rows = every.filter(l => (logUI.u === 'all' || l.data.name === logUI.u) && (logUI.a === 'all' || l.data.act === logUI.a));
   const ex = el('button', 'btn', 'Export CSV'); ex.type = 'button'; ex.id = 'logexport'; ex.addEventListener('click', () => exportLog(rows.map(l => l.data)));
   const tools = el('div', 'formrow'); tools.append(su, sa, ex);
-  root.append(pageHead('Log', 'Who changed what, and when. Newest first. Times show in your time zone. Undo puts an edit back the way it was.', tools));
+  root.append(pageHead('Log', 'Who changed what, and when. Newest first. Times show in your time zone.' + (canEdit() ? ' Undo puts an edit back the way it was.' : ''), tools));
   const card = el('div', 'card'); let day = '';
   if (!rows.length) card.append(el('div', 'hint', 'No changes recorded yet.'));
   rows.forEach(l => {

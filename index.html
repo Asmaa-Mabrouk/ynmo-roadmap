@@ -1675,7 +1675,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     ex.addEventListener("click", () => exportLog(rows.map((l) => l.data)));
     const tools = el("div", "formrow");
     tools.append(su, sa, ex);
-    root.append(pageHead("Log", "Who changed what, and when. Newest first. Times show in your time zone. Undo puts an edit back the way it was.", tools));
+    root.append(pageHead("Log", "Who changed what, and when. Newest first. Times show in your time zone." + (canEdit() ? " Undo puts an edit back the way it was." : ""), tools));
     const card = el("div", "card");
     let day = "";
     if (!rows.length) card.append(el("div", "hint", "No changes recorded yet."));
