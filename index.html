@@ -516,6 +516,15 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .addcol { min-height: 120px; border: 2px dashed color-mix(in srgb, var(--brand) 40%, #fff); border-radius: 16px; background: transparent; color: var(--brand); font-weight: 700; font-size: 1rem; cursor: pointer; }
 .addcol:hover { background: color-mix(in srgb, var(--brand) 6%, #fff); }
 
+.col.dropcol { outline: 2px dashed var(--c, var(--brand)); outline-offset: 2px; }
+.col.dragcol { opacity: .55; }
+.col h2 .colmore { min-width: 34px; font-size: 18px; line-height: 1; padding: 2px 8px; }
+.card.dragging, .icard.dragging { opacity: .5; }
+
+.icard { position: relative; }
+.icard .grip { position: absolute; top: 2px; left: 50%; transform: translateX(-50%) rotate(90deg); font-size: 14px; line-height: 1; letter-spacing: -2px; color: var(--muted); cursor: grab; padding: 2px 10px; user-select: none; touch-action: none; }
+.icard .grip:hover { color: var(--brand); }
+
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -1892,6 +1901,7 @@ function ideaCard(id, i) {
         mi(m, (i.st === 'shortlisted' ? '✓ ' : '') + 'Shortlist', () => { saveIdea(id, { st: i.st === 'shortlisted' ? 'idea' : 'shortlisted' }, 'idea', (i.st === 'shortlisted' ? 'unshortlisted "' : 'shortlisted "') + i.t + '"'); renderIdeas(true); });
         mi(m, i.st === 'dropped' ? 'Reopen idea' : 'Drop idea', () => { saveIdea(id, { st: i.st === 'dropped' ? 'idea' : 'dropped' }, 'idea', (i.st === 'dropped' ? 'reopened "' : 'dropped "') + i.t + '"'); renderIdeas(true); });
       }
+      moveMenu(m, id, i);
       m.append(el('div', 'msep'));
       mi(m, 'Delete idea', () => { if (!window.confirm('Delete "' + i.t + '"?')) return; logAct('idea', 'deleted idea "' + i.t + '"'); delete ideas[id]; write('ideas/' + id, null); renderIdeas(true); renderDrawer(); }, 'danger');
     });
@@ -1918,18 +1928,17 @@ function renderIdeas(force) {
       return okS && (!fq || (i.t + ' ' + (i.n || '')).toLowerCase().includes(fq));
     }).sort((a, b) => ideaScore(ideas[b]) - ideaScore(ideas[a]) || (ideas[b].ts || 0) - (ideas[a].ts || 0));
     const h = el('h2'); h.append(document.createTextNode(l.n), el('span', 'badge', String(list.length)));
-    if (l.custom && canEdit()) { const rn = el('button', 'btn sm', 'Rename'); rn.type = 'button'; rn.style.marginInlineStart = 'auto'; rn.addEventListener('click', () => colDialog(l)); const rm = el('button', 'btn sm', 'Remove'); rm.type = 'button'; rm.addEventListener('click', () => removeCol(l)); h.append(rn, rm); h.style.display = 'flex'; h.style.flexWrap = 'wrap'; h.style.alignItems = 'center'; h.style.gap = '6px 8px'; }
-    col.append(h);
+    decorateCol(col, h, l); wireCol(col, l);
     if (canEdit()) {
       const inp = el('input'); inp.type = 'text'; inp.placeholder = 'Add an idea and press Enter'; inp.maxLength = 140; inp.setAttribute('aria-label', 'New idea for ' + l.n);
       inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); const v = inp.value.trim(); if (v) { addIdea(l.k, v); renderIdeas(true); const n = root.querySelectorAll('.col input[type=text]')[ideaCols().findIndex(x => x.k === l.k)]; if (n) n.focus(); } } });
       col.append(inp);
     }
-    list.forEach(id => col.append(ideaCard(id, ideas[id])));
+    list.forEach(id => col.append(dragCard(id, ideaCard(id, ideas[id]))));
     if (!list.length) col.append(el('div', 'hint', 'Nothing here yet.'));
     board.append(col);
   });
-  if (canEdit()) { const ac = el('button', 'addcol', '+ Add product'); ac.type = 'button'; ac.id = 'addcol'; ac.addEventListener('click', () => colDialog(null)); board.append(ac); }
+  boardExtras(board);
   root.append(board);
 }
 function renderDrawer() {
@@ -1940,7 +1949,7 @@ function renderDrawer() {
   h.append(x);
   d.append(h, el('div', 'hint', 'Drag an idea onto a person and a day. It becomes a bar and stays linked.'));
   const list = el('div', 'dl');
-  const open = Object.keys(ideas).filter(id => !ideas[id].col && (ideas[id].st || 'idea') === 'idea' || ideas[id].st === 'shortlisted');
+  const open = Object.keys(ideas).filter(id => !isMeta(ideas[id]) && (ideas[id].st || 'idea') === 'idea' || ideas[id].st === 'shortlisted');
   ideaCols().forEach(l => {
     const mine = open.filter(id => ideas[id].pr === l.k).sort((a, b) => ideaScore(ideas[b]) - ideaScore(ideas[a]));
     if (!mine.length) return;
@@ -2922,26 +2931,36 @@ function openClear() {
   });
 }
 
-/* ---------- ideas: your own product columns ---------- */
+/* ---------- ideas: editable, colourable, re-orderable product columns (like Trello) ---------- */
 const COL_COLORS = ['#0d8560', '#6d48a8', '#c04a17', '#5a6db5', '#b8860b', '#c2185b', '#00838f', '#55608a'];
-function ideaCols() {
-  const custom = Object.keys(ideas).filter(id => ideas[id] && ideas[id].col).map(id => ({ k: id, n: ideas[id].n || 'Untitled', c: ideas[id].c || '#55608a', custom: true })).sort((a, b) => (ideas[a.k].ts || 0) - (ideas[b.k].ts || 0));
-  return LANES.map(l => ({ k: l.k, n: l.n, c: l.c })).concat(custom);
+const isMeta = i => !!(i && (i.col || i.cfg));
+function ideaCols(withHidden) {
+  const built = LANES.map(l => { const o = ideas['cfg_' + l.k] || {}; return { k: l.k, n: o.n || l.n, c: o.c || l.c, hidden: !!o.hidden, builtin: true }; });
+  const custom = Object.keys(ideas).filter(id => ideas[id] && ideas[id].col).sort((a, b) => (ideas[a].ts || 0) - (ideas[b].ts || 0)).map(id => ({ k: id, n: ideas[id].n || 'Untitled', c: ideas[id].c || '#55608a', custom: true }));
+  const ord = (ideas.colorder && ideas.colorder.ord) || [], all = built.concat(custom);
+  all.forEach((c, n) => { const p = ord.indexOf(c.k); c.o = p >= 0 ? p : 1000 + n; });
+  all.sort((a, b) => a.o - b.o);
+  return withHidden ? all : all.filter(c => !c.hidden);
 }
-function ideaColName(k) { const c = ideaCols().find(x => x.k === k); return c ? c.n : laneOf(k).n; }
-function colDialog(existing) {
-  openDlg(existing ? 'Rename product column' : 'Add a product column', box => {
-    const nm = el('input'); nm.type = 'text'; nm.maxLength = 40; nm.placeholder = 'Product name'; nm.setAttribute('aria-label', 'Product name'); nm.style.width = '100%'; nm.value = existing ? existing.n : '';
-    const sel = { v: existing ? existing.c : COL_COLORS[(ideaCols().length) % COL_COLORS.length] };
+function ideaColName(k) { const c = ideaCols(true).find(x => x.k === k); return c ? c.n : laneOf(k).n; }
+function colCount(k) { return Object.keys(ideas).filter(id => !isMeta(ideas[id]) && ideas[id].pr === k).length; }
+function colDialog(col) {
+  openDlg(col ? 'Edit column' : 'Add a product column', box => {
+    const nm = el('input'); nm.type = 'text'; nm.maxLength = 40; nm.placeholder = 'Product name'; nm.setAttribute('aria-label', 'Product name'); nm.style.width = '100%'; nm.value = col ? col.n : '';
+    const sel = { v: col ? col.c : COL_COLORS[ideaCols(true).length % COL_COLORS.length] };
+    const hex = v => /^#[0-9a-f]{6}$/i.test(v) ? v : '#55608a';
     const sw = el('div', 'mrow'); sw.setAttribute('role', 'radiogroup'); sw.setAttribute('aria-label', 'Color');
-    COL_COLORS.forEach(c => { const b = el('button', 'swatch'); b.type = 'button'; b.style.setProperty('--c', c); b.setAttribute('role', 'radio'); b.setAttribute('aria-label', 'Color ' + c); b.setAttribute('aria-pressed', String(sel.v === c)); b.setAttribute('aria-checked', String(sel.v === c)); b.addEventListener('click', () => { sel.v = c; sw.querySelectorAll('.swatch').forEach(x => { const on = x === b; x.setAttribute('aria-pressed', String(on)); x.setAttribute('aria-checked', String(on)); }); }); sw.append(b); });
+    const paint = () => sw.querySelectorAll('.swatch').forEach(x => { const on = x.dataset.c === sel.v; x.setAttribute('aria-pressed', String(on)); x.setAttribute('aria-checked', String(on)); });
+    COL_COLORS.forEach(c => { const b = el('button', 'swatch'); b.type = 'button'; b.dataset.c = c; b.style.setProperty('--c', c); b.setAttribute('role', 'radio'); b.setAttribute('aria-label', 'Color ' + c); b.addEventListener('click', () => { sel.v = c; cp.value = c; paint(); }); sw.append(b); });
+    const cp = el('input'); cp.type = 'color'; cp.value = hex(sel.v); cp.setAttribute('aria-label', 'Custom color'); cp.style.cssText = 'width:34px;height:34px;padding:0;border:0;background:none;cursor:pointer'; cp.addEventListener('input', () => { sel.v = cp.value; paint(); }); sw.append(cp); paint();
     const msg = el('div', 'gerr'); msg.setAttribute('aria-live', 'polite');
-    const go = el('button', 'btn primary', existing ? 'Save' : 'Add column'); go.type = 'button';
+    const go = el('button', 'btn primary', col ? 'Save' : 'Add column'); go.type = 'button';
     const no = el('button', 'btn', 'Cancel'); no.type = 'button'; no.addEventListener('click', closeDlg);
     const submit = () => {
       const n = nm.value.trim(); if (!n) { msg.textContent = 'Type a name.'; return; }
-      if (ideaCols().some(c => c.n.toLowerCase() === n.toLowerCase() && (!existing || c.k !== existing.k))) { msg.textContent = 'A column with this name already exists.'; return; }
-      if (existing) { saveIdea(existing.k, { n: n, c: sel.v }, 'idea', 'renamed product column "' + existing.n + '" to "' + n + '"'); }
+      if (ideaCols(true).some(c => c.n.toLowerCase() === n.toLowerCase() && (!col || c.k !== col.k))) { msg.textContent = 'A column with this name already exists.'; return; }
+      if (col && col.custom) saveIdea(col.k, { n: n, c: sel.v }, 'idea', 'edited product column "' + col.n + '"' + (n !== col.n ? ' (now "' + n + '")' : ''));
+      else if (col) saveIdea('cfg_' + col.k, { cfg: true, k: col.k, n: n, c: sel.v, hidden: false }, 'idea', 'edited product column "' + col.n + '"' + (n !== col.n ? ' (now "' + n + '")' : ''));
       else { const id = 'col' + Date.now().toString(36); saveIdea(id, { col: true, n: n, c: sel.v, ts: Date.now() }, 'idea', 'added product column "' + n + '"'); }
       closeDlg(); renderIdeas(true); renderDrawer();
     };
@@ -2952,9 +2971,71 @@ function colDialog(existing) {
   });
 }
 function removeCol(c) {
-  const n = Object.keys(ideas).filter(id => ideas[id].pr === c.k).length;
+  const n = colCount(c.k);
   if (n) { toast('"' + c.n + '" still has ' + n + ' idea' + (n === 1 ? '' : 's') + '. Move or delete them first.'); return; }
-  logAct('idea', 'removed product column "' + c.n + '"'); delete ideas[c.k]; write('ideas/' + c.k, null); renderIdeas(true); renderDrawer();
+  if (c.builtin) { saveIdea('cfg_' + c.k, { cfg: true, k: c.k, n: c.n, c: c.c, hidden: true }, 'idea', 'hid product column "' + c.n + '"'); }
+  else { logAct('idea', 'removed product column "' + c.n + '"'); delete ideas[c.k]; write('ideas/' + c.k, null); }
+  renderIdeas(true); renderDrawer();
+}
+function saveOrder(keys) { saveIdea('colorder', { cfg: true, ord: keys }, null); }
+function moveCol(k, to) {
+  const keys = ideaCols(true).map(c => c.k), from = keys.indexOf(k); if (from < 0) return;
+  keys.splice(from, 1); keys.splice(Math.max(0, Math.min(keys.length, to)), 0, k); saveOrder(keys); renderIdeas(true); renderDrawer();
+}
+function decorateCol(col, h, l) {
+  if (!canEdit()) { col.append(h); return; }
+  const more = el('button', 'btn sm colmore', '⋯'); more.type = 'button'; more.setAttribute('aria-label', 'Column options for ' + l.n); more.title = 'Column options';
+  more.addEventListener('click', e => {
+    e.stopPropagation(); const r = more.getBoundingClientRect(), vis = ideaCols(true), pos = vis.findIndex(x => x.k === l.k);
+    openCtx(r.right - 190, r.bottom + 4, m => {
+      mi(m, 'Rename and color…', () => colDialog(l));
+      if (pos > 0) mi(m, 'Move left', () => moveCol(l.k, pos - 1));
+      if (pos < vis.length - 1) mi(m, 'Move right', () => moveCol(l.k, pos + 1));
+      m.append(el('div', 'msep'));
+      mi(m, l.builtin ? 'Hide column' : 'Remove column', () => removeCol(l), 'danger');
+    });
+  });
+  h.append(more); h.style.cssText = 'display:flex;align-items:center;gap:8px'; more.style.marginInlineStart = 'auto';
+  h.draggable = true; h.style.cursor = 'grab'; h.title = 'Drag to reorder columns';
+  h.addEventListener('dragstart', e => { e.dataTransfer.setData('text/col', l.k); e.dataTransfer.effectAllowed = 'move'; col.classList.add('dragcol'); });
+  h.addEventListener('dragend', () => { document.querySelectorAll('.dragcol,.dropcol').forEach(x => x.classList.remove('dragcol', 'dropcol')); });
+  col.append(h);
+}
+function wireCol(col, l) {
+  if (!canEdit()) return;
+  const ok = e => { const t = [...(e.dataTransfer ? e.dataTransfer.types : [])]; return t.includes('text/ideacard') || t.includes('text/col'); };
+  col.addEventListener('dragover', e => { if (!ok(e)) return; e.preventDefault(); col.classList.add('dropcol'); });
+  col.addEventListener('dragleave', e => { if (!col.contains(e.relatedTarget)) col.classList.remove('dropcol'); });
+  col.addEventListener('drop', e => {
+    col.classList.remove('dropcol');
+    const card = e.dataTransfer.getData('text/ideacard'), ck = e.dataTransfer.getData('text/col');
+    if (card && ideas[card] && ideas[card].pr !== l.k) { e.preventDefault(); const t = ideas[card].t; saveIdea(card, { pr: l.k }, 'idea', 'moved idea "' + t + '" to ' + l.n); renderIdeas(true); }
+    else if (ck && ck !== l.k) { e.preventDefault(); const keys = ideaCols(true).map(c => c.k); moveCol(ck, keys.indexOf(l.k)); }
+  });
+}
+function dragCard(id, c) {
+  if (!canEdit()) return c;
+  const g = el('div', 'grip', '⋮⋮'); g.title = 'Drag to another product'; g.setAttribute('aria-hidden', 'true'); c.prepend(g);
+  const on = () => { c.draggable = true; }, off = () => { c.draggable = false; };
+  g.addEventListener('pointerdown', on); document.addEventListener('pointerup', off, true);
+  c.addEventListener('dragstart', e => { if (!c.draggable) return; e.dataTransfer.setData('text/ideacard', id); e.dataTransfer.effectAllowed = 'move'; c.classList.add('dragging'); });
+  c.addEventListener('dragend', () => { off(); c.classList.remove('dragging'); document.querySelectorAll('.dropcol').forEach(x => x.classList.remove('dropcol')); });
+  return c;
+}
+function boardExtras(board) {
+  if (!canEdit()) return;
+  const ac = el('button', 'addcol', '+ Add product'); ac.type = 'button'; ac.id = 'addcol'; ac.addEventListener('click', () => colDialog(null)); board.append(ac);
+  const hid = ideaCols(true).filter(c => c.hidden);
+  if (hid.length) {
+    const b = el('button', 'btn sm', 'Show hidden columns (' + hid.length + ')'); b.type = 'button'; b.id = 'showhid'; b.style.alignSelf = 'start';
+    b.addEventListener('click', () => { hid.forEach(c => saveIdea('cfg_' + c.k, { cfg: true, k: c.k, n: c.n, c: c.c, hidden: false }, null)); logAct('idea', 'showed hidden product columns'); renderIdeas(true); renderDrawer(); });
+    board.append(b);
+  }
+}
+function moveMenu(m, id, i) {
+  if (!canEdit()) return;
+  m.append(el('div', 'mlab', 'Move to product'));
+  ideaCols().forEach(c => { if (c.k === i.pr) return; mi(m, c.n, () => { saveIdea(id, { pr: c.k }, 'idea', 'moved idea "' + i.t + '" to ' + c.n); renderIdeas(true); }); });
 }
 
 function init() {
