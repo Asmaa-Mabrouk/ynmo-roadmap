@@ -288,6 +288,14 @@ button.pill { cursor: pointer; }
 .pweye { position: absolute; inset-inline-end: 6px; top: 50%; transform: translateY(-50%); }
 .gcard label > input:focus, .gcard label > select:focus, .pwwrap input:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
 
+.ghead { flex-direction: column; justify-content: center; text-align: center; gap: 10px; }
+.ghead .logo { width: 64px; height: 64px; }
+.gcard .meta { text-align: center; }
+.gcard .gerr { text-align: center; }
+.gcard .link { display: block; margin-inline: auto; }
+.gcard .formrow { justify-content: center; }
+.gcard .btn { width: 100%; margin-top: 8px; }
+
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -1305,9 +1313,17 @@ function showSignup() {
     const r = await sb.auth.signUp({ email: em.input.value.trim(), password: pw.input.value, options: { data: { name: nm.input.value.trim(), role: jb.input.value, avatar: sel.v }, emailRedirectTo: location.origin + location.pathname } });
     if (r.error) throw new Error(r.error.message);
     if (r.data && r.data.session) { await afterAuth(r.data.session); return; }
-    m.className = 'gerr ok'; m.textContent = 'Check your email and click the confirmation link, then sign in.';
+    showCheckEmail(em.input.value.trim());
   });
   nm.input.focus();
+}
+function showCheckEmail(email) {
+  const c = gateCard('Check your email', 'We sent a confirmation link to ' + email + '. Open it, then come back here and sign in. If it is not in your inbox, check spam.');
+  const msg = el('div', 'gerr'); msg.setAttribute('aria-live', 'polite');
+  const again = el('button', 'btn', 'Send the link again'); again.type = 'button';
+  again.addEventListener('click', async () => { again.disabled = true; try { const r = await sb.auth.resend({ type: 'signup', email: email, options: { emailRedirectTo: location.origin + location.pathname } }); msg.className = r.error ? 'gerr' : 'gerr ok'; msg.textContent = r.error ? 'Could not resend yet. Wait a minute and try again.' : 'Sent again. Check your inbox.'; } catch (e) { msg.textContent = 'Could not resend yet.'; } setTimeout(() => { again.disabled = false; }, 30000); });
+  const back = el('button', 'btn primary', 'Go to sign in'); back.type = 'button'; back.addEventListener('click', showLogin);
+  c.append(msg, back, again);
 }
 function showPending(profile) {
   const c = gateCard('Waiting for approval', 'Your account (' + (profile.email || '') + ') was created. An admin needs to approve it before you can open the roadmap.');
@@ -1841,11 +1857,12 @@ function start() {
   showPage((location.hash.match(/^#\/(\w+)/) || [])[1] || 'roadmap');
 }
 async function boot() {
-  const invited = /type=(invite|recovery|signup)/.test(location.hash);
+  const invited = /type=(invite|recovery)/.test(location.hash), confirmed = /type=signup/.test(location.hash);
   let sess = null;
   try { sess = (await sb.auth.getSession()).data.session; } catch (e) { /* offline */ }
   sb.auth.onAuthStateChange(ev => { if (ev === 'PASSWORD_RECOVERY' && !started) showSetPw(); });
-  if (sess && invited) showSetPw(); else if (sess) await afterAuth(sess); else showLogin();
+  if (confirmed) { try { window.history.replaceState(null, '', location.pathname); } catch (e) { /* ignore */ } }
+  if (sess && invited) showSetPw(); else if (sess) { await afterAuth(sess); if (confirmed && !started) { const n = document.querySelector('#gate .meta'); if (n) n.textContent = 'Email confirmed. ' + n.textContent; } } else showLogin();
 }
 
 function init() {
