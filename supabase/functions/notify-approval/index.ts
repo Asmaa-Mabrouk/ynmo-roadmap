@@ -6,6 +6,7 @@
 //  SMTP_PASS   Gmail App password (16 characters)
 //  SITE_URL    e.g. https://your-project.vercel.app
 //  ADMIN_NOTIFY_EMAIL  (optional) where "new registration" emails go
+//  WEBHOOK_SECRET  a long random string. Add the SAME value as an HTTP header  x-webhook-secret  in the Database Webhook.
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const esc = (s: string) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
@@ -20,7 +21,13 @@ async function send(to: string, subject: string, text: string, html: string) {
   }
 }
 
+// The webhook must send the header  x-webhook-secret: <WEBHOOK_SECRET>. Without it anyone could make this function email strangers.
+const safeSubject = (s: string) => String(s ?? "").replace(/[\r\n]+/g, " ").slice(0, 120);
+const same = (a: string, b: string) => a.length === b.length && [...a].reduce((d, c, i) => d | (c.charCodeAt(0) ^ b.charCodeAt(i)), 0) === 0;
+
 Deno.serve(async (req) => {
+  const want = Deno.env.get("WEBHOOK_SECRET") ?? "", got = req.headers.get("x-webhook-secret") ?? "";
+  if (!want || !same(want, got)) return new Response("forbidden", { status: 403 });
   try {
     const p = await req.json();
     const rec = p.record, old = p.old_record, site = Deno.env.get("SITE_URL") ?? "";
@@ -38,9 +45,9 @@ Deno.serve(async (req) => {
     if (p.type === "INSERT" && rec?.approved === false && admin) {
       await send(
         admin,
-        `New registration waiting: ${rec.name || rec.email}`,
-        `${rec.name || ""} (${rec.email}) registered and is waiting for your approval.\nOpen ${site} > Resources to approve.`,
-        `<p>${esc(rec.name || "")} (${esc(rec.email)}) registered and is waiting for your approval.</p><p>Open <a href="${esc(site)}">Ynmo Roadmaps</a> &rsaquo; Resources to approve.</p>`,
+        safeSubject(`New registration waiting: ${rec.name || rec.email}`),
+        `${rec.name || ""} (${rec.email}) registered and is waiting for your approval.\nOpen ${site} > Approvals to approve.`,
+        `<p>${esc(rec.name || "")} (${esc(rec.email)}) registered and is waiting for your approval.</p><p>Open <a href="${esc(site)}">Ynmo Roadmaps</a> &rsaquo; Approvals to approve.</p>`,
       );
       return new Response("admin email sent");
     }

@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="vendor/supabase-js.js"></script>
 <style>
 /* Layout: a planner table (feature, resources, status) on the left with collapsible squad groups, 18 weekly columns on the right (Oct 2026 to Jan 2027). Bar fill = squad or chosen color, bar pattern = status. */
 :root {
@@ -2407,7 +2407,7 @@ function trackPres() {
 function startPresence() {
   if (presCh || !sb.channel) return;
   try {
-    presCh = sb.channel('ynmo-presence', { config: { presence: { key: me.id } } });
+    presCh = sb.channel('ynmo-presence', { config: { private: true, presence: { key: me.id } } });
     presCh.on('presence', { event: 'sync' }, () => { try { pres = presCh.presenceState() || {}; } catch (e) { pres = {}; } drawPresence(); decorateLocks(); });
     presCh.subscribe(s => { if (s === 'SUBSCRIBED') trackPres(); });
   } catch (e) { presCh = null; }
@@ -2709,7 +2709,7 @@ function renderBaselines() {
     cmp.addEventListener('click', () => { cmpId = cmpId === b.id ? null : b.id; renderBaselines(); });
     r.append(w, cmp);
     if (canWrite() && !b.active) { const mk = el('button', 'btn sm', 'Make baseline'); mk.type = 'button'; mk.addEventListener('click', () => { setBaseline(b.id); renderBaselines(); }); r.append(mk); }
-    if (canWrite()) { const dl2 = el('button', 'btn sm danger', 'Delete'); dl2.type = 'button'; dl2.addEventListener('click', () => { delete baselines[b.id]; db.doc('baselines/' + b.id).delete().catch(() => {}); logAct('roadmap', 'deleted snapshot "' + b.name + '"'); renderBaselines(); }); r.append(dl2); }
+    if (canWrite() && me && me.is_admin) { const dl2 = el('button', 'btn sm danger', 'Delete'); dl2.type = 'button'; dl2.addEventListener('click', () => { delete baselines[b.id]; db.doc('baselines/' + b.id).delete().catch(() => {}); logAct('roadmap', 'deleted snapshot "' + b.name + '"'); renderBaselines(); }); r.append(dl2); }
     lc.append(r);
     if (cmpId === b.id) lc.append(compareView(b));
   });
@@ -2935,8 +2935,8 @@ function openClear() {
 const COL_COLORS = ['#0d8560', '#6d48a8', '#c04a17', '#5a6db5', '#b8860b', '#c2185b', '#00838f', '#55608a'];
 const isMeta = i => !!(i && (i.col || i.cfg));
 function ideaCols(withHidden) {
-  const built = LANES.map(l => { const o = ideas['cfg_' + l.k] || {}; return { k: l.k, n: o.n || l.n, c: o.c || l.c, hidden: !!o.hidden, builtin: true }; });
-  const custom = Object.keys(ideas).filter(id => ideas[id] && ideas[id].col).sort((a, b) => (ideas[a].ts || 0) - (ideas[b].ts || 0)).map(id => ({ k: id, n: ideas[id].n || 'Untitled', c: ideas[id].c || '#55608a', custom: true }));
+  const built = LANES.map(l => { const o = ideas['cfg_' + l.k] || {}; return { k: l.k, n: o.n || l.n, c: /^#[0-9a-f]{6}$/i.test(o.c || '') ? o.c : l.c, hidden: !!o.hidden, builtin: true }; });
+  const custom = Object.keys(ideas).filter(id => ideas[id] && ideas[id].col).sort((a, b) => (ideas[a].ts || 0) - (ideas[b].ts || 0)).map(id => ({ k: id, n: ideas[id].n || 'Untitled', c: /^#[0-9a-f]{6}$/i.test(ideas[id].c || '') ? ideas[id].c : '#55608a', custom: true }));
   const ord = (ideas.colorder && ideas.colorder.ord) || [], all = built.concat(custom);
   all.forEach((c, n) => { const p = ord.indexOf(c.k); c.o = p >= 0 ? p : 1000 + n; });
   all.sort((a, b) => a.o - b.o);
