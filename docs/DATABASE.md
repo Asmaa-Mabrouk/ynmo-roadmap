@@ -52,4 +52,4 @@ Publication includes the doc tables; the client subscribes per table. Presence u
 1. `create table public.<name> (like public.items including all);`
 2. Enable RLS + copy the read/editor-write policies from 04.
 3. `alter publication supabase_realtime add table public.<name>;`
-4. Use `db.collection`-style access via `makeDb()` in a new `src/js` module; log changes with `logAct`.
+4. Use `db.collection`-style access via `makeDb()` in a new `src/esm` module; log changes with `logAct`.

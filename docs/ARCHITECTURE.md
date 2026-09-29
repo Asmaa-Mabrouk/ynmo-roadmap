@@ -17,38 +17,39 @@ There is **no application server**. The browser is untrusted; every permission i
 Tiny team, zero-ops, instant deploy, works offline-first for reads. Sources are split into modules under `src/`
 and concatenated by `build.mjs` into one `index.html` – readable in the repo, trivial to host, no bundler toolchain.
 
-## 3. Build & module order
-`node build.mjs`: CSS `base → brand → skin → features`; JS files `src/js/NN-*.js` in numeric order, inside one
-`<script>` → **one shared global scope**. Function declarations hoist; `const/let` are only usable after their file
-runs, so keep load-time work out of top-level and put new modules **before** `29-ideas-columns.js`, which ends with `init()`.
+## 3. Modules and build
+Source is **native ES modules** under `src/esm/` with explicit `import`/`export`. `node build.mjs` bundles `src/esm/main.js`
+with esbuild into one classic IIFE and inlines it (plus the CSS) into `index.html`, so the deploy stays a single file that also
+works from `file://`. `node lint.mjs` fails on a missing import, an import of a non-exported name, or an undefined identifier.
 
-| # | Module | Responsibility |
-|---|---|---|
-| 01 | time-and-lanes | Day axis, lanes, seed items, `over` overlay, selectors `items() visible() team() directory()` |
-| 02 | saving | Write queue + retry, save pill, undo history (`commit`) |
-| 03 | people | Assignee & time-off popovers |
-| 04 | drag | Bar/row drag & drop |
-| 05 | render | Gantt rendering, filters, zoom, bar packing, by-person view |
-| 06 | editing | Inline edit, add/duplicate, context menus |
-| 07 | export | CSV export |
-| 08 | supabase | Client init, `makeDb()` adapter |
-| 09 | avatars | Local SVG avatars |
-| 10 | gate | Login/sign-up/forgot/pending screens, hash routes |
-| 11 | profile | Profile load/edit |
-| 12 | shared-state-and-log | `me`, helpers, toast, `logAct`, `describe` |
-| 13–17 | page-* | Roadmaps, Ideas, Resources/Approvals, Vacations, Log pages |
-| 18 | shell | Navigation, `start()`, `boot()` |
-| 19 | dialogs-offline-hardening | Dialogs, offline banner, password meter, idle logout, permission helpers |
-| 20 | presence | Online users, soft locks |
-| 21 | dependencies | Milestones, dependency checks, SVG overlay |
-| 22 | log-tools | Load older, export, undo from log |
-| 23 | capacity | Capacity page |
-| 24 | baselines | Snapshots & compare |
-| 25 | sharing | Public links, access roles |
-| 26 | wiring | `initExtras`, `startExtras` |
-| 27 | dropdowns | Styled select popup |
-| 28 | loading | Loader/progress |
-| 29 | ideas-columns | Column CRUD/drag, **`init()` entry point** |
+```
+src/esm/
+  main.js                 entry: imports modules in boot order, exposes window.__ynmo (test/debug handles), calls init()
+  core/    model · state · shared · saving · supabase          data model, shared state, persistence, client
+  auth/    gate · profile                                       login/sign-up screens, profile
+  ui/      gantt-render · editing · drag · people-picker · export · avatars · dropdowns · loading
+  pages/   roadmaps · ideas · ideas-columns · resources · vacations · log
+  features/ safety · presence · dependencies · log-tools · capacity · baselines · sharing
+  app/     shell · extras-wiring                                navigation, boot, extras start-up
+```
+| Module | Responsibility |
+|---|---|
+| core/model | Day axis, lanes, seed items, `items() visible() team() directory()` selectors |
+| core/state | **`S`**: the only object holding state reassigned across modules (`S.me, S.over, S.db, S.roadmaps, S.readonly, …`) |
+| core/shared | Helpers (`el`, `toast`, dates), `PAGES`, `logAct`, `describe` |
+| core/saving | Write queue + retry, `commit`, undo (`S.undoStack`) |
+| core/supabase | Client init, `makeDb()` adapter |
+| auth/gate, auth/profile | Auth screens & hash routes; profile load/edit |
+| ui/* | Rendering & interaction primitives (Gantt, editing, drag, pickers, dropdown popup, loader) |
+| pages/* | One file per page; `ideas-columns` adds Trello-style column management |
+| features/* | Cross-cutting features: safety (dialogs, offline, idle logout, permissions), presence, dependencies, log tools, capacity, baselines, sharing |
+| app/shell | `showPage`, navigation, `start()`, `boot()`; app/extras-wiring: `initExtras/startExtras` |
+
+**Rules of the module graph**
+1. Import what you use; never rely on globals. Cycles exist (render ↔ editing ↔ saving) and are safe because they only call each other from functions, never at load time.
+2. A value reassigned from more than one module lives on `S` (imports are read-only bindings). Module-private `let`s stay private.
+3. Load-time (top-level) side effects are limited to registering listeners; they run in the order of the imports in `main.js`.
+4. Only `main.js` touches `window.__ynmo`; nothing in the app reads it.
 
 ## 4. Data model in the client
 - Static seed `ITEMS` (base features) + **`over`**: an overlay object `{id: {…changed fields}}` persisted per item. Views read through
@@ -59,7 +60,7 @@ runs, so keep load-time work out of top-level and put new modules **before** `29
   the client and in RLS/guards (see DATABASE.md).
 
 ## 5. Data flow of an edit
-`UI event → canWrite() check → commit(id, fields)` → snapshot to undo history → update `over` → `logAct()` (with undo payload)
+`UI event → canWrite() check → commit(id, fields)` → snapshot to undo stack → update `S.over` → `logAct()` (with undo payload)
 → `render()` → `persist(id)` → `write()` (serial per path, retry with backoff) → Postgres (RLS) → Realtime → other clients' `onSnap` → `softRender()`.
 
 ## 6. Boot sequence
@@ -76,6 +77,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Highlights: all DOM text via `textConten
 every mutation begins with `canWrite()`, every mutation calls `logAct`, UI strings in English, dates as ISO `YYYY-MM-DD` in UTC.
 
 ## 9. Known trade-offs
-- Global scope instead of ES modules (simplicity vs. isolation) – a future step is native ES modules with `<script type=module>`.
+- Bundled IIFE instead of shipping `<script type=module>` files: keeps one-file deploy and `file://` testing; modules still isolate names and dependencies at source level.
 - Free Supabase email limits require Custom SMTP for production sign-ups.
 - Soft locks are advisory. `merge()` is read-modify-write, not atomic: two people changing *different fields of the same bar* within milliseconds can lose one change. A Postgres function using `jsonb ||` would make it atomic if this ever matters.

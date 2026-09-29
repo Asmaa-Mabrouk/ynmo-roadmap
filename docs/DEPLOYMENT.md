@@ -24,14 +24,14 @@ Every push to `main` deploys. `index.html` is committed (generated) so no build 
 
 ## 4. Release procedure
 ```bash
-node build.mjs && node build.mjs --check
+npm install && node build.mjs && node build.mjs --check && node lint.mjs
 python3 tests/e2e_qa.py
 git add -A && git commit -m "feat: …" && git push origin main
 ```
 Rollback: Vercel → Deployments → *Promote* a previous one, or `git revert` and push.
 
 ## 5. Changing the Supabase project or key
-Edit `SUPABASE_URL` / `SUPABASE_KEY` in `src/js/08-supabase.js` (publishable key only), update `connect-src` in `vercel.json`, rebuild.
+Edit `SUPABASE_URL` / `SUPABASE_KEY` in `src/esm/core/supabase.js` (publishable key only), update `connect-src` in `vercel.json`, rebuild.
 
 ## 6. Operations runbook
 | Symptom | Likely cause / action |

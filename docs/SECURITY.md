@@ -13,11 +13,11 @@ only usability. The only key in the client is the *publishable* key. Never commi
 | Log forgery | activity insert requires `data.uid = auth.uid()` | sql/05 |
 | Tampering with history | `guard_baseline`; delete = admin only | sql/05 |
 | Presence eavesdropping | Private channel + realtime policies | sql/05 |
-| XSS | User content set via `textContent`; no `innerHTML` with user data; strict CSP; column colours validated `^#[0-9a-f]{6}$` | src/js, vercel.json |
+| XSS | User content set via `textContent`; no `innerHTML` with user data; strict CSP; column colours validated `^#[0-9a-f]{6}$` | src/esm, vercel.json |
 | Supply chain | supabase-js vendored at a pinned version (no CDN, no SRI drift) | vendor/ |
 | Clickjacking / sniffing / referrer leaks | `frame-ancestors 'self'`, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy, HSTS | vercel.json |
 | Webhook abuse | Edge Function requires `x-webhook-secret` (constant-time compare); CR/LF stripped from email subject | supabase/functions |
-| Brute force / stolen device | Password meter (min 8), idle logout 30 min, sign-out-everywhere | src/js/19 |
+| Brute force / stolen device | Password meter (min 8), idle logout 30 min, sign-out-everywhere | src/esm/features/safety.js |
 | Public link leakage | Token-based, revocable, RPC returns only one roadmap's bars, people, company days off | sql/04 |
 
 ## Known limits / residual risk
@@ -28,7 +28,7 @@ only usability. The only key in the client is the *publishable* key. Never commi
 ## Operator checklist
 - [ ] Confirm email ON · [ ] Custom SMTP configured · [ ] Realtime "Allow public access" OFF
 - [ ] sql/01→05 applied · [ ] `WEBHOOK_SECRET` set on function **and** as `x-webhook-secret` header of the Database Webhook
-- [ ] Only the publishable key in `src/js/08-supabase.js` · [ ] Rotate any key that was ever pasted in chat/tickets
+- [ ] Only the publishable key in `src/esm/core/supabase.js` · [ ] Rotate any key that was ever pasted in chat/tickets
 
 ## Reporting
 Send findings privately to the product lead (asmaa.mabrouk.ibrahim@gmail.com). Don't open public issues for vulnerabilities.

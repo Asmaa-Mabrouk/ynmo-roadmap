@@ -13,7 +13,11 @@ The fake does not enforce RLS – RLS is verified manually (below).
 Areas: Auth · Roadmap editing · Ideas · Resources · Vacations · Capacity · Baselines · Log/undo · Sharing/viewer · Multi-user (M*) · Security (S*) · Responsive.
 Known **test-wording artifacts** (not app bugs): `A10`, `R9`, `S4`.
 
+## Test handles
+The bundle is an IIFE, so tests reach internals through `window.__ynmo` (`items, directory, allRoadmaps, commit, removeItem, render, state, S, NDAYS, vacs`) defined in `src/esm/main.js`.
+
 ## Static checks
+- `node lint.mjs` – module graph: missing imports/exports, undefined identifiers.
 - `node build.mjs --check` – generated file matches `src/`.
 - Syntax: extract the inline script and run `node --check`.
 - CSP: serve the repo with `vercel.json` headers and confirm no violations in the console.

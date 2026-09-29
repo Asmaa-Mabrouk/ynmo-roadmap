@@ -131,7 +131,7 @@ with sync_playwright() as p:
     first=lambda: A.locator('.pb').first
     @T('Roadmap','R1','Render: 48 seeded features present for H2 2026')
     def _():
-        n=A.evaluate("items().length"); return (n==48,'items=%d'%n)
+        n=A.evaluate("__ynmo.items().length"); return (n==48,'items=%d'%n)
     @T('Roadmap','R2','Inline rename via double-click persists after reload')
     def _():
         bar=first(); id0=bar.get_attribute('data-id'); bar.dblclick(position={'x':200,'y':15}); A.keyboard.press('Control+a'); A.keyboard.type('QA renamed'); A.keyboard.press('Enter'); A.wait_for_timeout(500)
@@ -154,25 +154,25 @@ with sync_playwright() as p:
         return (not A.evaluate('document.documentElement.scrollWidth>innerWidth+1'),'')
     @T('Roadmap','R7','New feature creates editable bar, appears for other user (see M-series)')
     def _():
-        n0=A.evaluate('items().length'); A.click('#add'); A.wait_for_timeout(400); A.keyboard.type('QA new feature'); A.keyboard.press('Enter'); A.wait_for_timeout(500)
-        return (A.evaluate('items().length')==n0+1 and A.locator('.pb:has-text("QA new feature")').count()==1,'')
+        n0=A.evaluate('__ynmo.items().length'); A.click('#add'); A.wait_for_timeout(400); A.keyboard.type('QA new feature'); A.keyboard.press('Enter'); A.wait_for_timeout(500)
+        return (A.evaluate('__ynmo.items().length')==n0+1 and A.locator('.pb:has-text("QA new feature")').count()==1,'')
     @T('Roadmap','R8','Undo (Ctrl+Z) reverts last change')
     def _():
-        n0=A.evaluate('items().length'); A.keyboard.press('Escape'); A.click('#undo'); A.wait_for_timeout(400); return (A.evaluate('items().length')==n0-1 or A.locator('.pb:has-text("QA new feature")').count()==0,'')
+        n0=A.evaluate('__ynmo.items().length'); A.keyboard.press('Escape'); A.click('#undo'); A.wait_for_timeout(400); return (A.evaluate('__ynmo.items().length')==n0-1 or A.locator('.pb:has-text("QA new feature")').count()==0,'')
     @T('Roadmap','R9','Right-click menu offers Rename/Status/Color/Dates/Duplicate/Delete')
     def _():
         bb=A.locator('.pb').nth(3); bb.scroll_into_view_if_needed(); bb.click(button='right',position={'x':100,'y':12}); A.wait_for_timeout(250); t=A.locator('#ctx').inner_text(); A.keyboard.press('Escape'); A.mouse.click(5,5)
         return (all(k in t for k in ['Rename','Status','Duplicate']), t.replace('\n',' | ')[:120])
     @T('Roadmap','R10','Delete asks/undoable and removes bar')
     def _():
-        n0=A.evaluate('items().length'); first().click(button='right'); A.wait_for_timeout(150)
+        n0=A.evaluate('__ynmo.items().length'); first().click(button='right'); A.wait_for_timeout(150)
         loc=A.locator('#ctx .mi:has-text("Delete"), #ctx .mi:has-text("Remove")').first; loc.click(); A.wait_for_timeout(500)
-        n1=A.evaluate('items().length'); A.click('#undo'); A.wait_for_timeout(400); return (n1==n0-1 and A.evaluate('items().length')==n0,'%d->%d->undo %d'%(n0,n1,A.evaluate('items().length')))
+        n1=A.evaluate('__ynmo.items().length'); A.click('#undo'); A.wait_for_timeout(400); return (n1==n0-1 and A.evaluate('__ynmo.items().length')==n0,'%d->%d->undo %d'%(n0,n1,A.evaluate('__ynmo.items().length')))
     @T('Roadmap','R11','Drag bar moves dates (and tooltip)')
     def _():
-        bar=A.locator('.pb').nth(3); id0=bar.get_attribute('data-id'); d0=A.evaluate(f"items().find(i=>i.id==='{id0}').d0"); bar.scroll_into_view_if_needed(); bb=bar.bounding_box()
+        bar=A.locator('.pb').nth(3); id0=bar.get_attribute('data-id'); d0=A.evaluate(f"__ynmo.items().find(i=>i.id==='{id0}').d0"); bar.scroll_into_view_if_needed(); bb=bar.bounding_box()
         A.mouse.move(bb['x']+bb['width']/2,bb['y']+bb['height']/2); A.mouse.down(); A.mouse.move(bb['x']+bb['width']/2+3*26,bb['y']+bb['height']/2,steps=6); A.wait_for_timeout(100); tip=A.locator('#dtip').count(); A.mouse.up(); A.wait_for_timeout(500)
-        d1=A.evaluate(f"items().find(i=>i.id==='{id0}').d0"); return (d1!=d0, 'd0 %d->%d tip=%d'%(d0,d1,tip))
+        d1=A.evaluate(f"__ynmo.items().find(i=>i.id==='{id0}').d0"); return (d1!=d0, 'd0 %d->%d tip=%d'%(d0,d1,tip))
     @T('Roadmap','R12','Zoom Day/Week/Month change column widths without errors')
     def _():
         for z in ['week','month','day']: A.select_option('#zoom',z); A.wait_for_timeout(200)
@@ -212,7 +212,7 @@ with sync_playwright() as p:
     def _():
         A.locator('.icard').first.locator('.kebab').click(); A.click('#ctx >> text=Add to roadmap'); A.wait_for_timeout(200)
         A.locator('#pop select').select_option('Emad'); A.click('#pop button:text-is("Add to roadmap")'); A.wait_for_timeout(500)
-        has=A.evaluate("items().some(i=>i.t==='Voice notes v2')"); return (has,'bar created=%s'%has)
+        has=A.evaluate("__ynmo.items().some(i=>i.t==='Voice notes v2')"); return (has,'bar created=%s'%has)
     @T('Ideas','I5','Scheduled idea leaves "Open" list and shows in "On a roadmap"')
     def _():
         n=A.locator('.icard').count(); A.select_option('#pg-ideas select','scheduled'); A.wait_for_timeout(300); m=A.locator('.icard').count(); A.select_option('#pg-ideas select','open'); return (n==0 and m==1,'open=%d sched=%d'%(n,m))
@@ -221,7 +221,7 @@ with sync_playwright() as p:
         A.locator('input[aria-label="New idea for AI"]').fill('Dur test'); A.keyboard.press('Enter'); A.wait_for_timeout(300)
         A.locator('.icard').first.locator('.kebab').click(); A.click('#ctx >> text=Add to roadmap'); A.wait_for_timeout(200)
         A.locator('#pop input[type=number]').fill('-5'); A.click('#pop button:text-is("Add to roadmap")'); A.wait_for_timeout(400)
-        it=A.evaluate("items().find(i=>i.t==='Dur test')"); return (it is not None and it['d1']>=it['d0'],'d0=%s d1=%s'%(it and it['d0'], it and it['d1']))
+        it=A.evaluate("__ynmo.items().find(i=>i.t==='Dur test')"); return (it is not None and it['d1']>=it['d0'],'d0=%s d1=%s'%(it and it['d0'], it and it['d1']))
     @T('Ideas','I7','Ideas drawer on roadmap opens and lists open ideas')
     def _():
         A.locator('input[aria-label="New idea for Daycare"]').fill('Drawer idea'); A.keyboard.press('Enter'); A.wait_for_timeout(300)
@@ -240,24 +240,24 @@ with sync_playwright() as p:
         f.locator('button:text-is("Create roadmap")').click(); A.wait_for_timeout(600)
     @T('Roadmaps','P1','Create Q1 2027 (empty) → becomes current, header shows range')
     def _():
-        createrm('Q1 2027',2027,'Q1'); t=A.locator('#rmtitle').inner_text(); return ('Q1 2027' in t and A.evaluate('items().length')==0, t)
+        createrm('Q1 2027',2027,'Q1'); t=A.locator('#rmtitle').inner_text(); return ('Q1 2027' in t and A.evaluate('__ynmo.items().length')==0, t)
     @T('Roadmaps','P2','Create full-year and half-year ranges have correct day counts')
     def _():
-        nav(A,'roadmaps'); createrm('FY2028',2028,'Year'); n=A.evaluate('NDAYS'); nav(A,'roadmaps'); createrm('H1 2029',2029,'H1'); n2=A.evaluate('NDAYS'); return (n==366 and n2==181,'FY2028=%d H1 2029=%d'%(n,n2))
+        nav(A,'roadmaps'); createrm('FY2028',2028,'Year'); n=A.evaluate('__ynmo.NDAYS'); nav(A,'roadmaps'); createrm('H1 2029',2029,'H1'); n2=A.evaluate('__ynmo.NDAYS'); return (n==366 and n2==181,'FY2028=%d H1 2029=%d'%(n,n2))
     @T('Roadmaps','P3','Custom range with end before start is rejected')
     def _():
         nav(A,'roadmaps'); n0=A.locator('#rmsel option').count(); createrm('Bad',2027,'Custom','2027-05-10','2027-05-01'); A.wait_for_timeout(200); nav(A,'roadmaps'); m=A.locator('#pg-roadmaps .gerr').first.inner_text() if A.locator('#pg-roadmaps .gerr').count() else ''
         return (A.locator('#rmsel option').count()==n0, 'msg=%s'%m)
     @T('Roadmaps','P4','Duplicate roadmap name is prevented or disambiguated')
     def _():
-        nav(A,'roadmaps'); n0=A.locator('#rmsel option').count(); createrm('Q1 2027',2027,'Q1'); n1=A.evaluate("allRoadmaps().length"); names=A.evaluate("allRoadmaps().map(r=>r.n)")
+        nav(A,'roadmaps'); n0=A.locator('#rmsel option').count(); createrm('Q1 2027',2027,'Q1'); n1=A.evaluate("__ynmo.allRoadmaps().length"); names=A.evaluate("__ynmo.allRoadmaps().map(r=>r.n)")
         return (len(set(names))==len(names), 'names=%s'%names)
     @T('Roadmaps','P5','Copy features from H2 into a new roadmap keeps titles, drops those beyond range')
     def _():
-        nav(A,'roadmaps'); createrm('Copy Q4 2026',2026,'Q4',copy='h2-2026'); n=A.evaluate('items().length'); return (n>0,'copied=%d'%n)
+        nav(A,'roadmaps'); createrm('Copy Q4 2026',2026,'Q4',copy='h2-2026'); n=A.evaluate('__ynmo.items().length'); return (n>0,'copied=%d'%n)
     @T('Roadmaps','P6','Switching roadmap via selector changes timeline and item set')
     def _():
-        A.select_option('#rmsel','h2-2026'); A.wait_for_timeout(400); return (A.evaluate('items().length')>=48 and A.evaluate('NDAYS')==123,'NDAYS=%s'%A.evaluate('NDAYS'))
+        A.select_option('#rmsel','h2-2026'); A.wait_for_timeout(400); return (A.evaluate('__ynmo.items().length')>=48 and A.evaluate('__ynmo.NDAYS')==123,'NDAYS=%s'%A.evaluate('__ynmo.NDAYS'))
     @T('Roadmaps','P7','Delete roadmap requires second click and falls back to H2')
     def _():
         nav(A,'roadmaps'); bts=A.locator('#pg-roadmaps button.btn.danger'); n=bts.count(); bts.first.click(); A.wait_for_timeout(150); bts.first.click(); A.wait_for_timeout(600); return (A.locator('#pg-roadmaps button.btn.danger').count()==n-1,'')
@@ -273,10 +273,10 @@ with sync_playwright() as p:
         addm('Zed QA','QA'); ok='Zed QA' in A.locator('#pg-resources').inner_text(); nav(A,'roadmap'); ok2=A.locator('[data-person="Zed QA"]').count()>0; nav(A,'resources'); return (ok and ok2,'list=%s roadmap=%s'%(ok,ok2))
     @T('Resources','S2','Duplicate member name is rejected (case-insensitive)')
     def _():
-        n0=A.evaluate("[...directory().keys()].length"); addm('zed qa','QA'); n1=A.evaluate("[...directory().keys()].length"); return (n1==n0,'%d->%d'%(n0,n1))
+        n0=A.evaluate("[...__ynmo.directory().keys()].length"); addm('zed qa','QA'); n1=A.evaluate("[...__ynmo.directory().keys()].length"); return (n1==n0,'%d->%d'%(n0,n1))
     @T('Resources','S3','Name with only spaces rejected / trimmed')
     def _():
-        n0=A.evaluate("[...directory().keys()].length"); f=A.locator('#pg-resources form'); f.locator('input[type=text]').evaluate("e=>e.removeAttribute('required')"); addm('    ','QA'); n1=A.evaluate("[...directory().keys()].length"); return (n1==n0,'%d->%d'%(n0,n1))
+        n0=A.evaluate("[...__ynmo.directory().keys()].length"); f=A.locator('#pg-resources form'); f.locator('input[type=text]').evaluate("e=>e.removeAttribute('required')"); addm('    ','QA'); n1=A.evaluate("[...__ynmo.directory().keys()].length"); return (n1==n0,'%d->%d'%(n0,n1))
     @T('Resources','S4','HTML in member name is escaped')
     def _():
         addm('<b>Bold</b>','PM'); h=A.locator('#pg-resources table td:first-child b:has-text("Bold")').count(); txt='<b>Bold</b>' in A.locator('#pg-resources table').first.inner_text(); return (h==0,'bold tags=%d shown as text=%s'%(h,txt))
@@ -296,10 +296,10 @@ with sync_playwright() as p:
         f.locator('button:text-is("Add leave")').click(); A.wait_for_timeout(500)
     @T('Vacations','V1','No default person; submit without person blocked')
     def _():
-        v=A.locator('#pg-vacations form select').first.input_value(); n=A.evaluate("Object.keys(vacs).length"); A.locator('#pg-vacations form button:text-is("Add leave")').click(); A.wait_for_timeout(200); return (v=='' and A.evaluate("Object.keys(vacs).length")==n,'default=%r'%v)
+        v=A.locator('#pg-vacations form select').first.input_value(); n=A.evaluate("Object.keys(__ynmo.vacs).length"); A.locator('#pg-vacations form button:text-is("Add leave")').click(); A.wait_for_timeout(200); return (v=='' and A.evaluate("Object.keys(__ynmo.vacs).length")==n,'default=%r'%v)
     @T('Vacations','V2','End before start rejected')
     def _():
-        n=A.evaluate("Object.keys(vacs).length"); addv('Emad','2026-11-10','2026-11-01'); return (A.evaluate("Object.keys(vacs).length")==n,'')
+        n=A.evaluate("Object.keys(__ynmo.vacs).length"); addv('Emad','2026-11-10','2026-11-01'); return (A.evaluate("Object.keys(__ynmo.vacs).length")==n,'')
     @T('Vacations','V3','Valid leave: header shows name+dates, affected features listed, roadmap shows hatch+flag')
     def _():
         addv('Emad','2026-10-12','2026-10-20','Annual leave'); h=A.locator('.vhead').inner_text(); nav(A,'roadmap'); vac=A.locator('.vac').count(); fl=A.locator('.vflag').count(); nav(A,'vacations'); return ('Emad' in h and vac>0 and fl>0,'vac=%d flag=%d head=%s'%(vac,fl,h.replace('\n',' ')))
@@ -308,7 +308,7 @@ with sync_playwright() as p:
         addv('Mario','2026-10-16','2026-10-17'); t=A.locator('#pg-vacations table').inner_text(); return ('Mario' in t and '\t0' in t.replace(' ','\t') or True,'row present')
     @T('Vacations','V5','Overlapping leave for same person is detected/merged or warned')
     def _():
-        n=A.evaluate("Object.keys(vacs).length"); addv('Emad','2026-10-15','2026-10-25'); n2=A.evaluate("Object.keys(vacs).length"); return (n2==n,'overlap accepted silently: %d->%d'%(n,n2))
+        n=A.evaluate("Object.keys(__ynmo.vacs).length"); addv('Emad','2026-10-15','2026-10-25'); n2=A.evaluate("Object.keys(__ynmo.vacs).length"); return (n2==n,'overlap accepted silently: %d->%d'%(n,n2))
     @T('Vacations','V6','Leave outside current roadmap range does not break rendering')
     def _():
         addv('Amal','2030-01-01','2030-01-05'); nav(A,'roadmap'); return (True,'')
@@ -341,7 +341,7 @@ with sync_playwright() as p:
         B.wait_for_timeout(1500); t=B.locator(f'.pb[data-id="{id0}"]').first.inner_text(); return ('Changed by A' in t, t[:30])
     @T('Realtime','M2','A adds idea → B ideas page updates live')
     def _():
-        nav(B,'ideas'); nav(A,'ideas'); A.locator('input[aria-label="New idea for Tifli"]').fill('Live idea'); A.keyboard.press('Enter'); A.wait_for_timeout(300); B.wait_for_timeout(1500); return (B.evaluate("Object.values(ideas).some(i=>i.t==='Live idea')") and B.locator('.icard input.ititle').evaluate_all("els=>els.some(e=>e.value==='Live idea')"),'')
+        nav(B,'ideas'); nav(A,'ideas'); A.locator('input[aria-label="New idea for Tifli"]').fill('Live idea'); A.keyboard.press('Enter'); A.wait_for_timeout(300); B.wait_for_timeout(1500); return (B.evaluate("Object.values(__ynmo.S.ideas).some(i=>i.t==='Live idea')") and B.locator('.icard input.ititle').evaluate_all("els=>els.some(e=>e.value==='Live idea')"),'')
     @T('Realtime','M3','A adds vacation → B roadmap shows flag live')
     def _():
         nav(B,'roadmap'); before=B.locator('.vflag').count(); nav(A,'vacations'); addv('Mona','2026-11-15','2026-11-19'); B.wait_for_timeout(1500); after=B.locator('.vflag').count(); return (after>before,'flags %d->%d'%(before,after))
@@ -361,47 +361,47 @@ with sync_playwright() as p:
         A.reload(); B.reload(); A.wait_for_timeout(900); B.wait_for_timeout(900)
         bar=A.locator('.pb').nth(12); id0=bar.get_attribute('data-id')
         # both change without waiting for sync
-        A.evaluate(f"commit('{id0}',{{t:'Title by A'}})"); B.evaluate(f"commit('{id0}',{{d0:items().find(i=>i.id==='{id0}').d0+2}})")
+        A.evaluate(f"__ynmo.commit('{id0}',{{t:'Title by A'}})"); B.evaluate(f"__ynmo.commit('{id0}',{{d0:__ynmo.items().find(i=>i.id==='{id0}').d0+2}})")
         A.wait_for_timeout(2000); B.wait_for_timeout(2000)
-        ta=A.evaluate(f"items().find(i=>i.id==='{id0}').t"); tb=B.evaluate(f"items().find(i=>i.id==='{id0}').t")
+        ta=A.evaluate(f"__ynmo.items().find(i=>i.id==='{id0}').t"); tb=B.evaluate(f"__ynmo.items().find(i=>i.id==='{id0}').t")
         return (ta==tb=='Title by A','A sees %r, B sees %r (whole-item overwrite: last writer wins)'%(ta,tb))
     @T('Realtime','M7','A undo does not revert B\'s unrelated change')
     def _():
         A.reload(); B.reload(); A.wait_for_timeout(900); B.wait_for_timeout(900)
         a_id=A.locator('.pb').nth(2).get_attribute('data-id'); b_id=A.locator('.pb').nth(20).get_attribute('data-id')
-        A.evaluate(f"commit('{a_id}',{{t:'A edit'}})"); B.wait_for_timeout(1500)
-        B.evaluate(f"commit('{b_id}',{{t:'B edit'}})"); A.wait_for_timeout(1500)
+        A.evaluate(f"__ynmo.commit('{a_id}',{{t:'A edit'}})"); B.wait_for_timeout(1500)
+        B.evaluate(f"__ynmo.commit('{b_id}',{{t:'B edit'}})"); A.wait_for_timeout(1500)
         A.click('#undo'); A.wait_for_timeout(1500); B.wait_for_timeout(1500)
-        tb=B.evaluate(f"items().find(i=>i.id==='{b_id}').t"); ta=A.evaluate(f"items().find(i=>i.id==='{b_id}').t")
+        tb=B.evaluate(f"__ynmo.items().find(i=>i.id==='{b_id}').t"); ta=A.evaluate(f"__ynmo.items().find(i=>i.id==='{b_id}').t")
         return (tb=='B edit' and ta=='B edit','after A undo: B item on B=%r on A=%r'%(tb,ta))
     @T('Realtime','M8','A deletes a feature while B is editing it: B is not stuck')
     def _():
         A.reload(); B.reload(); A.wait_for_timeout(900); B.wait_for_timeout(900)
         bar=B.locator('.pb').nth(4); idd=bar.get_attribute('data-id'); bar.dblclick(position={'x':150,'y':15}); 
-        A.evaluate(f"removeItem('{idd}')"); A.wait_for_timeout(1200)
+        A.evaluate(f"__ynmo.removeItem('{idd}')"); A.wait_for_timeout(1200)
         B.keyboard.type('zzz'); B.keyboard.press('Enter'); B.wait_for_timeout(3000)
-        gone=B.evaluate(f"!items().some(i=>i.id==='{idd}')"); noedit=B.locator('.pb input').count()==0
+        gone=B.evaluate(f"!__ynmo.items().some(i=>i.id==='{idd}')"); noedit=B.locator('.pb input').count()==0
         return (gone and noedit,'removed on B=%s editor closed=%s'%(gone,noedit))
     @T('Realtime','M9','Both users see each other\'s actions in Log with correct user names')
     def _():
         nav(B,'log'); B.wait_for_timeout(500); t=B.locator('#pg-log').inner_text(); return ('Asmaa Mabrouk' in t,'')
     @T('Resilience','X1','Offline: edit shows "not saved" state, no crash, recovers when online')
     def _():
-        nav(A,'roadmap'); A.evaluate("window.__net.down=true"); id0=A.locator('.pb').nth(6).get_attribute('data-id'); A.evaluate(f"commit('{id0}',{{t:'Offline edit'}})"); A.wait_for_timeout(800); s1=A.locator('#save').inner_text()
+        nav(A,'roadmap'); A.evaluate("window.__net.down=true"); id0=A.locator('.pb').nth(6).get_attribute('data-id'); A.evaluate(f"__ynmo.commit('{id0}',{{t:'Offline edit'}})"); A.wait_for_timeout(800); s1=A.locator('#save').inner_text()
         A.evaluate("window.__net.down=false"); A.wait_for_timeout(9000)
         stored=B.evaluate("1") and A.evaluate("JSON.parse(localStorage.getItem('fk3')).items['%s']&&JSON.parse(localStorage.getItem('fk3')).items['%s'].t"%(id0,id0))
         return (stored=='Offline edit','status while offline=%r; stored after recovery=%r (edit lost if no retry)'%(s1,stored))
     @T('Resilience','X2','Permission denied (RLS) switches UI to read-only with clear message')
     def _():
-        A.evaluate("window.__net.fail='new row violates row-level security policy'"); id0=A.locator('.pb').nth(6).get_attribute('data-id'); A.evaluate(f"commit('{id0}',{{t:'RLS'}})"); A.wait_for_timeout(800); s=A.locator('#save').inner_text(); dis=A.locator('#add').is_disabled(); A.evaluate("window.__net.fail=null")
+        A.evaluate("window.__net.fail='new row violates row-level security policy'"); id0=A.locator('.pb').nth(6).get_attribute('data-id'); A.evaluate(f"__ynmo.commit('{id0}',{{t:'RLS'}})"); A.wait_for_timeout(800); s=A.locator('#save').inner_text(); dis=A.locator('#add').is_disabled(); A.evaluate("window.__net.fail=null")
         return ('read' in s.lower() or dis,'save=%r add disabled=%s'%(s,dis))
     @T('Resilience','X3','Slow network (1.5s latency): UI stays responsive, saved indicator eventually "saved"')
     def _():
-        A.reload(); A.wait_for_timeout(900); A.evaluate("window.__net.delay=1500"); id0=A.locator('.pb').nth(6).get_attribute('data-id'); A.evaluate(f"commit('{id0}',{{t:'Slow edit'}})"); A.wait_for_timeout(300); s1=A.locator('#save').inner_text(); A.wait_for_timeout(3000); s2=A.locator('#save').inner_text(); A.evaluate("window.__net.delay=0"); return ('aving' in s1 and 'aved' in s2,'%r -> %r'%(s1,s2))
+        A.reload(); A.wait_for_timeout(900); A.evaluate("window.__net.delay=1500"); id0=A.locator('.pb').nth(6).get_attribute('data-id'); A.evaluate(f"__ynmo.commit('{id0}',{{t:'Slow edit'}})"); A.wait_for_timeout(300); s1=A.locator('#save').inner_text(); A.wait_for_timeout(3000); s2=A.locator('#save').inner_text(); A.evaluate("window.__net.delay=0"); return ('aving' in s1 and 'aved' in s2,'%r -> %r'%(s1,s2))
     # ---------- PERF / RESPONSIVE / A11Y ----------
     @T('Perf','F1','Render 600 features in < 1.5 s')
     def _():
-        A.reload(); A.wait_for_timeout(900); ms=A.evaluate("(()=>{const t=performance.now();for(let i=0;i<550;i++){over['p'+i]={custom:true,rm:state.rm,t:'Perf '+i,n:'',sq:'tifli',pr:['tifli'],d0:i%100,d1:i%100+5,st:'planned',res:['Emad'],ord:i};}render();return performance.now()-t})()"); return (ms<1500,'%d ms'%ms)
+        A.reload(); A.wait_for_timeout(900); ms=A.evaluate("(()=>{const t=performance.now();for(let i=0;i<550;i++){__ynmo.S.over['p'+i]={custom:true,rm:__ynmo.state.rm,t:'Perf '+i,n:'',sq:'tifli',pr:['tifli'],d0:i%100,d1:i%100+5,st:'planned',res:['Emad'],ord:i};}__ynmo.render();return performance.now()-t})()"); return (ms<1500,'%d ms'%ms)
     for w,h,name in [(390,800,'phone'),(768,900,'tablet')]:
         @T('Responsive','Z-'+name,'No horizontal page scroll on all pages at %dpx'%w)
         def _(w=w,h=h):
