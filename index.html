@@ -1,4 +1,7 @@
+<!doctype html>
+<html lang="en">
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ynmo Roadmaps</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -361,7 +364,7 @@ body::before { content: ""; position: fixed; inset-block-start: -140px; inset-in
 .avbtn { width: auto; height: 48px; border-radius: 14px; border: 0; background: var(--surface-2); padding: 5px 12px 5px 6px; gap: 8px; display: inline-flex; align-items: center; }
 .avbtn::after { content: ""; width: 12px; height: 12px; background: no-repeat center / contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 4.2 6 8l4-3.8' fill='none' stroke='%235a6180' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
 .avbtn:hover, .avbtn[aria-expanded="true"] { background: color-mix(in srgb, var(--brand) 12%, var(--surface-2)); }
-.umenu { top: calc(var(--top-h) - 6px); inset-inline-end: 16px; right: auto; border: 0; box-shadow: 0 16px 40px rgba(20, 25, 60, .18); border-radius: 14px; }
+.umenu { top: calc(var(--top-h) - 6px); inset-inline-end: 16px; inset-inline-start: auto; left: auto; border: 0; box-shadow: 0 16px 40px rgba(20, 25, 60, .18); border-radius: 14px; }
 .page { padding-inline: 24px; }
 .pghead h1 { font-size: 1.6rem; }
 .drawer { top: var(--top-h); }
@@ -405,6 +408,17 @@ body { margin: 0; }
 
 .gate { display: flex; align-items: center; justify-content: center; min-height: 100vh; min-height: 100dvh; padding: 16px; box-sizing: border-box; }
 .gate .gcard { margin: auto; }
+
+.mh small { color: #7a4f00; }
+.ghead h1 { margin: 0; font-size: 1.5rem; }
+.av { color: #14372e; }
+.sr { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.wk.we, .wk.we.sparse { color: var(--ink); }
+.av { color: #14372e !important; }
+.wk { color: #454b68; }
+.badge.ok { color: #0a6446; }
+.tg { color: #454b68; }
+.bar .tg { opacity: 1; }
 
 </style>
 
@@ -504,7 +518,7 @@ function setRange(a, b) {
   });
   MGROUPS.forEach(m => { MSTART.push(m.from); MEND.push(m.to); });
   STARTDOW = new Date(START).getUTCDay();
-  const k = Math.floor((Date.now() - START) / DAY); todayK = k >= 0 && k < NDAYS ? k : -1;
+  const nw = new Date(), k = Math.round((Date.UTC(nw.getFullYear(), nw.getMonth(), nw.getDate()) - START) / DAY); todayK = k >= 0 && k < NDAYS ? k : -1;
 }
 setRange('2026-10-01', '2027-01-31');
 const LOWPRI = { 1: true, 2: true };   // Nov and Dec are marked LOW PRIORITY in the checkpoint (H2 2026 only)
@@ -710,23 +724,32 @@ const SAVE_TEXT = {
   saving: 'Saving…', saved: 'Saved.',
   local: 'Edits are not saved in this view and last until you reload.',
   readonly: 'View only. Ask the owner for edit access to change the plan.',
-  error: 'The last change did not save. Try it again.'
+  error: 'No connection. Your change is kept here and will be saved automatically when you are back online.'
 };
 function setSave(k) { $('save').textContent = SAVE_TEXT[k] || ''; }
 const queue = {};
-function write(path, data) {
+function write(path, data, fields) {
   if (!db) { setSave('local'); return; }
-  const ref = db.doc(path), copy = data ? clone(data) : null;
+  const ref = db.doc(path), copy = data ? clone(data) : null, part = fields ? clone(fields) : null;
   inflight++; setSave('saving');
   queue[path] = (queue[path] || Promise.resolve()).then(async () => {
-    try { if (copy) await ref.set(copy); else await ref.delete(); setSave('saved'); }
-    catch (e) {
-      if (e && e.code === 'invalid_argument') { readonly = true; setSave('readonly'); render(); } else setSave('error');
-    } finally { inflight--; }
+    for (let tryN = 0; tryN < 6; tryN++) {
+      try {
+        if (copy && part && ref.merge) await ref.merge(part, copy); else if (copy) await ref.set(copy); else await ref.delete();
+        setSave('saved'); break;
+      } catch (e) {
+        if (e && e.code === 'invalid_argument') { readonly = true; setSave('readonly'); render(); break; }
+        setSave('error'); if (tryN === 5) break;
+        await new Promise(r => setTimeout(r, Math.min(15000, 1500 * Math.pow(2, tryN))));
+      }
+    }
+    inflight--;
   });
 }
-function persist(id) { write('items/' + id, over[id] || null); }
-function pushHistory() { history.push(JSON.stringify(over)); if (history.length > 60) history.shift(); }
+window.addEventListener('online', () => { if (typeof loadMembers === 'function') { /* retries run on their own timer */ } });
+function persist(id, fields) { if (curEntry) curEntry.ids.add(id); write('items/' + id, over[id] || null, fields && over[id] ? fields : null); }
+let curEntry = null;
+function pushHistory() { curEntry = { snap: JSON.stringify(over), ids: new Set() }; history.push(curEntry); if (history.length > 60) history.shift(); }
 function commit(id, fields) {
   const prev = items().find(i => i.id === id);
   pushHistory();
@@ -734,13 +757,17 @@ function commit(id, fields) {
   const d = describe(prev, fields);
   if (d) logAct('edit', '"' + (prev ? prev.t : id) + '": ' + d);
   state.refocus = document.activeElement && document.activeElement.id;
-  render(); persist(id);
+  render(); persist(id, fields);
 }
 function undo() {
   if (!history.length || !canEdit()) return;
-  const cur = over; over = JSON.parse(history.pop());
-  closePicker(); render();
-  new Set(Object.keys(cur).concat(Object.keys(over))).forEach(id => { if (JSON.stringify(cur[id]) !== JSON.stringify(over[id])) persist(id); });
+  let e = history.pop(); while (e && !e.ids.size && history.length) e = history.pop();
+  if (!e || !e.ids.size) { render(); return; }
+  curEntry = null; const snap = JSON.parse(e.snap);
+  closePicker();
+  e.ids.forEach(id => { if (id in snap) over[id] = snap[id]; else delete over[id]; });
+  render();
+  e.ids.forEach(id => persist(id));
 }
 function removeItem(id) {
   const it0 = items().find(i => i.id === id);
@@ -763,8 +790,11 @@ async function restoreAll() {
     setSave('saved');
   } catch (e) { setSave(e && e.code === 'invalid_argument' ? 'readonly' : 'error'); } finally { inflight--; }
 }
+let pendingSnap = null;
+setInterval(() => { if (pendingSnap && !dragging && !inflight && !state.edit) { const s = pendingSnap; pendingSnap = null; onSnap(s); } if (needRender && !dragging && !state.edit) { needRender = false; render(); } }, 700);
 function onSnap(snap) {
-  if (dragging || inflight > 0 || state.edit) return;
+  if (dragging || inflight > 0 || state.edit) { pendingSnap = snap; return; }
+  pendingSnap = null;
   const next = {};
   snap.docs.forEach(d => { next[d.id] = d.data(); });
   if (JSON.stringify(next) === JSON.stringify(over)) return;
@@ -1268,7 +1298,7 @@ function openAddPerson(anchor) {
 }
 
 /* ---------- export ---------- */
-function csvCell(v) { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+function csvCell(v) { v = String(v == null ? '' : v); if (/^[=+\-@\t\r]/.test(v)) v = "'" + v; return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
 async function exportCsv() {
   if (!dl) return;
   const head = ['Squad', 'Feature', 'Resources', 'Status', 'Start', 'End', 'Notes'];
@@ -1276,7 +1306,7 @@ async function exportCsv() {
   LANES.forEach(l => items().filter(i => i.sq === l.k).sort(byOrd).forEach(it => {
     lines.push([l.n, it.t, it.res.join('; '), STATUS[it.st], iso(it.d0), iso(it.d1), it.n || ''].map(csvCell).join(','));
   }));
-  try { await dl.save({ filename: 'ynmo-h2-roadmap.csv', data: '﻿' + lines.join('\n') }); } catch (e) { /* declined or unavailable: nothing to do */ }
+  try { await dl.save({ filename: 'ynmo-' + slug(curRm().n) + '-roadmap.csv', data: '﻿' + lines.join('\n') }); } catch (e) { /* declined or unavailable: nothing to do */ }
 }
 
 /* ---------- setup ---------- */
@@ -1300,6 +1330,12 @@ function makeDb() {
       const p = path.split('/'), t = p[0], id = p[1];
       return {
         async set(d) { const r = await sb.from(t).upsert({ id: id, data: d }); if (r.error) throw err(r.error); },
+        async merge(fields, full) {
+          const cur = await sb.from(t).select('data').eq('id', id).maybeSingle();
+          if (cur.error) throw err(cur.error);
+          const base = (cur.data && cur.data.data) || {};
+          const r = await sb.from(t).upsert({ id: id, data: Object.assign({}, base, fields) }); if (r.error) throw err(r.error);
+        },
         async delete() { const r = await sb.from(t).delete().eq('id', id); if (r.error) throw err(r.error); }
       };
     },
@@ -1358,9 +1394,9 @@ function avatarEl(id, size, name) {
 /* ---------- gate screens ---------- */
 const JOBS = ['Product Manager', 'Engineer', 'QA', 'UX / Design', 'Other'];
 function gateCard(title, sub) {
-  const g = $('gate'); g.hidden = false; g.textContent = '';
+  const g = $('gate'); g.hidden = false; g.textContent = ''; g.setAttribute('role', 'main');
   const c = el('form', 'gcard card'); c.noValidate = false;
-  const h = el('div', 'ghead'); h.append(logoEl(), el('h2', '', title)); c.append(h);
+  const h = el('div', 'ghead'); h.append(logoEl(), el('h1', '', title)); c.append(h);
   if (sub) c.append(el('div', 'meta', sub));
   g.append(c); return c;
 }
@@ -1522,6 +1558,7 @@ const DOMAINS = ['PM', 'Mobile', 'Backend', 'Frontend', 'Full-stack', 'Engineeri
 const VTYPES = ['Annual leave', 'Training', 'Public holiday', 'Other'];
 const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'x';
 const fmtIso = s => { const t = parseIso(s); if (t === null) return s || ''; const d = new Date(t); return DN[d.getUTCDay()] + ' ' + d.getUTCDate() + ' ' + MN[d.getUTCMonth()] + ' ' + d.getUTCFullYear(); };
+function todayIso() { const n = new Date(), z = v => (v < 10 ? '0' : '') + v; return n.getFullYear() + '-' + z(n.getMonth() + 1) + '-' + z(n.getDate()); }
 function wdays(a, b) { let n = 0; for (let t = parseIso(a); t !== null && t <= parseIso(b); t += DAY) { const w = new Date(t).getUTCDay(); if (w !== 5 && w !== 6) n++; } return n; }
 function kOfIso(s) { const t = parseIso(s); return t === null ? NaN : Math.round((t - START) / DAY); }
 function ago(iso) {
@@ -1627,7 +1664,9 @@ function renderRoadmaps() {
     const a = da.value, b = db2.value;
     if (parseIso(a) === null || parseIso(b) === null || parseIso(b) < parseIso(a)) { msg.textContent = 'Pick a valid date range.'; return; }
     if ((parseIso(b) - parseIso(a)) / DAY > 730) { msg.textContent = 'Keep a roadmap within two years.'; return; }
-    const id = createRoadmap(nm.value.trim(), kd.value, a, b, cp.value);
+    const nmv = nm.value.trim(); if (!nmv) { msg.textContent = 'Give the roadmap a name.'; return; }
+    if (allRoadmaps().some(r => r.n.trim().toLowerCase() === nmv.toLowerCase())) { msg.textContent = 'A roadmap called "' + nmv + '" already exists. Choose another name.'; return; }
+    const id = createRoadmap(nmv, kd.value, a, b, cp.value);
     useRoadmap(id); showPage('roadmap');
   });
   root.append(f);
@@ -1682,7 +1721,7 @@ function openSchedule(id, anchor) {
   const names = [...directory().keys()].sort((x, y) => x.localeCompare(y));
   const who = selOf([['__none', 'Unassigned']].concat(names.map(n => [n, n])), '__none');
   const d = el('input'); d.type = 'date'; d.min = r.a; d.max = r.b;
-  const td = new Date().toISOString().slice(0, 10); d.value = td >= r.a && td <= r.b ? td : r.a;
+  const td = todayIso(); d.value = td >= r.a && td <= r.b ? td : r.a;
   const n = el('input'); n.type = 'number'; n.min = 1; n.max = 365; n.value = 14;
   const box = el('div', 'padd'); box.style.gridTemplateColumns = '1fr';
   box.append(fld('Person', who), fld('Starts', d), fld('Duration in days', n));
@@ -1744,7 +1783,7 @@ function renderIdeas(force) {
   root.textContent = '';
   const tools = el('div', 'formrow');
   const q = el('input'); q.type = 'search'; q.placeholder = 'Search ideas'; q.value = ideaUI.q; q.addEventListener('input', () => { ideaUI.q = q.value; renderIdeas(true); const s = root.querySelector('input[type=search]'); if (s) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); } });
-  const fs = selOf([['open', 'Open ideas'], ['scheduled', 'On a roadmap'], ['dropped', 'Dropped'], ['all', 'All']], ideaUI.st); fs.addEventListener('change', () => { ideaUI.st = fs.value; renderIdeas(true); });
+  const fs = selOf([['open', 'Open ideas'], ['scheduled', 'On a roadmap'], ['dropped', 'Dropped'], ['all', 'All']], ideaUI.st); fs.setAttribute('aria-label', 'Show ideas by status'); fs.addEventListener('change', () => { ideaUI.st = fs.value; renderIdeas(true); });
   tools.append(q, fs);
   root.append(pageHead('Ideas', 'Capture thoughts per product first. When one is ready, press Add to roadmap here, or drag it from the Ideas drawer onto a person on the roadmap.', tools));
   const board = el('div', 'board');
@@ -1757,7 +1796,7 @@ function renderIdeas(force) {
       const okS = ideaUI.st === 'all' || (ideaUI.st === 'open' ? (s === 'idea' || s === 'shortlisted') : s === ideaUI.st);
       return okS && (!fq || (i.t + ' ' + (i.n || '')).toLowerCase().includes(fq));
     }).sort((a, b) => ideaScore(ideas[b]) - ideaScore(ideas[a]) || (ideas[b].ts || 0) - (ideas[a].ts || 0));
-    const h = el('h3'); h.append(document.createTextNode(l.n), el('span', 'badge', String(list.length))); col.append(h);
+    const h = el('h2'); h.append(document.createTextNode(l.n), el('span', 'badge', String(list.length))); col.append(h);
     if (canEdit()) {
       const inp = el('input'); inp.type = 'text'; inp.placeholder = 'Add an idea and press Enter'; inp.maxLength = 140; inp.setAttribute('aria-label', 'New idea for ' + l.n);
       inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); const v = inp.value.trim(); if (v) { addIdea(l.k, v); renderIdeas(true); const n = root.querySelectorAll('.col input[type=text]')[LANES.indexOf(l)]; if (n) n.focus(); } } });
@@ -1811,7 +1850,7 @@ function removePerson2(name) {
   fillPersons(); render(); renderResources();
 }
 function addMember(name, domain, sqs) {
-  if (directory().has(name)) return 'Already on the chart.';
+  if ([...directory().keys()].some(k => k.trim().toLowerCase() === name.trim().toLowerCase())) return 'Already on the chart.';
   const id = 'p' + Date.now().toString(36);
   extras[id] = { n: name, domain: domain, sqs: sqs }; write('people/' + id, extras[id]);
   logAct('resource', 'added ' + name + ' (' + domain + ', ' + sqs.map(k => laneOf(k).n).join(' + ') + ')');
@@ -1843,7 +1882,7 @@ function renderResources() {
   const dir = directory(), prim = d => Math.min.apply(null, [...d.sqs].map(k => LANES.findIndex(l => l.k === k)).filter(i => i >= 0).concat([9]));
   const people = [...dir.values()].sort((a, b) => prim(a) - prim(b) || a.name.localeCompare(b.name));
   const card = el('div', 'card'); card.append(el('h2', '', 'Team (' + people.length + ')'));
-  const t = el('table', 'tbl'), th = el('thead'), hr = el('tr'); ['Name', 'Domain', 'Squads', ''].forEach(x => hr.append(el('th', '', x))); th.append(hr); t.append(th);
+  const t = el('table', 'tbl'), th = el('thead'), hr = el('tr'); ['Name', 'Domain', 'Squads', ''].forEach(x => { const c = el('th', '', x); if (!x) c.append(el('span', 'sr', 'Actions')); hr.append(c); }); th.append(hr); t.append(th);
   const tb = el('tbody');
   people.forEach(p => {
     const tr = el('tr'), c1 = el('td'); const w = el('div', 'formrow'); w.style.alignItems = 'center'; w.append(avatarEl('', 30, p.name), el('b', '', p.name)); c1.append(w);
@@ -1865,7 +1904,7 @@ function renderResources() {
   }
   const ac = el('div', 'card'); ac.append(el('h2', '', 'Access to this tool'));
   if (!me || !me.is_admin) ac.append(el('div', 'hint', 'New accounts are approved by an admin. Ask an admin if a teammate is waiting.'));
-  const at = el('table', 'tbl'), ah = el('thead'), ar = el('tr'); ['User', 'Role', 'Email', 'Status', ''].forEach(x => ar.append(el('th', '', x))); ah.append(ar); at.append(ah);
+  const at = el('table', 'tbl'), ah = el('thead'), ar = el('tr'); ['User', 'Role', 'Email', 'Status', ''].forEach(x => { const c = el('th', '', x); if (!x) c.append(el('span', 'sr', 'Actions')); ar.append(c); }); ah.append(ar); at.append(ah);
   const ab = el('tbody');
   members.forEach(m => {
     const tr = el('tr'), c1 = el('td'), w = el('div', 'formrow'); w.style.alignItems = 'center'; w.append(avatarEl(m.avatar, 30, m.name), el('b', '', m.name || m.email)); c1.append(w);
@@ -1891,7 +1930,7 @@ function affectedBy(v) {
 const vacUI = { open: new Set() };
 const VT_CLASS = t => 't' + Math.max(0, VTYPES.indexOf(t));
 function personStats(name) {
-  const list = vacsOf(name).sort((x, y) => x.a0 < y.a0 ? -1 : 1), td = new Date().toISOString().slice(0, 10);
+  const list = vacsOf(name).sort((x, y) => x.a0 < y.a0 ? -1 : 1), td = todayIso();
   let cal = 0, work = 0, taken = 0, upcoming = null; const byType = {};
   list.forEach(v => {
     const a1 = v.a1 || v.a0, w = wdays(v.a0, a1);
@@ -1904,7 +1943,7 @@ function leaveCalendar(list) {
   const r = curRm(); let a = r.a, b = r.b;
   list.forEach(v => { if (v.a0 < a) a = v.a0; if ((v.a1 || v.a0) > b) b = v.a1 || v.a0; });
   const map = {}; list.forEach(v => { for (let t = parseIso(v.a0); t <= parseIso(v.a1 || v.a0); t += DAY) map[new Date(t).toISOString().slice(0, 10)] = v; });
-  const wrap = el('div', 'mcals'), td = new Date().toISOString().slice(0, 10), pad = n => (n < 10 ? '0' : '') + n;
+  const wrap = el('div', 'mcals'), td = todayIso(), pad = n => (n < 10 ? '0' : '') + n;
   let y = +a.slice(0, 4), m = +a.slice(5, 7) - 1; const ey = +b.slice(0, 4), em = +b.slice(5, 7) - 1;
   for (let n = 0; n < 14 && y * 12 + m <= ey * 12 + em; n++) {
     const box = el('div', 'mcal'); box.append(el('h4', '', MN[m] + ' ' + y));
@@ -1926,7 +1965,7 @@ function renderTeamLeave(root) {
   const names = [...new Set(Object.keys(vacs).map(id => vacs[id]).filter(v => v.a0).map(v => v.p))].sort((x, y) => x.localeCompare(y));
   if (!names.length) return;
   const card = el('div', 'card'); card.append(el('h2', '', 'Team leave'), el('div', 'hint', 'Select a person to see their leave stats and calendar.'));
-  const td = new Date().toISOString().slice(0, 10);
+  const td = todayIso();
   names.forEach(nm => {
     const st = personStats(nm), open = vacUI.open.has(nm), row = el('div', 'tlrow');
     const hb = el('button', 'tlhead'); hb.type = 'button'; hb.setAttribute('aria-expanded', String(open));
@@ -1972,11 +2011,11 @@ function renderVacations(force) {
   const who = selOf([['', 'Choose a person…']].concat(names.map(n => [n, n])), ''), a = el('input'), b = el('input'), ty = selOf(VTYPES, 'Annual leave'), nt = el('input');
   who.required = true; who.setAttribute('aria-label', 'Person');
   a.type = b.type = 'date'; a.required = true; nt.type = 'text'; nt.maxLength = 80; nt.placeholder = 'Optional note';
-  const td = new Date().toISOString().slice(0, 10); a.value = td;
+  const td = todayIso(); a.value = td;
   const r1 = el('div', 'formrow'); r1.append(fld('Person', who), fld('From', a), fld('To', b), fld('Type', ty), fld('Note', nt));
   const msg = el('div', 'gerr'), go = el('button', 'btn primary', 'Add leave'); go.type = 'submit'; go.disabled = !canEdit();
   f.append(r1, msg, go);
-  f.addEventListener('submit', e => { e.preventDefault(); if (!who.value) { msg.textContent = 'Choose a person first.'; who.focus(); return; } const x0 = a.value, x1 = b.value || a.value; if (parseIso(x0) === null || parseIso(x1) < parseIso(x0)) { msg.textContent = 'Pick a valid date range.'; return; } addVacation(who.value, x0, x1, ty.value, nt.value.trim()); });
+  f.addEventListener('submit', e => { e.preventDefault(); if (!who.value) { msg.textContent = 'Choose a person first.'; who.focus(); return; } const x0 = a.value, x1 = b.value || a.value; if (parseIso(x0) === null || parseIso(x1) < parseIso(x0)) { msg.textContent = 'Pick a valid date range.'; return; } const clash = vacsOf(who.value).find(v => x0 <= (v.a1 || v.a0) && x1 >= v.a0); if (clash) { msg.textContent = who.value + ' already has leave on ' + fmtIso(clash.a0) + (clash.a1 > clash.a0 ? ' to ' + fmtIso(clash.a1) : '') + '. Remove it first or pick other dates.'; return; } addVacation(who.value, x0, x1, ty.value, nt.value.trim()); });
   root.append(f);
   if (vacNotice) {
     const c = el('div', 'card'); c.style.borderColor = 'var(--brand-2)';
@@ -1997,7 +2036,7 @@ function renderVacations(force) {
   const list = Object.keys(vacs).map(id => Object.assign({ id: id }, vacs[id])).filter(v => v.a0).sort((x, y) => x.a0 < y.a0 ? -1 : 1);
   if (!list.length) card.append(el('div', 'hint', 'No leave added yet.'));
   else {
-    const t = el('table', 'tbl'), th = el('thead'), hr = el('tr'); ['Person', 'Dates', 'Type', 'Working days', 'Affects', ''].forEach(x => hr.append(el('th', '', x))); th.append(hr); t.append(th);
+    const t = el('table', 'tbl'), th = el('thead'), hr = el('tr'); ['Person', 'Dates', 'Type', 'Working days', 'Affects', ''].forEach(x => { const c = el('th', '', x); if (!x) c.append(el('span', 'sr', 'Actions')); hr.append(c); }); th.append(hr); t.append(th);
     const tb = el('tbody');
     list.forEach(v => {
       const aff = affectedBy(v), tr = el('tr');
@@ -2017,7 +2056,7 @@ function renderLog() {
   const root = $('pg-log'); root.textContent = '';
   const users = [...new Set(logs.map(l => l.data.name))].sort();
   const su = selOf([['all', 'Everyone']].concat(users.map(u => [u, u])), logUI.u), sa = selOf([['all', 'All changes'], ['edit', 'Edits'], ['roadmap', 'Roadmaps'], ['idea', 'Ideas'], ['resource', 'Resources'], ['vacation', 'Vacations'], ['access', 'Access']], logUI.a);
-  su.addEventListener('change', () => { logUI.u = su.value; renderLog(); }); sa.addEventListener('change', () => { logUI.a = sa.value; renderLog(); });
+  su.setAttribute('aria-label', 'Filter by person'); sa.setAttribute('aria-label', 'Filter by type of change'); su.addEventListener('change', () => { logUI.u = su.value; renderLog(); }); sa.addEventListener('change', () => { logUI.a = sa.value; renderLog(); });
   const tools = el('div', 'formrow'); tools.append(su, sa);
   root.append(pageHead('Log', 'Who changed what, and when. Newest first. Times show in your time zone.', tools));
   const card = el('div', 'card'); let day = '';
@@ -2059,6 +2098,9 @@ function buildNav() {
   const n = $('nav'); n.textContent = '';
   PAGES.forEach(x => { const b = el('button', ''); b.type = 'button'; b.dataset.p = x[0]; b.title = x[1]; b.setAttribute('aria-label', x[1]); b.insertAdjacentHTML('beforeend', NAV_ICONS[x[0]] || ''); b.append(el('span', 'lbl', x[1])); if (x[0] === 'resources') { const d = el('span', 'dot', '0'); d.hidden = true; b.append(d); } b.addEventListener('click', () => showPage(x[0])); n.append(b); });
 }
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+let needRender = false;
+function softRender() { if (state.edit || dragging) { needRender = true; return; } render(); }
 let started = false;
 function start() {
   if (started) return; started = true;
@@ -2066,16 +2108,16 @@ function start() {
   db = makeDb(); drawAvatar(); buildNav();
   try { wantRm = localStorage.getItem('ynmo-rm'); } catch (e) { wantRm = null; }
   db.collection('items').onSnapshot(onSnap, () => setSave('error'));
-  db.collection('daysoff').onSnapshot(s => { if (dragging) return; daysoff = {}; s.docs.forEach(d => { daysoff[d.id] = d.data(); }); render(); if (offOpen) buildOff(); }, () => {});
-  db.collection('people').onSnapshot(s => { extras = {}; s.docs.forEach(d => { extras[d.id] = d.data(); }); fillPersons(); if (picker && picker.id) buildPicker(); render(); if (state.page === 'resources') renderResources(); if (state.page === 'vacations') renderVacations(); }, () => {});
+  db.collection('daysoff').onSnapshot(s => { const n = {}; s.docs.forEach(d => { n[d.id] = d.data(); }); if (same(n, daysoff)) return; daysoff = n; softRender(); if (offOpen && !state.edit) buildOff(); }, () => {});
+  db.collection('people').onSnapshot(s => { const n = {}; s.docs.forEach(d => { n[d.id] = d.data(); }); if (same(n, extras)) return; extras = n; fillPersons(); if (picker && picker.id) buildPicker(); softRender(); if (state.page === 'resources') renderResources(); if (state.page === 'vacations') renderVacations(); }, () => {});
   db.collection('roadmaps').onSnapshot(s => {
-    roadmaps = {}; s.docs.forEach(d => { roadmaps[d.id] = d.data(); });
+    const n = {}; s.docs.forEach(d => { n[d.id] = d.data(); }); if (same(n, roadmaps)) return; roadmaps = n;
     if (wantRm && allRoadmaps().some(r => r.id === wantRm)) { const w = wantRm; wantRm = null; useRoadmap(w); }
     else if (!allRoadmaps().some(r => r.id === state.rm)) useRoadmap(H2_ID); else fillRm();
     if (state.page === 'roadmaps') renderRoadmaps();
   }, () => {});
-  db.collection('ideas').onSnapshot(s => { ideas = {}; s.docs.forEach(d => { ideas[d.id] = d.data(); }); renderDrawer(); if (state.page === 'ideas') renderIdeas(); if (state.page === 'roadmaps') renderRoadmaps(); }, () => {});
-  db.collection('vacations').onSnapshot(s => { vacs = {}; s.docs.forEach(d => { vacs[d.id] = d.data(); }); render(); if (state.page === 'vacations') renderVacations(); }, () => {});
+  db.collection('ideas').onSnapshot(s => { const n = {}; s.docs.forEach(d => { n[d.id] = d.data(); }); if (same(n, ideas)) return; ideas = n; renderDrawer(); if (state.page === 'ideas') renderIdeas(); if (state.page === 'roadmaps') renderRoadmaps(); }, () => {});
+  db.collection('vacations').onSnapshot(s => { const n = {}; s.docs.forEach(d => { n[d.id] = d.data(); }); if (same(n, vacs)) return; vacs = n; softRender(); if (state.page === 'vacations') renderVacations(); }, () => {});
   db.collection('activity').onSnapshot(s => { logs = s.docs.map(d => ({ id: d.id, data: d.data() })).sort((a, b) => a.data.at < b.data.at ? 1 : -1); if (state.page === 'log') renderLog(); }, () => {});
   setSave('ready'); fillRm();
   loadMembers(); setInterval(loadMembers, 60000);
@@ -2155,6 +2197,7 @@ function init() {
   const av = $('avbtn'), um = $('umenu');
   av.addEventListener('click', e => { e.stopPropagation(); um.hidden = !um.hidden; av.setAttribute('aria-expanded', String(!um.hidden)); });
   document.addEventListener('pointerdown', e => { if (!um.hidden && !um.contains(e.target) && !av.contains(e.target)) { um.hidden = true; av.setAttribute('aria-expanded', 'false'); } });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !um.hidden) { um.hidden = true; av.setAttribute('aria-expanded', 'false'); av.focus(); } });
   $('rmsel').addEventListener('change', e => useRoadmap(e.target.value));
   try { const z = localStorage.getItem('ynmo-zoom'); if (ZOOM[z]) { state.zoom = z; $('zoom').value = z; } } catch (e) { /* storage unavailable */ }
   $('zoom').addEventListener('change', e => { state.zoom = e.target.value; try { localStorage.setItem('ynmo-zoom', state.zoom); } catch (x) { /* storage unavailable */ } render(); });
@@ -2169,3 +2212,5 @@ function init() {
 }
 init();
 </script>
+
+</html>
