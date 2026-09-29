@@ -19,8 +19,8 @@ supabase secrets set WEBHOOK_SECRET=<long random> SMTP_USER=<mailbox> SMTP_PASS=
 Dashboard → Database → Webhooks → on `profiles` INSERT → HTTP request to the function URL with header `x-webhook-secret: <same value>`.
 
 ## 3. Vercel
-Import the GitHub repo, framework *Other*, no build command, output = repo root. `vercel.json` adds the security headers.
-Every push to `main` deploys. `index.html` is committed (generated) so no build step is needed on Vercel.
+Import the GitHub repo, framework *Other*. `vercel.json` sets install `npm ci`, build `node build.mjs --dist`, output `dist/` (index.html + vendor) and the security headers.
+Every push to `main` deploys; Vercel rebuilds from `src/`, the committed `index.html` is only for local use and tests.
 
 ## 4. Release procedure
 ```bash

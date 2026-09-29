@@ -4,6 +4,7 @@
  *
  *   node build.mjs          -> writes ./index.html
  *   node build.mjs --check  -> exits 1 if ./index.html is out of date
+ *   node build.mjs --dist   -> writes ./dist (index.html + vendor/) for Vercel
  *
  * The app ships as ONE html file on purpose (esbuild is a build-time tool only; no runtime deps beyond
  * the vendored supabase-js). Sources live in `src/`:
@@ -11,7 +12,7 @@
  *   src/css/*.css            concatenated in filename order (base -> brand -> skin -> features)
  *   src/esm/main.js          ES-module entry; esbuild bundles it (imports are explicit, see docs/ARCHITECTURE.md)
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, cpSync } from 'node:fs';
 import { buildSync } from 'esbuild';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,6 +34,13 @@ const html = readFileSync(join(root, 'src/index.template.html'), 'utf8')
   .replace('{{SCRIPTS}}', () => js);
 
 const out = join(root, 'index.html');
+if (process.argv.includes('--dist')) {          // used by Vercel: publish only what the site needs
+  mkdirSync(join(root, 'dist'), { recursive: true });
+  writeFileSync(join(root, 'dist/index.html'), html);
+  cpSync(join(root, 'vendor'), join(root, 'dist/vendor'), { recursive: true });
+  console.log('dist/ ready');
+  process.exit(0);
+}
 if (process.argv.includes('--check')) {
   const same = readFileSync(out, 'utf8') === html;
   console.log(same ? 'index.html is up to date' : 'index.html is STALE - run: node build.mjs');
