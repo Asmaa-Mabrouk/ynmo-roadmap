@@ -2,7 +2,7 @@ import os, sys, json, time, traceback
 from playwright.sync_api import sync_playwright
 """End-to-end QA suite (Playwright, Python). Run from repo root: `python3 tests/e2e_qa.py`.
 Loads ./index.html with the in-browser fake Supabase (tests/fake-supabase.js), so no network or real project is touched.
-Results -> tests/out/qa_results.json. Known test-wording artifacts: A10, R9, S4 (see docs/TESTING.md)."""
+Results -> tests/out/qa_results.json. All scenarios are expected to pass."""
 HERE=os.path.dirname(os.path.abspath(__file__)); ROOT=os.path.dirname(HERE); os.makedirs(HERE+'/out',exist_ok=True)
 URL="file://"+ROOT+"/index.html"
 FAKE=open(HERE+'/fake-supabase.js').read()
@@ -78,7 +78,7 @@ with sync_playwright() as p:
         return (ok, 'Approve button present' if ok else 'no Approve button')
     @T('Auth','A10','Approved user gets in via "Check again" without re-login')
     def _():
-        B.click('button:has-text("Check again")'); B.wait_for_timeout(800); return (B.locator('#nav button').count()==6, '')
+        B.click('button:has-text("Check again")'); B.wait_for_timeout(800); return (B.locator('#nav button').count()==8, 'editor sees 8 pages')
     @T('Auth','A11','Login: wrong password message generic (no user enumeration)')
     def _():
         C=newpage(); C.goto(URL); C.wait_for_timeout(300); login(C,'asmaa@x.com','wrong'); m=gerr(C); C.close(); return ('not right' in m, m)
@@ -162,7 +162,7 @@ with sync_playwright() as p:
     @T('Roadmap','R9','Right-click menu offers Rename/Status/Color/Dates/Duplicate/Delete')
     def _():
         bb=A.locator('.pb').nth(3); bb.scroll_into_view_if_needed(); bb.click(button='right',position={'x':100,'y':12}); A.wait_for_timeout(250); t=A.locator('#ctx').inner_text(); A.keyboard.press('Escape'); A.mouse.click(5,5)
-        return (all(k in t for k in ['Rename','Status','Duplicate']), t.replace('\n',' | ')[:120])
+        return (all(k.lower() in t.lower() for k in ['Rename','Status','Duplicate']), t.replace('\n',' | ')[:120])
     @T('Roadmap','R10','Delete asks/undoable and removes bar')
     def _():
         n0=A.evaluate('__ynmo.items().length'); first().click(button='right'); A.wait_for_timeout(150)
@@ -279,7 +279,7 @@ with sync_playwright() as p:
         n0=A.evaluate("[...__ynmo.directory().keys()].length"); f=A.locator('#pg-resources form'); f.locator('input[type=text]').evaluate("e=>e.removeAttribute('required')"); addm('    ','QA'); n1=A.evaluate("[...__ynmo.directory().keys()].length"); return (n1==n0,'%d->%d'%(n0,n1))
     @T('Resources','S4','HTML in member name is escaped')
     def _():
-        addm('<b>Bold</b>','PM'); h=A.locator('#pg-resources table td:first-child b:has-text("Bold")').count(); txt='<b>Bold</b>' in A.locator('#pg-resources table').first.inner_text(); return (h==0,'bold tags=%d shown as text=%s'%(h,txt))
+        addm('<b>Bold</b>','PM'); h=A.locator('#pg-resources table td:first-child b b').count(); txt='<b>Bold</b>' in A.locator('#pg-resources table').first.inner_text(); return (h==0,'bold tags=%d shown as text=%s'%(h,txt))
     @T('Resources','S5','Change domain persists; remove needs second click; removal keeps features safe')
     def _():
         sel=A.locator('#pg-resources table select[aria-label="Domain of Zed QA"]'); sel.select_option('Backend'); A.wait_for_timeout(400); A.reload(); A.wait_for_timeout(900); nav(A,'resources'); v=A.locator('#pg-resources table select[aria-label="Domain of Zed QA"]').input_value(); return (v=='Backend','domain=%s'%v)

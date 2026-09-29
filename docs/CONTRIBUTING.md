@@ -29,4 +29,4 @@ Branch → edit `src/` → `node build.mjs && node lint.mjs` → tests → commi
 - [ ] E2E test added · docs updated (BUSINESS feature table, DATABASE if schema changed, CHANGELOG)
 
 ## Definition of done
-Builds clean, tests pass (only the known 3 artifacts), no console errors, docs and changelog updated, no secrets, RLS reviewed.
+Builds clean, tests pass , no console errors, docs and changelog updated, no secrets, RLS reviewed.

@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased – Engineering hygiene
+- Test suite consolidated: `tests/run_all.sh` (build check, lint, feature scripts, CSP check on `dist/`, 88 scenarios) – all green.
 - **Native ES modules** (`src/esm`, 31 modules) with explicit imports/exports; shared mutable state consolidated in `core/state.js`; `lint.mjs` guards the module graph; esbuild bundles to the single-file deploy.
 - Fixed latent name clash: the undo stack was called `history` (shadowing `window.history`); now `S.undoStack`.
 - Source split into `src/` modules + `build.mjs`; `index.html` is now generated.

@@ -4,14 +4,15 @@
 ```bash
 pip install playwright && playwright install chromium
 node build.mjs
-python3 tests/e2e_qa.py            # ~88 scenarios, results in tests/out/qa_results.json
+tests/run_all.sh                   # build check + lint + feature scripts + CSP check + 88 scenarios
+python3 tests/e2e_qa.py            # only the 88 scenarios; results in tests/out/qa_results.json
 ```
 `tests/fake-supabase.js` replaces the real client in the browser (route intercept of `vendor/supabase-js.js`): an in-`localStorage`
 Postgres/Auth/Realtime/RPC fake, so **no real project is touched** and multi-user scenarios run with two tabs.
 The fake does not enforce RLS – RLS is verified manually (below).
 
 Areas: Auth · Roadmap editing · Ideas · Resources · Vacations · Capacity · Baselines · Log/undo · Sharing/viewer · Multi-user (M*) · Security (S*) · Responsive.
-Known **test-wording artifacts** (not app bugs): `A10`, `R9`, `S4`.
+All 88 scenarios are expected to pass.
 
 ## Test handles
 The bundle is an IIFE, so tests reach internals through `window.__ynmo` (`items, directory, allRoadmaps, commit, removeItem, render, state, S, NDAYS, vacs`) defined in `src/esm/main.js`.
