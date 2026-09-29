@@ -475,7 +475,7 @@ svg.ovl path.dep { pointer-events: stroke; }
 .badge.undone { background: #eee; color: #444; margin-inline-start: 6px; }
 .logrow .btn.undo { align-self: center; }
 .chk { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
-.viewer #daysoff, .viewer #ideasbtn, .viewer #undo, .viewer #add, .viewer #sharebtn, .viewer #addp, .viewer #reset,
+.viewer #clearbtn, .shared #clearbtn, .viewer #daysoff, .viewer #ideasbtn, .viewer #undo, .viewer #add, .viewer #sharebtn, .viewer #addp, .viewer #reset,
 .shared #daysoff, .shared #ideasbtn, .shared #undo, .shared #add, .shared #sharebtn, .shared #addp, .shared #reset, .shared #rmsel, .shared #avbtn, .shared #ghostbtn, .shared #export { display: none !important; }
 .shared .rail { display: none; }
 .shared .topbar, .shared .offbar { margin-inline-start: 0; }
@@ -2798,7 +2798,8 @@ function initExtras() {
     gb.title = 'Show where the saved baseline had each bar as a thin amber line';
     gb.addEventListener('click', () => { ghostOn = !ghostOn; try { localStorage.setItem('ynmo-ghost', ghostOn ? '1' : '0'); } catch (e) { /* storage unavailable */ } render(); });
     const sh = el('button', 'btn', 'Share'); sh.type = 'button'; sh.id = 'sharebtn'; sh.addEventListener('click', openShare);
-    today.after(gb, sh);
+    const cl = el('button', 'btn danger', 'Clear all'); cl.type = 'button'; cl.id = 'clearbtn'; cl.title = 'Remove every feature from this roadmap'; cl.addEventListener('click', openClear);
+    today.after(gb, sh, cl);
   }
   netBar(); netShow();
 }
@@ -2885,6 +2886,30 @@ window.addEventListener('hashchange', () => {
   const h = (location.hash.match(/^#\/(\w+)/) || [])[1];
   if (h === 'signup') showSignup(); else if (h === 'forgot') showForgot(); else if (h === 'login') showLogin();
 });
+
+/* ---------- clear the whole roadmap ---------- */
+function openClear() {
+  if (!canWrite()) return;
+  const n = items().length, rm = curRm();
+  openDlg('Clear ' + rm.n + '?', box => {
+    box.append(el('p', '', 'This removes all ' + n + ' features from "' + rm.n + '" for everyone. People, leave, ideas and other roadmaps are not touched.'));
+    box.append(el('p', 'hint', 'A snapshot called "Before clearing" is saved first as a record. Undo brings everything back only until you reload the page, so be sure.'));
+    const t = el('input'); t.type = 'text'; t.placeholder = 'Type CLEAR to confirm'; t.setAttribute('aria-label', 'Type CLEAR to confirm'); t.style.width = '100%'; box.append(t);
+    const go = el('button', 'btn danger', 'Remove all features'); go.type = 'button'; go.disabled = true;
+    const no = el('button', 'btn', 'Cancel'); no.type = 'button'; no.addEventListener('click', closeDlg);
+    t.addEventListener('input', () => { go.disabled = t.value.trim().toUpperCase() !== 'CLEAR'; });
+    go.addEventListener('click', async () => {
+      go.disabled = true;
+      try { if (n) await saveSnapshot('Before clearing · ' + todayIso(), false); } catch (e) { /* snapshot is best effort */ }
+      closeDlg(); pushHistory();
+      const ids = [];
+      items().forEach(i => { ids.push(i.id); if (base.has(i.id)) over[i.id] = Object.assign({}, over[i.id] || {}, { x: true }); else delete over[i.id]; });
+      logAct('roadmap', 'cleared all ' + ids.length + ' features from ' + rm.n);
+      render(); ids.forEach(id => persist(id)); toast('All features removed. Undo brings them back.');
+    });
+    const row = el('div', 'formrow'); row.append(go, no); box.append(row);
+  });
+}
 
 function init() {
   const chips = $('chips');
