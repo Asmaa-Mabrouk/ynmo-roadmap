@@ -491,6 +491,22 @@ svg.ovl path.dep { pointer-events: stroke; }
 .copt.dis { opacity: .45; cursor: not-allowed; }
 select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
+.ldg { position: fixed; inset: 0; z-index: 500; background: var(--bg, #faf9f6); display: grid; place-items: center; }
+.ldg[hidden] { display: none; }
+.ldgbox { display: grid; justify-items: center; gap: 16px; }
+.ldgring { position: relative; width: 84px; height: 84px; display: grid; place-items: center; }
+.ldgring::before { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 4px solid color-mix(in srgb, var(--brand) 18%, transparent); border-top-color: var(--brand); animation: spin .9s linear infinite; }
+.ldgring img { width: 46px; height: 46px; animation: pulse 1.6s ease-in-out infinite; }
+.ldgtxt { font-weight: 700; color: var(--slate); }
+.prog { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 450; overflow: hidden; background: transparent; }
+.prog::after { content: ""; position: absolute; inset-block: 0; width: 35%; background: linear-gradient(90deg, var(--brand), var(--brand-2)); animation: slide 1s ease-in-out infinite; }
+.btn.busy { position: relative; color: transparent !important; pointer-events: none; }
+.btn.busy::after { content: ""; position: absolute; width: 18px; height: 18px; inset: 0; margin: auto; border-radius: 50%; border: 2.5px solid rgba(255, 255, 255, .5); border-top-color: #fff; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { 50% { transform: scale(.88); opacity: .75; } }
+@keyframes slide { from { left: -35%; } to { left: 100%; } }
+@media (prefers-reduced-motion: reduce) { .ldgring::before, .ldgring img, .prog::after, .btn.busy::after { animation-duration: 3s; } }
+
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -801,7 +817,7 @@ const SAVE_TEXT = {
   readonly: 'View only. Ask the owner for edit access to change the plan.',
   error: 'No connection. Your change is kept here and will be saved automatically when you are back online.'
 };
-function setSave(k) { $('save').textContent = SAVE_TEXT[k] || ''; if (k === 'error') netMark(false); else if (k === 'saved') netMark(true); }
+function setSave(k) { $('save').textContent = SAVE_TEXT[k] || ''; if (k === 'error') netMark(false); else if (k === 'saved') netMark(true); progress(k === 'saving'); }
 const queue = {};
 function write(path, data, fields) {
   if (!db) { setSave('local'); return; }
@@ -1507,7 +1523,7 @@ function avPicker(sel) {
 }
 function bindSubmit(c, fn) {
   const msg = c.querySelector('.gerr'), go = c.querySelector('button[type=submit]');
-  c.addEventListener('submit', async e => { e.preventDefault(); go.disabled = true; msg.textContent = ''; msg.className = 'gerr'; try { await fn(msg); } catch (x) { msg.textContent = x.message || 'Something went wrong. Try again.'; } go.disabled = false; });
+  c.addEventListener('submit', async e => { e.preventDefault(); go.disabled = true; go.classList.add('busy'); msg.textContent = ''; msg.className = 'gerr'; try { await fn(msg); } catch (x) { msg.textContent = x.message || 'Something went wrong. Try again.'; } go.disabled = false; go.classList.remove('busy'); });
 }
 function linkBtn(t, fn) { const b = el('button', 'link', t); b.type = 'button'; b.addEventListener('click', fn); return b; }
 function showForgot(prefill) {
@@ -2212,10 +2228,11 @@ function softRender() { if (state.edit || dragging) { needRender = true; return;
 let started = false;
 function start() {
   if (started) return; started = true;
+  showLoading('Loading your roadmap…'); setTimeout(hideLoading, 10000);
   $('gate').hidden = true; $('shell').classList.remove('app-hidden');
   db = makeDb(); drawAvatar(); buildNav();
   try { wantRm = localStorage.getItem('ynmo-rm'); } catch (e) { wantRm = null; }
-  db.collection('items').onSnapshot(onSnap, () => setSave('error'));
+  db.collection('items').onSnapshot(s => { hideLoading(); onSnap(s); }, () => { hideLoading(); setSave('error'); });
   db.collection('daysoff').onSnapshot(s => { const n = {}; s.docs.forEach(d => { n[d.id] = d.data(); }); if (same(n, daysoff)) return; daysoff = n; softRender(); if (offOpen && !state.edit) buildOff(); }, () => {});
   db.collection('people').onSnapshot(s => { const n = {}; s.docs.forEach(d => { n[d.id] = d.data(); }); if (same(n, extras)) return; extras = n; fillPersons(); if (picker && picker.id) buildPicker(); softRender(); if (state.page === 'resources') renderResources(); if (state.page === 'vacations') renderVacations(); }, () => {});
   db.collection('roadmaps').onSnapshot(s => {
@@ -2231,7 +2248,8 @@ function start() {
   loadMembers(); setInterval(loadMembers, 20000);
   showPage((location.hash.match(/^#\/(\w+)/) || [])[1] || 'roadmap');
 }
-async function boot() {
+async function boot() { showLoading(); try { await bootInner(); } finally { if (!started) hideLoading(); } }
+async function bootInner() {
   const shm = /^#\/share\/([A-Za-z0-9]{16,})/.exec(location.hash);
   if (shm) { await bootShared(shm[1]); return; }
   const invited = /type=(invite|recovery)/.test(location.hash), confirmed = /type=signup/.test(location.hash);
@@ -2837,6 +2855,23 @@ document.addEventListener('keydown', e => {
 }, true);
 window.addEventListener('resize', () => cpopClose());
 window.addEventListener('scroll', e => { if (cpop && !cpop.contains(e.target)) cpopClose(); }, true);
+
+/* ---------- loading states ---------- */
+let ldgN = 0;
+function showLoading(msg) {
+  let l = $('ldg');
+  if (!l) {
+    l = el('div', 'ldg'); l.id = 'ldg'; l.setAttribute('role', 'status'); l.setAttribute('aria-live', 'polite');
+    const w = el('div', 'ldgbox'); const ring = el('div', 'ldgring'); const im = document.createElement('img'); im.src = LOGO; im.alt = ''; ring.append(im);
+    w.append(ring, el('div', 'ldgtxt')); l.append(w); document.body.append(l);
+  }
+  l.querySelector('.ldgtxt').textContent = msg || 'Loading…'; l.hidden = false;
+}
+function hideLoading() { const l = $('ldg'); if (l) l.hidden = true; }
+function progress(on) {
+  let b = $('prog'); if (!b) { b = el('div', 'prog'); b.id = 'prog'; b.hidden = true; document.body.append(b); }
+  b.hidden = !on;
+}
 
 function init() {
   const chips = $('chips');
