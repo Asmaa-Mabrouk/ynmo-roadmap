@@ -397,8 +397,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px
   :root { --rail: 0px; --top-h: 60px; }
   .rail { inset-block: auto 0; inset-inline: 0; width: auto; height: 62px; flex-direction: row; padding: 4px 6px; border-inline-end: 0; border-top: 1px solid var(--line); justify-content: center; }
   .rail .brand { display: none; }
-  .rail .nav { flex-direction: row; justify-content: space-around; padding: 0; }
-  .rail .nav button { flex: 1; padding: 6px 0 4px; }
+  .rail .nav { flex-direction: row; justify-content: flex-start; padding: 0; overflow-x: auto; scrollbar-width: none; }
+  .rail .nav button { flex: 1 0 auto; min-width: 58px; padding: 6px 4px 4px; }
   #shell main { padding-bottom: 76px; }
   .topbar { padding: 0 14px; }
   .page { padding-inline: 14px; }
@@ -420,6 +420,76 @@ body { margin: 0; }
 .badge.ok { color: #0a6446; }
 .tg { color: #454b68; }
 .bar .tg { opacity: 1; }
+
+/* ---------- v4: offline bar, dialogs, presence, dependencies, capacity, baselines ---------- */
+.offbar { position: sticky; top: 0; z-index: 60; margin-inline-start: var(--rail); min-height: 34px; padding: 7px 24px; background: #7a2e0e; color: #fff; font-weight: 700; font-size: 13px; text-align: center; }
+.offbar.sharebar { background: var(--brand-2); }
+body.offline .topbar, body.sharedview .topbar { top: 34px; }
+.xdlg { position: fixed; inset: 0; z-index: 200; background: rgba(20, 24, 50, .45); display: grid; place-items: center; padding: 16px; }
+.xbox { width: min(520px, 100%); max-height: 90vh; overflow: auto; box-shadow: 0 20px 60px rgba(10, 12, 30, .35); }
+.deplist { display: grid; gap: 2px; max-height: 42vh; overflow: auto; border: 1px solid var(--line); border-radius: 10px; padding: 6px; }
+.deprow { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: center; padding: 6px 8px; border-radius: 8px; cursor: pointer; }
+.deprow:hover { background: var(--surface-2); }
+.deprow small { grid-column: 2; color: var(--muted); }
+.pwmeter { display: flex; align-items: center; gap: 10px; margin-top: 6px; min-height: 18px; }
+.pwbar { display: flex; gap: 4px; flex: none; }
+.pwbar i { width: 34px; height: 6px; border-radius: 3px; background: var(--line); }
+.pwmeter[data-s="0"] .pwbar i.on, .pwmeter[data-s="1"] .pwbar i.on { background: #c0392b; }
+.pwmeter[data-s="2"] .pwbar i.on { background: #b76e00; }
+.pwmeter[data-s="3"] .pwbar i.on, .pwmeter[data-s="4"] .pwbar i.on { background: var(--brand); }
+.pwtxt { font-size: 12.5px; font-weight: 600; color: var(--ink); }
+.presence { display: flex; align-items: center; margin-inline-end: 6px; }
+.presence .pav { margin-inline-start: -8px; border: 2px solid var(--surface); border-radius: 50%; }
+.presence .pav:first-child { margin-inline-start: 0; }
+.pmore { font-size: 12px; font-weight: 700; margin-inline-start: 6px; color: var(--muted); }
+.bar.locked { outline: 2px dashed var(--brand-2); outline-offset: 1px; }
+.lockchip { position: absolute; top: -9px; inset-inline-end: 6px; background: var(--brand-2); color: #fff; font-size: 10.5px; font-weight: 700; padding: 0 6px; border-radius: 8px; z-index: 3; }
+.bar.ms { background: transparent !important; border: 0 !important; box-shadow: none !important; overflow: visible; padding: 0; min-height: 26px; justify-content: center; align-items: center; }
+.bar.ms::before { content: ""; width: 18px; height: 18px; transform: rotate(45deg); background: var(--c); border-radius: 3px; box-shadow: 0 0 0 2px var(--surface); }
+.bar.ms .nm2 { position: absolute; left: calc(50% + 14px); white-space: nowrap; color: var(--ink); display: block; -webkit-line-clamp: unset; overflow: visible; }
+.bar.ms .hd, .bar.ms .tg { display: none; }
+.bar.flash { animation: flash 1.6s ease; }
+@keyframes flash { 0%, 60% { box-shadow: 0 0 0 4px #c0392b; } 100% { box-shadow: none; } }
+.grid { position: relative; }
+svg.ovl { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 6; overflow: visible; }
+svg.ovl path.dep { pointer-events: stroke; }
+.depchip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 2px 10px; font-weight: 700; font-size: 12.5px; cursor: pointer; color: var(--ink); }
+.depchip.bad { border-color: #c0392b; color: #8f2418; background: #fdecea; }
+.capwrap { overflow: auto; }
+.captable { border-collapse: separate; border-spacing: 3px; min-width: 100%; }
+.captable th { font-size: 12px; font-weight: 700; text-align: center; color: var(--muted); padding: 2px 4px; white-space: nowrap; }
+.captable th.capname { text-align: start; color: var(--ink); font-size: 13.5px; position: sticky; inset-inline-start: 0; background: var(--surface); padding-inline-end: 12px; z-index: 1; }
+.capcell { text-align: center; font-weight: 700; font-size: 12.5px; min-width: 52px; height: 32px; border-radius: 8px; font-variant-numeric: tabular-nums; }
+.capcell.none { background: var(--surface-2); color: var(--muted); font-weight: 500; }
+.capcell.lo { background: #d9f2ea; color: #0b4d38; }
+.capcell.ok { background: #a8e0cb; color: #073b2a; }
+.capcell.x2 { background: #ffe0a3; color: #5c3900; }
+.capcell.x3 { background: #f6b3ab; color: #6b1409; }
+.capcell.lv { background: #e6e0f7; color: #3d2673; }
+.caplegend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--muted); }
+.caplegend span { display: inline-flex; align-items: center; gap: 6px; }
+.caplegend i { display: inline-block; width: 18px; height: 14px; min-width: 0; }
+.cmpbox { border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 8px; margin: 6px 0 12px; }
+.cmpsec h3 { font-size: .95rem; margin: 6px 0 2px; }
+.cmprow { font-size: 13.5px; padding: 3px 0; border-bottom: 1px dashed var(--line); }
+.badge.undone { background: #eee; color: #444; margin-inline-start: 6px; }
+.logrow .btn.undo { align-self: center; }
+.chk { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.viewer #daysoff, .viewer #ideasbtn, .viewer #undo, .viewer #add, .viewer #sharebtn, .viewer #addp, .viewer #reset,
+.shared #daysoff, .shared #ideasbtn, .shared #undo, .shared #add, .shared #sharebtn, .shared #addp, .shared #reset, .shared #rmsel, .shared #avbtn, .shared #ghostbtn, .shared #export { display: none !important; }
+.shared .rail { display: none; }
+.shared .topbar, .shared .offbar { margin-inline-start: 0; }
+.shared main { margin-inline-start: 0; }
+@media (max-width: 720px) { .offbar { margin-inline-start: 0; padding: 7px 12px; } }
+.cpop { position: fixed; z-index: 400; background: #fff; border-radius: 14px; box-shadow: 0 12px 34px rgba(35, 45, 90, .18), 0 1px 3px rgba(35, 45, 90, .08); padding: 6px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--brand-soft) transparent; animation: cpin .12s ease-out; }
+@keyframes cpin { from { opacity: 0; transform: translateY(-4px); } }
+.cpop::-webkit-scrollbar { width: 6px; } .cpop::-webkit-scrollbar-thumb { background: var(--brand-soft); border-radius: 6px; }
+.copt { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 10px; color: var(--slate); font-weight: 600; font-size: 14px; cursor: pointer; }
+.copt.act { background: #eef6f3; }
+.copt.sel { color: var(--brand); font-weight: 700; }
+.copt .ck { font-style: normal; font-weight: 800; }
+.copt.dis { opacity: .45; cursor: not-allowed; }
+select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
 </style>
 
@@ -489,6 +559,8 @@ body { margin: 0; }
 <section class="pg page" id="pg-roadmaps" hidden></section>
 <section class="pg page" id="pg-resources" hidden></section>
 <section class="pg page" id="pg-vacations" hidden></section>
+<section class="pg page" id="pg-capacity" hidden></section>
+<section class="pg page" id="pg-baselines" hidden></section>
 <section class="pg page" id="pg-log" hidden></section>
 <section class="pg page" id="pg-admin" hidden></section>
 </main>
@@ -637,7 +709,7 @@ const NOTES = [
   'Edits are shared: anyone with edit access sees your changes.'
 ];
 
-const FIELDS = ['t', 'sq', 'pr', 'd0', 'd1', 'st', 'n', 'res', 'c', 'ord'];
+const FIELDS = ['t', 'sq', 'pr', 'd0', 'd1', 'st', 'n', 'res', 'c', 'ord', 'dep', 'ms'];
 const base = new Map();
 LANES.forEach(l => {
   ITEMS.map((it, i) => ({ it: it, i: i })).filter(x => x.it.sq === l.k)
@@ -658,6 +730,7 @@ const byOrd = (a, b) => a.ord - b.ord || (a.id < b.id ? -1 : 1);
 function finish(it) {
   it.d0 = Math.max(0, Math.min(NDAYS - 1, Math.round(it.d0)));
   it.d1 = Math.max(it.d0, Math.min(NDAYS - 1, Math.round(it.d1)));
+  if (it.ms) it.d1 = it.d0;
   if (it.res === undefined) it.res = TEAMS[it.sq].pm.slice();
   return it;
 }
@@ -728,7 +801,7 @@ const SAVE_TEXT = {
   readonly: 'View only. Ask the owner for edit access to change the plan.',
   error: 'No connection. Your change is kept here and will be saved automatically when you are back online.'
 };
-function setSave(k) { $('save').textContent = SAVE_TEXT[k] || ''; }
+function setSave(k) { $('save').textContent = SAVE_TEXT[k] || ''; if (k === 'error') netMark(false); else if (k === 'saved') netMark(true); }
 const queue = {};
 function write(path, data, fields) {
   if (!db) { setSave('local'); return; }
@@ -755,9 +828,11 @@ function pushHistory() { curEntry = { snap: JSON.stringify(over), ids: new Set()
 function commit(id, fields) {
   const prev = items().find(i => i.id === id);
   pushHistory();
-  over[id] = Object.assign({}, over[id] || {}, fields);
   const d = describe(prev, fields);
-  if (d) logAct('edit', '"' + (prev ? prev.t : id) + '": ' + d);
+  const raw0 = over[id] || {}, uset = {}, unset = [];
+  Object.keys(fields).forEach(k => { if (raw0[k] === undefined) unset.push(k); else uset[k] = clone(raw0[k]); });
+  over[id] = Object.assign({}, over[id] || {}, fields);
+  if (d) logAct('edit', '"' + (prev ? prev.t : id) + '": ' + d, { id: id, set: uset, unset: unset, after: clone(fields) });
   state.refocus = document.activeElement && document.activeElement.id;
   render(); persist(id, fields);
 }
@@ -774,7 +849,7 @@ function undo() {
 function removeItem(id) {
   const it0 = items().find(i => i.id === id);
   pushHistory();
-  if (it0) logAct('edit', 'removed "' + it0.t + '" from ' + curRm().n);
+  if (it0) logAct('edit', 'removed "' + it0.t + '" from ' + curRm().n, { id: id, whole: over[id] ? clone(over[id]) : null });
   if (base.has(id)) over[id] = Object.assign({}, over[id] || {}, { x: true }); else delete over[id];
   render(); persist(id);
 }
@@ -1046,7 +1121,7 @@ function filtersActive() { return state.sq.size < LANES.length || state.status !
 function laneOf(k) { return LANES.find(l => l.k === k) || LANES[0]; }
 function buildBar(it, owner) {
   const l = laneOf(it.sq), col = it.c ? 'var(--' + it.c + ')' : l.c;
-  const bar = el('div', 'bar st-' + it.st + (canEdit() ? '' : ' ro'));
+  const bar = el('div', 'bar st-' + it.st + (canEdit() ? '' : ' ro') + (it.ms ? ' ms' : ''));
   bar.style.setProperty('--c', col); bar.dataset.person = owner || ''; bar.dataset.id = it.id;
   bar.tabIndex = 0; bar.setAttribute('role', 'button'); 
   bar.setAttribute('aria-label', it.t + ', ' + dlabel(it.d0) + ' to ' + dlabel(it.d1) + ', ' + STATUS[it.st]);
@@ -1116,13 +1191,14 @@ function render() {
   else if (state.refocusBar) { const b = [...g.querySelectorAll('.bar')].find(x => x.dataset.id === state.refocusBar); state.refocusBar = null; if (b) b.focus(); }
   else if (state.refocus) { const f = $(state.refocus); if (f) f.focus(); }
   state.refocus = null;
+  afterRender();
 }
 function pack(its) {
   const ends = [], out = [];
   its.slice().sort((a, b) => a.d0 - b.d0 || a.d1 - b.d1 || a.ord - b.ord).forEach(it => {
     let i = ends.findIndex(e => e < it.d0);
     if (i < 0) { i = ends.length; ends.push(-1); }
-    ends[i] = it.d1; out.push({ it: it, lane: i });
+    ends[i] = it.ms ? it.d1 + 5 : it.d1; out.push({ it: it, lane: i });
   });
   return { out: out, n: Math.max(1, ends.length) };
 }
@@ -1192,9 +1268,9 @@ function renderPeople(g, put, list) {
 
 
 /* ---------- inline edit, context menu, people ---------- */
-function startEdit(it, owner) { if (!canEdit()) return; closeCtx(); state.edit = it.id + '|' + (owner || ''); state.needFocus = true; render(); }
+function startEdit(it, owner) { if (!canEdit() || !lockCheck(it)) return; closeCtx(); state.edit = it.id + '|' + (owner || ''); state.needFocus = true; render(); trackPres(); }
 function finishEdit(it, val, ok) {
-  state.edit = null;
+  state.edit = null; trackPres();
   const v = (val || '').replace(/\s+/g, ' ').trim();
   if (ok && v && v !== it.t) commit(it.id, { t: v }); else render();
 }
@@ -1212,14 +1288,14 @@ function addAt(person, k) {
   k = Math.max(0, Math.min(NDAYS - 1, k));
   over[id] = { custom: true, rm: state.rm, t: 'New feature', sq: sq, pr: sq === 'ai' ? ['tifli'] : [sq], d0: k, d1: Math.min(NDAYS - 1, k + 6), st: 'planned', n: '', res: none ? [] : [person], ord: all.length ? Math.max.apply(null, all.map(i => i.ord)) + 1 : 0 };
   state.edit = id + '|' + (none ? '__none' : person); state.needFocus = true;
-  logAct('edit', 'added a new bar' + (none ? '' : ' for ' + person) + ' on ' + curRm().n);
+  logAct('edit', 'added a new bar' + (none ? '' : ' for ' + person) + ' on ' + curRm().n, { id: id, whole: null }); trackPres();
   render(); persist(id);
 }
 function duplicate(it) {
   pushHistory();
   const id = 'c' + Date.now().toString(36);
   over[id] = { custom: true, rm: state.rm, t: it.t + ' (copy)', sq: it.sq, pr: it.pr.slice(), d0: it.d0, d1: it.d1, st: it.st, n: it.n || '', res: it.res.slice(), c: it.c || null, ord: it.ord + 0.5 };
-  logAct('edit', 'duplicated "' + it.t + '"');
+  logAct('edit', 'duplicated "' + it.t + '"', { id: id, whole: null });
   render(); persist(id);
 }
 function dayAt(x) { const w = $('grid').querySelector('.wk'); if (!w) return 0; const r = w.getBoundingClientRect(); return Math.floor((x - r.left) / r.width); }
@@ -1250,6 +1326,8 @@ function barMenu(it, owner, x, y) {
     c.append(dr);
     c.append(el('div', 'msep'));
     mi(c, 'Assign people…' + (it.res.length ? ' (' + it.res.length + ')' : ''), b => openPicker(it.id, b));
+    mi(c, it.ms ? 'Make regular bar' : 'Make milestone', () => toggleMilestone(it));
+    mi(c, 'Depends on…' + (depsOf(it).length ? ' (' + depsOf(it).length + ')' : ''), () => openDeps(it));
     mi(c, 'Duplicate', () => duplicate(it));
     mi(c, 'Delete', () => removeItem(it.id), 'danger');
   });
@@ -1324,7 +1402,8 @@ function makeDb() {
   const load = async t => {
     let q = sb.from(t).select('id,data');
     if (t === 'activity') q = q.order('updated_at', { ascending: false }).limit(300);
-    const r = await q; if (r.error) throw err(r.error);
+    let r; try { r = await q; } catch (e) { netMark(false); throw e; }
+    if (r.error) throw err(r.error); netMark(true);
     return { docs: r.data.map(x => ({ id: x.id, data: () => x.data || {} })) };
   };
   return {
@@ -1394,7 +1473,7 @@ function avatarEl(id, size, name) {
 }
 
 /* ---------- gate screens ---------- */
-const JOBS = ['Product Manager', 'Engineer', 'QA', 'UX / Design', 'Other'];
+const JOBS = ['Product Manager', 'Engineer', 'QA', 'UX / Design', 'CEO', 'CTO', 'Executive', 'Other'];
 function gateCard(title, sub) {
   const g = $('gate'); g.hidden = false; g.textContent = ''; g.setAttribute('role', 'main');
   const c = el('form', 'gcard card'); c.noValidate = false;
@@ -1468,6 +1547,7 @@ function showSignup() {
   const two = el('div', 'two'); two.append(nm.label, jb.label);
   const msg = el('div', 'gerr'); msg.setAttribute('aria-live', 'polite');
   const go = el('button', 'btn primary', 'Create account'); go.type = 'submit';
+  pwMeter(pw.input, pw.label);
   c.append(two, em.label, pw.label, pick, msg, go, linkBtn('I already have an account', showLogin));
   bindSubmit(c, async m => {
     if (pw.input.value.length < 8) throw new Error('Use at least 8 characters.');
@@ -1500,6 +1580,7 @@ function showSetPw() {
   const c = gateCard('Set your password');
   const p1 = gField('p1', 'New password (8 characters or more)', 'password', 'new-password'), p2 = gField('p2', 'Repeat password', 'password', 'new-password');
   const msg = el('div', 'gerr'); const go = el('button', 'btn primary', 'Save and continue'); go.type = 'submit';
+  pwMeter(p1.input, p1.label);
   c.append(p1.label, p2.label, msg, go);
   bindSubmit(c, async () => {
     if (p1.input.value.length < 8) throw new Error('Use at least 8 characters.');
@@ -1552,13 +1633,14 @@ function drawAvatar() {
   w.append(avatarEl(me.avatar, 44, me.name), t); m.append(w);
   const e = el('button', 'mi', 'Edit profile'); e.type = 'button'; e.addEventListener('click', () => { m.hidden = true; b.setAttribute('aria-expanded', 'false'); openProfileEdit(); });
   const o = el('button', 'mi', 'Log out'); o.type = 'button'; o.addEventListener('click', doLogout);
-  m.append(e, o);
+  const ev = el('button', 'mi', 'Sign out on all devices'); ev.type = 'button'; ev.addEventListener('click', signOutEverywhere);
+  m.append(e, o, ev);
 }
 
 /* ---------- shared state for pages ---------- */
 let me = null, roadmaps = {}, ideas = {}, vacs = {}, logs = [], members = [], wantRm = null, vacNotice = null, ideaUI = { st: 'open', q: '' }, drawerOpen = false;
 const H2 = { id: H2_ID, n: 'H2 2026', a: '2026-10-01', b: '2027-01-31', kind: 'H2', builtin: true };
-const PAGES = [['roadmap', 'Roadmap'], ['ideas', 'Ideas'], ['roadmaps', 'Roadmaps'], ['resources', 'Resources'], ['vacations', 'Vacations'], ['log', 'Log'], ['admin', 'Approvals']];
+const PAGES = [['roadmap', 'Roadmap'], ['ideas', 'Ideas'], ['roadmaps', 'Roadmaps'], ['resources', 'Resources'], ['vacations', 'Vacations'], ['capacity', 'Capacity'], ['baselines', 'Baselines'], ['log', 'Log'], ['admin', 'Approvals']];
 const DOMAINS = ['PM', 'Mobile', 'Backend', 'Frontend', 'Full-stack', 'Engineering', 'QA', 'UX / Design', 'AI / ML', 'Other'];
 const VTYPES = ['Annual leave', 'Training', 'Public holiday', 'Other'];
 const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'x';
@@ -1578,10 +1660,11 @@ function pageHead(t, sub, extra) { const h = el('div', 'pghead'); const d = el('
 function toast(t) { $('save').textContent = t; }
 
 /* ---------- activity log ---------- */
-function logAct(act, sum) {
+function logAct(act, sum, undo) {
   if (!me || !sum) return;
   const id = 'l' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const data = { at: new Date().toISOString(), uid: me.id, name: me.name || me.email, av: me.avatar || '', act: act, sum: sum, rm: curRm().n };
+  if (undo) data.u = undo;
   logs.unshift({ id: id, data: data }); if (state.page === 'log') renderLog();
   sb.from('activity').insert({ id: id, data: data }).then(() => {}, () => {});
 }
@@ -1595,6 +1678,8 @@ function describe(prev, f) {
   if (f.c !== undefined && f.c !== (prev.c || null)) parts.push('color changed');
   if (f.n !== undefined && f.n !== (prev.n || '')) parts.push('notes edited');
   if (f.sq && f.sq !== prev.sq) parts.push('product: ' + laneOf(f.sq).n);
+  if (f.dep) parts.push('depends on ' + (f.dep.length ? f.dep.length + ' bar' + (f.dep.length === 1 ? '' : 's') : 'nothing'));
+  if (f.ms !== undefined && !!f.ms !== !!prev.ms) parts.push(f.ms ? 'made a milestone' : 'made a regular bar');
   return parts.join('; ');
 }
 
@@ -1918,15 +2003,17 @@ function renderAdmin() {
     pend.forEach(m => {
       const row = el('div', 'formrow'); row.style.alignItems = 'center';
       const who = el('div'); who.append(el('b', '', m.name || m.email), el('div', 'hint', (m.role ? m.role + ' · ' : '') + (m.email || '')));
-      const ok = el('button', 'btn primary sm', 'Approve'); ok.type = 'button'; ok.style.marginInlineStart = 'auto';
+      const acc = selOf([['editor', 'Editor'], ['viewer', 'Viewer']], 'editor'); acc.style.marginInlineStart = 'auto'; acc.setAttribute('aria-label', 'Access for ' + (m.name || m.email));
+      const ok = el('button', 'btn primary sm', 'Approve'); ok.type = 'button';
       ok.addEventListener('click', async () => {
-        ok.disabled = true; const r = await sb.from('profiles').update({ approved: true }).eq('id', m.id);
+        ok.disabled = true; const patch = acc.value === 'viewer' ? { approved: true, access: 'viewer' } : { approved: true }; const r = await sb.from('profiles').update(patch).eq('id', m.id);
         if (r.error) { ok.disabled = false; toast('Could not approve: ' + r.error.message); return; }
-        logAct('access', 'approved ' + (m.name || m.email)); toast('Approved. ' + (m.name || m.email) + ' can now open the tool.'); await loadMembers();
+        logAct('access', 'approved ' + (m.name || m.email) + (acc.value === 'viewer' ? ' as a viewer' : '')); toast('Approved. ' + (m.name || m.email) + ' can now open the tool.'); await loadMembers();
       });
-      row.append(avatarEl(m.avatar, 36, m.name), who, ok); ac.append(row);
+      row.append(avatarEl(m.avatar, 36, m.name), who, acc, ok); ac.append(row);
     });
   root.append(ac);
+  renderAccess(root);
 }
 
 /* ---------- vacations ---------- */
@@ -2063,31 +2150,40 @@ function renderVacations(force) {
 let logUI = { u: 'all', a: 'all' };
 function renderLog() {
   const root = $('pg-log'); root.textContent = '';
-  const users = [...new Set(logs.map(l => l.data.name))].sort();
+  const every = allLogs(), done = undoneSet();
+  const users = [...new Set(every.map(l => l.data.name))].sort();
   const su = selOf([['all', 'Everyone']].concat(users.map(u => [u, u])), logUI.u), sa = selOf([['all', 'All changes'], ['edit', 'Edits'], ['roadmap', 'Roadmaps'], ['idea', 'Ideas'], ['resource', 'Resources'], ['vacation', 'Vacations'], ['access', 'Access']], logUI.a);
   su.setAttribute('aria-label', 'Filter by person'); sa.setAttribute('aria-label', 'Filter by type of change'); su.addEventListener('change', () => { logUI.u = su.value; renderLog(); }); sa.addEventListener('change', () => { logUI.a = sa.value; renderLog(); });
-  const tools = el('div', 'formrow'); tools.append(su, sa);
-  root.append(pageHead('Log', 'Who changed what, and when. Newest first. Times show in your time zone.', tools));
+  const rows = every.filter(l => (logUI.u === 'all' || l.data.name === logUI.u) && (logUI.a === 'all' || l.data.act === logUI.a));
+  const ex = el('button', 'btn', 'Export CSV'); ex.type = 'button'; ex.id = 'logexport'; ex.addEventListener('click', () => exportLog(rows.map(l => l.data)));
+  const tools = el('div', 'formrow'); tools.append(su, sa, ex);
+  root.append(pageHead('Log', 'Who changed what, and when. Newest first. Times show in your time zone. Undo puts an edit back the way it was.', tools));
   const card = el('div', 'card'); let day = '';
-  const rows = logs.map(l => l.data).filter(d => (logUI.u === 'all' || d.name === logUI.u) && (logUI.a === 'all' || d.act === logUI.a));
   if (!rows.length) card.append(el('div', 'hint', 'No changes recorded yet.'));
-  rows.forEach(d => {
+  rows.forEach(l => {
+    const d = l.data;
     const dd = new Date(d.at).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     if (dd !== day) { day = dd; card.append(el('div', 'logday', dd)); }
     const r = el('div', 'logrow'), b = el('div', 'lb');
     const nm = el('b', '', d.name); b.append(nm, document.createTextNode(' '), el('span', 'badge', d.act), document.createTextNode(' ' + d.sum));
+    if (done.has(l.id)) b.append(el('span', 'badge undone', 'undone'));
     if (d.rm) b.append(el('div', 'hint', d.rm));
     const tm = el('div', 'lt', ago(d.at)); tm.title = clock(d.at);
-    r.append(avatarEl(d.av, 34, d.name), b, tm); card.append(r);
+    r.append(avatarEl(d.av, 34, d.name), b, tm);
+    if (canUndoRow(l, done)) { const u = el('button', 'btn sm undo', 'Undo'); u.type = 'button'; u.setAttribute('aria-label', 'Undo: ' + d.sum); u.addEventListener('click', () => undoFromLog(l)); r.append(u); }
+    card.append(r);
   });
+  if (logsMore) { const m = el('button', 'btn', logsBusy ? 'Loading…' : 'Load older entries'); m.type = 'button'; m.id = 'logmore'; m.disabled = logsBusy; m.addEventListener('click', loadOlderLogs); card.append(m); }
+  else if (every.length > ACTIVE_LOG_PAGE) card.append(el('div', 'hint', 'That is everything.'));
   root.append(card);
 }
 
 /* ---------- shell: navigation and start ---------- */
 function refreshPage() { renderPage(state.page); }
-function renderPage(p) { ({ roadmap: render, ideas: () => renderIdeas(true), roadmaps: renderRoadmaps, resources: renderResources, admin: () => { loadMembers(); renderAdmin(); }, vacations: () => renderVacations(true), log: renderLog })[p](); }
+function renderPage(p) { ({ roadmap: render, ideas: () => renderIdeas(true), roadmaps: renderRoadmaps, resources: renderResources, admin: () => { loadMembers(); renderAdmin(); }, vacations: () => renderVacations(true), log: renderLog, capacity: renderCapacity, baselines: renderBaselines })[p](); }
+const VIEWER_PAGES = ['roadmap', 'capacity', 'baselines', 'log'];
 function showPage(p) {
-  if (!PAGES.some(x => x[0] === p) || (p === 'admin' && !(me && me.is_admin))) p = 'roadmap';
+  if (!PAGES.some(x => x[0] === p) || (p === 'admin' && !(me && me.is_admin)) || (isViewer() && !VIEWER_PAGES.includes(p))) p = 'roadmap';
   state.page = p; closeCtx(); closePicker();
   PAGES.forEach(x => { $('pg-' + x[0]).hidden = x[0] !== p; });
   document.querySelectorAll('#nav button').forEach(b => { if (b.dataset.p === p) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
@@ -2102,11 +2198,13 @@ const NAV_ICONS = {
   resources: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 5.2a3.2 3.2 0 0 1 0 5.6M18 14.3c1.8.8 3 2.6 3 4.7" /></svg>',
   vacations: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M8 3v4M16 3v4M3.5 10h17M9 15l2 2 4-4" /></svg>',
   admin: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.4 2.9 8.3 7 10 4.1-1.7 7-5.6 7-10V6l-7-3z" /><path d="m9 12 2 2 4-4" /></svg>',
+  capacity: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>',
+  baselines: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4v16M5 6h11l-2 3.5L16 13H5" /></svg>',
   log: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>'
 };
 function buildNav() {
   const n = $('nav'); n.textContent = '';
-  PAGES.filter(x => x[0] !== 'admin' || (me && me.is_admin)).forEach(x => { const b = el('button', ''); b.type = 'button'; b.dataset.p = x[0]; b.title = x[1]; b.setAttribute('aria-label', x[1]); b.insertAdjacentHTML('beforeend', NAV_ICONS[x[0]] || ''); b.append(el('span', 'lbl', x[1])); if (x[0] === 'admin') { const d = el('span', 'dot', '0'); d.hidden = true; b.append(d); } b.addEventListener('click', () => showPage(x[0])); n.append(b); });
+  PAGES.filter(x => (x[0] !== 'admin' || (me && me.is_admin)) && (!isViewer() || VIEWER_PAGES.includes(x[0]))).forEach(x => { const b = el('button', ''); b.type = 'button'; b.dataset.p = x[0]; b.title = x[1]; b.setAttribute('aria-label', x[1]); b.insertAdjacentHTML('beforeend', NAV_ICONS[x[0]] || ''); b.append(el('span', 'lbl', x[1])); if (x[0] === 'admin') { const d = el('span', 'dot', '0'); d.hidden = true; b.append(d); } b.addEventListener('click', () => showPage(x[0])); n.append(b); });
 }
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 let needRender = false;
@@ -2128,12 +2226,14 @@ function start() {
   }, () => {});
   db.collection('ideas').onSnapshot(s => { const n = {}; s.docs.forEach(d => { n[d.id] = d.data(); }); if (same(n, ideas)) return; ideas = n; renderDrawer(); if (state.page === 'ideas') renderIdeas(); if (state.page === 'roadmaps') renderRoadmaps(); }, () => {});
   db.collection('vacations').onSnapshot(s => { const n = {}; s.docs.forEach(d => { n[d.id] = d.data(); }); if (same(n, vacs)) return; vacs = n; softRender(); if (state.page === 'vacations') renderVacations(); }, () => {});
-  db.collection('activity').onSnapshot(s => { logs = s.docs.map(d => ({ id: d.id, data: d.data() })).sort((a, b) => a.data.at < b.data.at ? 1 : -1); if (state.page === 'log') renderLog(); }, () => {});
-  setSave('ready'); fillRm();
+  db.collection('activity').onSnapshot(s => { logs = s.docs.map(d => ({ id: d.id, data: d.data() })).sort((a, b) => a.data.at < b.data.at ? 1 : -1); if (!logsOld.length) logsMore = s.docs.length >= ACTIVE_LOG_PAGE; if (state.page === 'log') renderLog(); }, () => {});
+  setSave('ready'); fillRm(); startExtras();
   loadMembers(); setInterval(loadMembers, 20000);
   showPage((location.hash.match(/^#\/(\w+)/) || [])[1] || 'roadmap');
 }
 async function boot() {
+  const shm = /^#\/share\/([A-Za-z0-9]{16,})/.exec(location.hash);
+  if (shm) { await bootShared(shm[1]); return; }
   const invited = /type=(invite|recovery)/.test(location.hash), confirmed = /type=signup/.test(location.hash);
   let sess = null;
   try { sess = (await sb.auth.getSession()).data.session; } catch (e) { /* offline */ }
@@ -2141,6 +2241,602 @@ async function boot() {
   if (confirmed) { try { window.history.replaceState(null, '', location.pathname); } catch (e) { /* ignore */ } }
   if (sess && invited) showSetPw(); else if (sess) { await afterAuth(sess); if (confirmed && !started) { const n = document.querySelector('#gate .meta'); if (n) n.textContent = 'Email confirmed. ' + n.textContent; } } else showLogin();
 }
+
+/* ================= v4 extras: network banner, session safety, presence, dependencies, capacity, baselines, sharing ================= */
+let SHARE = false, presCh = null, pres = {}, shares = {}, baselines = {}, logsOld = [], logsMore = false, logsBusy = false;
+const ACTIVE_LOG_PAGE = 300;
+const canWrite = () => !readonly && !SHARE;
+const isViewer = () => !!(me && me.access === 'viewer' && !me.is_admin);
+
+/* ---------- generic dialog ---------- */
+let dlgPrev = null;
+function closeDlg() { const d = $('xdlg'); if (d) { if (d._esc) document.removeEventListener('keydown', d._esc, true); d.remove(); } if (dlgPrev && dlgPrev.focus) { try { dlgPrev.focus(); } catch (e) { /* gone */ } } dlgPrev = null; }
+function openDlg(title, build, opts) {
+  closeDlg(); dlgPrev = document.activeElement;
+  const ov = el('div', 'xdlg'); ov.id = 'xdlg';
+  const box = el('div', 'xbox card'); box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true'); box.setAttribute('aria-label', title);
+  const h = el('h2', '', title); box.append(h); build(box);
+  ov.append(box); document.body.append(ov);
+  ov.addEventListener('pointerdown', e => { if (e.target === ov && !(opts && opts.sticky)) closeDlg(); });
+  ov._esc = e => { if (e.key === 'Escape' && !(opts && opts.sticky) && $('xdlg') === ov) { e.stopPropagation(); closeDlg(); } };
+  document.addEventListener('keydown', ov._esc, true);
+  ov.addEventListener('keydown', e => {
+    if (e.key === 'Tab') { const f = [...box.querySelectorAll('button:not([disabled]),input,select,textarea,a[href]')].filter(x => !x.hidden); if (!f.length) return; const a = f[0], z = f[f.length - 1]; if (e.shiftKey && document.activeElement === a) { e.preventDefault(); z.focus(); } else if (!e.shiftKey && document.activeElement === z) { e.preventDefault(); a.focus(); } }
+  });
+  const f = box.querySelector('input,select,textarea,button:not(.link)'); if (f) f.focus();
+  return box;
+}
+
+/* ---------- 8. offline banner ---------- */
+let netBad = false, netTimer = 0;
+function netBar() {
+  let b = $('offbar');
+  if (!b) {
+    b = el('div', 'offbar'); b.id = 'offbar'; b.setAttribute('role', 'status'); b.hidden = true;
+    const sh = $('shell'); sh.insertBefore(b, sh.firstChild);
+  }
+  return b;
+}
+function netShow() {
+  const bad = netBad || (typeof navigator !== 'undefined' && navigator.onLine === false), b = netBar();
+  b.hidden = !bad; document.body.classList.toggle('offline', bad);
+  if (bad) b.textContent = 'You are offline. Changes stay on this device and save by themselves when the connection is back. Others will not see them until then.';
+  clearTimeout(netTimer);
+  if (bad) netTimer = setTimeout(netProbe, 6000);
+}
+function netMark(ok) { const was = netBad; netBad = !ok; if (was !== netBad) netShow(); }
+async function netProbe() {
+  if (!sb || SHARE) return;
+  try { const r = await sb.from('profiles').select('id').limit(1); if (r && r.error && !r.data) throw new Error('x'); netBad = false; } catch (e) { netBad = true; }
+  netShow();
+}
+window.addEventListener('offline', () => netShow());
+window.addEventListener('online', () => { netBad = false; netShow(); netProbe(); });
+
+/* ---------- 7. sign-in hardening ---------- */
+function pwScore(v) {
+  let s = 0; const tips = [];
+  if (v.length >= 8) s++; else tips.push('use 8 or more characters');
+  if (v.length >= 12) s++; else if (v.length >= 8) tips.push('12+ characters is stronger');
+  if (/[a-z]/.test(v) && /[A-Z]/.test(v)) s++; else tips.push('mix upper and lower case');
+  if (/\d/.test(v)) s++; else tips.push('add a number');
+  if (/[^A-Za-z0-9]/.test(v)) s++; else tips.push('add a symbol');
+  if (/^(password|12345678|qwerty|11111111|abc12345)/i.test(v)) { s = Math.min(s, 1); tips.unshift('avoid common passwords'); }
+  return { s: Math.min(4, Math.max(0, s - (v.length < 8 ? 1 : 0))), tips: tips };
+}
+function pwMeter(input, host) {
+  const w = el('div', 'pwmeter'); w.setAttribute('aria-live', 'polite');
+  const bar = el('div', 'pwbar'); for (let i = 0; i < 4; i++) bar.append(el('i'));
+  const txt = el('span', 'pwtxt'); w.append(bar, txt); host.append(w);
+  const upd = () => {
+    const v = input.value; if (!v) { w.dataset.s = ''; txt.textContent = ''; bar.querySelectorAll('i').forEach(i => i.className = ''); return; }
+    const r = pwScore(v), lab = ['Weak', 'Weak', 'Okay', 'Good', 'Strong'][r.s];
+    w.dataset.s = String(r.s); bar.querySelectorAll('i').forEach((i, n) => { i.className = n < Math.max(1, r.s) ? 'on' : ''; });
+    txt.textContent = lab + (r.tips.length && r.s < 4 ? ' · ' + r.tips[0] : '');
+  };
+  input.addEventListener('input', upd); return upd;
+}
+const IDLE_MS = () => window.__idleMs || 30 * 60 * 1000, IDLE_WARN = () => window.__idleWarn || 60 * 1000;
+let lastAct = Date.now(), idleT = 0, idleShown = false, idleTick = 0;
+function bumpAct() {
+  const n = Date.now(); if (n - lastAct < 1500) return; lastAct = n;
+  try { localStorage.setItem('ynmo-act', String(n)); } catch (e) { /* storage unavailable */ }
+}
+function startIdle() {
+  ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(ev => document.addEventListener(ev, () => { if (!idleShown) bumpAct(); }, { passive: true, capture: true }));
+  window.addEventListener('storage', e => { if (e.key === 'ynmo-act' && !idleShown) lastAct = Math.max(lastAct, +e.newValue || 0); });
+  clearInterval(idleT);
+  idleT = setInterval(() => {
+    let la = lastAct; try { la = Math.max(la, +localStorage.getItem('ynmo-act') || 0); } catch (e) { /* storage unavailable */ }
+    const idle = Date.now() - la;
+    if (idle >= IDLE_MS()) { clearInterval(idleT); doLogout(); return; }
+    if (idle >= IDLE_MS() - IDLE_WARN() && !idleShown) idleWarn(la);
+  }, window.__idleMs ? 300 : 5000);
+}
+function idleWarn(la) {
+  idleShown = true;
+  const box = openDlg('Still there?', b => {
+    const p = el('p', 'hint'); p.id = 'idlemsg'; b.append(p);
+    const ok = el('button', 'btn primary', 'Stay signed in'); ok.type = 'button';
+    const out = el('button', 'btn', 'Sign out now'); out.type = 'button';
+    ok.addEventListener('click', () => { idleShown = false; lastAct = Date.now(); try { localStorage.setItem('ynmo-act', String(lastAct)); } catch (e) { /* storage unavailable */ } closeDlg(); clearInterval(idleTick); });
+    out.addEventListener('click', doLogout);
+    const row = el('div', 'formrow'); row.append(ok, out); b.append(row);
+  }, { sticky: true });
+  const end = la + IDLE_MS();
+  clearInterval(idleTick);
+  idleTick = setInterval(() => { const s = Math.max(0, Math.ceil((end - Date.now()) / 1000)); const m = $('idlemsg'); if (m) m.textContent = 'You will be signed out in ' + s + ' seconds because there was no activity. Your saved work is safe.'; }, 250);
+}
+async function signOutEverywhere() {
+  try { await sb.auth.signOut({ scope: 'global' }); } catch (e) { /* offline: local sign-out still happens */ try { await sb.auth.signOut(); } catch (x) { /* ignore */ } }
+  location.reload();
+}
+
+/* ---------- 2. presence + soft lock ---------- */
+let presT = 0, lockOverride = null, lockAt = 0;
+function myPres() { return { uid: me.id, name: me.name || me.email, av: me.avatar || '', page: state.page, rm: state.rm, edit: state.edit ? state.edit.split('|')[0] : null }; }
+function trackPres() {
+  clearTimeout(presT);
+  presT = setTimeout(() => { if (presCh && me) { try { presCh.track(myPres()); } catch (e) { /* not connected */ } } }, 120);
+}
+function startPresence() {
+  if (presCh || !sb.channel) return;
+  try {
+    presCh = sb.channel('ynmo-presence', { config: { presence: { key: me.id } } });
+    presCh.on('presence', { event: 'sync' }, () => { try { pres = presCh.presenceState() || {}; } catch (e) { pres = {}; } drawPresence(); decorateLocks(); });
+    presCh.subscribe(s => { if (s === 'SUBSCRIBED') trackPres(); });
+  } catch (e) { presCh = null; }
+}
+function others() { const out = []; Object.keys(pres).forEach(k => { if (k === (me && me.id)) return; const m = (pres[k] || [])[0]; if (m) out.push(m); }); return out; }
+function editorOf(id) { const o = others().find(m => m.edit === id); return o || null; }
+function drawPresence() {
+  let box = $('presence');
+  if (!box) { box = el('div', 'presence'); box.id = 'presence'; box.setAttribute('aria-label', 'People online'); const av = $('avbtn'); av.parentNode.insertBefore(box, av); }
+  box.textContent = '';
+  const o = others(); box.hidden = !o.length;
+  o.slice(0, 4).forEach(m => { const a = avatarEl(m.av, 28, m.name); a.title = m.name + (m.edit ? ' · editing' : ' · online') + ' · ' + (m.page || ''); a.classList.add('pav'); box.append(a); });
+  if (o.length > 4) box.append(el('span', 'pmore', '+' + (o.length - 4)));
+  box.setAttribute('role', 'group'); box.setAttribute('aria-label', o.length + (o.length === 1 ? ' other person online: ' : ' others online: ') + o.map(m => m.name).join(', '));
+}
+function decorateLocks() {
+  const g = $('grid'); if (!g) return;
+  g.querySelectorAll('.bar.locked').forEach(b => { b.classList.remove('locked'); const t = b.querySelector('.lockchip'); if (t) t.remove(); });
+  others().forEach(m => {
+    if (!m.edit) return;
+    g.querySelectorAll('.bar').forEach(b => { if (b.dataset.id === m.edit && !b.classList.contains('editing')) { b.classList.add('locked'); b.append(el('span', 'lockchip', '✎ ' + String(m.name).split(' ')[0])); b.title += ' · ' + m.name + ' is editing'; } });
+  });
+}
+function lockCheck(it) {
+  const o = editorOf(it.id); if (!o) return true;
+  if (lockOverride === it.id && Date.now() - lockAt < 6000) { lockOverride = null; return true; }
+  lockOverride = it.id; lockAt = Date.now();
+  toast(o.name + ' is editing "' + it.t + '" right now. Try again within 6 seconds to edit anyway.');
+  return false;
+}
+
+/* ---------- 3. milestones and dependencies ---------- */
+function depsOf(it) { return Array.isArray(it.dep) ? it.dep : []; }
+function dependents(id, all) { const out = new Set(), walk = x => all.forEach(i => { if (depsOf(i).includes(x) && !out.has(i.id)) { out.add(i.id); walk(i.id); } }); walk(id); return out; }
+function depIssues(all) {
+  const byId = new Map(all.map(i => [i.id, i])), out = [];
+  all.forEach(s => depsOf(s).forEach(pid => {
+    const p = byId.get(pid); if (!p) return;
+    const gap = s.d0 - p.d1 - 1;
+    out.push({ from: p, to: s, gap: gap, bad: s.d0 <= p.d1 });
+  }));
+  return out;
+}
+function openDeps(it) {
+  const all = items(), block = dependents(it.id, all), cur = new Set(depsOf(it));
+  const cands = all.filter(i => i.id !== it.id && !block.has(i.id)).sort((a, b) => a.d0 - b.d0 || a.t.localeCompare(b.t));
+  openDlg('Depends on… ' + it.t, box => {
+    box.append(el('p', 'hint', 'This bar should start after the ones you tick have finished. An arrow is drawn, and it turns red if the dates clash.'));
+    const q = el('input'); q.type = 'search'; q.placeholder = 'Search features'; q.setAttribute('aria-label', 'Search features'); q.style.width = '100%'; box.append(q);
+    const list = el('div', 'deplist'); box.append(list);
+    const draw = () => {
+      list.textContent = ''; const t = q.value.trim().toLowerCase();
+      cands.filter(i => !t || i.t.toLowerCase().includes(t) || i.res.join(' ').toLowerCase().includes(t) || cur.has(i.id)).forEach(i => {
+        const l = el('label', 'deprow'), c = el('input'); c.type = 'checkbox'; c.checked = cur.has(i.id);
+        c.addEventListener('change', () => { if (c.checked) cur.add(i.id); else cur.delete(i.id); });
+        l.append(c, el('span', '', (i.ms ? '◆ ' : '') + i.t), el('small', '', dlabel(i.d0) + (i.ms ? '' : ' to ' + dlabel(i.d1)) + (i.res.length ? ' · ' + i.res.join(', ') : '')));
+        list.append(l);
+      });
+      if (!list.children.length) list.append(el('div', 'hint', 'Nothing matches.'));
+    };
+    q.addEventListener('input', draw); draw();
+    const save = el('button', 'btn primary', 'Save'); save.type = 'button';
+    const cancel = el('button', 'btn', 'Cancel'); cancel.type = 'button'; cancel.addEventListener('click', closeDlg);
+    save.addEventListener('click', () => { closeDlg(); const next = [...cur]; if (JSON.stringify(next.sort()) !== JSON.stringify(depsOf(it).slice().sort())) commit(it.id, { dep: next }); });
+    const row = el('div', 'formrow'); row.append(save, cancel); box.append(row);
+  });
+}
+function toggleMilestone(it) { if (it.ms) commit(it.id, { ms: false }); else commit(it.id, { ms: true, d1: it.d0 }); }
+
+let ghostOn = false;
+try { ghostOn = localStorage.getItem('ynmo-ghost') === '1'; } catch (e) { /* storage unavailable */ }
+function activeBaseline() {
+  const l = Object.keys(baselines).map(id => Object.assign({ id: id }, baselines[id])).filter(b => b.rm === state.rm);
+  return l.find(b => b.active) || null;
+}
+const SVGNS = 'http://www.w3.org/2000/svg';
+function sv(tag, attrs) { const n = document.createElementNS(SVGNS, tag); Object.keys(attrs || {}).forEach(k => n.setAttribute(k, attrs[k])); return n; }
+function drawOverlay() {
+  const g = $('grid'); if (!g) return;
+  const old = g.querySelector('svg.ovl'); if (old) old.remove();
+  const all = items(), issues = depIssues(all), base = ghostOn ? activeBaseline() : null;
+  const sum = $('summary'); const oldc = sum && sum.querySelector('.depchip'); if (oldc) oldc.remove();
+  const bad = issues.filter(x => x.bad);
+  if (sum && issues.length) {
+    const c = el('button', 'depchip' + (bad.length ? ' bad' : ''), bad.length ? '⛓ ' + bad.length + (bad.length === 1 ? ' dependency clash' : ' dependency clashes') : '⛓ ' + issues.length + ' dependencies, all fine'); c.type = 'button';
+    c.title = bad.length ? bad.map(x => '"' + x.to.t + '" starts before "' + x.from.t + '" ends').join('\n') : 'Every dependent bar starts after its predecessor ends';
+    c.addEventListener('click', () => { const x = bad[0]; if (!x) return; const b = [...g.querySelectorAll('.bar')].find(y => y.dataset.id === x.to.id); if (b) { b.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' }); b.classList.add('flash'); setTimeout(() => b.classList.remove('flash'), 1600); } });
+    sum.append(c);
+  }
+  if (!issues.length && !base) return;
+  const gr = g.getBoundingClientRect(), first = new Map();
+  g.querySelectorAll('.bar').forEach(b => { if (!first.has(b.dataset.id)) first.set(b.dataset.id, b); });
+  const svg = sv('svg', { class: 'ovl', width: g.scrollWidth, height: g.scrollHeight, 'aria-hidden': 'true' });
+  const defs = sv('defs'); ['ok', 'bad'].forEach(k => { const m = sv('marker', { id: 'ar-' + k, viewBox: '0 0 8 8', refX: '7', refY: '4', markerWidth: '7', markerHeight: '7', orient: 'auto' }); m.append(sv('path', { d: 'M0 0 8 4 0 8z', fill: k === 'bad' ? '#c0392b' : '#55608a' })); defs.append(m); });
+  svg.append(defs);
+  issues.forEach(x => {
+    const a = first.get(x.from.id), b = first.get(x.to.id); if (!a || !b) return;
+    const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+    const x1 = ra.right - gr.left - 1, y1 = ra.top + ra.height / 2 - gr.top, x2 = rb.left - gr.left, y2 = rb.top + rb.height / 2 - gr.top;
+    let d;
+    if (x2 >= x1 + 14) d = 'M' + x1 + ' ' + y1 + ' H' + (x1 + 7) + ' V' + y2 + ' H' + (x2 - 1);
+    else { const my = y2 > y1 ? Math.max(ra.bottom, rb.top) - gr.top + 2 : Math.min(ra.top, rb.bottom) - gr.top - 2; d = 'M' + x1 + ' ' + y1 + ' H' + (x1 + 7) + ' V' + my + ' H' + (x2 - 7) + ' V' + y2 + ' H' + (x2 - 1); }
+    const tip = '"' + x.from.t + '" → "' + x.to.t + '": ' + (x.bad ? (x.gap === -1 ? 'starts the same day the first ends' : 'starts ' + (-x.gap - 1) + ' day(s) before the first ends') : (x.gap === 0 ? 'starts the next day, no buffer' : x.gap + ' day(s) of buffer'));
+    const p = sv('path', { d: d, fill: 'none', stroke: x.bad ? '#c0392b' : '#55608a', 'stroke-width': x.bad ? '2' : '1.5', 'marker-end': 'url(#ar-' + (x.bad ? 'bad' : 'ok') + ')', class: 'dep' + (x.bad ? ' bad' : '') });
+    const t = sv('title'); t.textContent = tip; p.append(t); svg.append(p);
+  });
+  if (base) {
+    const w0 = g.querySelector('.wk'); if (w0) {
+      const wr = w0.getBoundingClientRect(), dw = wr.width, L = wr.left - gr.left;
+      const bi = new Map((base.items || []).map(i => [i.id, i]));
+      first.forEach((bar, id) => {
+        const o = bi.get(id), it = all.find(i => i.id === id); if (!o || !it || (o.d0 === it.d0 && o.d1 === it.d1)) return;
+        const r = bar.getBoundingClientRect(), y = r.bottom - gr.top - 1;
+        const g1 = sv('rect', { x: L + o.d0 * dw + 1, y: y, width: Math.max(4, (o.d1 - o.d0 + 1) * dw - 2), height: 5, rx: 2.5, fill: '#e5a513', opacity: '.9', class: 'ghost' });
+        const t = sv('title'); const sl = it.d1 - o.d1;
+        t.textContent = 'Plan: ' + dlabel(o.d0) + (o.d1 > o.d0 ? ' to ' + dlabel(o.d1) : '') + ' · now ' + (sl === 0 ? 'starts ' + (it.d0 - o.d0 > 0 ? 'later' : 'earlier') : sl > 0 ? 'ends ' + sl + ' day(s) later' : 'ends ' + (-sl) + ' day(s) earlier'); g1.append(t); svg.append(g1);
+      });
+    }
+  }
+  g.append(svg);
+}
+function afterRender() {
+  try { drawOverlay(); decorateLocks(); } catch (e) { /* overlay is optional */ }
+  const gb = $('ghostbtn'); if (gb) { const b = activeBaseline(); gb.hidden = !b; gb.setAttribute('aria-pressed', String(ghostOn)); }
+}
+
+/* ---------- 6. log: export, load older, undo ---------- */
+function allLogs() {
+  const seen = new Set(), out = [];
+  logs.concat(logsOld).forEach(l => { if (!seen.has(l.id)) { seen.add(l.id); out.push(l); } });
+  return out.sort((a, b) => a.data.at < b.data.at ? 1 : -1);
+}
+async function loadOlderLogs() {
+  if (logsBusy) return; logsBusy = true;
+  try {
+    const have = allLogs().length;
+    const r = await sb.from('activity').select('id,data').order('updated_at', { ascending: false }).range(have, have + ACTIVE_LOG_PAGE - 1);
+    if (r.error) throw new Error(r.error.message);
+    const rows = (r.data || []).map(x => ({ id: x.id, data: x.data || {} }));
+    logsOld = logsOld.concat(rows); logsMore = rows.length >= ACTIVE_LOG_PAGE;
+  } catch (e) { toast('Could not load older entries. Try again.'); }
+  logsBusy = false; if (state.page === 'log') renderLog();
+}
+async function exportLog(rows) {
+  const lines = [['When', 'Who', 'Type', 'Change', 'Roadmap'].map(csvCell).join(',')];
+  rows.forEach(d => lines.push([d.at, d.name, d.act, d.sum, d.rm || ''].map(csvCell).join(',')));
+  try { await dl.save({ filename: 'ynmo-log-' + todayIso() + '.csv', data: '﻿' + lines.join('\n') }); } catch (e) { /* declined */ }
+}
+function undoneSet() { const s = new Set(); allLogs().forEach(l => { if (l.data.ref) s.add(l.data.ref); }); return s; }
+function canUndoRow(l, done) { return canWrite() && l.data.u && !done.has(l.id); }
+function undoFromLog(l) {
+  const u = l.data.u; if (!u || !canWrite()) return;
+  const cur = over[u.id], isSame = (a, b) => JSON.stringify(a === undefined ? null : a) === JSON.stringify(b === undefined ? null : b);
+  let clash = false;
+  if (u.after) Object.keys(u.after).forEach(k => { if (!isSame(cur && cur[k], u.after[k])) clash = true; });
+  if (u.whole !== undefined && u.after === undefined) clash = false;
+  const run = () => {
+    pushHistory();
+    if (u.after) {
+      const o = Object.assign({}, over[u.id] || {});
+      Object.keys(u.set || {}).forEach(k => { o[k] = u.set[k]; }); (u.unset || []).forEach(k => { delete o[k]; });
+      over[u.id] = o; persist(u.id, (u.unset || []).length ? null : u.set);
+    } else if (u.whole) { over[u.id] = u.whole; persist(u.id); } else { delete over[u.id]; persist(u.id); }
+    render();
+    const data = { at: new Date().toISOString(), uid: me.id, name: me.name || me.email, av: me.avatar || '', act: 'edit', sum: 'undid: ' + l.data.sum, rm: l.data.rm, ref: l.id };
+    const id = 'l' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    logs.unshift({ id: id, data: data }); sb.from('activity').insert({ id: id, data: data }).then(() => {}, () => {});
+    if (state.page === 'log') renderLog();
+    toast('Change undone.');
+  };
+  if (!clash) { run(); return; }
+  openDlg('Undo this change?', b => {
+    b.append(el('p', 'hint', 'This bar was changed again after that entry. Undoing will put back the older values and replace what is there now.'));
+    const ok = el('button', 'btn primary', 'Undo anyway'); ok.type = 'button'; const no = el('button', 'btn', 'Keep current'); no.type = 'button';
+    ok.addEventListener('click', () => { closeDlg(); run(); }); no.addEventListener('click', closeDlg);
+    const row = el('div', 'formrow'); row.append(ok, no); b.append(row);
+  });
+}
+
+/* ---------- roadmap picker for pages that follow the current roadmap ---------- */
+function rmPicker(after) {
+  const s = selOf(allRoadmaps().map(r => [r.id, r.n]), state.rm); s.setAttribute('aria-label', 'Roadmap');
+  s.addEventListener('change', () => { useRoadmap(s.value); after(); }); return s;
+}
+
+/* ---------- 4. capacity ---------- */
+function weekCols() {
+  const cols = [];
+  for (let k = 0; k < NDAYS; k++) { const w = Math.floor((k + STARTDOW) / 7); if (!cols[w]) cols[w] = { ks: [] }; cols[w].ks.push(k); }
+  return cols.filter(Boolean);
+}
+function leaveDays(name) {
+  const s = new Set(); vacsOf(name).forEach(v => { const a = kOfIso(v.a0), b = kOfIso(v.a1 || v.a0); for (let k = Math.max(0, a); k <= Math.min(NDAYS - 1, b); k++) s.add(k); }); return s;
+}
+function capacityData() {
+  const all = items().filter(i => !i.ms), cols = weekCols(), dir = directory(), rows = [];
+  const names = new Set(dir.keys()); all.forEach(i => i.res.forEach(n => names.add(n)));
+  [...names].forEach(name => {
+    const mine = all.filter(i => i.res.includes(name)); if (!mine.length && !vacsOf(name).length) return;
+    const lv = leaveDays(name);
+    const cells = cols.map(c => {
+      let avail = 0, sched = 0, leave = 0; const its = new Set();
+      c.ks.forEach(k => {
+        if (DAYS[k].we || offAt(k)) return;
+        const bars = mine.filter(i => k >= i.d0 && k <= i.d1);
+        sched += bars.length; bars.forEach(b => its.add(b.t));
+        if (lv.has(k)) leave++; else avail++;
+      });
+      const pct = avail > 0 ? Math.round(sched / avail * 100) : (sched > 0 ? Infinity : null);
+      return { pct: pct, avail: avail, sched: sched, leave: leave, its: [...its] };
+    });
+    const peak = Math.max.apply(null, cells.map(c => c.pct === Infinity ? 999 : (c.pct || 0)));
+    rows.push({ name: name, cells: cells, peak: peak, over: cells.filter(c => c.pct === Infinity || (c.pct || 0) > 100).length });
+  });
+  rows.sort((a, b) => b.over - a.over || b.peak - a.peak || a.name.localeCompare(b.name));
+  return { cols: cols, rows: rows };
+}
+function renderCapacity() {
+  const root = $('pg-capacity'); root.textContent = '';
+  const d = capacityData();
+  root.append(pageHead('Capacity', 'Load per person per week. Each bar counts as one full working day for every day it runs, so two bars at once is 200%. Leave and company days off are taken out of the week. Working days are Sunday to Thursday.', rmPicker(renderCapacity)));
+  const overP = d.rows.filter(r => r.over).length;
+  const sm = el('div', 'summary'); const mk = (n, t) => { const w = el('div'); w.append(el('b', '', String(n)), document.createTextNode(' '), el('span', '', t)); sm.append(w); };
+  mk(d.rows.length, 'people with work or leave'); mk(overP, 'over 100% in at least one week'); mk(d.rows.filter(r => r.cells.some(c => c.pct === Infinity)).length, 'with work while on leave'); root.append(sm);
+  const card = el('div', 'card capcard');
+  if (!d.rows.length) { card.append(el('div', 'hint', 'Nobody has work in this roadmap yet.')); root.append(card); return; }
+  const wrap = el('div', 'capwrap'); const t = el('table', 'captable'); t.setAttribute('aria-label', 'Weekly load per person');
+  const th = el('thead'), hr = el('tr'); hr.append(el('th', '', 'Person'));
+  d.cols.forEach(c => { const h = el('th', '', DAYS[c.ks[0]].d.getUTCDate() + ' ' + MN[DAYS[c.ks[0]].d.getUTCMonth()]); h.title = 'Week of ' + dlabel(c.ks[0]); h.scope = 'col'; hr.append(h); });
+  th.append(hr); t.append(th);
+  const tb = el('tbody');
+  d.rows.forEach(r => {
+    const tr = el('tr'), n = el('th', 'capname', r.name); n.scope = 'row'; if (r.over) n.append(el('small', 'warnx', ' ⚠ ' + r.over + (r.over === 1 ? ' week' : ' weeks'))); tr.append(n);
+    r.cells.forEach(c => {
+      const td = el('td', 'capcell'); let lab, cls;
+      if (c.pct === null) { lab = c.leave ? 'Leave' : '–'; cls = c.leave ? 'lv' : 'none'; }
+      else if (c.pct === Infinity) { lab = 'Leave!'; cls = 'x3'; }
+      else { lab = c.pct + '%'; cls = c.pct === 0 ? 'none' : c.pct <= 70 ? 'lo' : c.pct <= 100 ? 'ok' : c.pct <= 150 ? 'x2' : 'x3'; }
+      td.classList.add(cls); td.textContent = lab;
+      td.title = r.name + ': ' + c.sched + ' bar-days on ' + c.avail + ' available day(s)' + (c.leave ? ', ' + c.leave + ' on leave' : '') + (c.its.length ? '\n' + c.its.join('\n') : '');
+      td.setAttribute('aria-label', r.name + ' ' + lab + (c.its.length ? ', ' + c.its.join(', ') : '')); tr.append(td);
+    });
+    tb.append(tr);
+  });
+  t.append(tb); wrap.append(t); card.append(wrap);
+  const lg = el('div', 'caplegend'); [['lo', 'up to 70%'], ['ok', '71–100%'], ['x2', '101–150%'], ['x3', 'over 150%'], ['lv', 'on leave']].forEach(x => { const s = el('span'); s.append(el('i', 'capcell ' + x[0]), document.createTextNode(x[1])); lg.append(s); });
+  card.append(lg); root.append(card);
+}
+
+/* ---------- 5. baselines ---------- */
+function snapItems() { return items().map(i => ({ id: i.id, t: i.t, sq: i.sq, d0: i.d0, d1: i.d1, st: i.st, res: i.res.slice(), ms: !!i.ms, dep: depsOf(i).slice() })); }
+function saveSnapshot(name, active) {
+  const id = 'b' + Date.now().toString(36), rm = state.rm;
+  if (active) Object.keys(baselines).forEach(k => { if (baselines[k].rm === rm && baselines[k].active) { const d = Object.assign({}, baselines[k], { active: false }); baselines[k] = d; db.doc('baselines/' + k).set(d).catch(() => {}); } });
+  const data = { rm: rm, rmName: curRm().n, name: name, at: new Date().toISOString(), by: me.name || me.email, active: !!active, items: snapItems() };
+  baselines[id] = data; return db.doc('baselines/' + id).set(data).then(() => { logAct('roadmap', 'saved snapshot "' + name + '" of ' + curRm().n); });
+}
+function setBaseline(id) {
+  const rm = baselines[id].rm;
+  Object.keys(baselines).forEach(k => { if (baselines[k].rm === rm) { const want = k === id; if (!!baselines[k].active !== want) { const d = Object.assign({}, baselines[k], { active: want }); baselines[k] = d; db.doc('baselines/' + k).set(d).catch(() => {}); } } });
+  logAct('roadmap', 'set "' + baselines[id].name + '" as the baseline for ' + baselines[id].rmName);
+}
+function diffSnap(b) {
+  const now = items(), nm = new Map(now.map(i => [i.id, i])), om = new Map((b.items || []).map(i => [i.id, i]));
+  const out = { moved: [], added: [], removed: [], status: [], owners: [] };
+  now.forEach(i => {
+    const o = om.get(i.id); if (!o) { out.added.push(i); return; }
+    if (o.d0 !== i.d0 || o.d1 !== i.d1) out.moved.push({ it: i, o: o, ds: i.d0 - o.d0, de: i.d1 - o.d1 });
+    if (o.st !== i.st) out.status.push({ it: i, o: o });
+    if (JSON.stringify((o.res || []).slice().sort()) !== JSON.stringify(i.res.slice().sort())) out.owners.push({ it: i, o: o });
+  });
+  (b.items || []).forEach(o => { if (!nm.has(o.id)) out.removed.push(o); });
+  return out;
+}
+let cmpId = null;
+function renderBaselines() {
+  const root = $('pg-baselines'); root.textContent = '';
+  root.append(pageHead('Baselines', 'Save the plan at a point in time, then compare it with today. Snapshots never change after they are saved. Turn on "Plan vs now" on the roadmap to see the old dates as thin amber bars under each bar.', rmPicker(renderBaselines)));
+  const mine = Object.keys(baselines).map(id => Object.assign({ id: id }, baselines[id])).filter(b => b.rm === state.rm).sort((a, b) => a.at < b.at ? 1 : -1);
+  if (canWrite()) {
+    const c = el('div', 'card'); c.append(el('h2', '', 'Save a snapshot of ' + curRm().n));
+    const nm = el('input'); nm.type = 'text'; nm.value = curRm().n + ' · ' + todayIso(); nm.maxLength = 80; nm.setAttribute('aria-label', 'Snapshot name');
+    const ck = el('input'); ck.type = 'checkbox'; ck.checked = !mine.some(b => b.active); ck.id = 'snapactive'; const cl = el('label', 'chk'); cl.htmlFor = 'snapactive'; cl.append(ck, document.createTextNode(' Use as the baseline to compare against'));
+    const go = el('button', 'btn primary', 'Save snapshot'); go.type = 'button';
+    const msg = el('div', 'gerr'); msg.setAttribute('aria-live', 'polite');
+    go.addEventListener('click', async () => {
+      const n = nm.value.trim(); if (!n) { msg.textContent = 'Give the snapshot a name.'; return; }
+      go.disabled = true; try { await saveSnapshot(n, ck.checked); toast('Snapshot saved.'); } catch (e) { msg.textContent = 'Could not save. If this keeps happening, ask the admin to run setup v4.'; } go.disabled = false; renderBaselines();
+    });
+    const row = el('div', 'formrow'); row.style.alignItems = 'center'; row.append(nm, cl, go); nm.style.flex = '1 1 260px'; c.append(row, msg); root.append(c);
+  }
+  const lc = el('div', 'card'); lc.append(el('h2', '', 'Checkpoint history'));
+  if (!mine.length) lc.append(el('div', 'hint', 'No snapshots for this roadmap yet.'));
+  mine.forEach(b => {
+    const r = el('div', 'formrow snaprow'); r.style.alignItems = 'center';
+    const w = el('div'); const t = el('b', '', b.name); if (b.active) t.append(el('span', 'badge', 'baseline'));
+    w.append(t, el('div', 'hint', clock(b.at) + ' · ' + b.by + ' · ' + (b.items || []).length + ' bars'));
+    const cmp = el('button', 'btn sm' + (cmpId === b.id ? ' primary' : ''), cmpId === b.id ? 'Hide comparison' : 'Compare with now'); cmp.type = 'button'; cmp.style.marginInlineStart = 'auto';
+    cmp.addEventListener('click', () => { cmpId = cmpId === b.id ? null : b.id; renderBaselines(); });
+    r.append(w, cmp);
+    if (canWrite() && !b.active) { const mk = el('button', 'btn sm', 'Make baseline'); mk.type = 'button'; mk.addEventListener('click', () => { setBaseline(b.id); renderBaselines(); }); r.append(mk); }
+    if (canWrite()) { const dl2 = el('button', 'btn sm danger', 'Delete'); dl2.type = 'button'; dl2.addEventListener('click', () => { delete baselines[b.id]; db.doc('baselines/' + b.id).delete().catch(() => {}); logAct('roadmap', 'deleted snapshot "' + b.name + '"'); renderBaselines(); }); r.append(dl2); }
+    lc.append(r);
+    if (cmpId === b.id) lc.append(compareView(b));
+  });
+  root.append(lc);
+}
+function compareView(b) {
+  const d = diffSnap(b), w = el('div', 'cmpbox');
+  const late = d.moved.filter(m => m.de > 0).length, early = d.moved.filter(m => m.de < 0).length, avg = d.moved.length ? Math.round(d.moved.reduce((s, m) => s + m.de, 0) / d.moved.length * 10) / 10 : 0;
+  const sm = el('div', 'summary'); [[d.moved.length, 'moved'], [late, 'end later'], [early, 'end earlier'], [d.added.length, 'added'], [d.removed.length, 'removed'], [d.status.length, 'status changed']].forEach(p => { const x = el('div'); x.append(el('b', '', String(p[0])), document.createTextNode(' '), el('span', '', p[1])); sm.append(x); });
+  w.append(sm);
+  if (d.moved.length) w.append(el('div', 'hint', 'Average end-date shift: ' + (avg > 0 ? '+' : '') + avg + ' days'));
+  const sec = (title, rows) => { if (!rows.length) return; const s = el('div', 'cmpsec'); s.append(el('h3', '', title + ' (' + rows.length + ')')); rows.forEach(r => s.append(el('div', 'cmprow', r))); w.append(s); };
+  const sh = n => (n > 0 ? '+' : '') + n + 'd';
+  sec('Moved', d.moved.sort((a, b2) => Math.abs(b2.de) - Math.abs(a.de)).map(m => m.it.t + ': was ' + dlabel(m.o.d0) + ' to ' + dlabel(m.o.d1) + ', now ' + dlabel(m.it.d0) + ' to ' + dlabel(m.it.d1) + ' (start ' + sh(m.ds) + ', end ' + sh(m.de) + ')'));
+  sec('Added since', d.added.map(i => i.t + ' · ' + dlabel(i.d0) + ' to ' + dlabel(i.d1)));
+  sec('Removed since', d.removed.map(i => i.t + ' · was ' + dlabel(i.d0) + ' to ' + dlabel(i.d1)));
+  sec('Status changed', d.status.map(m => m.it.t + ': ' + STATUS[m.o.st] + ' → ' + STATUS[m.it.st]));
+  sec('Owners changed', d.owners.map(m => m.it.t + ': ' + ((m.o.res || []).join(', ') || 'nobody') + ' → ' + (m.it.res.join(', ') || 'nobody')));
+  if (!d.moved.length && !d.added.length && !d.removed.length && !d.status.length && !d.owners.length) w.append(el('div', 'hint', 'Nothing has changed since this snapshot.'));
+  return w;
+}
+
+/* ---------- 1. sharing and viewer access ---------- */
+function shareFor(rm) { const k = Object.keys(shares).find(t => shares[t].rm === rm); return k ? { token: k, data: shares[k] } : null; }
+function shareUrl(t) { return location.origin + location.pathname + '#/share/' + t; }
+function openShare() {
+  if (!canWrite()) return;
+  const rmId = state.rm;
+  openDlg('Share ' + curRm().n + ' (read only)', box => {
+    box.append(el('p', 'hint', 'Anyone with the link can look at this roadmap without an account. They cannot change anything, and they do not see leave, ideas or the log. Stop sharing at any time and the link stops working.'));
+    const area = el('div'); box.append(area);
+    const msg = el('div', 'gerr'); msg.setAttribute('aria-live', 'polite'); box.append(msg);
+    const close = el('button', 'btn', 'Close'); close.type = 'button'; close.addEventListener('click', closeDlg);
+    const draw = () => {
+      area.textContent = ''; const s = shareFor(rmId);
+      if (!s) {
+        const mk = el('button', 'btn primary', 'Create share link'); mk.type = 'button';
+        mk.addEventListener('click', async () => {
+          mk.disabled = true; const t = (window.crypto && crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()).replace(/-/g, ''); const data = { rm: rmId, by: me.name || me.email, at: new Date().toISOString() };
+          try { await db.doc('share_links/' + t).set(data); shares[t] = data; logAct('access', 'created a share link for ' + curRm().n); draw(); } catch (e) { mk.disabled = false; msg.textContent = 'Could not create the link. Ask the admin to run setup v4.'; }
+        });
+        area.append(mk);
+      } else {
+        const inp = el('input'); inp.type = 'text'; inp.readOnly = true; inp.value = shareUrl(s.token); inp.id = 'shareurl'; inp.setAttribute('aria-label', 'Share link'); inp.style.width = '100%';
+        inp.addEventListener('focus', () => inp.select());
+        const cp = el('button', 'btn primary', 'Copy link'); cp.type = 'button';
+        cp.addEventListener('click', async () => { try { await navigator.clipboard.writeText(inp.value); cp.textContent = 'Copied'; } catch (e) { inp.select(); cp.textContent = 'Press Ctrl+C'; } });
+        const stop = el('button', 'btn danger', 'Stop sharing'); stop.type = 'button';
+        stop.addEventListener('click', async () => { stop.disabled = true; try { await db.doc('share_links/' + s.token).delete(); delete shares[s.token]; logAct('access', 'stopped sharing ' + curRm().n); draw(); } catch (e) { stop.disabled = false; msg.textContent = 'Could not stop sharing. Try again.'; } });
+        const row = el('div', 'formrow'); row.append(cp, stop); area.append(inp, row, el('div', 'hint', 'Shared by ' + s.data.by + ' on ' + clock(s.data.at)));
+      }
+    };
+    draw(); box.append(close);
+
+  });
+}
+function applyShared(p) {
+  over = p.items || {}; extras = p.people || {}; daysoff = p.daysoff || {};
+  roadmaps = p.roadmap ? { [p.rm]: p.roadmap } : {};
+  if (state.rm !== p.rm) { const r = allRoadmaps().find(x => x.id === p.rm) || H2; state.rm = r.id; setRange(r.a, r.b); }
+  fillRm(); render();
+}
+async function bootShared(token) {
+  SHARE = true; readonly = true;
+  const r = await sb.rpc('shared_snapshot', { t: token });
+  if (r.error || !r.data) { const c = gateCard('This link is not active', 'The share link was stopped or is wrong. Ask the person who sent it for a new one.'); return; }
+  $('gate').hidden = true; $('shell').classList.remove('app-hidden'); $('shell').classList.add('shared');
+  document.body.classList.add('sharedview');
+  const nav = $('nav'); nav.textContent = ''; $('toplogo').src = LOGO;
+  PAGES.forEach(x => { const s = $('pg-' + x[0]); if (s) s.hidden = x[0] !== 'roadmap'; });
+  $('ptitle').textContent = 'Shared roadmap';
+  const b = netBar(); b.classList.add('sharebar'); b.hidden = false; b.textContent = 'You are looking at a read-only shared roadmap. It updates by itself every minute.';
+  applyShared(r.data); setSave('readonly'); $('save').textContent = 'View only.';
+  let last = JSON.stringify(r.data);
+  setInterval(async () => { try { const n = await sb.rpc('shared_snapshot', { t: token }); if (n.data && JSON.stringify(n.data) !== last) { last = JSON.stringify(n.data); applyShared(n.data); } else if (!n.data && !n.error) { location.reload(); } } catch (e) { /* keep showing what we have */ } }, window.__sharePoll || 60000);
+}
+function renderAccess(root) {
+  if (!(me && me.is_admin)) return;
+  const done = members.filter(m => m.approved);
+  const c = el('div', 'card'); c.append(el('h2', '', 'Who can edit'));
+  c.append(el('div', 'hint', 'Editors change the plan. Viewers can look at the roadmap, capacity, snapshots and log, but cannot change anything.'));
+  done.forEach(m => {
+    const row = el('div', 'formrow'); row.style.alignItems = 'center';
+    const who = el('div'); who.append(el('b', '', m.name || m.email), el('div', 'hint', (m.role ? m.role + ' · ' : '') + (m.email || '')));
+    row.append(avatarEl(m.avatar, 34, m.name), who);
+    if (m.is_admin) { const a = el('span', 'badge', 'Admin'); a.style.marginInlineStart = 'auto'; row.append(a); }
+    else {
+      const s = selOf([['editor', 'Editor'], ['viewer', 'Viewer']], m.access === 'viewer' ? 'viewer' : 'editor'); s.style.marginInlineStart = 'auto'; s.setAttribute('aria-label', 'Access for ' + (m.name || m.email));
+      s.addEventListener('change', async () => {
+        const r = await sb.from('profiles').update({ access: s.value }).eq('id', m.id);
+        if (r.error) { s.value = m.access === 'viewer' ? 'viewer' : 'editor'; toast('Could not change access. Ask the admin to run setup v4.'); return; }
+        m.access = s.value; logAct('access', 'set ' + (m.name || m.email) + ' as ' + s.value); toast((m.name || m.email) + ' is now a ' + s.value + '.');
+      });
+      row.append(s);
+    }
+    c.append(row);
+  });
+  root.append(c);
+}
+
+/* ---------- wiring ---------- */
+function initExtras() {
+  // toolbar buttons
+  const today = $('today');
+  if (today && !$('sharebtn')) {
+    const gb = el('button', 'btn', 'Plan vs now'); gb.type = 'button'; gb.id = 'ghostbtn'; gb.hidden = true; gb.setAttribute('aria-pressed', String(ghostOn));
+    gb.title = 'Show where the saved baseline had each bar as a thin amber line';
+    gb.addEventListener('click', () => { ghostOn = !ghostOn; try { localStorage.setItem('ynmo-ghost', ghostOn ? '1' : '0'); } catch (e) { /* storage unavailable */ } render(); });
+    const sh = el('button', 'btn', 'Share'); sh.type = 'button'; sh.id = 'sharebtn'; sh.addEventListener('click', openShare);
+    today.after(gb, sh);
+  }
+  netBar(); netShow();
+}
+function startExtras() {
+  $('shell').classList.toggle('viewer', isViewer());
+  if (isViewer()) readonly = true;
+  db.collection('baselines').onSnapshot(s => { const n = {}; s.docs.forEach(d => { n[d.id] = d.data(); }); if (same(n, baselines)) return; baselines = n; if (state.page === 'baselines') renderBaselines(); softRender(); }, () => {});
+  db.collection('share_links').onSnapshot(s => { const n = {}; s.docs.forEach(d => { n[d.id] = d.data(); }); shares = n; }, () => {});
+  startPresence(); startIdle();
+}
+
+/* ---------- elegant dropdowns: the native select stays (value, change, forms), its list is replaced ---------- */
+let cpop = null, cpopSel = null, cpopIdx = -1;
+function cpopClose(refocus) {
+  if (!cpop) return; const s = cpopSel; cpop.remove(); cpop = null; cpopSel = null;
+  if (s) { s.setAttribute('aria-expanded', 'false'); if (refocus) s.focus(); }
+}
+function cpopMove(d) {
+  const rows = [...cpop.querySelectorAll('.copt:not(.dis)')]; if (!rows.length) return;
+  let i = rows.findIndex(r => r.classList.contains('act')); i = Math.max(0, Math.min(rows.length - 1, i + d));
+  rows.forEach(r => r.classList.remove('act')); rows[i].classList.add('act'); rows[i].scrollIntoView({ block: 'nearest' });
+}
+function cpopPick(opt) {
+  const s = cpopSel; if (!s || opt.disabled) return; const changed = s.value !== opt.value; s.value = opt.value; cpopClose(true);
+  if (changed) { s.dispatchEvent(new Event('input', { bubbles: true })); s.dispatchEvent(new Event('change', { bubbles: true })); }
+}
+function cpopOpen(s) {
+  if (cpop && cpopSel === s) { cpopClose(true); return; }
+  cpopClose(); cpopSel = s; s.setAttribute('aria-haspopup', 'listbox'); s.setAttribute('aria-expanded', 'true');
+  const box = el('div', 'cpop'); box.setAttribute('role', 'listbox'); box.tabIndex = -1;
+  [...s.options].forEach(o => {
+    const r = el('div', 'copt' + (o.selected ? ' sel act' : '') + (o.disabled ? ' dis' : '')); r.setAttribute('role', 'option'); r.setAttribute('aria-selected', String(o.selected));
+    r.append(el('span', '', o.textContent)); if (o.selected) r.append(el('i', 'ck', '✓'));
+    r.addEventListener('pointerdown', e => e.preventDefault());
+    r.addEventListener('click', () => cpopPick(o));
+    r.addEventListener('pointermove', () => { box.querySelectorAll('.act').forEach(x => x.classList.remove('act')); if (!o.disabled) r.classList.add('act'); });
+    box.append(r);
+  });
+  document.body.append(box); cpop = box;
+  const b = s.getBoundingClientRect(), h = Math.min(box.scrollHeight, 280);
+  box.style.minWidth = b.width + 'px'; box.style.maxHeight = '280px';
+  const below = window.innerHeight - b.bottom, top = below >= h + 12 || below >= b.top ? b.bottom + 6 : b.top - h - 6;
+  box.style.top = Math.max(8, top) + 'px'; box.style.left = Math.max(8, Math.min(b.left, window.innerWidth - box.offsetWidth - 8)) + 'px';
+  const cur = box.querySelector('.sel'); if (cur) cur.scrollIntoView({ block: 'nearest' });
+}
+document.addEventListener('mousedown', e => {
+  const s = e.target.closest && e.target.closest('select'); if (s && !s.disabled && !s.multiple) { e.preventDefault(); s.focus(); cpopOpen(s); return; }
+  if (cpop && !cpop.contains(e.target)) cpopClose();
+}, true);
+document.addEventListener('keydown', e => {
+  const t = e.target;
+  if (cpop) {
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cpopClose(true); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); cpopMove(1); } else if (e.key === 'ArrowUp') { e.preventDefault(); cpopMove(-1); }
+    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const a = cpop.querySelector('.act'); if (a) cpopPick(cpopSel.options[[...cpop.children].indexOf(a)]); else cpopClose(true); }
+    else if (e.key === 'Tab') cpopClose();
+    return;
+  }
+  if (t && t.tagName === 'SELECT' && !t.multiple && (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown' || e.key === 'ArrowUp')) { e.preventDefault(); cpopOpen(t); }
+}, true);
+window.addEventListener('resize', () => cpopClose());
+window.addEventListener('scroll', e => { if (cpop && !cpop.contains(e.target)) cpopClose(); }, true);
 
 function init() {
   const chips = $('chips');
@@ -2203,6 +2899,7 @@ function init() {
   });
   render();
   $('export').addEventListener('click', exportCsv);
+  initExtras();
   $('toplogo').src = LOGO;
   const av = $('avbtn'), um = $('umenu');
   av.addEventListener('click', e => { e.stopPropagation(); um.hidden = !um.hidden; av.setAttribute('aria-expanded', String(!um.hidden)); });
