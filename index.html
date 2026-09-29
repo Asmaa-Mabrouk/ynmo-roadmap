@@ -1281,16 +1281,27 @@ function bindSubmit(c, fn) {
   c.addEventListener('submit', async e => { e.preventDefault(); go.disabled = true; msg.textContent = ''; msg.className = 'gerr'; try { await fn(msg); } catch (x) { msg.textContent = x.message || 'Something went wrong. Try again.'; } go.disabled = false; });
 }
 function linkBtn(t, fn) { const b = el('button', 'link', t); b.type = 'button'; b.addEventListener('click', fn); return b; }
+function showForgot(prefill) {
+  const c = gateCard('Reset your password', 'Type your email and we will send you a link to choose a new password.');
+  const em = gField('fe', 'Email', 'email', 'username'); em.input.value = prefill || '';
+  const msg = el('div', 'gerr'); msg.setAttribute('aria-live', 'polite');
+  const go = el('button', 'btn primary', 'Send reset link'); go.type = 'submit';
+  c.append(em.label, msg, go, linkBtn('Back to sign in', showLogin));
+  bindSubmit(c, async m => {
+    const e = em.input.value.trim(); if (!e) throw new Error('Type your email first.');
+    const r = await sb.auth.resetPasswordForEmail(e, { redirectTo: location.origin + location.pathname });
+    if (r.error) throw new Error('Could not send the link. Wait a minute and try again.');
+    m.className = 'gerr ok'; m.textContent = 'If this email has an account, a link is on its way. Check spam too.';
+  });
+  em.input.focus();
+}
 function showLogin() {
   const c = gateCard('Sign in to Ynmo Roadmaps', 'Use the email you signed up with.');
   const em = gField('em', 'Email', 'email', 'username'), pw = gField('pw', 'Password', 'password', 'current-password');
   const msg = el('div', 'gerr'); msg.setAttribute('aria-live', 'polite');
   const go = el('button', 'btn primary', 'Sign in'); go.type = 'submit';
   const row = el('div', 'formrow');
-  row.append(linkBtn('Create an account', showSignup), linkBtn('Forgot password?', async () => {
-    const e = em.input.value.trim(); if (!e) { msg.textContent = 'Type your email first.'; return; }
-    const r = await sb.auth.resetPasswordForEmail(e, { redirectTo: location.origin + location.pathname }); msg.textContent = r.error ? 'Could not send the link. Ask the admin.' : 'If this email is on the team, a link is on its way.';
-  }));
+  row.append(linkBtn('Create an account', showSignup), linkBtn('Forgot password?', () => showForgot(em.input.value.trim())));
   c.append(em.label, pw.label, msg, go, row);
   bindSubmit(c, async () => {
     const r = await sb.auth.signInWithPassword({ email: em.input.value.trim(), password: pw.input.value });
