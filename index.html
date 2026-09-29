@@ -1526,7 +1526,10 @@ function bindSubmit(c, fn) {
   c.addEventListener('submit', async e => { e.preventDefault(); go.disabled = true; go.classList.add('busy'); msg.textContent = ''; msg.className = 'gerr'; try { await fn(msg); } catch (x) { msg.textContent = x.message || 'Something went wrong. Try again.'; } go.disabled = false; go.classList.remove('busy'); });
 }
 function linkBtn(t, fn) { const b = el('button', 'link', t); b.type = 'button'; b.addEventListener('click', fn); return b; }
+const LANDING = (location.hash.match(/^#\/(\w+)/) || [])[1];
+function gHash(n) { try { window.history.replaceState(null, '', '#/' + n); } catch (e) { /* ignore */ } }
 function showForgot(prefill) {
+  gHash('forgot');
   const c = gateCard('Reset your password', 'Type your email and we will send you a link to choose a new password.');
   const em = gField('fe', 'Email', 'email', 'username'); em.input.value = prefill || '';
   const msg = el('div', 'gerr'); msg.setAttribute('aria-live', 'polite');
@@ -1541,6 +1544,7 @@ function showForgot(prefill) {
   em.input.focus();
 }
 function showLogin() {
+  gHash('login');
   const c = gateCard('Sign in to Ynmo Roadmaps', 'Use the email you signed up with.');
   const em = gField('em', 'Email', 'email', 'username'), pw = gField('pw', 'Password', 'password', 'current-password');
   const msg = el('div', 'gerr'); msg.setAttribute('aria-live', 'polite');
@@ -1556,6 +1560,7 @@ function showLogin() {
   em.input.focus();
 }
 function showSignup() {
+  gHash('signup');
   const c = gateCard('Create your account', 'An admin approves new accounts before they can see the roadmap.');
   const nm = gField('sn', 'Full name', 'text', 'name'), jb = gField('sj', 'Your role', 'select', 'off', JOBS);
   const em = gField('se', 'Work email', 'email', 'username'), pw = gField('sp', 'Password (8 characters or more)', 'password', 'new-password');
@@ -1584,6 +1589,7 @@ function showCheckEmail(email) {
 }
 let pendTimer = 0;
 function showPending(profile) {
+  gHash('pending');
   const c = gateCard('Waiting for admin approval', 'Thanks for registering with ' + (profile.email || 'your email') + '. An admin needs to approve your account before you can open the roadmap. You will get an email as soon as it is approved, and this page opens the tool automatically.');
   const b1 = el('button', 'btn primary', 'Check again'); b1.type = 'button';
   const check = async () => { const p = await loadProfile(); if (p && p.approved) { clearInterval(pendTimer); start(); return true; } return false; };
@@ -2246,7 +2252,7 @@ function start() {
   db.collection('activity').onSnapshot(s => { logs = s.docs.map(d => ({ id: d.id, data: d.data() })).sort((a, b) => a.data.at < b.data.at ? 1 : -1); if (!logsOld.length) logsMore = s.docs.length >= ACTIVE_LOG_PAGE; if (state.page === 'log') renderLog(); }, () => {});
   setSave('ready'); fillRm(); startExtras();
   loadMembers(); setInterval(loadMembers, 20000);
-  showPage((location.hash.match(/^#\/(\w+)/) || [])[1] || 'roadmap');
+  { const h = (location.hash.match(/^#\/(\w+)/) || [])[1], ok = x => PAGES.some(y => y[0] === x); showPage(ok(h) ? h : ok(LANDING) ? LANDING : 'roadmap'); }
 }
 async function boot() { showLoading(); try { await bootInner(); } finally { if (!started) hideLoading(); } }
 async function bootInner() {
@@ -2872,6 +2878,13 @@ function progress(on) {
   let b = $('prog'); if (!b) { b = el('div', 'prog'); b.id = 'prog'; b.hidden = true; document.body.append(b); }
   b.hidden = !on;
 }
+
+/* typing #/login, #/signup or #/forgot while signed out opens that screen */
+window.addEventListener('hashchange', () => {
+  if (started || SHARE) return;
+  const h = (location.hash.match(/^#\/(\w+)/) || [])[1];
+  if (h === 'signup') showSignup(); else if (h === 'forgot') showForgot(); else if (h === 'login') showLogin();
+});
 
 function init() {
   const chips = $('chips');
