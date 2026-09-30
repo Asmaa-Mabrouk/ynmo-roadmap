@@ -13,6 +13,7 @@ import { laneOf, render } from '../ui/gantt-render.js';
 import { sb } from '../core/supabase.js';
 import { avatarEl } from '../ui/avatars.js';
 import { renderAccess } from '../features/sharing.js';
+import { notify } from '../ui/notify.js';
 
 /* ---------- resources ---------- */
 function personDocId(name) { return Object.keys(S.extras).find(i => S.extras[i] && S.extras[i].n === name && !S.extras[i].hidden); }
@@ -63,7 +64,7 @@ export function renderResources() {
   root.append(f);
   const dir = directory(), prim = d => Math.min.apply(null, [...d.sqs].map(k => LANES.findIndex(l => l.k === k)).filter(i => i >= 0).concat([9]));
   const people = [...dir.values()].sort((a, b) => prim(a) - prim(b) || a.name.localeCompare(b.name));
-  const card = el('div', 'card'); card.append(el('h2', '', 'Team (' + people.length + ')'));
+  const card = el('div', 'card'); card.append(el('h2', '', 'Team (' + people.length + ')'), el('p', 'sub', 'Squads: a coloured chip with a ✓ means the person works in that squad. Click a chip to add or remove the squad (saved automatically). They decide whose rows show on each squad\'s roadmap and who is suggested first on the sprint page.'));
   const t = el('table', 'tbl'), th = el('thead'), hr = el('tr'); ['Name', 'Domain', 'Squads', ''].forEach(x => { const c = el('th', '', x); if (!x) c.append(el('span', 'sr', 'Actions')); hr.append(c); }); th.append(hr); t.append(th);
   const tb = el('tbody');
   people.forEach(p => {
@@ -71,8 +72,8 @@ export function renderResources() {
     const c2 = el('td'), ds = selOf(DOMAINS, p.domain); ds.disabled = !canEdit(); ds.setAttribute('aria-label', 'Domain of ' + p.name);
     ds.addEventListener('change', () => savePerson(p.name, { domain: ds.value }, 'changed domain of ' + p.name + ' to ' + ds.value)); c2.append(ds);
     const c3 = el('td'), sw = el('div', 'formrow');
-    LANES.forEach(l => { const b = el('button', 'pill', l.n); b.type = 'button'; b.prepend(el('i')); b.style.setProperty('--c', l.c); b.setAttribute('aria-pressed', String(p.sqs.has(l.k))); b.disabled = !canEdit();
-      b.addEventListener('click', () => { const s = new Set(p.sqs); s.has(l.k) ? s.delete(l.k) : s.add(l.k); if (!s.size) return; savePerson(p.name, { sqs: [...s], over: true }, 'changed squads of ' + p.name + ': ' + [...s].map(k => laneOf(k).n).join(' + ')); }); sw.append(b); });
+    LANES.forEach(l => { const b = el('button', 'pill', (p.sqs.has(l.k) ? '✓ ' : '') + l.n); b.type = 'button'; b.title = (p.sqs.has(l.k) ? 'Remove ' : 'Add ') + p.name + (p.sqs.has(l.k) ? ' from ' : ' to ') + l.n; b.prepend(el('i')); b.style.setProperty('--c', l.c); b.setAttribute('aria-pressed', String(p.sqs.has(l.k))); b.disabled = !canEdit();
+      b.addEventListener('click', () => { const s = new Set(p.sqs); s.has(l.k) ? s.delete(l.k) : s.add(l.k); if (!s.size) { notify(p.name + ' must stay in at least one squad', 'err'); return; } notify(p.name + (s.has(l.k) ? ' added to ' : ' removed from ') + l.n); savePerson(p.name, { sqs: [...s], over: true }, 'changed squads of ' + p.name + ': ' + [...s].map(k => laneOf(k).n).join(' + ')); }); sw.append(b); });
     c3.append(sw);
     const c4 = el('td'); if (canEdit()) { let armed = false; const rm = el('button', 'btn danger sm', 'Remove'); rm.type = 'button'; rm.addEventListener('click', () => { if (armed) { removePerson2(p.name); return; } armed = true; rm.textContent = 'Click again'; setTimeout(() => { armed = false; rm.textContent = 'Remove'; }, 3000); }); c4.append(rm); }
     tr.append(c1, c2, c3, c4); tb.append(tr);

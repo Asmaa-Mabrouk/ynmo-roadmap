@@ -2275,6 +2275,28 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     startIdle();
   }
 
+  // src/esm/features/undo-router.js
+  var handlers = {};
+  function registerUndo(page, h) {
+    handlers[page] = h;
+  }
+  document.addEventListener("keydown", (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.defaultPrevented) return;
+    const k = e.key.toLowerCase();
+    if (k !== "z" && k !== "y") return;
+    const h = handlers[state.page];
+    if (!h || $("xdlg")) return;
+    const t = e.target;
+    if (t && t.tagName && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+    if (t && t.isContentEditable && !h.inEditable) return;
+    const redo = k === "y" || e.shiftKey;
+    if (redo && !h.redo) return;
+    if (h.ready && !h.ready()) return;
+    e.preventDefault();
+    if (redo) h.redo();
+    else h.undo();
+  }, true);
+
   // src/esm/pages/ideas-columns.js
   var COL_COLORS = ["#0d8560", "#6d48a8", "#c04a17", "#5a6db5", "#b8860b", "#c2185b", "#00838f", "#55608a"];
   var isMeta = (i) => !!(i && (i.col || i.cfg));
@@ -2613,17 +2635,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       if (canEdit()) addItem();
     });
     $("undo").addEventListener("click", undo);
+    registerUndo("roadmap", { ready: () => canEdit(), undo: () => undo() });
     $("daysoff").addEventListener("click", (e) => openOff(e.currentTarget));
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
         closeCtx();
         if (S.picker || S.offOpen) closePicker();
-      }
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === "z" || e.key === "Z")) {
-        const t = e.target && e.target.tagName;
-        if (t === "TEXTAREA" || t === "INPUT" || t === "SELECT") return;
-        e.preventDefault();
-        undo();
       }
     });
     let armed = false, t2 = 0;
@@ -4458,6 +4475,52 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return r;
   }
 
+  // src/esm/ui/notify.js
+  var box = null;
+  function host() {
+    if (box && document.body.contains(box)) return box;
+    box = document.createElement("div");
+    box.id = "toasts";
+    box.setAttribute("aria-live", "polite");
+    document.body.append(box);
+    return box;
+  }
+  function notify(msg, kind, ms) {
+    kind = kind || "ok";
+    const t = document.createElement("div");
+    t.className = "toast " + kind;
+    t.setAttribute("role", kind === "err" ? "alert" : "status");
+    const ic = document.createElement("span");
+    ic.className = "ti";
+    ic.textContent = kind === "err" ? "!" : kind === "ok" ? "✓" : "i";
+    ic.setAttribute("aria-hidden", "true");
+    const tx = document.createElement("span");
+    tx.className = "tt";
+    tx.textContent = msg;
+    const x = document.createElement("button");
+    x.type = "button";
+    x.className = "tx";
+    x.textContent = "×";
+    x.setAttribute("aria-label", "Dismiss");
+    const gone = () => {
+      t.classList.add("out");
+      setTimeout(() => t.remove(), 200);
+    };
+    x.addEventListener("click", gone);
+    t.append(ic, tx, x);
+    const h = host();
+    h.append(t);
+    while (h.children.length > 3) h.firstChild.remove();
+    setTimeout(gone, ms || (kind === "err" ? 7e3 : 3500));
+  }
+  var lastFail = 0;
+  function notifyFailOnce(msg) {
+    const n = Date.now();
+    if (n - lastFail < 8e3) return;
+    lastFail = n;
+    notify(msg, "err");
+  }
+
   // src/esm/pages/resources.js
   function personDocId(name) {
     return Object.keys(S.extras).find((i) => S.extras[i] && S.extras[i].n === name && !S.extras[i].hidden);
@@ -4563,7 +4626,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const dir = directory(), prim = (d) => Math.min.apply(null, [...d.sqs].map((k) => LANES.findIndex((l) => l.k === k)).filter((i) => i >= 0).concat([9]));
     const people = [...dir.values()].sort((a, b) => prim(a) - prim(b) || a.name.localeCompare(b.name));
     const card = el("div", "card");
-    card.append(el("h2", "", "Team (" + people.length + ")"));
+    card.append(el("h2", "", "Team (" + people.length + ")"), el("p", "sub", "Squads: a coloured chip with a ✓ means the person works in that squad. Click a chip to add or remove the squad (saved automatically). They decide whose rows show on each squad's roadmap and who is suggested first on the sprint page."));
     const t = el("table", "tbl"), th = el("thead"), hr = el("tr");
     ["Name", "Domain", "Squads", ""].forEach((x) => {
       const c = el("th", "", x);
@@ -4586,8 +4649,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       c2.append(ds);
       const c3 = el("td"), sw = el("div", "formrow");
       LANES.forEach((l) => {
-        const b = el("button", "pill", l.n);
+        const b = el("button", "pill", (p.sqs.has(l.k) ? "✓ " : "") + l.n);
         b.type = "button";
+        b.title = (p.sqs.has(l.k) ? "Remove " : "Add ") + p.name + (p.sqs.has(l.k) ? " from " : " to ") + l.n;
         b.prepend(el("i"));
         b.style.setProperty("--c", l.c);
         b.setAttribute("aria-pressed", String(p.sqs.has(l.k)));
@@ -4595,7 +4659,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         b.addEventListener("click", () => {
           const s = new Set(p.sqs);
           s.has(l.k) ? s.delete(l.k) : s.add(l.k);
-          if (!s.size) return;
+          if (!s.size) {
+            notify(p.name + " must stay in at least one squad", "err");
+            return;
+          }
+          notify(p.name + (s.has(l.k) ? " added to " : " removed from ") + l.n);
           savePerson(p.name, { sqs: [...s], over: true }, "changed squads of " + p.name + ": " + [...s].map((k) => laneOf(k).n).join(" + "));
         });
         sw.append(b);
@@ -5067,50 +5135,90 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return Array.from({ length: n }, (_, i) => lo + (hi - lo) * (i + 1) / (n + 1));
   }
 
-  // src/esm/ui/notify.js
-  var box = null;
-  function host() {
-    if (box && document.body.contains(box)) return box;
-    box = document.createElement("div");
-    box.id = "toasts";
-    box.setAttribute("aria-live", "polite");
-    document.body.append(box);
-    return box;
-  }
-  function notify(msg, kind, ms) {
-    kind = kind || "ok";
-    const t = document.createElement("div");
-    t.className = "toast " + kind;
-    t.setAttribute("role", kind === "err" ? "alert" : "status");
-    const ic = document.createElement("span");
-    ic.className = "ti";
-    ic.textContent = kind === "err" ? "!" : kind === "ok" ? "✓" : "i";
-    ic.setAttribute("aria-hidden", "true");
-    const tx = document.createElement("span");
-    tx.className = "tt";
-    tx.textContent = msg;
-    const x = document.createElement("button");
-    x.type = "button";
-    x.className = "tx";
-    x.textContent = "×";
-    x.setAttribute("aria-label", "Dismiss");
-    const gone = () => {
-      t.classList.add("out");
-      setTimeout(() => t.remove(), 200);
+  // src/esm/features/undo-stack.js
+  var same2 = (a, b) => JSON.stringify(a === void 0 ? null : a) === JSON.stringify(b === void 0 ? null : b);
+  var canon = (d) => d ? Object.keys(d).sort().reduce((o, k) => (o[k] = d[k], o), {}) : null;
+  function createUndo(limit) {
+    const max = limit || 100;
+    let undo2 = [], redo = [], open = null;
+    const subs = /* @__PURE__ */ new Set();
+    const tell = () => subs.forEach((f) => f());
+    const finalize = (step2) => {
+      if (step2.ops.length) {
+        undo2.push(step2);
+        if (undo2.length > max) undo2.shift();
+        redo = [];
+        tell();
+      }
     };
-    x.addEventListener("click", gone);
-    t.append(ic, tx, x);
-    const h = host();
-    h.append(t);
-    while (h.children.length > 3) h.firstChild.remove();
-    setTimeout(gone, ms || (kind === "err" ? 7e3 : 3500));
-  }
-  var lastFail = 0;
-  function notifyFailOnce(msg) {
-    const n = Date.now();
-    if (n - lastFail < 8e3) return;
-    lastFail = n;
-    notify(msg, "err");
+    const begin = () => {
+      if (!open) {
+        const step2 = open = { label: "Edit", ops: [] };
+        queueMicrotask(() => {
+          if (open === step2) {
+            open = null;
+            finalize(step2);
+          }
+        });
+      }
+      return open;
+    };
+    return {
+      /** Name the step being recorded, e.g. "Delete 3 lines" (call before the changes). */
+      mark(label) {
+        if (label) begin().label = label;
+      },
+      /** Record one change: `before` / `after` are the whole doc (null = did not exist / was deleted). */
+      rec(id, before, after) {
+        if (same2(canon(before), canon(after))) return;
+        const o = begin(), prev = o.ops.find((x) => x.id === id);
+        if (prev) prev.after = after;
+        else o.ops.push({ id, before, after });
+      },
+      canUndo: () => undo2.length > 0,
+      canRedo: () => redo.length > 0,
+      nextUndo: () => undo2.length ? undo2[undo2.length - 1].label : "",
+      nextRedo: () => redo.length ? redo[redo.length - 1].label : "",
+      clear() {
+        undo2 = [];
+        redo = [];
+        open = null;
+        tell();
+      },
+      subscribe(f) {
+        subs.add(f);
+        return () => subs.delete(f);
+      },
+      /**
+       * Revert (dir 'undo') or re-apply (dir 'redo') the latest step.
+       * @param {(id:string)=>object|undefined} current the doc as it is now
+       * @param {(id:string, doc:object|null)=>void} apply write a doc (null = delete)
+       * @returns {{label:string, done:number, skipped:number}|null}
+       */
+      step(dir, current, apply) {
+        if (open) {
+          const st = open;
+          open = null;
+          finalize(st);
+        }
+        const from = dir === "undo" ? undo2 : redo, to = dir === "undo" ? redo : undo2;
+        const s = from.pop();
+        if (!s) return null;
+        let done2 = 0, skipped = 0;
+        (dir === "undo" ? s.ops.slice().reverse() : s.ops).forEach((o) => {
+          const want = dir === "undo" ? o.after : o.before, then = dir === "undo" ? o.before : o.after;
+          if (!same2(canon(current(o.id) || null), canon(want))) {
+            skipped++;
+            return;
+          }
+          apply(o.id, then);
+          done2++;
+        });
+        if (done2) to.push(s);
+        tell();
+        return { label: s.label, done: done2, skipped };
+      }
+    };
   }
 
   // src/esm/features/rich-text.js
@@ -5267,15 +5375,56 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const l = reportList();
     return l.find((r) => r.id === rUI.id) || l[0] || null;
   };
-  function save(rep, log) {
+  var undoers = {};
+  var baseline = {};
+  var undoR = (id) => {
+    const k = (S.me && S.me.id || "me") + ":" + id;
+    return undoers[k] || (undoers[k] = createUndo(60));
+  };
+  var noStamp = (d) => {
+    const c = JSON.parse(JSON.stringify(d));
+    delete c.by;
+    delete c.ts;
+    return JSON.stringify(c);
+  };
+  function save(rep, log, label) {
     const id = rep.id, d = Object.assign({}, rep);
     delete d.id;
     d.by = S.me && (S.me.name || S.me.email) || "";
     d.ts = Date.now();
     S.reports[id] = d;
     write("reports/" + id, d);
+    const before = baseline[id] ? JSON.parse(baseline[id]) : null, after = JSON.parse(JSON.stringify(d));
+    if (before && before.status !== after.status) undoR(id).clear();
+    else if (before && noStamp(before) !== noStamp(after)) {
+      const U = undoR(id);
+      U.mark(label || "Edit");
+      U.rec(id, before, after);
+    }
+    baseline[id] = JSON.stringify(after);
     if (log) logAct("report", log);
   }
+  var unsubR = null;
+  function reportUndo(dir) {
+    const rep = cur();
+    if (!rep || rep.status === "submitted" || isViewer() || !canBuild()) return;
+    const r = undoR(rep.id).step(dir, (id) => S.reports[id], (id, doc) => {
+      if (!doc) return;
+      S.reports[id] = doc;
+      write("reports/" + id, doc);
+      baseline[id] = JSON.stringify(doc);
+    }), word = dir === "undo" ? "Undo" : "Redo";
+    if (!r) {
+      notify("Nothing to " + word.toLowerCase(), "info");
+      return;
+    }
+    notify(r.done ? word + ": " + r.label : "Someone else changed this report after you, so nothing was " + (dir === "undo" ? "undone" : "redone"), r.done ? "ok" : "info");
+    renderReports();
+  }
+  registerUndo("reports", { ready: () => {
+    const r = cur();
+    return !!r && r.status !== "submitted" && !isViewer() && canBuild();
+  }, undo: () => reportUndo("undo"), redo: () => reportUndo("redo") });
   function roadFor(a, b) {
     const rm = allRoadmaps().find((r) => r.a <= a && r.b >= a);
     if (!rm) return { road: [], ka: NaN, kb: NaN };
@@ -5337,7 +5486,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     rep.srcN = { si: sitems.length, rf: road.filter((r) => Number.isFinite(ka) && r.d0 <= kb && r.d1 >= ka).length };
     const lines = countLines(rep.prods);
     rUI.id = rep.id;
-    save(rep, isNew ? "created the weekly report for " + fmtIso(rep.a) : "synced the weekly report for " + fmtIso(rep.a));
+    save(rep, isNew ? "created the weekly report for " + fmtIso(rep.a) : "synced the weekly report for " + fmtIso(rep.a), "Sync from sprint and roadmap");
     if (!lines) {
       say(rep, "No data found for this week: Sprint " + rep.n + " has no items for these products and no roadmap bar overlaps " + fmtIso(rep.a) + ". Add items on the Sprints page (or check Report settings), then sync again.", true);
       rUI.busy = false;
@@ -5355,7 +5504,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         if (r.error || !r.data || !r.data.products) throw r.error || new Error("no answer");
         const n = applyAi(rep.prods, r.data);
         rep.ai = { model: r.data.model || "", at: (/* @__PURE__ */ new Date()).toISOString() };
-        save(rep);
+        save(rep, "", "AI wording");
         say(rep, n ? "AI wording applied (" + n + " changes). Your own edits were kept." : "AI returned nothing new; the draft is unchanged.", false);
       } catch (e) {
         say(rep, await aiWhy(e) + " The rule-based draft was kept.", true);
@@ -5459,7 +5608,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     r.dataset.id = l.id;
     const touch = (patch) => {
       Object.assign(l, patch, { edited: true });
-      save(rep);
+      save(rep, "", patch.hide !== void 0 ? patch.hide ? "Hide line" : "Show line" : patch.st ? "Change status" : patch.g ? "Move to another group" : "Edit line");
     };
     const st = el("select", "spsel rst-" + l.st);
     st.setAttribute("aria-label", "Status");
@@ -5571,7 +5720,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
             n.jira = r.jira;
             d.items.push(n);
           });
-          save(rep, "added " + rows2.length + " line" + (rows2.length === 1 ? "" : "s") + " to the weekly report");
+          save(rep, "added " + rows2.length + " line" + (rows2.length === 1 ? "" : "s") + " to the weekly report", "Add " + rows2.length + " line" + (rows2.length === 1 ? "" : "s"));
           notify(rows2.length + " line" + (rows2.length === 1 ? "" : "s") + ' added to "' + g[1] + '"');
           renderReports();
         });
@@ -5586,6 +5735,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     if (!pg) return;
     pg.textContent = "";
     const viewer = isViewer(), l = reportList(), rep = cur();
+    if (rep && S.reports[rep.id]) baseline[rep.id] = JSON.stringify(S.reports[rep.id]);
     pg.append(pageHead("Weekly report", viewer ? "Submitted weekly updates per product." : "Built from the sprint plan and the roadmap. Edit anything, then submit it to the executives."));
     const bar = el("div", "row spbar");
     if (l.length) {
@@ -5646,6 +5796,18 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       ab.append(document.createTextNode(rUI.wait ? "Writing…" : "Generate with AI"));
       ab.title = "Rewrites unedited lines and summaries in executive wording. Your edits are kept.";
       tools.prepend(ab);
+    }
+    if (!viewer && !sub) {
+      const U = undoR(rep.id), ub = btn("↶ Undo", "", () => reportUndo("undo"), true), rb = btn("↷ Redo", "", () => reportUndo("redo"), true);
+      const upd = () => {
+        ub.disabled = !U.canUndo() || !canBuild();
+        rb.disabled = !U.canRedo() || !canBuild();
+        ub.title = ub.ariaLabel = U.canUndo() ? "Undo: " + U.nextUndo() + " (Ctrl/Cmd+Z)" : "Nothing to undo";
+        rb.title = rb.ariaLabel = U.canRedo() ? "Redo: " + U.nextRedo() + " (Ctrl/Cmd+Shift+Z)" : "Nothing to redo";
+      };
+      if (unsubR) unsubR();
+      unsubR = U.subscribe(upd);
+      upd();
     }
     btn("Copy text", "", () => {
       const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso);
@@ -5832,92 +5994,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return nav;
   }
 
-  // src/esm/features/undo-stack.js
-  var same2 = (a, b) => JSON.stringify(a === void 0 ? null : a) === JSON.stringify(b === void 0 ? null : b);
-  var canon = (d) => d ? Object.keys(d).sort().reduce((o, k) => (o[k] = d[k], o), {}) : null;
-  function createUndo(limit) {
-    const max = limit || 100;
-    let undo2 = [], redo = [], open = null;
-    const subs = /* @__PURE__ */ new Set();
-    const tell = () => subs.forEach((f) => f());
-    const finalize = (step2) => {
-      if (step2.ops.length) {
-        undo2.push(step2);
-        if (undo2.length > max) undo2.shift();
-        redo = [];
-        tell();
-      }
-    };
-    const begin = () => {
-      if (!open) {
-        const step2 = open = { label: "Edit", ops: [] };
-        queueMicrotask(() => {
-          if (open === step2) {
-            open = null;
-            finalize(step2);
-          }
-        });
-      }
-      return open;
-    };
-    return {
-      /** Name the step being recorded, e.g. "Delete 3 lines" (call before the changes). */
-      mark(label) {
-        if (label) begin().label = label;
-      },
-      /** Record one change: `before` / `after` are the whole doc (null = did not exist / was deleted). */
-      rec(id, before, after) {
-        if (same2(canon(before), canon(after))) return;
-        const o = begin(), prev = o.ops.find((x) => x.id === id);
-        if (prev) prev.after = after;
-        else o.ops.push({ id, before, after });
-      },
-      canUndo: () => undo2.length > 0,
-      canRedo: () => redo.length > 0,
-      nextUndo: () => undo2.length ? undo2[undo2.length - 1].label : "",
-      nextRedo: () => redo.length ? redo[redo.length - 1].label : "",
-      clear() {
-        undo2 = [];
-        redo = [];
-        open = null;
-        tell();
-      },
-      subscribe(f) {
-        subs.add(f);
-        return () => subs.delete(f);
-      },
-      /**
-       * Revert (dir 'undo') or re-apply (dir 'redo') the latest step.
-       * @param {(id:string)=>object|undefined} current the doc as it is now
-       * @param {(id:string, doc:object|null)=>void} apply write a doc (null = delete)
-       * @returns {{label:string, done:number, skipped:number}|null}
-       */
-      step(dir, current, apply) {
-        if (open) {
-          const st = open;
-          open = null;
-          finalize(st);
-        }
-        const from = dir === "undo" ? undo2 : redo, to = dir === "undo" ? redo : undo2;
-        const s = from.pop();
-        if (!s) return null;
-        let done2 = 0, skipped = 0;
-        (dir === "undo" ? s.ops.slice().reverse() : s.ops).forEach((o) => {
-          const want = dir === "undo" ? o.after : o.before, then = dir === "undo" ? o.before : o.after;
-          if (!same2(canon(current(o.id) || null), canon(want))) {
-            skipped++;
-            return;
-          }
-          apply(o.id, then);
-          done2++;
-        });
-        if (done2) to.push(s);
-        tell();
-        return { label: s.label, done: done2, skipped };
-      }
-    };
-  }
-
   // src/esm/pages/sprints.js
   var iso3 = (t) => new Date(t).toISOString().slice(0, 10);
   var uid2 = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -5961,10 +6037,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     S.sprints[id] = d;
     write("sprints/" + id, d);
   }
-  var undoers = {};
+  var undoers2 = {};
   var undoOf = (spId) => {
     const k = (S.me && S.me.id || "me") + ":" + spId;
-    return undoers[k] || (undoers[k] = createUndo(100));
+    return undoers2[k] || (undoers2[k] = createUndo(100));
   };
   var rawSet = (id, doc) => {
     if (doc) S.sitems[id] = doc;
@@ -6768,15 +6844,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   }
   var unsubBar = null;
   var activeEd = null;
-  document.addEventListener("keydown", (e) => {
-    if (!activeEd || state.page !== "sprints" || !routeId() || !(e.ctrlKey || e.metaKey) || e.altKey || $("xdlg")) return;
-    const k = e.key.toLowerCase();
-    if (k !== "z" && k !== "y") return;
-    const t = e.target;
-    if (t && t.tagName && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
-    e.preventDefault();
-    activeEd.doUndo(k === "y" || e.shiftKey ? "redo" : "undo");
-  }, true);
+  registerUndo("sprints", { inEditable: true, ready: () => !!activeEd, undo: () => activeEd.doUndo("undo"), redo: () => activeEd.doUndo("redo") });
   function detailView(pg, sp, ro) {
     ensureMigrated(sp);
     sp = Object.assign({ id: sp.id }, S.sprints[sp.id]);

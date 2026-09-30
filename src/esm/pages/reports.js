@@ -15,6 +15,8 @@ import { items } from '../core/model.js';
 import { saveIdea } from './ideas.js';
 import { itemsOf, parsePaste, sprintList } from './sprints.js';
 import { notify } from '../ui/notify.js';
+import { createUndo } from '../features/undo-stack.js';
+import { registerUndo } from '../features/undo-router.js';
 import { autoGrow, richBar, richBox, showRich, submitOnCtrlEnter } from '../features/rich-text.js';
 import { GROUPS, RSTATUS, aiPayload, applyAi, buildProds, jiraUrl, newManualLine, overall, productsOf, reportToText, ruleSummary } from '../features/report-model.js';
 
@@ -26,7 +28,26 @@ const canBuild = () => !isViewer() && canWrite();
 export const reportList = () => Object.keys(S.reports).map(id => Object.assign({ id: id }, S.reports[id])).filter(r => r.a && (!isViewer() || r.status === 'submitted')).sort((x, y) => (x.a < y.a ? 1 : -1));
 const cur = () => { const l = reportList(); return l.find(r => r.id === rUI.id) || l[0] || null; };
 
-function save(rep, log) { const id = rep.id, d = Object.assign({}, rep); delete d.id; d.by = (S.me && (S.me.name || S.me.email)) || ''; d.ts = Date.now(); S.reports[id] = d; write('reports/' + id, d); if (log) logAct('report', log); }
+/* ---- undo: one history per user and report; every save is a step, restoring the whole report (never over someone else's newer change) ---- */
+const undoers = {}, baseline = {};
+const undoR = id => { const k = ((S.me && S.me.id) || 'me') + ':' + id; return undoers[k] || (undoers[k] = createUndo(60)); };
+const noStamp = d => { const c = JSON.parse(JSON.stringify(d)); delete c.by; delete c.ts; return JSON.stringify(c); };
+function save(rep, log, label) {
+  const id = rep.id, d = Object.assign({}, rep); delete d.id; d.by = (S.me && (S.me.name || S.me.email)) || ''; d.ts = Date.now(); S.reports[id] = d; write('reports/' + id, d);
+  const before = baseline[id] ? JSON.parse(baseline[id]) : null, after = JSON.parse(JSON.stringify(d));
+  if (before && before.status !== after.status) undoR(id).clear();   /* submit / reopen is never undone silently */
+  else if (before && noStamp(before) !== noStamp(after)) { const U = undoR(id); U.mark(label || 'Edit'); U.rec(id, before, after); }
+  baseline[id] = JSON.stringify(after);
+  if (log) logAct('report', log);
+}
+let unsubR = null;
+function reportUndo(dir) {
+  const rep = cur(); if (!rep || rep.status === 'submitted' || isViewer() || !canBuild()) return;
+  const r = undoR(rep.id).step(dir, id => S.reports[id], (id, doc) => { if (!doc) return; S.reports[id] = doc; write('reports/' + id, doc); baseline[id] = JSON.stringify(doc); }), word = dir === 'undo' ? 'Undo' : 'Redo';
+  if (!r) { notify('Nothing to ' + word.toLowerCase(), 'info'); return; }
+  notify(r.done ? word + ': ' + r.label : 'Someone else changed this report after you, so nothing was ' + (dir === 'undo' ? 'undone' : 'redone'), r.done ? 'ok' : 'info'); renderReports();
+}
+registerUndo('reports', { ready: () => { const r = cur(); return !!r && r.status !== 'submitted' && !isViewer() && canBuild(); }, undo: () => reportUndo('undo'), redo: () => reportUndo('redo') });
 /** Roadmap bars for the roadmap that covers the sprint week, as day indexes of that roadmap. */
 function roadFor(a, b) {
   const rm = allRoadmaps().find(r => r.a <= a && r.b >= a); if (!rm) return { road: [], ka: NaN, kb: NaN };
@@ -66,7 +87,7 @@ async function sync(rep, ai, isNew) {
   rep.pl = pl; rep.prods = buildProds(pl, rep.prods, sitems, road, ka, kb, rep.a, rep.b);
   rep.srcN = { si: sitems.length, rf: road.filter(r => Number.isFinite(ka) && r.d0 <= kb && r.d1 >= ka).length };
   const lines = countLines(rep.prods);
-  rUI.id = rep.id; save(rep, isNew ? 'created the weekly report for ' + fmtIso(rep.a) : 'synced the weekly report for ' + fmtIso(rep.a));
+  rUI.id = rep.id; save(rep, isNew ? 'created the weekly report for ' + fmtIso(rep.a) : 'synced the weekly report for ' + fmtIso(rep.a), 'Sync from sprint and roadmap');
   if (!lines) {
     say(rep, 'No data found for this week: Sprint ' + rep.n + ' has no items for these products and no roadmap bar overlaps ' + fmtIso(rep.a) + '. Add items on the Sprints page (or check Report settings), then sync again.', true);
     rUI.busy = false; renderReports(); return;
@@ -78,7 +99,7 @@ async function sync(rep, ai, isNew) {
       const r = await sb.functions.invoke('weekly-draft', { body: aiPayload(rep.a, pl, rep.prods) });
       if (r.error || !r.data || !r.data.products) throw r.error || new Error('no answer');
       const n = applyAi(rep.prods, r.data); rep.ai = { model: r.data.model || '', at: new Date().toISOString() };
-      save(rep); say(rep, n ? 'AI wording applied (' + n + ' changes). Your own edits were kept.' : 'AI returned nothing new; the draft is unchanged.', false);
+      save(rep, '', 'AI wording'); say(rep, n ? 'AI wording applied (' + n + ' changes). Your own edits were kept.' : 'AI returned nothing new; the draft is unchanged.', false);
     } catch (e) { say(rep, (await aiWhy(e)) + ' The rule-based draft was kept.', true); }
     rUI.wait = false;
   }
@@ -126,7 +147,7 @@ function viewLine(l) {
 function lineRow(rep, d, l, ro) {
   if (ro) return viewLine(l);
   const r = el('div', 'rline ln-' + l.st + (l.hide ? ' hid' : '')); r.dataset.id = l.id;
-  const touch = patch => { Object.assign(l, patch, { edited: true }); save(rep); };
+  const touch = patch => { Object.assign(l, patch, { edited: true }); save(rep, '', patch.hide !== undefined ? (patch.hide ? 'Hide line' : 'Show line') : patch.st ? 'Change status' : patch.g ? 'Move to another group' : 'Edit line'); };
   const st = el('select', 'spsel rst-' + l.st); st.setAttribute('aria-label', 'Status'); Object.keys(RSTATUS).forEach(k => { const o = el('option', '', RSTATUS[k]); o.value = k; o.selected = k === l.st; st.append(o); });
   st.addEventListener('change', () => { touch({ st: st.value }); renderReports(); });
   const t = richBox('sptext', l.h, l.t, 'Line text', (h, pl) => { if (!pl) { showRich(t, l.h, l.t); return; } touch({ t: pl.slice(0, 1200), h: h.slice(0, 4000) }); });
@@ -155,7 +176,7 @@ function prodBlock(rep, p, ro) {
       const f = el('form', 'spadd'), ta = el('textarea'), go = el('button', 'btn sm', 'Add items'); go.type = 'submit';
       ta.rows = 2; autoGrow(ta); submitOnCtrlEnter(ta, f); ta.placeholder = 'Add to "' + g[1] + '": type or paste one or many items, one per line (bullets are removed). Ctrl+Enter adds.'; ta.setAttribute('aria-label', 'Add items to ' + g[1]);
       f.append(ta, go);
-      f.addEventListener('submit', e => { e.preventDefault(); const rows = parsePaste(ta.value); if (!rows.length) { notify('Type at least one line first', 'err'); return; } rows.forEach(r => { const n = newManualLine(g[0], r.t); n.jira = r.jira; d.items.push(n); }); save(rep, 'added ' + rows.length + ' line' + (rows.length === 1 ? '' : 's') + ' to the weekly report'); notify(rows.length + ' line' + (rows.length === 1 ? '' : 's') + ' added to "' + g[1] + '"'); renderReports(); });
+      f.addEventListener('submit', e => { e.preventDefault(); const rows = parsePaste(ta.value); if (!rows.length) { notify('Type at least one line first', 'err'); return; } rows.forEach(r => { const n = newManualLine(g[0], r.t); n.jira = r.jira; d.items.push(n); }); save(rep, 'added ' + rows.length + ' line' + (rows.length === 1 ? '' : 's') + ' to the weekly report', 'Add ' + rows.length + ' line' + (rows.length === 1 ? '' : 's')); notify(rows.length + ' line' + (rows.length === 1 ? '' : 's') + ' added to "' + g[1] + '"'); renderReports(); });
       gh.append(f);
     }
     sec.append(gh);
@@ -165,6 +186,7 @@ function prodBlock(rep, p, ro) {
 export function renderReports() {
   const pg = $('pg-reports'); if (!pg) return; pg.textContent = '';
   const viewer = isViewer(), l = reportList(), rep = cur();
+  if (rep && S.reports[rep.id]) baseline[rep.id] = JSON.stringify(S.reports[rep.id]);
   pg.append(pageHead('Weekly report', viewer ? 'Submitted weekly updates per product.' : 'Built from the sprint plan and the roadmap. Edit anything, then submit it to the executives.'));
   const bar = el('div', 'row spbar');
   if (l.length) { const sel = el('select'); sel.setAttribute('aria-label', 'Report'); l.forEach(r => { const o = el('option', '', 'Week of ' + fmtIso(r.a) + ' · Sprint ' + r.n + (viewer ? '' : r.status === 'submitted' ? ' · submitted' : ' · draft')); o.value = r.id; o.selected = rep && r.id === rep.id; sel.append(o); }); sel.addEventListener('change', () => { rUI.id = sel.value; rUI.note = ''; rUI.err = false; renderReports(); }); bar.append(sel); }
@@ -182,6 +204,11 @@ export function renderReports() {
   const tools = el('div', 'row rtools');
   const btn = (t, cls, fn, dis) => { const b = el('button', 'btn ' + (cls || ''), t); b.type = 'button'; b.disabled = !!dis; b.addEventListener('click', fn); tools.append(b); return b; };
   if (!viewer && !sub) { btn('Sync from Sprint & Roadmap', '', () => sync(rep, false), !canBuild() || rUI.busy); const ab = btn('', 'ai', () => sync(rep, true), !canBuild() || rUI.busy); ab.insertAdjacentHTML('afterbegin', SPARK); ab.append(document.createTextNode(rUI.wait ? 'Writing…' : 'Generate with AI')); ab.title = 'Rewrites unedited lines and summaries in executive wording. Your edits are kept.'; tools.prepend(ab); }
+  if (!viewer && !sub) {
+    const U = undoR(rep.id), ub = btn('↶ Undo', '', () => reportUndo('undo'), true), rb = btn('↷ Redo', '', () => reportUndo('redo'), true);
+    const upd = () => { ub.disabled = !U.canUndo() || !canBuild(); rb.disabled = !U.canRedo() || !canBuild(); ub.title = ub.ariaLabel = U.canUndo() ? 'Undo: ' + U.nextUndo() + ' (Ctrl/Cmd+Z)' : 'Nothing to undo'; rb.title = rb.ariaLabel = U.canRedo() ? 'Redo: ' + U.nextRedo() + ' (Ctrl/Cmd+Shift+Z)' : 'Nothing to redo'; };
+    if (unsubR) unsubR(); unsubR = U.subscribe(upd); upd();
+  }
   btn('Copy text', '', () => { const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify('Report text copied to the clipboard'), () => notify('Could not copy. Select the text and copy it manually.', 'err')); });
   btn('Print / PDF', '', () => { document.body.classList.add('print-report'); const off = () => { document.body.classList.remove('print-report'); window.removeEventListener('afterprint', off); }; window.addEventListener('afterprint', off); window.print(); });
   if (!viewer && !sub) btn('Submit to executives', 'primary', () => { rep.status = 'submitted'; rep.subAt = new Date().toISOString(); rep.subBy = S.me.name || S.me.email; save(rep, 'submitted the weekly report for ' + fmtIso(rep.a)); notify('Report submitted. Executives can now see it.'); renderReports(); }, !canBuild());

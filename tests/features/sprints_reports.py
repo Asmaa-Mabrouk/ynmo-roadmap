@@ -143,6 +143,18 @@ with sync_playwright() as pw:
     A.click('button:text-is("Generate with AI")'); A.wait_for_timeout(900)
     t=A.locator('#pg-reports').inner_text(); vals=A.evaluate("[...document.querySelectorAll('#pg-reports .sptext,#pg-reports .rsum')].map(e=>e.innerText.trim())")
     ok('edited line and summary survive re-sync + AI', 'Custom wording by PM' in vals and 'My own summary' in vals)
+    # ---- undo on the report (per user), Ctrl+Z / Cmd+Z
+    hid=lambda: A.locator('#pg-reports .rline.hid').count()
+    ok('report has Undo and Redo buttons', A.locator('#pg-reports button:text-is("↶ Undo")').count()==1)
+    h0=hid(); A.locator('#pg-reports .rprod[data-k="tifli"] .rline').first.locator('button:text-is("Hide")').click(); A.wait_for_timeout(400)
+    ok('hiding a line is recorded', hid()==h0+1 and A.locator('#pg-reports button:text-is("↶ Undo")').is_enabled())
+    A.locator('#pg-reports h1').click(); A.keyboard.press('Control+z'); A.wait_for_timeout(400)
+    ok('Ctrl+Z undoes it on the Reports page', hid()==h0 and 'Undo: Hide line' in A.locator('#toasts').inner_text())
+    A.keyboard.press('Control+Shift+z'); A.wait_for_timeout(400); ok('Ctrl+Shift+Z redoes it', hid()==h0+1)
+    A.keyboard.press('Meta+z'); A.wait_for_timeout(400); ok('Cmd+Z works too', hid()==h0)
+    A.locator('#pg-reports .rprod[data-k="tifli"] .rline').first.locator('select[aria-label="Status"]').select_option('risk'); A.wait_for_timeout(500)
+    A.locator('#pg-reports h1').click(); A.keyboard.press('Control+z'); A.wait_for_timeout(500)
+    ok('a status change is undone', A.locator('#pg-reports .rprod[data-k="tifli"] .rline').first.locator('select[aria-label="Status"]').input_value()!='risk')
     # new sprint item shows up on plain sync, edits still kept
     A.click('#nav button[data-p="sprints"]'); A.wait_for_timeout(300); A.click('.spcard a.splink'); A.wait_for_timeout(500)
     P.locator('.sdoc .ghost .bt').click(); key('/'); typ('Product'); key('Enter'); typ('AI'); key('Enter'); typ('Lina'); key('Enter'); typ('Sara voice v2'); P.wait_for_timeout(700)
@@ -183,6 +195,8 @@ with sync_playwright() as pw:
     # submit
     A.click('button:text-is("Submit to executives")'); A.wait_for_timeout(600)
     ok('submitted and read-only', 'Submitted' in A.locator('#pg-reports .rmeta').inner_text() and A.locator('#pg-reports .rline input:not([disabled])').count()==0)
+    A.locator('#pg-reports h1').click(); A.keyboard.press('Control+z'); A.wait_for_timeout(400)
+    ok('Ctrl+Z never un-submits a report', 'Submitted' in A.locator('#pg-reports .rmeta').inner_text())
     ok('log has sprint and report entries', True)
     # second report stays draft (viewer must not see it)
     A.click('#nav button[data-p="sprints"]'); A.click('button:text-is("+ New sprint")'); A.wait_for_timeout(400)

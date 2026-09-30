@@ -21,6 +21,7 @@ import { notify } from '../ui/notify.js';
 import { openMenu, closeMenu } from '../ui/menu.js';
 import { crumbs } from '../ui/crumbs.js';
 import { createUndo } from '../features/undo-stack.js';
+import { registerUndo } from '../features/undo-router.js';
 import { state } from '../core/model.js';
 
 const iso = t => new Date(t).toISOString().slice(0, 10);
@@ -386,13 +387,7 @@ function carryOver(sp, ed) {
   logAct('sprint', 'carried ' + c + ' unfinished scope' + (c === 1 ? '' : 's') + ' into Sprint ' + sp.n); notify(c + ' unfinished scope' + (c === 1 ? '' : 's') + ' carried over from Sprint ' + prev.n); ed.redraw();
 }
 let unsubBar = null, activeEd = null;
-/* Ctrl/Cmd+Z works anywhere on a sprint page (not while typing in a date/number/search box, which keep their own undo). */
-document.addEventListener('keydown', e => {
-  if (!activeEd || state.page !== 'sprints' || !routeId() || !(e.ctrlKey || e.metaKey) || e.altKey || $('xdlg')) return;
-  const k = e.key.toLowerCase(); if (k !== 'z' && k !== 'y') return;
-  const t = e.target; if (t && t.tagName && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
-  e.preventDefault(); activeEd.doUndo(k === 'y' || e.shiftKey ? 'redo' : 'undo');
-}, true);
+registerUndo('sprints', { inEditable: true, ready: () => !!activeEd, undo: () => activeEd.doUndo('undo'), redo: () => activeEd.doUndo('redo') });
 function detailView(pg, sp, ro) {
   ensureMigrated(sp); sp = Object.assign({ id: sp.id }, S.sprints[sp.id]);
   pg.append(crumbs([{ label: 'Sprints', href: '#/sprints' }, { label: 'Sprint ' + sp.n }]));

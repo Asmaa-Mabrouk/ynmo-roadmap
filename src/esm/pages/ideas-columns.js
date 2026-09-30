@@ -18,6 +18,7 @@ import { initExtras } from '../app/extras-wiring.js';
 import { LOGO } from '../core/supabase.js';
 import { useRoadmap } from './roadmaps.js';
 import { boot } from '../app/shell.js';
+import { registerUndo } from '../features/undo-router.js';
 
 /* ---------- ideas: editable, colourable, re-orderable product columns (like Trello) ---------- */
 const COL_COLORS = ['#0d8560', '#6d48a8', '#c04a17', '#5a6db5', '#b8860b', '#c2185b', '#00838f', '#55608a'];
@@ -170,14 +171,10 @@ export function init() {
   document.addEventListener('pointerdown', e => { const c = $('ctx'); if (!c.hidden && !c.contains(e.target)) closeCtx(); }, true);
   $('add').addEventListener('click', () => { if (canEdit()) addItem(); });
   $('undo').addEventListener('click', undo);
+  registerUndo('roadmap', { ready: () => canEdit(), undo: () => undo() });
   $('daysoff').addEventListener('click', e => openOff(e.currentTarget));
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') { closeCtx(); if (S.picker || S.offOpen) closePicker(); }
-    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
-      const t = e.target && e.target.tagName;
-      if (t === 'TEXTAREA' || t === 'INPUT' || t === 'SELECT') return;
-      e.preventDefault(); undo();
-    }
   });
   let armed = false, t2 = 0; const rb = $('reset') || document.createElement('button');
   rb.addEventListener('click', () => {
