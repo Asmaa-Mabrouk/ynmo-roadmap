@@ -25,6 +25,8 @@ supabase functions deploy weekly-draft
 supabase secrets set GEMINI_API_KEY=<your key>      # or Dashboard > Edge Functions > Secrets. Never in the repo or in chat.
 supabase secrets set GEMINI_MODEL=<model id>        # optional; the default is set in the function, change it if Google renames models
 ```
+Troubleshooting: the red banner "Database setup needed" means SQL 06 was not run; "AI function is not deployed" means `weekly-draft` is missing; "GEMINI_API_KEY is missing" means the secret name is wrong.
+
 The function accepts only signed-in editors/admins, sends **only item titles, Jira keys and status** to Gemini (no names, notes or dates) and never stores anything. If it fails, the app keeps the rule-based draft. Use a paid-tier Gemini project if the report content must not be used for model training.
 
 ## 3. Vercel

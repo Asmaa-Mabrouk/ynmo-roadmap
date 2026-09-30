@@ -16,7 +16,8 @@ import { saveIdea } from './ideas.js';
 import { itemsOf, sprintList } from './sprints.js';
 import { GROUPS, RSTATUS, aiPayload, applyAi, buildProds, jiraUrl, newManualLine, overall, productsOf, reportToText, ruleSummary } from '../features/report-model.js';
 
-const rUI = { id: null, busy: false, note: '' };
+const SPARK = '<svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8L2.5 17.5l1.8-.7z"/></svg>';
+const rUI = { id: null, busy: false, note: '', err: false, wait: false };
 const cfg = () => S.ideas.reportcfg || {};
 const uidr = () => 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const canBuild = () => !isViewer() && canWrite();
@@ -41,23 +42,49 @@ function newReport(wk) {
   const rep = { id: id, sp: wk.sp, n: wk.n, w: wk.w, a: wk.a, b: wk.b, status: 'draft', pl: productsOf(cfg()), prods: {} };
   sync(rep, false, true);
 }
-/** Rules-only re-sync (never overwrites edited lines/summaries), then optionally the AI wording. */
+/** Human explanation of a failed call to the AI function (not deployed, key missing, not allowed, unreachable). */
+async function aiWhy(e) {
+  const c = e && e.context, st = c && c.status; let msg = '';
+  try { if (c && c.json) { const j = await c.json(); msg = (j && (j.error || j.message)) || ''; } } catch (x) { /* body not JSON */ }
+  if (st === 404) return 'The AI function is not deployed yet (weekly-draft). Deploy it in Supabase, then try again.';
+  if (st === 401 || st === 403) return 'Not allowed: only signed-in editors and admins can use AI.';
+  if (/GEMINI_API_KEY/i.test(msg)) return 'GEMINI_API_KEY is missing in Supabase Secrets.';
+  if (st) return 'AI error (' + st + ')' + (msg ? ': ' + String(msg).slice(0, 140) : '') + '.';
+  return 'Could not reach the AI function (' + String((e && e.message) || e || 'no answer').slice(0, 100) + ').';
+}
+const countLines = prods => Object.keys(prods).reduce((n, k) => n + prods[k].items.filter(l => !l.hide).length, 0);
+const say = (rep, txt, bad) => { rUI.note = txt; rUI.err = !!bad; toast(txt); };
+/** Rules-only re-sync (never overwrites edited lines/summaries), then optionally the AI wording. Empty data is reported as an error, never sent to the AI. */
 async function sync(rep, ai, isNew) {
-  if (rUI.busy) return; rUI.busy = true; rUI.note = '';
-  const pl = productsOf(cfg()), { road, ka, kb } = roadFor(rep.a, rep.b);
-  rep.pl = pl; rep.prods = buildProds(pl, rep.prods, itemsOf(rep.sp), road, ka, kb, rep.a, rep.b);
-  let note = isNew ? 'Draft created' : 'Synced from Sprint and Roadmap';
-  rUI.id = rep.id; save(rep, isNew ? 'created the weekly report for ' + fmtIso(rep.a) : 'synced the weekly report for ' + fmtIso(rep.a)); renderReports();
+  if (rUI.busy) return; rUI.busy = true; rUI.note = ''; rUI.err = false;
+  const pl = productsOf(cfg()), { road, ka, kb } = roadFor(rep.a, rep.b), sitems = itemsOf(rep.sp);
+  rep.pl = pl; rep.prods = buildProds(pl, rep.prods, sitems, road, ka, kb, rep.a, rep.b);
+  rep.srcN = { si: sitems.length, rf: road.filter(r => Number.isFinite(ka) && r.d0 <= kb && r.d1 >= ka).length };
+  const lines = countLines(rep.prods);
+  rUI.id = rep.id; save(rep, isNew ? 'created the weekly report for ' + fmtIso(rep.a) : 'synced the weekly report for ' + fmtIso(rep.a));
+  if (!lines) {
+    say(rep, 'No data found for this week: Sprint ' + rep.n + ' has no items for these products and no roadmap bar overlaps ' + fmtIso(rep.a) + '. Add items on the Sprints page (or check Report settings), then sync again.', true);
+    rUI.busy = false; renderReports(); return;
+  }
+  say(rep, isNew ? 'Draft created from ' + rep.srcN.si + ' sprint items and ' + rep.srcN.rf + ' roadmap bars' : 'Synced from Sprint and Roadmap', false); renderReports();
   if (ai) {
-    toast('Writing with Gemini…');
+    rUI.note = 'Writing with Gemini…'; rUI.wait = true; renderReports();
     try {
       const r = await sb.functions.invoke('weekly-draft', { body: aiPayload(rep.a, pl, rep.prods) });
-      if (r.error || !r.data || !r.data.products) throw new Error((r.error && r.error.message) || 'no answer');
+      if (r.error || !r.data || !r.data.products) throw r.error || new Error('no answer');
       const n = applyAi(rep.prods, r.data); rep.ai = { model: r.data.model || '', at: new Date().toISOString() };
-      save(rep); note = n ? 'AI wording applied (' + n + ' changes)' : 'AI had nothing to change';
-    } catch (e) { note = 'AI unavailable, kept the rule-based draft'; }
+      save(rep); say(rep, n ? 'AI wording applied (' + n + ' changes). Your own edits were kept.' : 'AI returned nothing new; the draft is unchanged.', false);
+    } catch (e) { say(rep, (await aiWhy(e)) + ' The rule-based draft was kept.', true); }
+    rUI.wait = false;
   }
-  rUI.busy = false; rUI.note = note; toast(note); renderReports();
+  rUI.busy = false; renderReports();
+}
+/** Red banner shown when the SQL for sprints/reports has not been run on Supabase. */
+export function setupBanner() {
+  if (!(S.setup.reports || S.setup.sprints || S.setup.sprint_items)) return null;
+  const b = el('div', 'rerr'); b.setAttribute('role', 'alert');
+  b.append(el('b', '', 'Database setup needed. '), document.createTextNode('Run supabase/sql/06-sprints-weekly-reports.sql in the Supabase SQL Editor. Until then sprints and reports are NOT saved and nobody else can see them.'));
+  return b;
 }
 function settingsDlg() {
   const cur0 = productsOf(cfg()).map(p => Object.assign({}, p, { squads: p.squads.slice() }));
@@ -132,19 +159,21 @@ export function renderReports() {
   const viewer = isViewer(), l = reportList(), rep = cur();
   pg.append(pageHead('Weekly report', viewer ? 'Submitted weekly updates per product.' : 'Built from the sprint plan and the roadmap. Edit anything, then submit it to the executives.'));
   const bar = el('div', 'row spbar');
-  if (l.length) { const sel = el('select'); sel.setAttribute('aria-label', 'Report'); l.forEach(r => { const o = el('option', '', 'Week of ' + fmtIso(r.a) + ' · Sprint ' + r.n + (viewer ? '' : r.status === 'submitted' ? ' · submitted' : ' · draft')); o.value = r.id; o.selected = rep && r.id === rep.id; sel.append(o); }); sel.addEventListener('change', () => { rUI.id = sel.value; rUI.note = ''; renderReports(); }); bar.append(sel); }
+  if (l.length) { const sel = el('select'); sel.setAttribute('aria-label', 'Report'); l.forEach(r => { const o = el('option', '', 'Week of ' + fmtIso(r.a) + ' · Sprint ' + r.n + (viewer ? '' : r.status === 'submitted' ? ' · submitted' : ' · draft')); o.value = r.id; o.selected = rep && r.id === rep.id; sel.append(o); }); sel.addEventListener('change', () => { rUI.id = sel.value; rUI.note = ''; rUI.err = false; renderReports(); }); bar.append(sel); }
   if (!viewer) {
     const free = missingWeeks(), t = todayIso(), pick = free.find(w => w.a <= t) || free[free.length - 1];
     if (pick) { const nb = el('button', 'btn primary', 'New report for week of ' + fmtIso(pick.a)); nb.type = 'button'; nb.disabled = !canBuild(); nb.addEventListener('click', () => newReport(pick)); bar.append(nb); }
     const sb2 = el('button', 'btn', 'Report settings'); sb2.type = 'button'; sb2.disabled = !canBuild(); sb2.addEventListener('click', settingsDlg); bar.append(sb2);
   }
+  const sb0 = viewer ? null : setupBanner(); if (sb0) pg.append(sb0);
   pg.append(bar);
   if (!rep) { pg.append(el('p', 'empty', viewer ? 'No report has been submitted yet.' : sprintList().length ? 'No report yet. Create one for the latest sprint.' : 'Create a sprint first (Sprints page), then build the report.')); return; }
   const sub = rep.status === 'submitted', ro = viewer || sub || !canBuild();
-  const meta = el('p', 'sub rmeta', sub ? 'Submitted' + (rep.subBy ? ' by ' + rep.subBy : '') + (rep.subAt ? ' on ' + fmtIso(rep.subAt.slice(0, 10)) : '') : 'Draft' + (rep.ai ? ' · wording by ' + (rep.ai.model || 'AI') : '') + ' · last edit ' + (rep.by || ''));
+  const srcTxt = rep.srcN ? ' · built from ' + rep.srcN.si + ' sprint items + ' + rep.srcN.rf + ' roadmap bars' : '';
+  const meta = el('p', 'sub rmeta', sub ? 'Submitted' + (rep.subBy ? ' by ' + rep.subBy : '') + (rep.subAt ? ' on ' + fmtIso(rep.subAt.slice(0, 10)) : '') : 'Draft' + (rep.ai ? ' · wording by ' + (rep.ai.model || 'AI') : '') + ' · last edit ' + (rep.by || '') + srcTxt);
   const tools = el('div', 'row rtools');
   const btn = (t, cls, fn, dis) => { const b = el('button', 'btn ' + (cls || ''), t); b.type = 'button'; b.disabled = !!dis; b.addEventListener('click', fn); tools.append(b); return b; };
-  if (!viewer && !sub) { btn('Sync from Sprint & Roadmap', '', () => sync(rep, false), !canBuild() || rUI.busy); btn('Draft with AI', '', () => sync(rep, true), !canBuild() || rUI.busy); }
+  if (!viewer && !sub) { btn('Sync from Sprint & Roadmap', '', () => sync(rep, false), !canBuild() || rUI.busy); const ab = btn('', 'ai', () => sync(rep, true), !canBuild() || rUI.busy); ab.insertAdjacentHTML('afterbegin', SPARK); ab.append(document.createTextNode(rUI.wait ? 'Writing…' : 'Generate with AI')); ab.title = 'Rewrites unedited lines and summaries in executive wording. Your edits are kept.'; tools.prepend(ab); }
   btn('Copy text', '', () => { const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Copied'), () => toast('Copy failed')); });
   btn('Print / PDF', '', () => { document.body.classList.add('print-report'); const off = () => { document.body.classList.remove('print-report'); window.removeEventListener('afterprint', off); }; window.addEventListener('afterprint', off); window.print(); });
   if (!viewer && !sub) btn('Submit to executives', 'primary', () => { rep.status = 'submitted'; rep.subAt = new Date().toISOString(); rep.subBy = S.me.name || S.me.email; save(rep, 'submitted the weekly report for ' + fmtIso(rep.a)); renderReports(); }, !canBuild());
@@ -155,5 +184,5 @@ export function renderReports() {
   pls.forEach(p => { const d = rep.prods[p.k]; if (!d) return; const v = d.items.filter(l => !l.hide), s = overall(d.items), t = el('div', 'rtile rs-' + s); t.append(el('b', '', p.n), el('span', 'chip rs-' + s, RSTATUS[s]), el('small', '', v.filter(l => l.g === 'done').length + ' delivered · ' + v.filter(l => l.g === 'prog').length + ' in progress · ' + v.filter(l => l.st === 'risk' || l.st === 'late').length + ' at risk')); glance.append(t); });
   body.append(glance);
   pls.forEach(p => body.append(prodBlock(rep, p, ro)));
-  pg.append(meta, tools); if (rUI.note && !viewer && !sub) { const nt = el('p', 'rnote', rUI.note); nt.setAttribute('role', 'status'); pg.append(nt); } pg.append(body);
+  pg.append(meta, tools); if (rUI.note && !viewer && !sub) { const nt = el('p', 'rnote' + (rUI.err ? ' bad' : ''), rUI.note); nt.setAttribute('role', 'status'); pg.append(nt); } pg.append(body);
 }

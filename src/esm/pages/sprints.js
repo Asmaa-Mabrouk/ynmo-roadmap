@@ -10,6 +10,7 @@ import { fld, fmtIso, logAct, pageHead, selOf, todayIso } from '../core/shared.j
 import { write } from '../core/saving.js';
 import { openDlg, closeDlg, canWrite } from '../features/safety.js';
 import { SKIND, SSTATUS } from '../features/report-model.js';
+import { setupBanner } from './reports.js';
 
 export const spUI = { id: null };
 const iso = t => new Date(t).toISOString().slice(0, 10);
@@ -91,6 +92,7 @@ export function renderSprints() {
   const ro = !canEdit() || !canWrite(), l = sprintList(), sp = curSprint();
   const nb = el('button', 'btn primary', '+ New sprint'); nb.type = 'button'; nb.disabled = ro; nb.addEventListener('click', newSprint);
   pg.append(pageHead('Sprints', 'Plan each two-week sprint here. The weekly executive report is built from it and from the roadmap.', nb));
+  const sbn = setupBanner(); if (sbn) pg.append(sbn);
   if (!sp) { pg.append(el('p', 'empty', 'No sprint yet. Create the first one.')); return; }
   const dl = el('datalist'); dl.id = 'sp-people'; [...directory().keys()].sort().forEach(n => { const o = el('option'); o.value = n; dl.append(o); }); pg.append(dl);
   const bar = el('div', 'row spbar'), sel = selOf(l.map(s => [s.id, 'Sprint ' + s.n + ' · ' + fmtIso(s.a)]), sp.id); sel.setAttribute('aria-label', 'Sprint');

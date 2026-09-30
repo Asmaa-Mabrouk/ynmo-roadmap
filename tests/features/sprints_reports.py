@@ -35,12 +35,12 @@ with sync_playwright() as pw:
     ok('blocked item makes the product At Risk', 'At Risk' in pd.locator('.chip').inner_text())
     ok('Tifli in-progress line present', 'Onboarding flow' in vl(A.locator('#pg-reports .rprod[data-k="tifli"]')))
     # AI
-    A.click('button:text-is("Draft with AI")'); A.wait_for_timeout(900)
+    A.click('button:text-is("Generate with AI")'); A.wait_for_timeout(900)
     ok('AI called once and wording applied', A.evaluate("window.__aiCalls")==1 and 'AI: ' in vl(A.locator('#pg-reports')) and 'AI summary' in A.locator('#pg-reports .rsum').first.input_value())
     # manual edit wins over a re-sync and AI
     ln=A.locator('#pg-reports .rprod[data-k="tifli"] .rline .sptext').first; ln.fill('Custom wording by PM'); ln.press('Tab'); A.wait_for_timeout(300)
     sm=A.locator('#pg-reports .rprod[data-k="tifli"] .rsum'); sm.fill('My own summary'); sm.press('Tab'); A.wait_for_timeout(300)
-    A.click('button:text-is("Draft with AI")'); A.wait_for_timeout(900)
+    A.click('button:text-is("Generate with AI")'); A.wait_for_timeout(900)
     t=A.locator('#pg-reports').inner_text(); vals=A.evaluate("[...document.querySelectorAll('#pg-reports .sptext,#pg-reports .rsum')].map(e=>e.value)")
     ok('edited line and summary survive re-sync + AI', 'Custom wording by PM' in vals and 'My own summary' in vals)
     # new sprint item shows up on plain sync, edits still kept
@@ -50,7 +50,7 @@ with sync_playwright() as pw:
     vals=A.evaluate("[...document.querySelectorAll('#pg-reports .sptext')].map(e=>e.value)")
     ok('sync adds new item and keeps edit', any('Sara voice v2' in v for v in vals) and 'Custom wording by PM' in vals)
     # AI failure falls back
-    A.evaluate("window.__aiFail=true"); A.click('button:text-is("Draft with AI")'); A.wait_for_timeout(900)
+    A.evaluate("window.__aiFail=true"); A.click('button:text-is("Generate with AI")'); A.wait_for_timeout(900)
     ok('AI failure keeps draft and says so', 'AI unavailable' in A.locator('#pg-reports .rnote').inner_text() and A.locator('#pg-reports .rprod').count()==3)
     A.evaluate("window.__aiFail=false")
     # copy text / hide line
@@ -83,5 +83,21 @@ with sync_playwright() as pw:
     ok('viewer now sees both submitted, visual read-only view', C.locator('#pg-reports select[aria-label="Report"] option').count()==2 and C.locator('.rprod.rview').count()==3)
     C.set_viewport_size({'width':390,'height':800}); C.click('#nav button[data-p="reports"]'); C.wait_for_timeout(400)
     ok('no overflow on phone', not C.evaluate("document.documentElement.scrollWidth>innerWidth+1"))
+
+    # --- empty data: clear error, AI never called
+    ctx2=mkctx(b); e2=[]; D=newpage(ctx2,e2); signup(D,'Admin','adm@x.com')
+    D.click('#nav button[data-p="sprints"]'); D.click('button:text-is("+ New sprint")'); D.wait_for_timeout(400)
+    D.click('#nav button[data-p="reports"]'); D.click('button:has-text("New report for week of")'); D.wait_for_timeout(700)
+    ok('empty week shows a clear error', 'No data found' in D.locator('#pg-reports .rnote.bad').inner_text())
+    D.click('button:has-text("Generate with AI")'); D.wait_for_timeout(600)
+    ok('AI is not called without data', not D.evaluate("window.__aiCalls") and 'No data found' in D.locator('#pg-reports .rnote.bad').inner_text())
+    ok('AI button is the sparkle button', D.locator('button.ai svg.spark').count()==1)
+    # --- missing tables (SQL 06 not run): setup banner instead of an "offline" banner
+    ctx3=mkctx(b, init="window.__missing=['reports']"); e3=[]; E=newpage(ctx3,e3); signup(E,'Admin','adm@x.com')
+    E.click('#nav button[data-p="sprints"]'); E.click('button:text-is("+ New sprint")'); E.wait_for_timeout(300)
+    E.locator('#pg-sprints .spadd input').first.fill('Thing'); E.locator('#pg-sprints .spadd input').first.press('Enter'); E.wait_for_timeout(300)
+    E.click('#nav button[data-p="reports"]'); E.click('button:has-text("New report for week of")'); E.wait_for_timeout(1500)
+    ok('missing table shows setup banner', 'Database setup needed' in E.locator('#pg-reports .rerr').inner_text())
+    ok('missing table is not shown as offline', E.locator('#offbar').is_hidden())
     ok('no page errors', errs==[])
 p=sum(1 for _,c in R if c); print(p,'/',len(R)); sys.exit(0 if p==len(R) else 1)

@@ -37,4 +37,5 @@ export const S = {
   sprints: {},
   sitems: {},
   reports: {},
+  setup: {},
 };

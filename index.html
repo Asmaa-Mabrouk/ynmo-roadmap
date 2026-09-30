@@ -593,6 +593,15 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .rv .dot { flex: none; width: 10px; height: 10px; border-radius: 50%; margin-top: 7px; background: var(--rc-on); }
 .rv .dot.rs-risk { background: var(--rc-risk); } .rv .dot.rs-late { background: var(--rc-late); } .rv .dot.rs-done { background: var(--rc-done); }
 @media print { body.print-report .rhero { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+
+/* AI action: clearly the special button */
+.btn.ai { display: inline-flex; align-items: center; gap: 7px; color: #fff; border: 0; padding: 8px 16px; font-weight: 700; background: linear-gradient(120deg, #563cca, #8a4fe0 55%, #39cbf9); box-shadow: 0 4px 14px rgba(86, 60, 202, .35); }
+.btn.ai:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+.btn.ai .spark { width: 17px; height: 17px; fill: currentColor; }
+.btn.ai:disabled { box-shadow: none; }
+.rnote { margin: 4px 0 12px; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--brand) 10%, #fff); font-size: .92rem; }
+.rnote.bad, .rerr { background: #fdecea; color: #8a1c14; border: 1.5px solid #c0392b; }
+.rerr { border-radius: 10px; padding: 10px 14px; margin: 0 0 12px; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -709,7 +718,8 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     shares: {},
     sprints: {},
     sitems: {},
-    reports: {}
+    reports: {},
+    setup: {}
   };
 
   // src/esm/core/model.js
@@ -1014,7 +1024,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
   function makeDb() {
     const err = (e) => {
       const x = new Error(e && e.message || "error");
-      x.code = e && (e.code === "42501" || /row-level/i.test(e.message || "")) ? "invalid_argument" : e && e.code || "error";
+      x.code = e && (e.code === "PGRST205" || e.code === "42P01" || /schema cache|does not exist/i.test(e.message || "")) ? "missing_table" : e && (e.code === "42501" || /row-level/i.test(e.message || "")) ? "invalid_argument" : e && e.code || "error";
       return x;
     };
     const load = async (t) => {
@@ -4777,234 +4787,9 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     return out.join("\n").trim() + "\n";
   }
 
-  // src/esm/pages/sprints.js
-  var spUI = { id: null };
-  var iso3 = (t) => new Date(t).toISOString().slice(0, 10);
-  var uid2 = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  var sprintList = () => Object.keys(S.sprints).map((id) => Object.assign({ id }, S.sprints[id])).filter((s) => s.a && s.b).sort((x, y) => y.n - x.n);
-  var itemsOf = (sp) => Object.keys(S.sitems).map((id) => Object.assign({ id }, S.sitems[id])).filter((i) => i.sp === sp).sort((a, b) => (a.ord || 0) - (b.ord || 0) || (a.id < b.id ? -1 : 1));
-  var curSprint = () => {
-    const l = sprintList();
-    return l.find((s) => s.id === spUI.id) || l[0] || null;
-  };
-  function saveSprint(id, d) {
-    S.sprints[id] = d;
-    write("sprints/" + id, d);
-  }
-  function saveItem(id, patch) {
-    const d = Object.assign({}, S.sitems[id] || {}, patch);
-    S.sitems[id] = d;
-    write("sprint_items/" + id, d);
-  }
-  function delItem(id) {
-    delete S.sitems[id];
-    write("sprint_items/" + id, null);
-  }
-  function parsePaste(txt) {
-    const out = [];
-    String(txt || "").split(/\r?\n/).forEach((raw) => {
-      let s = raw.replace(/^\s*(?:[-*•▪◦·]|\d+[.)])\s*/, "").trim();
-      if (!s) return;
-      const m = /\b([A-Z][A-Z0-9]+-\d+)\b/.exec(s), jira = m ? m[1] : "";
-      if (m) s = s.replace(m[0], "").replace(/\s*[-–:|]\s*$/, "").replace(/^\s*[-–:|]\s*/, "").replace(/\s{2,}/g, " ").trim();
-      s = s.replace(/\[[^\]]*\]/g, "").trim();
-      if (s) out.push({ t: s.slice(0, 300), jira });
-    });
-    return out;
-  }
-  function newSprint() {
-    const l = sprintList(), last = l[0];
-    const n = last ? last.n + 1 : 1, a = last ? iso3(parseIso(last.b) + DAY) : iso3(Date.now());
-    const b = iso3(parseIso(a) + 13 * DAY), id = "sp" + n;
-    if (S.sprints[id]) {
-      spUI.id = id;
-      renderSprints();
-      return;
-    }
-    saveSprint(id, { n, a, b, note: "" });
-    spUI.id = id;
-    logAct("sprint", "created Sprint " + n + " (" + fmtIso(a) + ")");
-    renderSprints();
-  }
-  function carryOver(sp) {
-    const prev = sprintList().find((s) => s.n === sp.n - 1);
-    if (!prev) return 0;
-    const have = new Set(itemsOf(sp.id).map((i) => i.t.toLowerCase()));
-    let c = 0;
-    itemsOf(prev.id).filter((i) => i.st !== "done").forEach((i) => {
-      if (have.has(i.t.toLowerCase())) return;
-      saveItem(uid2("si"), { sp: sp.id, squad: i.squad, person: i.person, t: i.t, jira: i.jira, kind: i.kind, st: i.st === "blocked" ? "blocked" : "planned", ord: Date.now() + c });
-      c++;
-    });
-    if (c) logAct("sprint", "carried " + c + " unfinished item" + (c === 1 ? "" : "s") + " into Sprint " + sp.n);
-    return c;
-  }
-  function pasteDlg(sp) {
-    openDlg("Paste sprint items", (box) => {
-      const sq = selOf(LANES.map((l) => [l.k, l.n]), LANES[0].k), pe = el("input");
-      pe.placeholder = "Person (optional)";
-      pe.setAttribute("list", "sp-people");
-      const kd = selOf(Object.keys(SKIND).map((k) => [k, SKIND[k]]), "feature"), ta = el("textarea");
-      ta.rows = 9;
-      ta.placeholder = "One item per line. Bullets and Jira keys (ABC-123) are recognised.";
-      ta.setAttribute("aria-label", "Items");
-      const info = el("p", "sub", "Nothing yet");
-      ta.addEventListener("input", () => {
-        info.textContent = parsePaste(ta.value).length + " item(s) found";
-      });
-      const ok = el("button", "btn primary", "Add items"), no = el("button", "btn", "Cancel");
-      ok.type = no.type = "button";
-      ok.addEventListener("click", () => {
-        const rows = parsePaste(ta.value);
-        if (!rows.length) return;
-        rows.forEach((r, i) => saveItem(uid2("si"), { sp: sp.id, squad: sq.value, person: pe.value.trim(), t: r.t, jira: r.jira, kind: kd.value, st: "planned", ord: Date.now() + i }));
-        logAct("sprint", "pasted " + rows.length + " item" + (rows.length === 1 ? "" : "s") + " into Sprint " + sp.n);
-        closeDlg();
-        renderSprints();
-      });
-      no.addEventListener("click", closeDlg);
-      const row = el("div", "row");
-      row.append(ok, no);
-      box.append(fld("Squad", sq), fld("Person", pe), fld("Type", kd), fld("Items", ta), info, row);
-    });
-  }
-  function itemRow(it, ro) {
-    const r = el("div", "sprow");
-    r.dataset.id = it.id;
-    const t = el("input", "sptext");
-    t.value = it.t;
-    t.disabled = ro;
-    t.setAttribute("aria-label", "Item title");
-    t.addEventListener("change", () => {
-      const v = t.value.trim();
-      if (!v) {
-        t.value = it.t;
-        return;
-      }
-      saveItem(it.id, { t: v.slice(0, 300) });
-    });
-    const j = el("input", "spjira");
-    j.value = it.jira || "";
-    j.placeholder = "Jira";
-    j.disabled = ro;
-    j.setAttribute("aria-label", "Jira key");
-    j.addEventListener("change", () => saveItem(it.id, { jira: /^[A-Z][A-Z0-9]+-\d+$/.test(j.value.trim()) ? j.value.trim() : "" }));
-    const k = selOf(Object.keys(SKIND).map((x2) => [x2, SKIND[x2]]), it.kind || "feature", "spsel");
-    k.disabled = ro;
-    k.setAttribute("aria-label", "Type");
-    k.addEventListener("change", () => saveItem(it.id, { kind: k.value }));
-    const s = selOf(Object.keys(SSTATUS).map((x2) => [x2, SSTATUS[x2]]), it.st || "planned", "spsel st-" + (it.st || "planned"));
-    s.disabled = ro;
-    s.setAttribute("aria-label", "Status");
-    s.addEventListener("change", () => {
-      saveItem(it.id, { st: s.value, dn: s.value === "done" ? todayIso() : "" });
-      s.className = "spsel st-" + s.value;
-    });
-    const x = el("button", "btn sm danger", "✕");
-    x.type = "button";
-    x.title = "Delete item";
-    x.setAttribute("aria-label", "Delete item");
-    x.disabled = ro;
-    x.addEventListener("click", () => {
-      delItem(it.id);
-      renderSprints();
-    });
-    r.append(t, j, k, s, x);
-    return r;
-  }
-  function addLine(sp, squad, person, ro) {
-    const f = el("form", "spadd"), i = el("input");
-    i.placeholder = "Add an item and press Enter";
-    i.disabled = ro;
-    i.setAttribute("aria-label", "New item");
-    f.append(i);
-    f.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const v = i.value.trim();
-      if (!v || !canWrite()) return;
-      saveItem(uid2("si"), { sp: sp.id, squad, person, t: v.slice(0, 300), jira: (/\b([A-Z][A-Z0-9]+-\d+)\b/.exec(v) || [])[1] || "", kind: "feature", st: "planned", ord: Date.now() });
-      renderSprints();
-      const n = document.querySelector('#pg-sprints [data-add="' + squad + "|" + person + '"] input');
-      if (n) n.focus();
-    });
-    f.dataset.add = squad + "|" + person;
-    return f;
-  }
-  function renderSprints() {
-    const pg = $("pg-sprints");
-    if (!pg) return;
-    pg.textContent = "";
-    const ro = !canEdit() || !canWrite(), l = sprintList(), sp = curSprint();
-    const nb = el("button", "btn primary", "+ New sprint");
-    nb.type = "button";
-    nb.disabled = ro;
-    nb.addEventListener("click", newSprint);
-    pg.append(pageHead("Sprints", "Plan each two-week sprint here. The weekly executive report is built from it and from the roadmap.", nb));
-    if (!sp) {
-      pg.append(el("p", "empty", "No sprint yet. Create the first one."));
-      return;
-    }
-    const dl2 = el("datalist");
-    dl2.id = "sp-people";
-    [...directory().keys()].sort().forEach((n) => {
-      const o = el("option");
-      o.value = n;
-      dl2.append(o);
-    });
-    pg.append(dl2);
-    const bar = el("div", "row spbar"), sel = selOf(l.map((s) => [s.id, "Sprint " + s.n + " · " + fmtIso(s.a)]), sp.id);
-    sel.setAttribute("aria-label", "Sprint");
-    sel.addEventListener("change", () => {
-      spUI.id = sel.value;
-      renderSprints();
-    });
-    const pb = el("button", "btn", "Paste items"), cb = el("button", "btn", "Carry over unfinished");
-    pb.type = cb.type = "button";
-    pb.disabled = cb.disabled = ro;
-    pb.addEventListener("click", () => pasteDlg(sp));
-    cb.addEventListener("click", () => {
-      const c = carryOver(sp);
-      $("save").textContent = c ? c + " item(s) carried over" : "Nothing to carry over";
-      renderSprints();
-    });
-    bar.append(sel, el("span", "sub", fmtIso(sp.a) + " to " + fmtIso(sp.b)), pb, cb);
-    pg.append(bar);
-    const all = itemsOf(sp.id), sum = el("p", "sub", all.length + " items · " + all.filter((i) => i.st === "done").length + " done · " + all.filter((i) => i.st === "blocked").length + " blocked");
-    pg.append(sum);
-    LANES.forEach((ln) => {
-      const mine = all.filter((i) => i.squad === ln.k), people = [...new Set(mine.map((i) => i.person || ""))].sort((a, b) => (a === "") - (b === "") || a.localeCompare(b));
-      const card = el("section", "card spsq");
-      card.style.setProperty("--c", ln.c);
-      card.append(el("h2", "", ln.n));
-      people.forEach((p) => {
-        const g = el("div", "spgrp");
-        g.append(el("h3", "", p || "Unassigned"));
-        mine.filter((i) => (i.person || "") === p).forEach((i) => g.append(itemRow(i, ro)));
-        g.append(addLine(sp, ln.k, p, ro));
-        card.append(g);
-      });
-      if (!people.length) card.append(addLine(sp, ln.k, "", ro));
-      else {
-        const pe = el("form", "spadd"), i = el("input");
-        i.placeholder = "Add for another person: Name: item";
-        i.disabled = ro;
-        i.setAttribute("aria-label", "New item for a person");
-        pe.append(i);
-        pe.addEventListener("submit", (e) => {
-          e.preventDefault();
-          const m = /^([^:]{1,60}):\s*(.+)$/.exec(i.value.trim());
-          if (!m || !canWrite()) return;
-          saveItem(uid2("si"), { sp: sp.id, squad: ln.k, person: m[1].trim(), t: m[2].slice(0, 300), jira: "", kind: "feature", st: "planned", ord: Date.now() });
-          renderSprints();
-        });
-        card.append(pe);
-      }
-      pg.append(card);
-    });
-  }
-
   // src/esm/pages/reports.js
-  var rUI = { id: null, busy: false, note: "" };
+  var SPARK = '<svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8L2.5 17.5l1.8-.7z"/></svg>';
+  var rUI = { id: null, busy: false, note: "", err: false, wait: false };
   var cfg = () => S.ideas.reportcfg || {};
   var canBuild = () => !isViewer() && canWrite();
   var reportList = () => Object.keys(S.reports).map((id) => Object.assign({ id }, S.reports[id])).filter((r) => r.a && (!isViewer() || r.status === "submitted")).sort((x, y) => x.a < y.a ? 1 : -1);
@@ -5045,34 +4830,73 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     const rep = { id, sp: wk.sp, n: wk.n, w: wk.w, a: wk.a, b: wk.b, status: "draft", pl: productsOf(cfg()), prods: {} };
     sync(rep, false, true);
   }
+  async function aiWhy(e) {
+    const c = e && e.context, st = c && c.status;
+    let msg = "";
+    try {
+      if (c && c.json) {
+        const j = await c.json();
+        msg = j && (j.error || j.message) || "";
+      }
+    } catch (x) {
+    }
+    if (st === 404) return "The AI function is not deployed yet (weekly-draft). Deploy it in Supabase, then try again.";
+    if (st === 401 || st === 403) return "Not allowed: only signed-in editors and admins can use AI.";
+    if (/GEMINI_API_KEY/i.test(msg)) return "GEMINI_API_KEY is missing in Supabase Secrets.";
+    if (st) return "AI error (" + st + ")" + (msg ? ": " + String(msg).slice(0, 140) : "") + ".";
+    return "Could not reach the AI function (" + String(e && e.message || e || "no answer").slice(0, 100) + ").";
+  }
+  var countLines = (prods) => Object.keys(prods).reduce((n, k) => n + prods[k].items.filter((l) => !l.hide).length, 0);
+  var say = (rep, txt, bad) => {
+    rUI.note = txt;
+    rUI.err = !!bad;
+    toast(txt);
+  };
   async function sync(rep, ai, isNew) {
     if (rUI.busy) return;
     rUI.busy = true;
     rUI.note = "";
-    const pl = productsOf(cfg()), { road, ka, kb } = roadFor(rep.a, rep.b);
+    rUI.err = false;
+    const pl = productsOf(cfg()), { road, ka, kb } = roadFor(rep.a, rep.b), sitems = itemsOf(rep.sp);
     rep.pl = pl;
-    rep.prods = buildProds(pl, rep.prods, itemsOf(rep.sp), road, ka, kb, rep.a, rep.b);
-    let note = isNew ? "Draft created" : "Synced from Sprint and Roadmap";
+    rep.prods = buildProds(pl, rep.prods, sitems, road, ka, kb, rep.a, rep.b);
+    rep.srcN = { si: sitems.length, rf: road.filter((r) => Number.isFinite(ka) && r.d0 <= kb && r.d1 >= ka).length };
+    const lines = countLines(rep.prods);
     rUI.id = rep.id;
     save(rep, isNew ? "created the weekly report for " + fmtIso(rep.a) : "synced the weekly report for " + fmtIso(rep.a));
+    if (!lines) {
+      say(rep, "No data found for this week: Sprint " + rep.n + " has no items for these products and no roadmap bar overlaps " + fmtIso(rep.a) + ". Add items on the Sprints page (or check Report settings), then sync again.", true);
+      rUI.busy = false;
+      renderReports();
+      return;
+    }
+    say(rep, isNew ? "Draft created from " + rep.srcN.si + " sprint items and " + rep.srcN.rf + " roadmap bars" : "Synced from Sprint and Roadmap", false);
     renderReports();
     if (ai) {
-      toast("Writing with Gemini…");
+      rUI.note = "Writing with Gemini…";
+      rUI.wait = true;
+      renderReports();
       try {
         const r = await sb.functions.invoke("weekly-draft", { body: aiPayload(rep.a, pl, rep.prods) });
-        if (r.error || !r.data || !r.data.products) throw new Error(r.error && r.error.message || "no answer");
+        if (r.error || !r.data || !r.data.products) throw r.error || new Error("no answer");
         const n = applyAi(rep.prods, r.data);
         rep.ai = { model: r.data.model || "", at: (/* @__PURE__ */ new Date()).toISOString() };
         save(rep);
-        note = n ? "AI wording applied (" + n + " changes)" : "AI had nothing to change";
+        say(rep, n ? "AI wording applied (" + n + " changes). Your own edits were kept." : "AI returned nothing new; the draft is unchanged.", false);
       } catch (e) {
-        note = "AI unavailable, kept the rule-based draft";
+        say(rep, await aiWhy(e) + " The rule-based draft was kept.", true);
       }
+      rUI.wait = false;
     }
     rUI.busy = false;
-    rUI.note = note;
-    toast(note);
     renderReports();
+  }
+  function setupBanner() {
+    if (!(S.setup.reports || S.setup.sprints || S.setup.sprint_items)) return null;
+    const b = el("div", "rerr");
+    b.setAttribute("role", "alert");
+    b.append(el("b", "", "Database setup needed. "), document.createTextNode("Run supabase/sql/06-sprints-weekly-reports.sql in the Supabase SQL Editor. Until then sprints and reports are NOT saved and nobody else can see them."));
+    return b;
   }
   function settingsDlg() {
     const cur0 = productsOf(cfg()).map((p) => Object.assign({}, p, { squads: p.squads.slice() }));
@@ -5298,6 +5122,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       sel.addEventListener("change", () => {
         rUI.id = sel.value;
         rUI.note = "";
+        rUI.err = false;
         renderReports();
       });
       bar.append(sel);
@@ -5317,13 +5142,16 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       sb2.addEventListener("click", settingsDlg);
       bar.append(sb2);
     }
+    const sb0 = viewer ? null : setupBanner();
+    if (sb0) pg.append(sb0);
     pg.append(bar);
     if (!rep) {
       pg.append(el("p", "empty", viewer ? "No report has been submitted yet." : sprintList().length ? "No report yet. Create one for the latest sprint." : "Create a sprint first (Sprints page), then build the report."));
       return;
     }
     const sub = rep.status === "submitted", ro = viewer || sub || !canBuild();
-    const meta = el("p", "sub rmeta", sub ? "Submitted" + (rep.subBy ? " by " + rep.subBy : "") + (rep.subAt ? " on " + fmtIso(rep.subAt.slice(0, 10)) : "") : "Draft" + (rep.ai ? " · wording by " + (rep.ai.model || "AI") : "") + " · last edit " + (rep.by || ""));
+    const srcTxt = rep.srcN ? " · built from " + rep.srcN.si + " sprint items + " + rep.srcN.rf + " roadmap bars" : "";
+    const meta = el("p", "sub rmeta", sub ? "Submitted" + (rep.subBy ? " by " + rep.subBy : "") + (rep.subAt ? " on " + fmtIso(rep.subAt.slice(0, 10)) : "") : "Draft" + (rep.ai ? " · wording by " + (rep.ai.model || "AI") : "") + " · last edit " + (rep.by || "") + srcTxt);
     const tools = el("div", "row rtools");
     const btn = (t, cls, fn, dis) => {
       const b = el("button", "btn " + (cls || ""), t);
@@ -5335,7 +5163,11 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     };
     if (!viewer && !sub) {
       btn("Sync from Sprint & Roadmap", "", () => sync(rep, false), !canBuild() || rUI.busy);
-      btn("Draft with AI", "", () => sync(rep, true), !canBuild() || rUI.busy);
+      const ab = btn("", "ai", () => sync(rep, true), !canBuild() || rUI.busy);
+      ab.insertAdjacentHTML("afterbegin", SPARK);
+      ab.append(document.createTextNode(rUI.wait ? "Writing…" : "Generate with AI"));
+      ab.title = "Rewrites unedited lines and summaries in executive wording. Your edits are kept.";
+      tools.prepend(ab);
     }
     btn("Copy text", "", () => {
       const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso);
@@ -5380,11 +5212,239 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     pls.forEach((p) => body.append(prodBlock(rep, p, ro)));
     pg.append(meta, tools);
     if (rUI.note && !viewer && !sub) {
-      const nt = el("p", "rnote", rUI.note);
+      const nt = el("p", "rnote" + (rUI.err ? " bad" : ""), rUI.note);
       nt.setAttribute("role", "status");
       pg.append(nt);
     }
     pg.append(body);
+  }
+
+  // src/esm/pages/sprints.js
+  var spUI = { id: null };
+  var iso3 = (t) => new Date(t).toISOString().slice(0, 10);
+  var uid2 = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  var sprintList = () => Object.keys(S.sprints).map((id) => Object.assign({ id }, S.sprints[id])).filter((s) => s.a && s.b).sort((x, y) => y.n - x.n);
+  var itemsOf = (sp) => Object.keys(S.sitems).map((id) => Object.assign({ id }, S.sitems[id])).filter((i) => i.sp === sp).sort((a, b) => (a.ord || 0) - (b.ord || 0) || (a.id < b.id ? -1 : 1));
+  var curSprint = () => {
+    const l = sprintList();
+    return l.find((s) => s.id === spUI.id) || l[0] || null;
+  };
+  function saveSprint(id, d) {
+    S.sprints[id] = d;
+    write("sprints/" + id, d);
+  }
+  function saveItem(id, patch) {
+    const d = Object.assign({}, S.sitems[id] || {}, patch);
+    S.sitems[id] = d;
+    write("sprint_items/" + id, d);
+  }
+  function delItem(id) {
+    delete S.sitems[id];
+    write("sprint_items/" + id, null);
+  }
+  function parsePaste(txt) {
+    const out = [];
+    String(txt || "").split(/\r?\n/).forEach((raw) => {
+      let s = raw.replace(/^\s*(?:[-*•▪◦·]|\d+[.)])\s*/, "").trim();
+      if (!s) return;
+      const m = /\b([A-Z][A-Z0-9]+-\d+)\b/.exec(s), jira = m ? m[1] : "";
+      if (m) s = s.replace(m[0], "").replace(/\s*[-–:|]\s*$/, "").replace(/^\s*[-–:|]\s*/, "").replace(/\s{2,}/g, " ").trim();
+      s = s.replace(/\[[^\]]*\]/g, "").trim();
+      if (s) out.push({ t: s.slice(0, 300), jira });
+    });
+    return out;
+  }
+  function newSprint() {
+    const l = sprintList(), last = l[0];
+    const n = last ? last.n + 1 : 1, a = last ? iso3(parseIso(last.b) + DAY) : iso3(Date.now());
+    const b = iso3(parseIso(a) + 13 * DAY), id = "sp" + n;
+    if (S.sprints[id]) {
+      spUI.id = id;
+      renderSprints();
+      return;
+    }
+    saveSprint(id, { n, a, b, note: "" });
+    spUI.id = id;
+    logAct("sprint", "created Sprint " + n + " (" + fmtIso(a) + ")");
+    renderSprints();
+  }
+  function carryOver(sp) {
+    const prev = sprintList().find((s) => s.n === sp.n - 1);
+    if (!prev) return 0;
+    const have = new Set(itemsOf(sp.id).map((i) => i.t.toLowerCase()));
+    let c = 0;
+    itemsOf(prev.id).filter((i) => i.st !== "done").forEach((i) => {
+      if (have.has(i.t.toLowerCase())) return;
+      saveItem(uid2("si"), { sp: sp.id, squad: i.squad, person: i.person, t: i.t, jira: i.jira, kind: i.kind, st: i.st === "blocked" ? "blocked" : "planned", ord: Date.now() + c });
+      c++;
+    });
+    if (c) logAct("sprint", "carried " + c + " unfinished item" + (c === 1 ? "" : "s") + " into Sprint " + sp.n);
+    return c;
+  }
+  function pasteDlg(sp) {
+    openDlg("Paste sprint items", (box) => {
+      const sq = selOf(LANES.map((l) => [l.k, l.n]), LANES[0].k), pe = el("input");
+      pe.placeholder = "Person (optional)";
+      pe.setAttribute("list", "sp-people");
+      const kd = selOf(Object.keys(SKIND).map((k) => [k, SKIND[k]]), "feature"), ta = el("textarea");
+      ta.rows = 9;
+      ta.placeholder = "One item per line. Bullets and Jira keys (ABC-123) are recognised.";
+      ta.setAttribute("aria-label", "Items");
+      const info = el("p", "sub", "Nothing yet");
+      ta.addEventListener("input", () => {
+        info.textContent = parsePaste(ta.value).length + " item(s) found";
+      });
+      const ok = el("button", "btn primary", "Add items"), no = el("button", "btn", "Cancel");
+      ok.type = no.type = "button";
+      ok.addEventListener("click", () => {
+        const rows = parsePaste(ta.value);
+        if (!rows.length) return;
+        rows.forEach((r, i) => saveItem(uid2("si"), { sp: sp.id, squad: sq.value, person: pe.value.trim(), t: r.t, jira: r.jira, kind: kd.value, st: "planned", ord: Date.now() + i }));
+        logAct("sprint", "pasted " + rows.length + " item" + (rows.length === 1 ? "" : "s") + " into Sprint " + sp.n);
+        closeDlg();
+        renderSprints();
+      });
+      no.addEventListener("click", closeDlg);
+      const row = el("div", "row");
+      row.append(ok, no);
+      box.append(fld("Squad", sq), fld("Person", pe), fld("Type", kd), fld("Items", ta), info, row);
+    });
+  }
+  function itemRow(it, ro) {
+    const r = el("div", "sprow");
+    r.dataset.id = it.id;
+    const t = el("input", "sptext");
+    t.value = it.t;
+    t.disabled = ro;
+    t.setAttribute("aria-label", "Item title");
+    t.addEventListener("change", () => {
+      const v = t.value.trim();
+      if (!v) {
+        t.value = it.t;
+        return;
+      }
+      saveItem(it.id, { t: v.slice(0, 300) });
+    });
+    const j = el("input", "spjira");
+    j.value = it.jira || "";
+    j.placeholder = "Jira";
+    j.disabled = ro;
+    j.setAttribute("aria-label", "Jira key");
+    j.addEventListener("change", () => saveItem(it.id, { jira: /^[A-Z][A-Z0-9]+-\d+$/.test(j.value.trim()) ? j.value.trim() : "" }));
+    const k = selOf(Object.keys(SKIND).map((x2) => [x2, SKIND[x2]]), it.kind || "feature", "spsel");
+    k.disabled = ro;
+    k.setAttribute("aria-label", "Type");
+    k.addEventListener("change", () => saveItem(it.id, { kind: k.value }));
+    const s = selOf(Object.keys(SSTATUS).map((x2) => [x2, SSTATUS[x2]]), it.st || "planned", "spsel st-" + (it.st || "planned"));
+    s.disabled = ro;
+    s.setAttribute("aria-label", "Status");
+    s.addEventListener("change", () => {
+      saveItem(it.id, { st: s.value, dn: s.value === "done" ? todayIso() : "" });
+      s.className = "spsel st-" + s.value;
+    });
+    const x = el("button", "btn sm danger", "✕");
+    x.type = "button";
+    x.title = "Delete item";
+    x.setAttribute("aria-label", "Delete item");
+    x.disabled = ro;
+    x.addEventListener("click", () => {
+      delItem(it.id);
+      renderSprints();
+    });
+    r.append(t, j, k, s, x);
+    return r;
+  }
+  function addLine(sp, squad, person, ro) {
+    const f = el("form", "spadd"), i = el("input");
+    i.placeholder = "Add an item and press Enter";
+    i.disabled = ro;
+    i.setAttribute("aria-label", "New item");
+    f.append(i);
+    f.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const v = i.value.trim();
+      if (!v || !canWrite()) return;
+      saveItem(uid2("si"), { sp: sp.id, squad, person, t: v.slice(0, 300), jira: (/\b([A-Z][A-Z0-9]+-\d+)\b/.exec(v) || [])[1] || "", kind: "feature", st: "planned", ord: Date.now() });
+      renderSprints();
+      const n = document.querySelector('#pg-sprints [data-add="' + squad + "|" + person + '"] input');
+      if (n) n.focus();
+    });
+    f.dataset.add = squad + "|" + person;
+    return f;
+  }
+  function renderSprints() {
+    const pg = $("pg-sprints");
+    if (!pg) return;
+    pg.textContent = "";
+    const ro = !canEdit() || !canWrite(), l = sprintList(), sp = curSprint();
+    const nb = el("button", "btn primary", "+ New sprint");
+    nb.type = "button";
+    nb.disabled = ro;
+    nb.addEventListener("click", newSprint);
+    pg.append(pageHead("Sprints", "Plan each two-week sprint here. The weekly executive report is built from it and from the roadmap.", nb));
+    const sbn = setupBanner();
+    if (sbn) pg.append(sbn);
+    if (!sp) {
+      pg.append(el("p", "empty", "No sprint yet. Create the first one."));
+      return;
+    }
+    const dl2 = el("datalist");
+    dl2.id = "sp-people";
+    [...directory().keys()].sort().forEach((n) => {
+      const o = el("option");
+      o.value = n;
+      dl2.append(o);
+    });
+    pg.append(dl2);
+    const bar = el("div", "row spbar"), sel = selOf(l.map((s) => [s.id, "Sprint " + s.n + " · " + fmtIso(s.a)]), sp.id);
+    sel.setAttribute("aria-label", "Sprint");
+    sel.addEventListener("change", () => {
+      spUI.id = sel.value;
+      renderSprints();
+    });
+    const pb = el("button", "btn", "Paste items"), cb = el("button", "btn", "Carry over unfinished");
+    pb.type = cb.type = "button";
+    pb.disabled = cb.disabled = ro;
+    pb.addEventListener("click", () => pasteDlg(sp));
+    cb.addEventListener("click", () => {
+      const c = carryOver(sp);
+      $("save").textContent = c ? c + " item(s) carried over" : "Nothing to carry over";
+      renderSprints();
+    });
+    bar.append(sel, el("span", "sub", fmtIso(sp.a) + " to " + fmtIso(sp.b)), pb, cb);
+    pg.append(bar);
+    const all = itemsOf(sp.id), sum = el("p", "sub", all.length + " items · " + all.filter((i) => i.st === "done").length + " done · " + all.filter((i) => i.st === "blocked").length + " blocked");
+    pg.append(sum);
+    LANES.forEach((ln) => {
+      const mine = all.filter((i) => i.squad === ln.k), people = [...new Set(mine.map((i) => i.person || ""))].sort((a, b) => (a === "") - (b === "") || a.localeCompare(b));
+      const card = el("section", "card spsq");
+      card.style.setProperty("--c", ln.c);
+      card.append(el("h2", "", ln.n));
+      people.forEach((p) => {
+        const g = el("div", "spgrp");
+        g.append(el("h3", "", p || "Unassigned"));
+        mine.filter((i) => (i.person || "") === p).forEach((i) => g.append(itemRow(i, ro)));
+        g.append(addLine(sp, ln.k, p, ro));
+        card.append(g);
+      });
+      if (!people.length) card.append(addLine(sp, ln.k, "", ro));
+      else {
+        const pe = el("form", "spadd"), i = el("input");
+        i.placeholder = "Add for another person: Name: item";
+        i.disabled = ro;
+        i.setAttribute("aria-label", "New item for a person");
+        pe.append(i);
+        pe.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const m = /^([^:]{1,60}):\s*(.+)$/.exec(i.value.trim());
+          if (!m || !canWrite()) return;
+          saveItem(uid2("si"), { sp: sp.id, squad: ln.k, person: m[1].trim(), t: m[2].slice(0, 300), jira: "", kind: "feature", st: "planned", ord: Date.now() });
+          renderSprints();
+        });
+        card.append(pe);
+      }
+      pg.append(card);
+    });
   }
 
   // src/esm/ui/loading.js
@@ -5574,7 +5634,11 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       if (same(n, S.reports)) return;
       S.reports = n;
       if (state.page === "reports" && !state.edit && !document.activeElement.closest("#pg-reports")) renderReports();
-    }, () => {
+    }, (e) => {
+      if (e && e.code === "missing_table") {
+        S.setup["reports"] = true;
+        if (state.page === "reports" || state.page === "sprints") refreshPage();
+      }
     });
     if (!isViewer()) {
       S.db.collection("sprints").onSnapshot((s) => {
@@ -5583,14 +5647,22 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
         S.sprints = n;
         if (state.page === "sprints" && !document.activeElement.closest("#pg-sprints")) renderSprints();
         if (state.page === "reports") renderReports();
-      }, () => {
+      }, (e) => {
+        if (e && e.code === "missing_table") {
+          S.setup["sprints"] = true;
+          if (state.page === "reports" || state.page === "sprints") refreshPage();
+        }
       });
       S.db.collection("sprint_items").onSnapshot((s) => {
         const n = snapDocs("sprint_items", s, S.sitems);
         if (same(n, S.sitems)) return;
         S.sitems = n;
         if (state.page === "sprints" && !document.activeElement.closest("#pg-sprints")) renderSprints();
-      }, () => {
+      }, (e) => {
+        if (e && e.code === "missing_table") {
+          S.setup["sprint_items"] = true;
+          if (state.page === "reports" || state.page === "sprints") refreshPage();
+        }
       });
     }
     S.db.collection("vacations").onSnapshot((s) => {
@@ -6273,6 +6345,12 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
           setSave("saved");
           break;
         } catch (e) {
+          if (e && e.code === "missing_table") {
+            S.setup[path.split("/")[0]] = true;
+            $("save").textContent = "Database setup needed (run SQL 06)";
+            progress(false);
+            break;
+          }
           if (e && e.code === "invalid_argument") {
             S.readonly = true;
             setSave("readonly");

@@ -28,7 +28,7 @@ window.supabase={createClient:()=>({
    return b; }
   let want=null,rng=null;const q={select(){return q},order(){return q},limit(){return q},range(a,b){rng=[a,b];return q},eq(c,v){want=v;return q},maybeSingle(){return gate().then(()=>{const s=rd();return {data:s[t][want]!==undefined?{id:want,data:s[t][want]}:null}})},then(res,rej){return gate().then(()=>{let rows=Object.keys(rd()[t]).map(id=>({id,data:rd()[t][id]})); if(t==='activity') rows.sort((a,b)=>(a.data.at<b.data.at?1:-1)); if(window.__page&&t==='activity'&&!rng) rows=rows.slice(0,window.__page); if(rng) rows=rows.slice(rng[0],rng[1]+1); return {data:rows}}).then(res,rej)}};
   return {select:()=>q,
-   upsert:async r=>{await gate(); if(window.__net.fail) return {error:{message:window.__net.fail,code:'42501'}}; const s=rd();s[t][r.id]=r.data;wr(s);return {};},
+   upsert:async r=>{await gate(); if((window.__missing||[]).includes(t)) return {error:{message:'Could not find the table in the schema cache',code:'PGRST205'}}; if(window.__net.fail) return {error:{message:window.__net.fail,code:'42501'}}; const s=rd();s[t][r.id]=r.data;wr(s);return {};},
    insert:async r=>{await gate(); const s=rd();s[t][r.id]=r.data;wr(s);return {}},
    delete:()=>({eq:async(c,id)=>{await gate(); const s=rd();delete s[t][id];wr(s);return {};}})};},
  rpc:async(fn,args)=>{ await gate(); const s=rd(); if(fn==='shared_snapshot'){ const l=s.share_links[args.t]; if(!l) return {data:null}; const items={}; Object.keys(s.items).forEach(id=>{ if((s.items[id].rm||'h2-2026')===l.rm) items[id]=s.items[id]; }); return {data:{rm:l.rm,roadmap:s.roadmaps[l.rm]||null,items,people:s.people,daysoff:s.daysoff}}; } return {error:{message:'no such function'}}; },

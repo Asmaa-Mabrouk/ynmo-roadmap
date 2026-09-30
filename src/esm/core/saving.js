@@ -59,6 +59,7 @@ export function write(path, data, fields) {
         if (copy && part && ref.merge) await ref.merge(part, copy); else if (copy) await ref.set(copy); else await ref.delete();
         setSave('saved'); break;
       } catch (e) {
+        if (e && e.code === 'missing_table') { S.setup[path.split('/')[0]] = true; $('save').textContent = 'Database setup needed (run SQL 06)'; progress(false); break; }
         if (e && e.code === 'invalid_argument') { S.readonly = true; setSave('readonly'); render(); break; }
         setSave('error'); if (tryN === 5) break;
         await new Promise(r => setTimeout(r, Math.min(15000, 1500 * Math.pow(2, tryN))));
