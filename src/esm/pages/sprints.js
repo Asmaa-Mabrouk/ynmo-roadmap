@@ -90,7 +90,7 @@ function listView(pg, ro) {
     const a = el('a', 'splink'); a.href = '#/sprints/' + sp.id; a.append(el('h2', '', 'Sprint ' + sp.n));
     info.append(a, el('div', 'meta', fmtIso(sp.a) + ' to ' + fmtIso(sp.b) + ' · ' + (Math.round((parseIso(sp.b) - parseIso(sp.a)) / DAY) + 1) + ' days'));
     const pr = el('div', 'prods'); secs.forEach(k => { const c = el('span', 'pchip', lane(k).n); c.style.setProperty('--c', lane(k).c); pr.append(c); }); if (!secs.length) pr.append(el('span', 'meta', 'No product sections yet')); info.append(pr);
-    const prog = el('div', 'prog'); prog.append(el('div', 'meta', done + ' of ' + leaf.length + ' done')); const b0 = el('div', 'bar0'), i0 = el('i'); i0.style.width = pct + '%'; b0.append(i0); prog.append(b0);
+    const prog = el('div', 'spprog'); prog.append(el('div', 'meta', done + ' of ' + leaf.length + ' done')); const b0 = el('div', 'bar0'), i0 = el('i'); i0.style.width = pct + '%'; b0.append(i0); prog.append(b0);
     const more = el('button', 'btn sm spmore', '⋯'); more.type = 'button'; more.setAttribute('aria-label', 'More actions for Sprint ' + sp.n); more.setAttribute('aria-haspopup', 'menu');
     more.addEventListener('click', () => openMenu(more, [{ label: 'Open in new tab', value: 'tab' }, { label: 'Delete sprint', value: 'del', disabled: ro }], {
       search: false, label: 'Sprint actions', onPick: it => { if (it.value === 'tab') window.open(location.pathname + location.search + '#/sprints/' + sp.id, '_blank', 'noopener'); else deleteSprint(sp); }, onClose: () => more.focus()

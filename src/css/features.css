@@ -216,7 +216,7 @@ a.spcard:hover, a.spcard:focus-visible { border-color: var(--brand); box-shadow:
 .spcard h2 { margin: 0 0 2px; font-size: 1.1rem; }
 .spcard .meta { color: var(--muted); font-size: .9rem; }
 .spcard .prods { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
-.spcard .prog { min-width: 160px; }
+.spcard .spprog { min-width: 160px; }
 .spcard .bar0 { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; margin-top: 4px; }
 .spcard .bar0 i { display: block; height: 100%; background: #2e9d6b; }
 .pchip { display: inline-block; padding: 1px 9px; border-radius: 99px; font-size: 12px; font-weight: 700; color: #fff; background: var(--c, var(--brand)); }

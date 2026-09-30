@@ -69,7 +69,8 @@ with sync_playwright() as pw:
     P.locator('.sdoc .blk.k-s', has_text='Parent chat').locator('.stp').click(); typ('blocked'); key('Enter'); P.wait_for_timeout(300)
     # list
     A.click('#nav button[data-p="sprints"]'); A.wait_for_timeout(400)
-    ok('sprint listed with product chips and progress', A.locator('.spcard').count()==1 and 'Tifli' in A.locator('.spcard .prods').inner_text() and 'done' in A.locator('.spcard .prog').inner_text())
+    ok('no stray loading bar on the list', A.evaluate("!document.querySelector('#pg-sprints .prog')"))
+    ok('sprint listed with product chips and progress', A.locator('.spcard').count()==1 and 'Tifli' in A.locator('.spcard .prods').inner_text() and 'done' in A.locator('.spcard .spprog').inner_text())
     ok('whole card is one link (new tab works with ctrl/middle click)', A.locator('.spcard a.splink').count()==1 and A.locator('.spcard a.spnew').count()==0)
     A.locator('.spcard .spmore').click(); A.wait_for_timeout(150)
     ok('more menu offers new tab and delete', 'Open in new tab' in A.locator('.cmenu').inner_text() and 'Delete sprint' in A.locator('.cmenu').inner_text()); A.keyboard.press('Escape')
@@ -90,7 +91,7 @@ with sync_playwright() as pw:
 
     # the sprint appears in the list with progress
     A.click('#nav button[data-p="sprints"]'); A.wait_for_timeout(400)
-    ok('sprint listed with product chips and progress', A.locator('.spcard').count()==1 and 'Tifli' in A.locator('.spcard .prods').inner_text() and 'done' in A.locator('.spcard .prog').inner_text())
+    ok('sprint listed with product chips and progress', A.locator('.spcard').count()==1 and 'Tifli' in A.locator('.spcard .prods').inner_text() and 'done' in A.locator('.spcard .spprog').inner_text())
     # report
     A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(300)
     A.click('button:has-text("New report for week of")'); A.wait_for_timeout(700)
