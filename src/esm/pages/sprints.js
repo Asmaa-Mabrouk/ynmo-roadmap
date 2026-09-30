@@ -274,7 +274,16 @@ function docEditor(sp, ro) {
       if (b.k === 'p') { const inf = directory().get(b.t); if (inf) r.append(el('span', 'role', inf.domain)); }
       const tags = el('span', 'btags'); (b.tags || []).forEach(n => { const ch = el('button', 'tgchip tg-' + (tagMap(spId)[n] || 'gray'), '#' + n); ch.type = 'button'; ch.disabled = ro; ch.setAttribute('aria-label', 'Tag ' + n + ': change colour or remove'); ch.addEventListener('click', () => chipMenu(b, n, ch)); tags.append(ch); }); r.append(tags);
     }
-    if (!ro) { const x = el('button', 'blkx', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Delete ' + KIND_NAME[b.k].toLowerCase()); x.addEventListener('click', () => removeGroup(b)); r.append(x); }
+    if (!ro) {
+      const x = el('button', 'blkh', '⋮⋮'); x.type = 'button'; x.setAttribute('aria-label', 'Options for this ' + KIND_NAME[b.k].toLowerCase()); x.setAttribute('aria-haspopup', 'menu');
+      x.addEventListener('click', () => {
+        const cur = S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, into = b.k === 'h' ? [] : ['s', 'u', 'n'].filter(k => k !== b.k).map(k => ({ label: 'Turn into ' + KIND_NAME[k].toLowerCase(), value: 'k:' + k }));
+        openMenu(x, [{ label: 'Move up', value: 'up' }, { label: 'Move down', value: 'down' }].concat(into, [{ label: 'Delete', value: 'del' }]), {
+          label: 'Line options', onPick: it => { if (it.value === 'up') move(cur, -1); else if (it.value === 'down') move(cur, 1); else if (it.value === 'del') removeGroup(cur); else { saveItem(b.id, { k: it.value.slice(2) }); redraw(b.id); } }, onClose: p => { if (!p) focusLater(b.id); }
+        });
+      });
+      r.prepend(x);
+    }
     return r;
   }
   function ghostRow(all) {
@@ -342,6 +351,7 @@ function detailView(pg, sp, ro) {
 export function renderSprints() {
   const pg = $('pg-sprints'); if (!pg) return; closeMenu(); pg.textContent = '';
   const ro = !canEdit() || !canWrite(), id = routeId(), sp = id ? sprintList().find(s => s.id === id) : null;
+  pg.classList.toggle('sheet', !!sp);
   if (id && !sp) { pg.append(crumbs([{ label: 'Sprints', href: '#/sprints' }, { label: 'Not found' }]), pageHead('Sprint not found', 'It may have been deleted, or it is still loading.')); return; }
   if (sp) detailView(pg, sp, ro); else listView(pg, ro);
 }

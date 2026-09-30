@@ -17,6 +17,7 @@
 - **Search in every dropdown:** each replaced dropdown (`ui/dropdowns.js`) now has a search box (type, Up/Down, Enter, Esc; "No matches" message). Fixed: opening a dropdown that was partly off-screen could close it at once because focusing it scrolled the page.
 - **Cleaner breadcrumb:** `Sprints › Sprint 2` on a sprint page, identical whether it was opened in the same tab, a new tab or a reload. In the list the whole card is one link (Ctrl/Cmd-click or middle-click opens a new tab) and a "⋯" menu holds "Open in new tab" and "Delete sprint".
 - **Editable sprint number:** the sprint page has a "Sprint number" field (1 to 9999, must be unique), so the team can start at Sprint 228; title, breadcrumb, list and new reports follow, and "New sprint" continues from the highest number. Carry-over now takes the nearest lower sprint.
+- **Notion-like sprint page:** a sprint opens as a clean white page (centred column, no background artwork, light headings). The per-line ✕ is gone: hover a line and use its ⋮⋮ handle for Move up/down, Turn into scope/sub-section/note, and Delete. Backspace on an empty line still deletes it.
 
 ## Engineering hygiene
 - **Person rows:** drag grip (⋮⋮) to reorder rows and a ⋯ menu (Move up/down, Hide from this roadmap) in the by-person roadmap; order shared via `ideas/peopleorder`, hidden rows per roadmap via `ideas/peoplehide` (only empty rows; "Show hidden" restores).

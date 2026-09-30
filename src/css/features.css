@@ -293,3 +293,27 @@ span.tgchip { cursor: default; margin-inline-start: 6px; }
 .cpop .csearch.off { position: absolute; width: 1px; height: 1px; opacity: 0; padding: 0; border: 0; overflow: hidden; }
 .sdoc .stp.sst-planned { background: #e7eaf3; color: #46506e; } .sdoc .stp.sst-progress { background: #e4e0fa; color: #3b2fa0; }
 .sdoc .stp.sst-done { background: #d5efe2; color: #1d7a52; } .sdoc .stp.sst-blocked { background: #fbe6c4; color: #8a5208; }
+
+/* ---------- sprint page = a white document page (Notion-like) ---------- */
+body:has(#pg-sprints.sheet:not([hidden])) { background: #fff; }
+body:has(#pg-sprints.sheet:not([hidden]))::before { display: none; }
+#pg-sprints.sheet { max-width: 900px; margin-inline: auto; width: 100%; padding-inline: 40px; gap: 10px; background: #fff; }
+#pg-sprints.sheet .sdoc { padding: 0 0 120px; margin-top: 18px; }
+.sdoc .blk { padding: 2px 4px; }
+.sdoc .blk:hover { background: transparent; }
+.sdoc .blk.k-h { margin-top: 34px; padding: 4px 4px 6px; border-bottom: 1px solid var(--line); }
+.sdoc .bh { font-size: 1.6rem; font-weight: 800; letter-spacing: -.01em; }
+.sdoc .blk.k-p { margin-top: 18px; padding-inline-start: 4px; font-size: 1.05rem; }
+.sdoc .blk.k-s { padding-inline-start: 22px; }
+.sdoc .blk.k-u { padding-inline-start: 50px; }
+.sdoc .blk.k-n, .sdoc .blk.ghost { padding-inline-start: 22px; }
+.sdoc .bt:focus { background: transparent; box-shadow: none; }
+.sdoc .stp { font-weight: 600; padding: 0 8px; font-size: .74rem; margin-top: 4px; }
+.sdoc .stp.sst-planned { background: transparent; color: #9aa1b5; padding-inline: 0; min-width: 62px; }
+.sdoc .blkx { display: none; }
+.sdoc .blk { position: relative; }
+.sdoc .blkh { position: absolute; inset-inline-start: -26px; top: 3px; width: 22px; border: 0; background: none; color: #b3b8c8; cursor: grab; opacity: 0; font-size: .95rem; letter-spacing: -3px; border-radius: 5px; padding: 2px 0; }
+.sdoc .blk:hover .blkh, .sdoc .blkh:focus-visible { opacity: 1; }
+.sdoc .blkh:hover { background: rgba(120, 130, 160, .14); color: #46506e; }
+.sdoc .blk.k-h .blkh { top: 12px; }
+@media (max-width: 720px) { #pg-sprints.sheet { padding-inline: 16px; } .sdoc .blkh { opacity: 1; inset-inline-start: -14px; } }
