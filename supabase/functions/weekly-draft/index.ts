@@ -68,12 +68,19 @@ Deno.serve(async (req) => {
   const models = [Deno.env.get("GEMINI_MODEL") || "gemini-3.5-flash", "gemini-3.5-flash-lite"];
   let lastErr = "";
   for (const model of models) {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-      body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, responseMimeType: "application/json", responseSchema: schema } }),
-    });
-    if (!r.ok) { lastErr = `${model}: HTTP ${r.status}`; if (r.status === 404 || r.status === 400) continue; break; }
+    // Gemini answers 429/5xx when it is busy: retry the same model with a short back-off, then fall through to the next model.
+    let r: Response | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, responseMimeType: "application/json", responseSchema: schema } }),
+      });
+      if (r.ok || ![429, 500, 502, 503, 504].includes(r.status)) break;
+      lastErr = `${model}: HTTP ${r.status}`;
+      await new Promise((res) => setTimeout(res, 1200 * (attempt + 1)));
+    }
+    if (!r || !r.ok) { lastErr = `${model}: HTTP ${r?.status}`; continue; }
     let out: any;
     try { out = JSON.parse((await r.json())?.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}"); } catch { lastErr = model + ": unreadable answer"; continue; }
 

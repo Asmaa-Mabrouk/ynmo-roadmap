@@ -48,6 +48,8 @@ async function aiWhy(e) {
   const c = e && e.context, st = c && c.status; let msg = '';
   try { if (c && c.json) { const j = await c.json(); msg = (j && (j.error || j.message)) || ''; } } catch (x) { /* body not JSON */ }
   if (!st && e && (e.name === 'FunctionsFetchError' || /Failed to send a request/i.test(e.message || ''))) return 'Could not reach the AI function. Most likely `weekly-draft` is not deployed on Supabase yet (or is named differently). Deploy it, then try again.';
+  if (/HTTP (429|5\d\d)/.test(msg)) return 'Gemini is busy or overloaded right now (' + (msg.match(/HTTP \d+/) || [''])[0] + '). Nothing is wrong with your setup, wait a minute and try again.';
+  if (/HTTP (401|403)/.test(msg)) return 'Gemini rejected the API key (' + (msg.match(/HTTP \d+/) || [''])[0] + '). Check GEMINI_API_KEY and that billing/quota is enabled.';
   if (st === 404) return 'The AI function is not deployed yet (weekly-draft). Deploy it in Supabase, then try again.';
   if (st === 401 || st === 403) return 'Not allowed: only signed-in editors and admins can use AI.';
   if (/GEMINI_API_KEY/i.test(msg)) return 'GEMINI_API_KEY is missing in Supabase Secrets.';
