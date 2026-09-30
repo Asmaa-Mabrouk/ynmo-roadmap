@@ -55,7 +55,7 @@ export function sourceLines(prod, sitems, road, ka, kb, a, b) {
     if (stt === 'done' && dn && a && b) { if (dn < a) return; if (dn > b) m = ST_OF.progress; }   /* sprints last 2 weeks, reports are weekly: done in an earlier week is not news, done later is still in progress */
     const t = sub.length ? s.t + ': ' + sub.map(x => x.t).join('; ') : s.t;
     const h = sub.length ? '<b>' + esc(s.t) + '</b><ul>' + sub.map(x => '<li>' + esc(x.t) + '</li>').join('') + '</ul>' : (s.h || '');
-    out.push({ src: 'si:' + s.id, g: m[0], st: m[1], t: t, h: h, jira: s.jira || '', kind: s.kind || 'feature', ord: s.ord || 0 });
+    out.push({ src: 'si:' + s.id, g: m[0], st: m[1], t: t, h: h, jira: s.jira || '', kind: s.kind || 'feature', tg: s.tg || [], ord: s.ord || 0 });
   });
   if (Number.isFinite(ka) && Number.isFinite(kb)) {
     road.filter(r => prod.squads.includes(r.sq) && r.d0 <= kb && r.d1 >= ka).forEach(r => {
@@ -73,9 +73,9 @@ export function mergeLines(prev, fresh) {
   const by = new Map((prev || []).map(p => [p.src, p])), seen = new Set(), out = [];
   fresh.forEach(f => {
     seen.add(f.src); const p = by.get(f.src);
-    if (!p) out.push({ id: uid(), src: f.src, g: f.g, st: f.st, t: f.t, h: f.h || '', t0: f.t, jira: f.jira, kind: f.kind, hide: false, edited: false });
+    if (!p) out.push({ id: uid(), src: f.src, g: f.g, st: f.st, t: f.t, h: f.h || '', t0: f.t, jira: f.jira, kind: f.kind, tg: f.tg || [], hide: false, edited: false });
     else if (p.edited) out.push(p);
-    else out.push(Object.assign({}, p, { g: f.g, st: f.st, t: f.t, t0: f.t, jira: f.jira, kind: f.kind, h: f.h || '' }));
+    else out.push(Object.assign({}, p, { g: f.g, st: f.st, t: f.t, t0: f.t, jira: f.jira, kind: f.kind, tg: f.tg || [], h: f.h || '' }));
   });
   (prev || []).forEach(p => { if (!seen.has(p.src) && (p.src === 'man' || p.edited)) out.push(p); });
   return out;

@@ -56,3 +56,6 @@ Publication includes the doc tables; the client subscribes per table. Presence u
 2. Enable RLS + copy the read/editor-write policies from 04.
 3. `alter publication supabase_realtime add table public.<name>;`
 4. Use `db.collection`-style access via `makeDb()` in a new `src/esm` module; log changes with `logAct`.
+
+
+Note (sprint document): `sprint_items` docs are now blocks `{sp,k,sq,t,st,dn,tags[],ord}` (k = h|p|s|u|n). Rows saved by the first version (`squad/person/par`) are converted once when the sprint is opened. `sprints` docs gain `tags:{name:colour}`. No SQL change.

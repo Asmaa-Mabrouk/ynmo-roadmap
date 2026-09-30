@@ -7,54 +7,65 @@
 import { el } from '../core/model.js';
 
 /* ---------- elegant dropdowns: the native select stays (value, change, forms), its list is replaced ---------- */
-let cpop = null, cpopSel = null, cpopIdx = -1;
+let cpop = null, cpopSel = null, openedAt = 0;
 function cpopClose(refocus) {
   if (!cpop) return; const s = cpopSel; cpop.remove(); cpop = null; cpopSel = null;
   if (s) { s.setAttribute('aria-expanded', 'false'); if (refocus) s.focus(); }
 }
+const rowsOf = () => [...cpop.querySelectorAll('.copt:not(.dis):not([hidden])')];
 function cpopMove(d) {
-  const rows = [...cpop.querySelectorAll('.copt:not(.dis)')]; if (!rows.length) return;
+  const rows = rowsOf(); if (!rows.length) return;
   let i = rows.findIndex(r => r.classList.contains('act')); i = Math.max(0, Math.min(rows.length - 1, i + d));
-  rows.forEach(r => r.classList.remove('act')); rows[i].classList.add('act'); rows[i].scrollIntoView({ block: 'nearest' });
+  cpop.querySelectorAll('.act').forEach(r => r.classList.remove('act')); rows[i].classList.add('act'); rows[i].scrollIntoView({ block: 'nearest' });
 }
 function cpopPick(opt) {
   const s = cpopSel; if (!s || opt.disabled) return; const changed = s.value !== opt.value; s.value = opt.value; cpopClose(true);
   if (changed) { s.dispatchEvent(new Event('input', { bubbles: true })); s.dispatchEvent(new Event('change', { bubbles: true })); }
 }
+/** Filter the rows by what was typed in the search box; the first match becomes the active row. */
+function cpopFilter(q) {
+  q = q.trim().toLowerCase(); let first = null, any = false;
+  cpop.querySelectorAll('.copt[data-opt]').forEach(r => { const hit = !q || r.textContent.toLowerCase().includes(q); r.hidden = !hit; r.classList.remove('act'); if (hit) { any = true; if (!first && !r.classList.contains('dis')) first = r; } });
+  if (first) first.classList.add('act'); cpop.querySelector('.cnone').hidden = any;
+}
 function cpopOpen(s) {
   if (cpop && cpopSel === s) { cpopClose(true); return; }
   cpopClose(); cpopSel = s; s.setAttribute('aria-haspopup', 'listbox'); s.setAttribute('aria-expanded', 'true');
-  const box = el('div', 'cpop'); box.setAttribute('role', 'listbox'); box.tabIndex = -1;
+  const box = el('div', 'cpop'); box.tabIndex = -1;
+  const q = el('input', 'csearch'); q.type = 'search'; q.placeholder = 'Search…'; q.setAttribute('aria-label', 'Search the list'); q.autocomplete = 'off'; q.addEventListener('input', () => cpopFilter(q.value)); box.append(q);
+  const list = el('div', 'clist'); list.setAttribute('role', 'listbox'); box.append(list);
   [...s.options].forEach(o => {
-    const r = el('div', 'copt' + (o.selected ? ' sel act' : '') + (o.disabled ? ' dis' : '')); r.setAttribute('role', 'option'); r.setAttribute('aria-selected', String(o.selected));
+    const r = el('div', 'copt' + (o.selected ? ' sel act' : '') + (o.disabled ? ' dis' : '')); r.dataset.opt = '1'; r._opt = o; r.setAttribute('role', 'option'); r.setAttribute('aria-selected', String(o.selected));
     r.append(el('span', '', o.textContent)); if (o.selected) r.append(el('i', 'ck', '✓'));
     r.addEventListener('pointerdown', e => e.preventDefault());
     r.addEventListener('click', () => cpopPick(o));
     r.addEventListener('pointermove', () => { box.querySelectorAll('.act').forEach(x => x.classList.remove('act')); if (!o.disabled) r.classList.add('act'); });
-    box.append(r);
+    list.append(r);
   });
-  document.body.append(box); cpop = box;
-  const b = s.getBoundingClientRect(), h = Math.min(box.scrollHeight, 280);
-  box.style.minWidth = b.width + 'px'; box.style.maxHeight = '280px';
+  const none = el('div', 'copt dis cnone', 'No matches'); none.hidden = true; list.append(none);
+  document.body.append(box); cpop = box; openedAt = Date.now();
+  const b = s.getBoundingClientRect(), h = Math.min(box.scrollHeight, 320);
+  box.style.minWidth = Math.max(b.width, 180) + 'px'; box.style.maxHeight = '320px';
   const below = window.innerHeight - b.bottom, top = below >= h + 12 || below >= b.top ? b.bottom + 6 : b.top - h - 6;
   box.style.top = Math.max(8, top) + 'px'; box.style.left = Math.max(8, Math.min(b.left, window.innerWidth - box.offsetWidth - 8)) + 'px';
   const cur = box.querySelector('.sel'); if (cur) cur.scrollIntoView({ block: 'nearest' });
+  q.focus({ preventScroll: true });
 }
 document.addEventListener('mousedown', e => {
-  const s = e.target.closest && e.target.closest('select'); if (s && !s.disabled && !s.multiple) { e.preventDefault(); s.focus(); cpopOpen(s); return; }
+  const s = e.target.closest && e.target.closest('select'); if (s && !s.disabled && !s.multiple) { e.preventDefault(); s.focus({ preventScroll: true }); cpopOpen(s); return; }
   if (cpop && !cpop.contains(e.target)) cpopClose();
 }, true);
 document.addEventListener('keydown', e => {
   const t = e.target;
   if (cpop) {
-    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cpopClose(true); }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); cpopClose(true); }
     else if (e.key === 'ArrowDown') { e.preventDefault(); cpopMove(1); } else if (e.key === 'ArrowUp') { e.preventDefault(); cpopMove(-1); }
-    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const a = cpop.querySelector('.act'); if (a) cpopPick(cpopSel.options[[...cpop.children].indexOf(a)]); else cpopClose(true); }
+    else if (e.key === 'Enter') { e.preventDefault(); const a = cpop.querySelector('.copt.act:not([hidden])'); if (a && a._opt) cpopPick(a._opt); else cpopClose(true); }
     else if (e.key === 'Tab') cpopClose();
     return;
   }
   if (t && t.tagName === 'SELECT' && !t.multiple && (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown' || e.key === 'ArrowUp')) { e.preventDefault(); cpopOpen(t); }
 }, true);
 window.addEventListener('resize', () => cpopClose());
-window.addEventListener('scroll', e => { if (cpop && !cpop.contains(e.target)) cpopClose(); }, true);
+window.addEventListener('scroll', e => { if (cpop && Date.now() - openedAt > 250 && !cpop.contains(e.target)) cpopClose(); }, true);
 
