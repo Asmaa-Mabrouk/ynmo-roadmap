@@ -65,6 +65,10 @@ with sync_playwright() as pw:
     P.wait_for_timeout(500); bl=blocks()
     ok('pasting an outline creates sections, people, scopes and sub-sections', [x[0] for x in bl][-5:]==['h','p','s','u','s'])
     ok('pasted #tag becomes a tag', any(x[1]=='Attendance report' and 'urgent' in x[3] for x in bl))
+    P.locator('.sdoc .ghost .bt').click()
+    P.evaluate(r"""()=>{const t=document.querySelector('.sdoc .ghost .bt');const dt=new DataTransfer();dt.setData('text/plain','@Zed\nTifli\n    Sub of a scope named like a product\n# Plan · Warif · Sharjah\n@Kim\nVoice');t.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));}""")
+    P.wait_for_timeout(500); bl=blocks()
+    ok('a scope named like a product stays a scope; "# Name" makes a section', [x[0] for x in bl][-6:]==['p','s','u','h','p','s'] and bl[-5][1]=='Tifli')
     # status on pasted scope
     P.locator('.sdoc .blk.k-s', has_text='Parent chat').locator('.stp').click(); typ('blocked'); key('Enter'); P.wait_for_timeout(300)
     # list

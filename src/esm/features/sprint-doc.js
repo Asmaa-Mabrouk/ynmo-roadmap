@@ -43,17 +43,20 @@ export function splitTags(text) {
   return { t: t, tags: tags.filter((x, i, a) => x && a.indexOf(x) === i) };
 }
 /**
- * Pasted text -> blocks. A line that is the name of a product section starts a section, `@Name` is a person,
+ * Pasted text -> blocks. A product name starts a section when `# ` marks it or a `@person` line follows, `@Name` is a person,
  * other lines are scopes; a line indented deeper than the previous scope is a sub-section.
  * @param {Array<{k:string,n:string}>} lanes product sections that can be recognised
  */
 export function parseOutline(text, lanes) {
-  const out = []; let scopeIndent = -1;
-  String(text || '').split(/\r?\n/).forEach(raw => {
-    if (!raw.trim()) return;
+  const out = [], lines = String(text || '').split(/\r?\n/).filter(l => l.trim()); let scopeIndent = -1;
+  const clean = l => l.trim().replace(BULLET, '').trim();
+  lines.forEach((raw, i) => {
     const indent = (/^[ \t]*/.exec(raw)[0].replace(/\t/g, '  ')).length;
-    let s = raw.trim().replace(BULLET, '').trim(); if (!s) return;
-    const lane = (lanes || []).find(l => { const x = s.replace(/[:：]\s*$/, '').toLowerCase(); return x === String(l.n).toLowerCase() || x === String(l.k).toLowerCase(); });
+    let s = clean(raw); if (!s) return;
+    const marked = /^#{1,3}\s+\S/.test(s); if (marked) s = s.replace(/^#{1,3}\s+/, '');
+    const nextIsPerson = lines[i + 1] !== undefined && clean(lines[i + 1])[0] === '@';
+    const x0 = s.replace(/[:：]\s*$/, '').toLowerCase();
+    const lane = (marked || nextIsPerson) && (lanes || []).find(l => x0 === String(l.n).toLowerCase() || x0 === String(l.k).toLowerCase());
     if (lane) { out.push({ k: 'h', sq: lane.k, t: lane.n, tags: [] }); scopeIndent = -1; return; }
     if (s[0] === '@') { const name = s.slice(1).trim().slice(0, 60); if (name) { out.push({ k: 'p', t: name, tags: [] }); scopeIndent = -1; } return; }
     const x = splitTags(s); if (!x.t) return;
