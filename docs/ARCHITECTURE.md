@@ -54,6 +54,7 @@ src/esm/
 ## 4. Data model in the client
 - Static seed `ITEMS` (base features) + **`over`**: an overlay object `{id: {…changed fields}}` persisted per item. Views read through
   `items()` which merges seed + overlay, so seed data never needs migrating and any field can be overridden or unset.
+- Toasts: `ui/notify.js` (`notify(msg,'ok'|'err'|'info')`). Sprints use hash sub-routes (`#/sprints/<id>`) handled inside `pages/sprints.js`.
 - Sprints/Reports: `pages/sprints.js`, `pages/reports.js`, pure logic in `features/report-model.js`; AI wording via Edge Function `weekly-draft` (Gemini).
 - Other collections (`people`, `daysoff`, `roadmaps`, `ideas`, `vacations`, `activity`, `baselines`, `share_links`) are
   generic docs: `id text` + `data jsonb`. The adapter `makeDb()` exposes `doc(path).set/merge/delete` and `collection(t).get/onSnapshot`; `onSnapshot` re-queries the table on every Postgres-changes event plus a 30 s safety poll (simple and robust; cheap at this data size).

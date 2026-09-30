@@ -11,6 +11,9 @@
 
 - **Sprint sheet = same editor as the report:** item titles are rich text (kept when the item flows into the report), each squad/person has a multi-line "Add items" box (one item per line; `Name: item` assigns to that person; Ctrl+Enter adds), and every add box grows while you type.
 
+- **Toast messages** (`ui/notify.js`) for the result of actions: green for success, red for failure (kept 7 s, announced to screen readers). Save failures, view-only rejections and a missing database table now show a toast instead of only the small status text.
+- **Sprints restructured:** `#/sprints` is a list of sprints (progress, product chips, Open, Open in new tab, Delete); a sprint has its own page `#/sprints/<id>` with From/To date pickers, product sections > resources (team members) > scopes > sub-sections. A scope's status is derived from its sub-sections. The Jira field was removed everywhere. The weekly report turns a scope with sub-sections into one line with a bullet list.
+
 ## Engineering hygiene
 - **Person rows:** drag grip (⋮⋮) to reorder rows and a ⋯ menu (Move up/down, Hide from this roadmap) in the by-person roadmap; order shared via `ideas/peopleorder`, hidden rows per roadmap via `ideas/peoplehide` (only empty rows; "Show hidden" restores).
 - **Fixes from the live QA run:** a realtime refresh could revert an edit that was still being saved (new roadmap not selected for Editors, column "Move left" appearing to do nothing) - now unsaved local documents are kept (`snapDocs`); deleting a roadmap returns its scheduled ideas to the backlog; leaving a dead share link by URL works; stale vacation notice cleared; "1 dependency" wording; partial-leave weeks flagged on Capacity (⚑); schedule/remove-column confirmations; reversed-date explanation; edit hint hidden for viewers/shared; rename box no longer clipped on narrow bars.

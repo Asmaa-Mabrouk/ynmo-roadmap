@@ -14,6 +14,7 @@ import { allRoadmaps, withRm } from './roadmaps.js';
 import { items } from '../core/model.js';
 import { saveIdea } from './ideas.js';
 import { itemsOf, parsePaste, sprintList } from './sprints.js';
+import { notify } from '../ui/notify.js';
 import { autoGrow, richBar, richBox, showRich, submitOnCtrlEnter } from '../features/rich-text.js';
 import { GROUPS, RSTATUS, aiPayload, applyAi, buildProds, jiraUrl, newManualLine, overall, productsOf, reportToText, ruleSummary } from '../features/report-model.js';
 
@@ -57,7 +58,7 @@ async function aiWhy(e) {
   return 'Could not reach the AI function (' + String((e && e.message) || e || 'no answer').slice(0, 100) + ').';
 }
 const countLines = prods => Object.keys(prods).reduce((n, k) => n + prods[k].items.filter(l => !l.hide).length, 0);
-const say = (rep, txt, bad) => { rUI.note = txt; rUI.err = !!bad; toast(txt); };
+const say = (rep, txt, bad) => { rUI.note = txt; rUI.err = !!bad; toast(txt); notify(txt, bad ? 'err' : 'ok'); };
 /** Rules-only re-sync (never overwrites edited lines/summaries), then optionally the AI wording. Empty data is reported as an error, never sent to the AI. */
 async function sync(rep, ai, isNew) {
   if (rUI.busy) return; rUI.busy = true; rUI.note = ''; rUI.err = false;
@@ -104,27 +105,26 @@ function settingsDlg() {
     };
     draw();
     const add = el('button', 'btn sm', '+ Product'); add.type = 'button'; add.addEventListener('click', () => { cur0.push({ k: 'p' + Date.now().toString(36), n: 'New product', squads: [] }); draw(); });
-    const jb = el('input'); jb.value = cfg().jira || ''; jb.placeholder = 'https://your-company.atlassian.net'; jb.setAttribute('aria-label', 'Jira base URL');
     const ok = el('button', 'btn primary', 'Save'), no = el('button', 'btn', 'Cancel'); ok.type = no.type = 'button';
     ok.addEventListener('click', () => {
-      const ps = cur0.filter(p => p.n.trim()).map(p => ({ k: p.k, n: p.n.trim(), squads: p.squads })); if (!ps.length) return;
-      const j = jb.value.trim(); saveIdea('reportcfg', { cfg: true, products: ps, jira: /^https:\/\//i.test(j) ? j : '' }, 'report', 'updated the report settings'); closeDlg(); renderReports();
+      const ps = cur0.filter(p => p.n.trim()).map(p => ({ k: p.k, n: p.n.trim(), squads: p.squads })); if (!ps.length) { notify('Keep at least one product', 'err'); return; }
+      saveIdea('reportcfg', { cfg: true, products: ps }, 'report', 'updated the report settings'); notify('Report settings saved'); closeDlg(); renderReports();
     });
     no.addEventListener('click', closeDlg);
     const row = el('div', 'row'); row.append(ok, no);
-    box.append(el('p', 'sub', 'One section per product. Tick the squads that belong to it.'), list, add, fld('Jira base URL (optional, https only)', jb), row);
+    box.append(el('p', 'sub', 'One section per product. Tick the squads that belong to it.'), list, add, row);
   });
 }
 
 function viewLine(l) {
-  const r = el('div', 'rv st-' + l.st), t = el('span', 'rvt'); showRich(t, l.h, l.t); r.append(el('span', 'dot rs-' + l.st), t);
+  const r = el('div', 'rv ln-' + l.st), t = el('span', 'rvt'); showRich(t, l.h, l.t); r.append(el('span', 'dot rs-' + l.st), t);
   const u = jiraUrl(cfg().jira, l.jira); if (l.jira) { const a = el(u ? 'a' : 'span', 'jira', l.jira); if (u) { a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer'; } r.append(a); }
   if (l.st === 'risk' || l.st === 'late') r.append(el('span', 'chip rs-' + l.st, RSTATUS[l.st]));
   return r;
 }
 function lineRow(rep, d, l, ro) {
   if (ro) return viewLine(l);
-  const r = el('div', 'rline st-' + l.st + (l.hide ? ' hid' : '')); r.dataset.id = l.id;
+  const r = el('div', 'rline ln-' + l.st + (l.hide ? ' hid' : '')); r.dataset.id = l.id;
   const touch = patch => { Object.assign(l, patch, { edited: true }); save(rep); };
   const st = el('select', 'spsel rst-' + l.st); st.setAttribute('aria-label', 'Status'); Object.keys(RSTATUS).forEach(k => { const o = el('option', '', RSTATUS[k]); o.value = k; o.selected = k === l.st; st.append(o); });
   st.addEventListener('change', () => { touch({ st: st.value }); renderReports(); });
@@ -151,9 +151,9 @@ function prodBlock(rep, p, ro) {
     const gh = el('div', 'rgrp'); gh.append(el('h3', '', g[1])); ls.forEach(l => gh.append(lineRow(rep, d, l, ro)));
     if (!ro) {
       const f = el('form', 'spadd'), ta = el('textarea'), go = el('button', 'btn sm', 'Add items'); go.type = 'submit';
-      ta.rows = 2; autoGrow(ta); submitOnCtrlEnter(ta, f); ta.placeholder = 'Add to "' + g[1] + '": type or paste one or many items, one per line (bullets and Jira keys are recognised). Ctrl+Enter adds.'; ta.setAttribute('aria-label', 'Add items to ' + g[1]);
+      ta.rows = 2; autoGrow(ta); submitOnCtrlEnter(ta, f); ta.placeholder = 'Add to "' + g[1] + '": type or paste one or many items, one per line (bullets are removed). Ctrl+Enter adds.'; ta.setAttribute('aria-label', 'Add items to ' + g[1]);
       f.append(ta, go);
-      f.addEventListener('submit', e => { e.preventDefault(); const rows = parsePaste(ta.value); if (!rows.length) return; rows.forEach(r => { const n = newManualLine(g[0], r.t); n.jira = r.jira; d.items.push(n); }); save(rep, 'added ' + rows.length + ' line' + (rows.length === 1 ? '' : 's') + ' to the weekly report'); renderReports(); });
+      f.addEventListener('submit', e => { e.preventDefault(); const rows = parsePaste(ta.value); if (!rows.length) { notify('Type at least one line first', 'err'); return; } rows.forEach(r => { const n = newManualLine(g[0], r.t); n.jira = r.jira; d.items.push(n); }); save(rep, 'added ' + rows.length + ' line' + (rows.length === 1 ? '' : 's') + ' to the weekly report'); notify(rows.length + ' line' + (rows.length === 1 ? '' : 's') + ' added to "' + g[1] + '"'); renderReports(); });
       gh.append(f);
     }
     sec.append(gh);
@@ -180,10 +180,10 @@ export function renderReports() {
   const tools = el('div', 'row rtools');
   const btn = (t, cls, fn, dis) => { const b = el('button', 'btn ' + (cls || ''), t); b.type = 'button'; b.disabled = !!dis; b.addEventListener('click', fn); tools.append(b); return b; };
   if (!viewer && !sub) { btn('Sync from Sprint & Roadmap', '', () => sync(rep, false), !canBuild() || rUI.busy); const ab = btn('', 'ai', () => sync(rep, true), !canBuild() || rUI.busy); ab.insertAdjacentHTML('afterbegin', SPARK); ab.append(document.createTextNode(rUI.wait ? 'Writing…' : 'Generate with AI')); ab.title = 'Rewrites unedited lines and summaries in executive wording. Your edits are kept.'; tools.prepend(ab); }
-  btn('Copy text', '', () => { const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Copied'), () => toast('Copy failed')); });
+  btn('Copy text', '', () => { const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify('Report text copied to the clipboard'), () => notify('Could not copy. Select the text and copy it manually.', 'err')); });
   btn('Print / PDF', '', () => { document.body.classList.add('print-report'); const off = () => { document.body.classList.remove('print-report'); window.removeEventListener('afterprint', off); }; window.addEventListener('afterprint', off); window.print(); });
-  if (!viewer && !sub) btn('Submit to executives', 'primary', () => { rep.status = 'submitted'; rep.subAt = new Date().toISOString(); rep.subBy = S.me.name || S.me.email; save(rep, 'submitted the weekly report for ' + fmtIso(rep.a)); renderReports(); }, !canBuild());
-  if (!viewer && sub) btn('Reopen as draft', '', () => { rep.status = 'draft'; delete rep.subAt; delete rep.subBy; save(rep, 'reopened the weekly report for ' + fmtIso(rep.a)); renderReports(); }, !canBuild());
+  if (!viewer && !sub) btn('Submit to executives', 'primary', () => { rep.status = 'submitted'; rep.subAt = new Date().toISOString(); rep.subBy = S.me.name || S.me.email; save(rep, 'submitted the weekly report for ' + fmtIso(rep.a)); notify('Report submitted. Executives can now see it.'); renderReports(); }, !canBuild());
+  if (!viewer && sub) btn('Reopen as draft', '', () => { rep.status = 'draft'; delete rep.subAt; delete rep.subBy; save(rep, 'reopened the weekly report for ' + fmtIso(rep.a)); notify('Report reopened as a draft. Executives no longer see it.', 'info'); renderReports(); }, !canBuild());
   const body = el('div', 'rbody'), pls = rep.pl || productsOf(cfg());
   const hero = el('div', 'rhero'); hero.append(el('small', '', 'Ynmo · Weekly product update'), el('h2', 'rtitle', fmtIso(rep.a) + ' – ' + fmtIso(rep.b)), el('span', 'rsp', 'Sprint ' + rep.n + ' · week ' + (rep.w || 1) + ' of 2')); body.append(hero);
   const glance = el('div', 'rglance');

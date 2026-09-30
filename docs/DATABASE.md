@@ -23,8 +23,8 @@ Generic document tables: `id text PK, data jsonb, updated_at timestamptz, update
 | vacations | Leave entries |
 | activity | Append-only audit log (`u` = undo payload, `ref` marks undone entries) |
 | baselines | Frozen snapshots (`active` flag is the only mutable field) |
-| sprints | Sprint definitions `sp<n>`: `{n, a, b, note}` (editors/admins only) |
-| sprint_items | Sprint work items `{sp, squad, person, t, jira, kind, st, ord}` (editors/admins only) |
+| sprints | Sprint definitions `sp<n>`: `{n, a, b, note, secs:{squad:{people:[name]}}}` - `secs` = the product sections and resources added to the sprint (editors/admins only) |
+| sprint_items | Sprint scopes and sub-sections `{sp, squad, person, par, t, h, kind, st, dn, ord}` (`par` = parent scope id, empty for a scope; `h` = rich text; `dn` = date it was marked done) (editors/admins only) |
 | reports | Weekly reports `rp<yyyymmdd of week start>`: `{sp, n, a, b, status draft/submitted, pl, prods{key:{sum,sumEdited,items[]}}, ai, subBy, subAt}`. Editors read/write drafts; approved viewers read `submitted` only; editors and admins submit/reopen; deleting a submitted report is admin-only (RLS in sql/06) |
 | share_links | Public share tokens (readable only by approved members) |
 | profiles | `id → auth.users`, email, name, role, avatar, `approved`, `is_admin`, `access` |

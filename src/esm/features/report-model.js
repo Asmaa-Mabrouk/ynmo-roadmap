@@ -17,6 +17,15 @@ export const SKIND = { feature: 'Feature', fix: 'Fix', support: 'Support' };
 export const SSTATUS = { planned: 'Planned', progress: 'In progress', done: 'Done', blocked: 'Blocked' };
 
 const ST_OF = { done: ['done', 'done'], progress: ['prog', 'on'], planned: ['next', 'on'], blocked: ['risk', 'risk'] };
+/** Status of a scope from its sub-sections (all done > done; any blocked > blocked; any started > in progress; else its own). */
+export function scopeStatus(kids, own) {
+  if (!kids.length) return own || 'planned';
+  if (kids.every(k => k.st === 'done')) return 'done';
+  if (kids.some(k => k.st === 'blocked')) return 'blocked';
+  if (kids.some(k => k.st === 'progress' || k.st === 'done')) return 'progress';
+  return 'planned';
+}
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const uid = () => 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
 /** Products from the saved config (meta doc `reportcfg`) or the defaults. */
@@ -38,10 +47,15 @@ export function jiraUrl(base, key) {
  */
 export function sourceLines(prod, sitems, road, ka, kb, a, b) {
   const out = [];
-  sitems.filter(s => prod.squads.includes(s.squad)).forEach(s => {
-    let m = ST_OF[s.st] || ST_OF.planned;
-    if (s.st === 'done' && s.dn && a && b) { if (s.dn < a) return; if (s.dn > b) m = ST_OF.progress; }   /* sprints last 2 weeks, reports are weekly: done in an earlier week is not news, done later is still in progress */
-    out.push({ src: 'si:' + s.id, g: m[0], st: m[1], t: s.t, h: s.h || '', jira: s.jira || '', kind: s.kind || 'feature', ord: s.ord || 0 });
+  const mine = sitems.filter(s => prod.squads.includes(s.squad)), ids = new Set(mine.map(s => s.id)), kids = {}, tops = [];
+  mine.forEach(s => { if (s.par && ids.has(s.par)) (kids[s.par] = kids[s.par] || []).push(s); else tops.push(s); });
+  tops.forEach(s => {
+    const sub = kids[s.id] || [], stt = scopeStatus(sub, s.st), dns = (sub.length ? sub : [s]).map(x => x.dn || '').sort(), dn = dns[dns.length - 1];
+    let m = ST_OF[stt] || ST_OF.planned;
+    if (stt === 'done' && dn && a && b) { if (dn < a) return; if (dn > b) m = ST_OF.progress; }   /* sprints last 2 weeks, reports are weekly: done in an earlier week is not news, done later is still in progress */
+    const t = sub.length ? s.t + ': ' + sub.map(x => x.t).join('; ') : s.t;
+    const h = sub.length ? '<b>' + esc(s.t) + '</b><ul>' + sub.map(x => '<li>' + esc(x.t) + '</li>').join('') + '</ul>' : (s.h || '');
+    out.push({ src: 'si:' + s.id, g: m[0], st: m[1], t: t, h: h, jira: s.jira || '', kind: s.kind || 'feature', ord: s.ord || 0 });
   });
   if (Number.isFinite(ka) && Number.isFinite(kb)) {
     road.filter(r => prod.squads.includes(r.sq) && r.d0 <= kb && r.d1 >= ka).forEach(r => {

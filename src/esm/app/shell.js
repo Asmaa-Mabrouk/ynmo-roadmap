@@ -38,7 +38,7 @@ export function showPage(p) {
   PAGES.forEach(x => { $('pg-' + x[0]).hidden = x[0] !== p; });
   document.querySelectorAll('#nav button').forEach(b => { if (b.dataset.p === p) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   const pt = $('ptitle'); if (pt) pt.textContent = (PAGES.find(x => x[0] === p) || [0, ''])[1];
-  if (location.hash !== '#/' + p) window.history.replaceState(null, '', '#/' + p);
+  if (location.hash !== '#/' + p && !(p === 'sprints' && /^#\/sprints\//.test(location.hash))) window.history.replaceState(null, '', '#/' + p);
   renderPage(p);
 }
 const NAV_ICONS = {
@@ -56,7 +56,7 @@ const NAV_ICONS = {
 };
 function buildNav() {
   const n = $('nav'); n.textContent = '';
-  PAGES.filter(x => (x[0] !== 'admin' || (S.me && S.me.is_admin)) && (!isViewer() || VIEWER_PAGES.includes(x[0]))).forEach(x => { const b = el('button', ''); b.type = 'button'; b.dataset.p = x[0]; b.title = x[1]; b.setAttribute('aria-label', x[1]); b.insertAdjacentHTML('beforeend', NAV_ICONS[x[0]] || ''); b.append(el('span', 'lbl', x[1])); if (x[0] === 'admin') { const d = el('span', 'dot', '0'); d.hidden = true; b.append(d); } b.addEventListener('click', () => showPage(x[0])); n.append(b); });
+  PAGES.filter(x => (x[0] !== 'admin' || (S.me && S.me.is_admin)) && (!isViewer() || VIEWER_PAGES.includes(x[0]))).forEach(x => { const b = el('button', ''); b.type = 'button'; b.dataset.p = x[0]; b.title = x[1]; b.setAttribute('aria-label', x[1]); b.insertAdjacentHTML('beforeend', NAV_ICONS[x[0]] || ''); b.append(el('span', 'lbl', x[1])); if (x[0] === 'admin') { const d = el('span', 'dot', '0'); d.hidden = true; b.append(d); } b.addEventListener('click', () => { window.history.replaceState(null, '', '#/' + x[0]); showPage(x[0]); }); n.append(b); });
 }
 export const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 

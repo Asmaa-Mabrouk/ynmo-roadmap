@@ -7,6 +7,7 @@
 import { S } from './state.js';
 import { $, H2_ID, base, canEdit, clone, items, state, todayK } from './model.js';
 import { netMark } from '../features/safety.js';
+import { notify, notifyFailOnce } from '../ui/notify.js';
 import { progress } from '../ui/loading.js';
 import { render } from '../ui/gantt-render.js';
 import { describe, logAct } from './shared.js';
@@ -59,9 +60,9 @@ export function write(path, data, fields) {
         if (copy && part && ref.merge) await ref.merge(part, copy); else if (copy) await ref.set(copy); else await ref.delete();
         setSave('saved'); break;
       } catch (e) {
-        if (e && e.code === 'missing_table') { S.setup[path.split('/')[0]] = true; $('save').textContent = 'Database setup needed (run SQL 06)'; progress(false); break; }
-        if (e && e.code === 'invalid_argument') { S.readonly = true; setSave('readonly'); render(); break; }
-        setSave('error'); if (tryN === 5) break;
+        if (e && e.code === 'missing_table') { S.setup[path.split('/')[0]] = true; $('save').textContent = 'Database setup needed (run SQL 06)'; notifyFailOnce('Not saved: the database is missing a table. Run supabase/sql/06-sprints-weekly-reports.sql.'); progress(false); break; }
+        if (e && e.code === 'invalid_argument') { S.readonly = true; setSave('readonly'); notify('You have view-only access, so this change was not saved.', 'err'); render(); break; }
+        setSave('error'); if (tryN === 0) notifyFailOnce('Could not save. Check your connection; we will keep retrying.'); if (tryN === 5) { notify('Still not saved after several tries. Your change is kept on this device; reload once you are online.', 'err'); break; }
         await new Promise(r => setTimeout(r, Math.min(15000, 1500 * Math.pow(2, tryN))));
       }
     }
