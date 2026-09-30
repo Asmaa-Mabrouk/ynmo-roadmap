@@ -13,7 +13,7 @@ with sync_playwright() as pw:
     ok('sprint created and lasts two weeks', 'Sprint 1' in A.locator('#pg-sprints').inner_text() and A.evaluate("(()=>{const s=Object.values(JSON.parse(localStorage.getItem('fk3')).sprints)[0];return (Date.parse(s.b)-Date.parse(s.a))/864e5})()")==13)
     # quick add in the Tifli squad
     tif=A.locator('#pg-sprints .spsq:has(h2:text-is("Tifli"))')
-    tif.locator('.spadd input').first.fill('Onboarding flow TIF-101'); tif.locator('.spadd input').first.press('Enter'); A.wait_for_timeout(400)
+    tif.locator('.spadd textarea').first.fill('Onboarding flow TIF-101'); tif.locator('.spadd button').first.click(); A.wait_for_timeout(400)
     ok('quick add keeps Jira key', tif.locator('.spjira').first.input_value()=='TIF-101')
     # paste import into Daycare
     A.click('button:text-is("Paste items")'); A.locator('#xdlg select').first.select_option('daycare')
@@ -45,17 +45,29 @@ with sync_playwright() as pw:
     ok('edited line and summary survive re-sync + AI', 'Custom wording by PM' in vals and 'My own summary' in vals)
     # new sprint item shows up on plain sync, edits still kept
     A.click('#nav button[data-p="sprints"]'); A.wait_for_timeout(300)
-    A.locator('#pg-sprints .spsq:has(h2:text-is("AI")) .spadd input').first.fill('Sara voice v2'); A.locator('#pg-sprints .spsq:has(h2:text-is("AI")) .spadd input').first.press('Enter'); A.wait_for_timeout(400)
+    A.locator('#pg-sprints .spsq:has(h2:text-is("AI")) .spadd textarea').first.fill('Sara voice v2'); A.locator('#pg-sprints .spsq:has(h2:text-is("AI")) .spadd button').first.click(); A.wait_for_timeout(400)
     A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(300); A.click('button:text-is("Sync from Sprint & Roadmap")'); A.wait_for_timeout(600)
     vals=A.evaluate("[...document.querySelectorAll('#pg-reports .sptext')].map(e=>e.innerText.trim())")
     ok('sync adds new item and keeps edit', any('Sara voice v2' in v for v in vals) and 'Custom wording by PM' in vals)
+    # --- sprint sheet: bulk add, auto-grow, rich title, "Name: item"
+    A.click('#nav button[data-p="sprints"]'); A.wait_for_timeout(300)
+    ai=A.locator('#pg-sprints .spsq:has(h2:text-is("AI"))'); ta=ai.locator('.spadd textarea').first; h0=ta.bounding_box()['height']
+    ta.fill('One\nTwo\nThree\nFour\nFive\nSix'); ta.dispatch_event('input'); A.wait_for_timeout(200)
+    ok('textarea grows while typing', ta.bounding_box()['height']>h0+40)
+    ai.locator('.spadd button').first.click(); A.wait_for_timeout(500)
+    ok('sprint bulk add makes one row per line', ai.locator('.sprow').count()>=7)
+    who=A.evaluate("[...__ynmo.directory().keys()][0]")
+    ai.locator('.spadd textarea').last.fill(who+': Assigned by prefix\nUnowned thing'); ai.locator('.spadd button').last.click(); A.wait_for_timeout(500)
+    ok('Name: item assigns to that person', ai.locator('.spgrp:has(h3:text-is("%s")) .sptext:has-text("Assigned by prefix")'%who).count()==1 and ai.locator('.spgrp:has(h3:text-is("Unassigned")) .sptext:has-text("Unowned thing")').count()==1)
+    r=ai.locator('.sprow .sptext').first; r.click(); A.keyboard.press('Control+A'); A.keyboard.type('Bold title'); A.keyboard.press('Control+A'); A.click('#pg-sprints .rbar button[aria-label="Bold"]'); r.blur(); A.wait_for_timeout(400)
+    ok('sprint title supports rich text', A.evaluate("Object.values(JSON.parse(localStorage.getItem('fk3')).sprint_items).some(x=>x.t==='Bold title'&&/<b>|<strong>/.test(x.h||''))"))
     # --- many items at once + rich text
     A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(300)
     tf=A.locator('#pg-reports .rprod[data-k="tifli"]'); before=tf.locator('.rline').count()
     ta=tf.locator('.rgrp:has(h3:text-is("Next")) .spadd textarea'); ta.fill('- First bulk item\n* Second bulk item TIF-9\n\n3. Third bulk item'); tf.locator('.rgrp:has(h3:text-is("Next")) .spadd button').click(); A.wait_for_timeout(500)
     ok('bulk add creates one line per row', A.locator('#pg-reports .rprod[data-k="tifli"] .rline').count()==before+3 and 'Second bulk item' in vl(A.locator('#pg-reports .rprod[data-k="tifli"]')))
     ok('bulk add picked up Jira key', 'TIF-9' in A.locator('#pg-reports .rprod[data-k="tifli"] .jira').all_inner_texts())
-    sm=A.locator('#pg-reports .rprod[data-k="tifli"] .rsum'); sm.click(); A.keyboard.press('Control+A'); A.keyboard.type('Big news'); A.keyboard.press('Control+A'); A.click('.rbar button[aria-label="Bold"]'); A.click('.rbar button[aria-label="Bulleted list"]'); A.wait_for_timeout(200); sm.blur(); A.wait_for_timeout(400)
+    sm=A.locator('#pg-reports .rprod[data-k="tifli"] .rsum'); sm.click(); A.keyboard.press('Control+A'); A.keyboard.type('Big news'); A.keyboard.press('Control+A'); A.click('#pg-reports .rbar button[aria-label="Bold"]'); A.click('#pg-reports .rbar button[aria-label="Bulleted list"]'); A.wait_for_timeout(200); sm.blur(); A.wait_for_timeout(400)
     ok('rich summary stored as bold + list', A.evaluate("(()=>{const r=Object.values(JSON.parse(localStorage.getItem('fk3')).reports).find(x=>x.prods.tifli.sumH);return !!r&&/<b>|<strong>/.test(r.prods.tifli.sumH)||/<ul>/.test(r.prods.tifli.sumH)})()"))
     ok('summary box is large', sm.bounding_box()['height']>=140)
     # scripts and unsafe links never survive
@@ -108,7 +120,7 @@ with sync_playwright() as pw:
     # --- missing tables (SQL 06 not run): setup banner instead of an "offline" banner
     ctx3=mkctx(b, init="window.__missing=['reports']"); e3=[]; E=newpage(ctx3,e3); signup(E,'Admin','adm@x.com')
     E.click('#nav button[data-p="sprints"]'); E.click('button:text-is("+ New sprint")'); E.wait_for_timeout(300)
-    E.locator('#pg-sprints .spadd input').first.fill('Thing'); E.locator('#pg-sprints .spadd input').first.press('Enter'); E.wait_for_timeout(300)
+    E.locator('#pg-sprints .spadd textarea').first.fill('Thing'); E.locator('#pg-sprints .spadd button').first.click(); E.wait_for_timeout(300)
     E.click('#nav button[data-p="reports"]'); E.click('button:has-text("New report for week of")'); E.wait_for_timeout(1500)
     ok('missing table shows setup banner', 'Database setup needed' in E.locator('#pg-reports .rerr').inner_text())
     ok('missing table is not shown as offline', E.locator('#offbar').is_hidden())

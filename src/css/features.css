@@ -193,3 +193,5 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .spadd { display: flex; gap: 8px; align-items: flex-start; }
 .spadd .btn { flex: none; }
 .rsumv, .rvt { white-space: pre-line; }
+.spadd textarea { overflow: hidden; resize: none; }
+.sprow .rt.sptext { min-height: 40px; }

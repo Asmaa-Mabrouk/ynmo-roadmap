@@ -14,7 +14,7 @@ import { allRoadmaps, withRm } from './roadmaps.js';
 import { items } from '../core/model.js';
 import { saveIdea } from './ideas.js';
 import { itemsOf, parsePaste, sprintList } from './sprints.js';
-import { cleanHtml, hasFormat, showRich, toPlain } from '../features/rich-text.js';
+import { autoGrow, richBar, richBox, showRich, submitOnCtrlEnter } from '../features/rich-text.js';
 import { GROUPS, RSTATUS, aiPayload, applyAi, buildProds, jiraUrl, newManualLine, overall, productsOf, reportToText, ruleSummary } from '../features/report-model.js';
 
 const SPARK = '<svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8L2.5 17.5l1.8-.7z"/></svg>';
@@ -114,27 +114,6 @@ function settingsDlg() {
   });
 }
 
-/** Toolbar shared by every rich field of the report; it acts on the field that has focus. */
-function richBar() {
-  const bar = el('div', 'rbar'); bar.setAttribute('role', 'toolbar'); bar.setAttribute('aria-label', 'Text formatting');
-  const b = (label, title, fn) => { const x = el('button', 'btn sm', label); x.type = 'button'; x.title = title; x.setAttribute('aria-label', title); x.addEventListener('mousedown', e => e.preventDefault()); x.addEventListener('click', () => { if (document.activeElement && document.activeElement.classList.contains('rt')) fn(); else toast('Click inside a text box first'); }); bar.append(x); return x; };
-  b('B', 'Bold', () => document.execCommand('bold')).style.fontWeight = '800';
-  b('I', 'Italic', () => document.execCommand('italic')).style.fontStyle = 'italic';
-  b('U', 'Underline', () => document.execCommand('underline')).style.textDecoration = 'underline';
-  b('• List', 'Bulleted list', () => document.execCommand('insertUnorderedList'));
-  b('1. List', 'Numbered list', () => document.execCommand('insertOrderedList'));
-  b('Link', 'Add link (https)', () => { const u = window.prompt('Link address (https://…)', 'https://'); if (u && /^https:\/\//i.test(u.trim())) document.execCommand('createLink', false, u.trim()); });
-  b('Clear', 'Remove formatting', () => document.execCommand('removeFormat'));
-  return bar;
-}
-/** A rich, editable box. `onSave(html, plain)` runs when the user leaves it. */
-function richBox(cls, html, plain, label, onSave) {
-  const d = el('div', 'rt ' + cls); d.contentEditable = 'true'; d.setAttribute('role', 'textbox'); d.setAttribute('aria-multiline', 'true'); d.setAttribute('aria-label', label); d.spellcheck = true;
-  showRich(d, html, plain); d.dataset.init = d.innerHTML;
-  d.addEventListener('paste', e => { const cd = e.clipboardData; if (!cd) return; e.preventDefault(); const h = cd.getData('text/html'); if (h) document.execCommand('insertHTML', false, cleanHtml(h)); else document.execCommand('insertText', false, cd.getData('text/plain')); });
-  d.addEventListener('blur', () => { const h = cleanHtml(d.innerHTML), pl = toPlain(h); if (d.dataset.init === h) return; d.dataset.init = h; onSave(hasFormat(h) ? h : '', pl); });
-  return d;
-}
 function viewLine(l) {
   const r = el('div', 'rv st-' + l.st), t = el('span', 'rvt'); showRich(t, l.h, l.t); r.append(el('span', 'dot rs-' + l.st), t);
   const u = jiraUrl(cfg().jira, l.jira); if (l.jira) { const a = el(u ? 'a' : 'span', 'jira', l.jira); if (u) { a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer'; } r.append(a); }
@@ -170,7 +149,7 @@ function prodBlock(rep, p, ro) {
     const gh = el('div', 'rgrp'); gh.append(el('h3', '', g[1])); ls.forEach(l => gh.append(lineRow(rep, d, l, ro)));
     if (!ro) {
       const f = el('form', 'spadd'), ta = el('textarea'), go = el('button', 'btn sm', 'Add items'); go.type = 'submit';
-      ta.rows = 2; ta.placeholder = 'Add to "' + g[1] + '": type or paste one or many items, one per line (bullets and Jira keys are recognised)'; ta.setAttribute('aria-label', 'Add items to ' + g[1]);
+      ta.rows = 2; autoGrow(ta); submitOnCtrlEnter(ta, f); ta.placeholder = 'Add to "' + g[1] + '": type or paste one or many items, one per line (bullets and Jira keys are recognised). Ctrl+Enter adds.'; ta.setAttribute('aria-label', 'Add items to ' + g[1]);
       f.append(ta, go);
       f.addEventListener('submit', e => { e.preventDefault(); const rows = parsePaste(ta.value); if (!rows.length) return; rows.forEach(r => { const n = newManualLine(g[0], r.t); n.jira = r.jira; d.items.push(n); }); save(rep, 'added ' + rows.length + ' line' + (rows.length === 1 ? '' : 's') + ' to the weekly report'); renderReports(); });
       gh.append(f);

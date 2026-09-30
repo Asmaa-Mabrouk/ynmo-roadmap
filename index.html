@@ -616,6 +616,8 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .spadd { display: flex; gap: 8px; align-items: flex-start; }
 .spadd .btn { flex: none; }
 .rsumv, .rvt { white-space: pre-line; }
+.spadd textarea { overflow: hidden; resize: none; }
+.sprow .rt.sptext { min-height: 40px; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -4709,7 +4711,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
         if (s.dn < a) return;
         if (s.dn > b) m = ST_OF.progress;
       }
-      out.push({ src: "si:" + s.id, g: m[0], st: m[1], t: s.t, jira: s.jira || "", kind: s.kind || "feature", ord: s.ord || 0 });
+      out.push({ src: "si:" + s.id, g: m[0], st: m[1], t: s.t, h: s.h || "", jira: s.jira || "", kind: s.kind || "feature", ord: s.ord || 0 });
     });
     if (Number.isFinite(ka) && Number.isFinite(kb)) {
       road.filter((r) => prod.squads.includes(r.sq) && r.d0 <= kb && r.d1 >= ka).forEach((r) => {
@@ -4723,9 +4725,9 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     fresh.forEach((f) => {
       seen.add(f.src);
       const p = by.get(f.src);
-      if (!p) out.push({ id: uid(), src: f.src, g: f.g, st: f.st, t: f.t, t0: f.t, jira: f.jira, kind: f.kind, hide: false, edited: false });
+      if (!p) out.push({ id: uid(), src: f.src, g: f.g, st: f.st, t: f.t, h: f.h || "", t0: f.t, jira: f.jira, kind: f.kind, hide: false, edited: false });
       else if (p.edited) out.push(p);
-      else out.push(Object.assign({}, p, { g: f.g, st: f.st, t: f.t, t0: f.t, jira: f.jira, kind: f.kind, h: "" }));
+      else out.push(Object.assign({}, p, { g: f.g, st: f.st, t: f.t, t0: f.t, jira: f.jira, kind: f.kind, h: f.h || "" }));
     });
     (prev || []).forEach((p) => {
       if (!seen.has(p.src) && (p.src === "man" || p.edited)) out.push(p);
@@ -4866,6 +4868,85 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     target.textContent = "";
     if (html) target.appendChild(cleanFragment(html));
     else target.textContent = plain || "";
+  }
+  function autoGrow(ta) {
+    const fit = () => {
+      ta.style.height = "auto";
+      ta.style.height = ta.scrollHeight + 2 + "px";
+    };
+    ta.addEventListener("input", fit);
+    ta._fit = fit;
+    requestAnimationFrame(fit);
+    return ta;
+  }
+  function submitOnCtrlEnter(ta, form) {
+    ta.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        form.requestSubmit();
+      }
+    });
+  }
+  function richBar() {
+    const bar = document.createElement("div");
+    bar.className = "rbar";
+    bar.setAttribute("role", "toolbar");
+    bar.setAttribute("aria-label", "Text formatting");
+    const b = (label, title, fn) => {
+      const x = document.createElement("button");
+      x.className = "btn sm";
+      x.textContent = label;
+      x.type = "button";
+      x.title = title;
+      x.setAttribute("aria-label", title);
+      x.addEventListener("mousedown", (e) => e.preventDefault());
+      x.addEventListener("click", () => {
+        if (document.activeElement && document.activeElement.classList.contains("rt")) fn();
+        else {
+          const s = document.getElementById("save");
+          if (s) s.textContent = "Click inside a text box first";
+        }
+      });
+      bar.append(x);
+      return x;
+    };
+    b("B", "Bold", () => document.execCommand("bold")).style.fontWeight = "800";
+    b("I", "Italic", () => document.execCommand("italic")).style.fontStyle = "italic";
+    b("U", "Underline", () => document.execCommand("underline")).style.textDecoration = "underline";
+    b("• List", "Bulleted list", () => document.execCommand("insertUnorderedList"));
+    b("1. List", "Numbered list", () => document.execCommand("insertOrderedList"));
+    b("Link", "Add link (https)", () => {
+      const u = window.prompt("Link address (https://…)", "https://");
+      if (u && /^https:\/\//i.test(u.trim())) document.execCommand("createLink", false, u.trim());
+    });
+    b("Clear", "Remove formatting", () => document.execCommand("removeFormat"));
+    return bar;
+  }
+  function richBox(cls, html, plain, label, onSave) {
+    const d = document.createElement("div");
+    d.className = "rt " + cls;
+    d.contentEditable = "true";
+    d.setAttribute("role", "textbox");
+    d.setAttribute("aria-multiline", "true");
+    d.setAttribute("aria-label", label);
+    d.spellcheck = true;
+    showRich(d, html, plain);
+    d.dataset.init = d.innerHTML;
+    d.addEventListener("paste", (e) => {
+      const cd = e.clipboardData;
+      if (!cd) return;
+      e.preventDefault();
+      const h = cd.getData("text/html");
+      if (h) document.execCommand("insertHTML", false, cleanHtml(h));
+      else document.execCommand("insertText", false, cd.getData("text/plain"));
+    });
+    d.addEventListener("blur", () => {
+      const h = cleanHtml(d.innerHTML), pl = toPlain(h);
+      if (d.dataset.init === h) return;
+      d.dataset.init = h;
+      onSave(hasFormat(h) ? h : "", pl);
+    });
+    return d;
   }
 
   // src/esm/pages/reports.js
@@ -5044,60 +5125,6 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       box.append(el("p", "sub", "One section per product. Tick the squads that belong to it."), list, add, fld("Jira base URL (optional, https only)", jb), row);
     });
   }
-  function richBar() {
-    const bar = el("div", "rbar");
-    bar.setAttribute("role", "toolbar");
-    bar.setAttribute("aria-label", "Text formatting");
-    const b = (label, title, fn) => {
-      const x = el("button", "btn sm", label);
-      x.type = "button";
-      x.title = title;
-      x.setAttribute("aria-label", title);
-      x.addEventListener("mousedown", (e) => e.preventDefault());
-      x.addEventListener("click", () => {
-        if (document.activeElement && document.activeElement.classList.contains("rt")) fn();
-        else toast("Click inside a text box first");
-      });
-      bar.append(x);
-      return x;
-    };
-    b("B", "Bold", () => document.execCommand("bold")).style.fontWeight = "800";
-    b("I", "Italic", () => document.execCommand("italic")).style.fontStyle = "italic";
-    b("U", "Underline", () => document.execCommand("underline")).style.textDecoration = "underline";
-    b("• List", "Bulleted list", () => document.execCommand("insertUnorderedList"));
-    b("1. List", "Numbered list", () => document.execCommand("insertOrderedList"));
-    b("Link", "Add link (https)", () => {
-      const u = window.prompt("Link address (https://…)", "https://");
-      if (u && /^https:\/\//i.test(u.trim())) document.execCommand("createLink", false, u.trim());
-    });
-    b("Clear", "Remove formatting", () => document.execCommand("removeFormat"));
-    return bar;
-  }
-  function richBox(cls, html, plain, label, onSave) {
-    const d = el("div", "rt " + cls);
-    d.contentEditable = "true";
-    d.setAttribute("role", "textbox");
-    d.setAttribute("aria-multiline", "true");
-    d.setAttribute("aria-label", label);
-    d.spellcheck = true;
-    showRich(d, html, plain);
-    d.dataset.init = d.innerHTML;
-    d.addEventListener("paste", (e) => {
-      const cd = e.clipboardData;
-      if (!cd) return;
-      e.preventDefault();
-      const h = cd.getData("text/html");
-      if (h) document.execCommand("insertHTML", false, cleanHtml(h));
-      else document.execCommand("insertText", false, cd.getData("text/plain"));
-    });
-    d.addEventListener("blur", () => {
-      const h = cleanHtml(d.innerHTML), pl = toPlain(h);
-      if (d.dataset.init === h) return;
-      d.dataset.init = h;
-      onSave(hasFormat(h) ? h : "", pl);
-    });
-    return d;
-  }
   function viewLine(l) {
     const r = el("div", "rv st-" + l.st), t = el("span", "rvt");
     showRich(t, l.h, l.t);
@@ -5215,7 +5242,9 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
         const f = el("form", "spadd"), ta = el("textarea"), go = el("button", "btn sm", "Add items");
         go.type = "submit";
         ta.rows = 2;
-        ta.placeholder = 'Add to "' + g[1] + '": type or paste one or many items, one per line (bullets and Jira keys are recognised)';
+        autoGrow(ta);
+        submitOnCtrlEnter(ta, f);
+        ta.placeholder = 'Add to "' + g[1] + '": type or paste one or many items, one per line (bullets and Jira keys are recognised). Ctrl+Enter adds.';
         ta.setAttribute("aria-label", "Add items to " + g[1]);
         f.append(ta, go);
         f.addEventListener("submit", (e) => {
@@ -5409,7 +5438,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     let c = 0;
     itemsOf(prev.id).filter((i) => i.st !== "done").forEach((i) => {
       if (have.has(i.t.toLowerCase())) return;
-      saveItem(uid2("si"), { sp: sp.id, squad: i.squad, person: i.person, t: i.t, jira: i.jira, kind: i.kind, st: i.st === "blocked" ? "blocked" : "planned", ord: Date.now() + c });
+      saveItem(uid2("si"), { sp: sp.id, squad: i.squad, person: i.person, t: i.t, h: i.h || "", jira: i.jira, kind: i.kind, st: i.st === "blocked" ? "blocked" : "planned", ord: Date.now() + c });
       c++;
     });
     if (c) logAct("sprint", "carried " + c + " unfinished item" + (c === 1 ? "" : "s") + " into Sprint " + sp.n);
@@ -5424,6 +5453,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       ta.rows = 9;
       ta.placeholder = "One item per line. Bullets and Jira keys (ABC-123) are recognised.";
       ta.setAttribute("aria-label", "Items");
+      autoGrow(ta);
       const info = el("p", "sub", "Nothing yet");
       ta.addEventListener("input", () => {
         info.textContent = parsePaste(ta.value).length + " item(s) found";
@@ -5447,18 +5477,14 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
   function itemRow(it, ro) {
     const r = el("div", "sprow");
     r.dataset.id = it.id;
-    const t = el("input", "sptext");
-    t.value = it.t;
-    t.disabled = ro;
-    t.setAttribute("aria-label", "Item title");
-    t.addEventListener("change", () => {
-      const v = t.value.trim();
-      if (!v) {
-        t.value = it.t;
+    const t = richBox("sptext", it.h, it.t, "Item title", (h, pl) => {
+      if (!pl) {
+        t.textContent = it.t;
         return;
       }
-      saveItem(it.id, { t: v.slice(0, 300) });
+      saveItem(it.id, { t: pl.slice(0, 1200), h: h.slice(0, 4e3) });
     });
+    if (ro) t.contentEditable = "false";
     const j = el("input", "spjira");
     j.value = it.jira || "";
     j.placeholder = "Jira";
@@ -5488,22 +5514,41 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     r.append(t, j, k, s, x);
     return r;
   }
-  function addLine(sp, squad, person, ro) {
-    const f = el("form", "spadd"), i = el("input");
-    i.placeholder = "Add an item and press Enter";
-    i.disabled = ro;
-    i.setAttribute("aria-label", "New item");
-    f.append(i);
+  function knownPeople(sp) {
+    const m = /* @__PURE__ */ new Map();
+    [...directory().keys()].concat(itemsOf(sp.id).map((i) => i.person).filter(Boolean)).forEach((n) => m.set(n.toLowerCase(), n));
+    return m;
+  }
+  function addLine(sp, squad, person, ro, hint) {
+    const f = el("form", "spadd"), ta = el("textarea"), go = el("button", "btn sm", "Add items");
+    go.type = "submit";
+    go.disabled = ro;
+    ta.disabled = ro;
+    ta.rows = 2;
+    ta.setAttribute("aria-label", hint ? "Add items for other people" : "Add items for " + (person || "unassigned"));
+    ta.placeholder = hint || "Add items: type or paste one per line (bullets and Jira keys recognised). Ctrl+Enter adds.";
+    autoGrow(ta);
+    submitOnCtrlEnter(ta, f);
+    f.append(ta, go);
+    f.dataset.add = squad + "|" + person;
     f.addEventListener("submit", (e) => {
       e.preventDefault();
-      const v = i.value.trim();
-      if (!v || !canWrite()) return;
-      saveItem(uid2("si"), { sp: sp.id, squad, person, t: v.slice(0, 300), jira: (/\b([A-Z][A-Z0-9]+-\d+)\b/.exec(v) || [])[1] || "", kind: "feature", st: "planned", ord: Date.now() });
+      if (!canWrite()) return;
+      const rows = parsePaste(ta.value);
+      if (!rows.length) return;
+      const names = person === null ? knownPeople(sp) : null;
+      rows.forEach((r, i) => {
+        let who = person || "", t = r.t;
+        const m = names && /^([^:]{1,40}):\s*(.+)$/.exec(t);
+        if (m && names.has(m[1].trim().toLowerCase())) {
+          who = names.get(m[1].trim().toLowerCase());
+          t = m[2];
+        }
+        saveItem(uid2("si"), { sp: sp.id, squad, person: who, t: t.slice(0, 300), jira: r.jira, kind: "feature", st: "planned", ord: Date.now() + i });
+      });
+      logAct("sprint", "added " + rows.length + " item" + (rows.length === 1 ? "" : "s") + " to Sprint " + sp.n);
       renderSprints();
-      const n = document.querySelector('#pg-sprints [data-add="' + squad + "|" + person + '"] input');
-      if (n) n.focus();
     });
-    f.dataset.add = squad + "|" + person;
     return f;
   }
   function renderSprints() {
@@ -5518,6 +5563,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     pg.append(pageHead("Sprints", "Plan each two-week sprint here. The weekly executive report is built from it and from the roadmap.", nb));
     const sbn = setupBanner();
     if (sbn) pg.append(sbn);
+    if (!ro && sp) pg.append(richBar());
     if (!sp) {
       pg.append(el("p", "empty", "No sprint yet. Create the first one."));
       return;
@@ -5561,22 +5607,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
         g.append(addLine(sp, ln.k, p, ro));
         card.append(g);
       });
-      if (!people.length) card.append(addLine(sp, ln.k, "", ro));
-      else {
-        const pe = el("form", "spadd"), i = el("input");
-        i.placeholder = "Add for another person: Name: item";
-        i.disabled = ro;
-        i.setAttribute("aria-label", "New item for a person");
-        pe.append(i);
-        pe.addEventListener("submit", (e) => {
-          e.preventDefault();
-          const m = /^([^:]{1,60}):\s*(.+)$/.exec(i.value.trim());
-          if (!m || !canWrite()) return;
-          saveItem(uid2("si"), { sp: sp.id, squad: ln.k, person: m[1].trim(), t: m[2].slice(0, 300), jira: "", kind: "feature", st: "planned", ord: Date.now() });
-          renderSprints();
-        });
-        card.append(pe);
-      }
+      card.append(addLine(sp, ln.k, people.length ? null : "", ro, people.length ? 'Add for other people: one per line as "Name: item" (or just the item for Unassigned)' : ""));
       pg.append(card);
     });
   }

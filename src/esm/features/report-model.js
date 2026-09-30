@@ -41,7 +41,7 @@ export function sourceLines(prod, sitems, road, ka, kb, a, b) {
   sitems.filter(s => prod.squads.includes(s.squad)).forEach(s => {
     let m = ST_OF[s.st] || ST_OF.planned;
     if (s.st === 'done' && s.dn && a && b) { if (s.dn < a) return; if (s.dn > b) m = ST_OF.progress; }   /* sprints last 2 weeks, reports are weekly: done in an earlier week is not news, done later is still in progress */
-    out.push({ src: 'si:' + s.id, g: m[0], st: m[1], t: s.t, jira: s.jira || '', kind: s.kind || 'feature', ord: s.ord || 0 });
+    out.push({ src: 'si:' + s.id, g: m[0], st: m[1], t: s.t, h: s.h || '', jira: s.jira || '', kind: s.kind || 'feature', ord: s.ord || 0 });
   });
   if (Number.isFinite(ka) && Number.isFinite(kb)) {
     road.filter(r => prod.squads.includes(r.sq) && r.d0 <= kb && r.d1 >= ka).forEach(r => {
@@ -59,9 +59,9 @@ export function mergeLines(prev, fresh) {
   const by = new Map((prev || []).map(p => [p.src, p])), seen = new Set(), out = [];
   fresh.forEach(f => {
     seen.add(f.src); const p = by.get(f.src);
-    if (!p) out.push({ id: uid(), src: f.src, g: f.g, st: f.st, t: f.t, t0: f.t, jira: f.jira, kind: f.kind, hide: false, edited: false });
+    if (!p) out.push({ id: uid(), src: f.src, g: f.g, st: f.st, t: f.t, h: f.h || '', t0: f.t, jira: f.jira, kind: f.kind, hide: false, edited: false });
     else if (p.edited) out.push(p);
-    else out.push(Object.assign({}, p, { g: f.g, st: f.st, t: f.t, t0: f.t, jira: f.jira, kind: f.kind, h: '' }));
+    else out.push(Object.assign({}, p, { g: f.g, st: f.st, t: f.t, t0: f.t, jira: f.jira, kind: f.kind, h: f.h || '' }));
   });
   (prev || []).forEach(p => { if (!seen.has(p.src) && (p.src === 'man' || p.edited)) out.push(p); });
   return out;
