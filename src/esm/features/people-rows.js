@@ -2,17 +2,18 @@
  * @module features/people-rows
  * Controls on each person row of the "by person" roadmap view.
  *  - a grip (⋮⋮) to reorder rows by drag & drop (order is shared with the whole team),
- *  - a ⋯ menu with Move up / Move down (keyboard and touch friendly) and "Remove from the chart".
+ *  - a ⋯ menu with Move up / Move down (keyboard and touch friendly) and "Hide from this roadmap".
  * The custom order is stored in the meta doc `ideas/peopleorder` ({cfg:true, ord:[names]}); people missing
  * from it fall back to squad order, then alphabetical, so new members simply appear where they always did.
+ * Hiding is per roadmap and only removes an EMPTY row: the person stays on the team and on every other roadmap.
+ * Stored in `ideas/peoplehide` ({cfg:true, byRm:{<roadmapId>:[names]}}). A hidden person who gets a feature
+ * on that roadmap shows up again automatically.
  */
 import { S } from '../core/state.js';
-import { LANES, canEdit, directory, el, items } from '../core/model.js';
+import { LANES, canEdit, directory, el, items, state } from '../core/model.js';
 import { logAct, toast } from '../core/shared.js';
-import { persist } from '../core/saving.js';
 import { saveIdea } from '../pages/ideas.js';
-import { allRoadmaps, withRm } from '../pages/roadmaps.js';
-import { removePerson2 } from '../pages/resources.js';
+import { curRm } from '../pages/roadmaps.js';
 import { render } from '../ui/gantt-render.js';
 import { mi, openCtx } from '../ui/editing.js';
 import { closeDlg, openDlg } from './safety.js';
@@ -58,25 +59,44 @@ function step(name, delta) {
   if (t) movePerson(name, t, delta > 0);
 }
 
-/** Ask for confirmation, unassign the person everywhere, then remove/hide them from the chart. */
-function confirmRemove(name) {
-  const assigned = [];
-  allRoadmaps().forEach(r => withRm(r.id, () => items().forEach(it => { if (it.res.includes(name)) assigned.push({ rm: r.id, id: it.id }); })));
-  openDlg('Remove ' + name + ' from the chart?', box => {
-    box.append(el('p', 'sub', name + ' disappears from every roadmap. ' + (assigned.length
-      ? assigned.length + ' feature' + (assigned.length === 1 ? ' is' : 's are') + ' assigned to them and will become unassigned (the features stay).'
-      : 'No features are assigned to them.') + ' Their leave entries are kept.'));
-    const go = el('button', 'btn danger', 'Remove ' + name); go.type = 'button';
-    const no = el('button', 'btn', 'Cancel'); no.type = 'button'; no.addEventListener('click', closeDlg);
-    go.addEventListener('click', () => {
-      allRoadmaps().forEach(r => withRm(r.id, () => items().forEach(it => {
-        if (!it.res.includes(name)) return;
-        S.over[it.id] = Object.assign({}, S.over[it.id] || {}, { res: it.res.filter(n => n !== name) }); persist(it.id);
-      })));
-      removePerson2(name);   // hides/deletes the member, logs it and redraws
-      closeDlg(); toast(name + ' removed from the chart.');
+/** Names hidden on the current roadmap. */
+export function hiddenHere() { const h = S.ideas.peoplehide; return (h && h.byRm && h.byRm[state.rm]) || []; }
+
+/** Number of features the person owns on the current roadmap. */
+const featureCount = name => items().filter(i => i.res.includes(name)).length;
+
+/** Save the hidden list of the current roadmap and redraw. */
+function setHidden(names, sum) {
+  const old = (S.ideas.peoplehide && S.ideas.peoplehide.byRm) || {}, byRm = Object.assign({}, old);
+  byRm[state.rm] = names; if (!names.length) delete byRm[state.rm];
+  saveIdea('peoplehide', { cfg: true, byRm: byRm }, 'resource', sum); render();
+}
+
+/**
+ * Hide an EMPTY row from this roadmap only. Refuses (with a message) when the person still owns features here.
+ * @param {string} name person to hide
+ */
+function hideHere(name) {
+  const n = featureCount(name);
+  if (n) { toast(name + ' has ' + n + ' feature' + (n === 1 ? '' : 's') + ' on this roadmap. Reassign ' + (n === 1 ? 'it' : 'them') + ' first, then hide the row.'); return; }
+  setHidden(hiddenHere().concat(name), 'hid ' + name + ' from ' + curRm().n);
+  toast(name + ' hidden on ' + curRm().n + '. Use "Show hidden" under the table to bring the row back.');
+}
+
+/** Dialog listing hidden people with a Show button each. */
+export function openHiddenDialog() {
+  openDlg('Hidden on ' + curRm().n, box => {
+    const names = hiddenHere().filter(n => directory().has(n));
+    box.append(el('p', 'sub', 'These people are still on the team and on other roadmaps. They only have no row here.'));
+    names.forEach(n => {
+      const row = el('div', 'formrow'), b = el('button', 'btn sm', 'Show'); b.type = 'button';
+      b.addEventListener('click', () => { setHidden(hiddenHere().filter(x => x !== n), 'showed ' + n + ' on ' + curRm().n); closeDlg(); if (hiddenHere().some(x => directory().has(x))) openHiddenDialog(); });
+      row.append(el('strong', '', n), b); box.append(row);
     });
-    const row = el('div', 'formrow'); row.append(go, no); box.append(row);
+    const all = el('button', 'btn primary', 'Show all'); all.type = 'button';
+    all.addEventListener('click', () => { setHidden([], 'showed all hidden people on ' + curRm().n); closeDlg(); });
+    const no = el('button', 'btn', 'Close'); no.type = 'button'; no.addEventListener('click', closeDlg);
+    const row = el('div', 'formrow'); row.append(all, no); box.append(row);
   });
 }
 
@@ -98,7 +118,7 @@ export function decoratePersonRow(c1, name) {
       if (i > 0) mi(m, 'Move up', () => step(name, -1));
       if (i < list.length - 1) mi(m, 'Move down', () => step(name, 1));
       m.append(el('div', 'msep'));
-      mi(m, 'Remove ' + name + ' from the chart…', () => confirmRemove(name), 'danger');
+      mi(m, 'Hide ' + name + ' from this roadmap', () => hideHere(name), 'danger');
     });
   });
   const side = e => { const r = c1.getBoundingClientRect(); return e.clientY > r.top + r.height / 2; };

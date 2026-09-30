@@ -1,6 +1,6 @@
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__)))); os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))+"/out")
 from h18 import *
-"""By-person view: reorder rows by drag & drop, Move up/down and Remove-from-chart via the row's ⋯ menu."""
+"""By-person view: reorder rows by drag & drop, Move up/down and Hide-from-this-roadmap via the row ⋯ menu."""
 R=[]
 def ok(n,c): R.append((n,bool(c))); print(('PASS ' if c else 'FAIL ')+n)
 with sync_playwright() as pw:
@@ -17,16 +17,28 @@ with sync_playwright() as pw:
     # move up via menu
     who=names()[3]; A.locator('.c1.pn[data-person="%s"] .pmore'%who).click(); A.click('#ctx :text("Move up")'); A.wait_for_timeout(500)
     ok('menu Move up', names().index(who)==2)
-    # remove: cancel first, then confirm
-    victim=names()[1]; A.locator('.c1.pn[data-person="%s"] .pmore'%victim).click(); A.click('#ctx :text("from the chart")'); A.wait_for_timeout(300)
-    ok('confirm dialog names the person', victim in A.locator('#xdlg').inner_text())
-    A.keyboard.press('Escape'); A.wait_for_timeout(200); ok('Esc cancels removal', victim in names() and A.locator('#xdlg').count()==0)
-    A.locator('.c1.pn[data-person="%s"] .pmore'%victim).click(); A.click('#ctx :text("from the chart")'); A.click('#xdlg button.danger'); A.wait_for_timeout(700)
-    ok('person removed from chart', victim not in names())
-    ok('no one else lost', len(names())==len(n0)-1)
-    A.reload(); A.wait_for_timeout(1500); ok('removal persists', victim not in names())
+    # hide from THIS roadmap only
+    empty=A.evaluate("[...__ynmo.directory().keys()].find(n=>!__ynmo.items().some(i=>i.res.includes(n)))")
+    busy=A.evaluate("[...__ynmo.directory().keys()].find(n=>__ynmo.items().some(i=>i.res.includes(n)))")
+    ok('test data has an empty and a busy person', bool(empty) and bool(busy))
+    A.locator('.c1.pn[data-person="%s"] .pmore'%busy).click(); A.click('#ctx :text("Hide")'); A.wait_for_timeout(300)
+    ok('person with features cannot be hidden', busy in names() and 'feature' in A.locator('#save').inner_text())
+    A.locator('.c1.pn[data-person="%s"] .pmore'%empty).click(); A.click('#ctx :text("Hide")'); A.wait_for_timeout(500)
+    ok('empty person hidden from this roadmap', empty not in names() and len(names())==len(n0)-1)
+    ok('still on the team', A.evaluate("n=>__ynmo.directory().has(n)",empty))
+    ok('Show hidden button counts 1', 'Show hidden (1)' in A.locator('#showhidden').inner_text())
+    A.reload(); A.wait_for_timeout(1500); ok('hiding persists after reload', empty not in names())
+    # another roadmap still shows the person
+    A.click('#nav button[data-p="roadmaps"]'); f=A.locator('#pg-roadmaps form'); s=f.locator('select')
+    s.nth(0).select_option('2027'); s.nth(1).select_option('Q1'); f.locator('input[type=text]').fill('Other RM'); f.locator('button:text-is("Create roadmap")').click(); A.wait_for_timeout(700)
+    ok('other roadmap keeps the row', empty in names())
+    A.click('#nav button[data-p="roadmaps"]'); A.locator('.rmcard:has-text("H2 2026") button:has-text("Open")').click(); A.wait_for_timeout(500)
+    ok('back on H2 the row is still hidden', empty not in names())
+    A.click('#showhidden'); A.wait_for_timeout(300); ok('dialog lists the person', empty in A.locator('#xdlg').inner_text())
+    A.click('#xdlg button:text-is("Show")'); A.wait_for_timeout(500); ok('row is back after Show', empty in names() and A.locator('#showhidden').count()==0)
     A.click('#nav button[data-p="log"]'); A.wait_for_timeout(400); t=A.locator('#pg-log').inner_text()
-    ok('log has both actions', 'removed '+victim in t and 'reordered' in t)
+    ok('log has hide, show and reorder', 'hid '+empty in t and 'showed '+empty in t and 'reordered' in t)
+    A.click('#nav button[data-p="roadmap"]'); A.wait_for_timeout(300)
     A.set_viewport_size({'width':390,'height':800}); A.click('#nav button[data-p="roadmap"]'); A.wait_for_timeout(500)
     ok('no overflow on phone', not A.evaluate("document.documentElement.scrollWidth>innerWidth+1"))
     ok('no page errors', errs==[])

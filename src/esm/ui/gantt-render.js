@@ -14,7 +14,7 @@ import { offAt, offRange } from './people-picker.js';
 import { afterRender } from '../features/dependencies.js';
 import { vacsOf } from '../pages/vacations.js';
 import { fmtIso, kOfIso } from '../core/shared.js';
-import { comparePeople, decoratePersonRow, primaryLane } from '../features/people-rows.js';
+import { comparePeople, decoratePersonRow, hiddenHere, openHiddenDialog, primaryLane } from '../features/people-rows.js';
 
 /* ---------- render ---------- */
 function renderSummary(list) {
@@ -124,6 +124,8 @@ function renderPeople(g, put, list) {
   let people = [...map.values()].filter(p => p.name !== '__none');
   if (state.person !== 'all') people = people.filter(p => p.name === state.person);
   else if (filtersActive()) people = people.filter(p => p.its.length);
+  const hid = hiddenHere();   // rows hidden on this roadmap (only ever empty rows; a new feature brings the person back)
+  if (state.person === 'all' && hid.length) people = people.filter(p => p.its.length || !hid.includes(p.name));
   people.sort(comparePeople);   // custom drag order, then squad, then A-Z
   let r = 3;
   const block = (p, title, sub, color) => {
@@ -170,6 +172,8 @@ function renderPeople(g, put, list) {
   if (canEdit()) {
     const ab = el('button', 'addp', '+ Add person'); ab.type = 'button'; ab.id = 'addp';
     const c = el('div', 'c1 addrow'); c.append(ab); put(c, r, 1);
+    const nh = hid.filter(n => dir.has(n) && !(map.get(n) && map.get(n).its.length)).length;
+    if (nh) { const sh = el('button', 'addp', 'Show hidden (' + nh + ')'); sh.type = 'button'; sh.id = 'showhidden'; sh.addEventListener('click', openHiddenDialog); c.append(sh); }
     ab.addEventListener('click', () => openAddPerson(ab));
     put(el('div', 'rowbg'), r, null).style.minHeight = '44px';
   }
