@@ -20,6 +20,7 @@ import { setupBanner } from './reports.js';
 import { notify } from '../ui/notify.js';
 import { openMenu, closeMenu } from '../ui/menu.js';
 import { crumbs } from '../ui/crumbs.js';
+import { createUndo } from '../features/undo-stack.js';
 import { state } from '../core/model.js';
 
 const iso = t => new Date(t).toISOString().slice(0, 10);
@@ -53,8 +54,14 @@ export function parsePaste(txt) {
 }
 
 function saveSprint(id, d) { S.sprints[id] = d; write('sprints/' + id, d); }
-function saveItem(id, patch) { const d = Object.assign({}, S.sitems[id] || {}, patch); S.sitems[id] = d; write('sprint_items/' + id, d); }
-function delItem(id) { delete S.sitems[id]; write('sprint_items/' + id, null); }
+/** One undo stack per user and sprint: undo only reverts what THIS user did. */
+const undoers = {};
+const undoOf = spId => { const k = ((S.me && S.me.id) || 'me') + ':' + spId; return undoers[k] || (undoers[k] = createUndo(100)); };
+const rawSet = (id, doc) => { if (doc) S.sitems[id] = doc; else delete S.sitems[id]; write('sprint_items/' + id, doc || null); };
+const pendingBefore = {};   /* text typed but not saved yet: the doc as it was before the typing */
+function putItem(id, doc) { const before = pendingBefore[id] || S.sitems[id] || null; delete pendingBefore[id]; const sp = (doc || before || {}).sp; if (sp) undoOf(sp).rec(id, before, doc); rawSet(id, doc); }
+function saveItem(id, patch) { putItem(id, Object.assign({}, S.sitems[id] || {}, patch)); }
+function delItem(id) { putItem(id, null); }
 function confirmDlg(title, msg, yes, onYes) {
   openDlg(title, box => {
     const ok = el('button', 'btn danger', yes), no = el('button', 'btn', 'Cancel'); ok.type = no.type = 'button';
@@ -153,20 +160,23 @@ function docEditor(sp, ro) {
   const list = () => blocksOf(spId);
   const focusLater = (id, pos) => { const bt = host.querySelector('.blk[data-id="' + id + '"] .bt'); if (bt) setCaret(bt, pos === undefined ? 'end' : pos); };
   const redraw = (focusId, pos) => { draw(); if (focusId) focusLater(focusId, pos); };
-  const flush = id => { if (saveTimers[id]) { clearTimeout(saveTimers[id]); delete saveTimers[id]; if (S.sitems[id]) { S.sitems[id] = Object.assign({}, S.sitems[id], { t: String(S.sitems[id].t || '').trim() }); write('sprint_items/' + id, S.sitems[id]); } } };
+  const flush = id => { if (saveTimers[id]) { clearTimeout(saveTimers[id]); delete saveTimers[id]; } if (S.sitems[id] && pendingBefore[id]) { const after = Object.assign({}, S.sitems[id], { t: String(S.sitems[id].t || '').trim() }); undoOf(spId).mark('Edit text'); putItem(id, after); } };
+  const flushAll = () => Object.keys(pendingBefore).forEach(flush);
   /** Create blocks with the given specs right after block `afterId` (or at the end). Returns their ids. */
   const insert = (afterId, specs) => {
+    undoOf(spId).mark(specs.length > 1 ? 'Add ' + specs.length + ' lines' : 'Add line');
     const all = list(), i = afterId ? all.findIndex(b => b.id === afterId) : all.length - 1, a = i >= 0 ? all[i].ord : undefined, b = i >= 0 && all[i + 1] ? all[i + 1].ord : undefined;
     const ords = ordBetween(a, b, specs.length), ids = [];
-    specs.forEach((s, n) => { const id = uid('si'); ids.push(id); const d = { sp: spId, k: s.k, t: s.t || '', st: 'planned', dn: '', tags: (s.tags || []).slice(), ord: ords[n] }; if (s.sq) d.sq = s.sq; S.sitems[id] = d; write('sprint_items/' + id, d); s.tags && s.tags.forEach(t => ensureTag(spId, t)); });
+    specs.forEach((s, n) => { const id = uid('si'); ids.push(id); const d = { sp: spId, k: s.k, t: s.t || '', st: 'planned', dn: '', tags: (s.tags || []).slice(), ord: ords[n] }; if (s.sq) d.sq = s.sq; putItem(id, d); s.tags && s.tags.forEach(t => ensureTag(spId, t)); });
     return ids;
   };
   const removeGroup = (b) => {
-    const all = list(), i = all.findIndex(x => x.id === b.id), g = groupOf(all, i), go = () => { g.forEach(x => delItem(x.id)); notify(g.length > 1 ? g.length + ' lines deleted' : 'Line deleted'); redraw(); };
+    const all = list(), i = all.findIndex(x => x.id === b.id), g = groupOf(all, i), go = () => { undoOf(spId).mark(g.length > 1 ? 'Delete ' + g.length + ' lines' : 'Delete line'); g.forEach(x => delItem(x.id)); notify(g.length > 1 ? g.length + ' lines deleted' : 'Line deleted'); redraw(); };
     if (g.length > 1) confirmDlg('Delete ' + (KIND_NAME[b.k] || 'line') + '?', 'This also deletes the ' + (g.length - 1) + ' line' + (g.length === 2 ? '' : 's') + ' inside it.', 'Delete', go); else go();
   };
   const move = (b, d) => {
     const all = list(), i = all.findIndex(x => x.id === b.id), g = groupOf(all, i), gi = new Set(g.map(x => x.id)), rest = all.filter(x => !gi.has(x.id)), r = RANK[b.k], note = b.k === 'n';
+    undoOf(spId).mark('Move line');
     let at; // index in `rest` before which the group is placed
     if (d < 0) {
       let j = i - 1; if (j < 0) return;
@@ -265,7 +275,7 @@ function docEditor(sp, ro) {
       const bt = el('div', 'bt', b.t || ''); bt.dataset.ph = { p: 'Person name (or press @)', s: 'Scope', u: 'Sub-section', n: 'Note' }[b.k]; bt.setAttribute('role', 'textbox'); bt.setAttribute('aria-label', KIND_NAME[b.k]);
       if (!ro) {
         bt.contentEditable = 'plaintext-only'; if (bt.contentEditable !== 'plaintext-only') bt.contentEditable = 'true'; bt.spellcheck = true;
-        bt.addEventListener('input', () => { const t = bt.textContent; S.sitems[b.id] = Object.assign({}, S.sitems[b.id], { t: t.slice(0, 300) }); clearTimeout(saveTimers[b.id]); saveTimers[b.id] = setTimeout(() => flush(b.id), 500); });
+        bt.addEventListener('input', () => { const t = bt.textContent; if (!pendingBefore[b.id] && S.sitems[b.id]) pendingBefore[b.id] = S.sitems[b.id]; S.sitems[b.id] = Object.assign({}, S.sitems[b.id], { t: t.slice(0, 300) }); clearTimeout(saveTimers[b.id]); saveTimers[b.id] = setTimeout(() => flush(b.id), 500); });
         bt.addEventListener('blur', () => flush(b.id));
         bt.addEventListener('keydown', e => onKey(e, S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, bt));
         bt.addEventListener('paste', e => onPaste(e, Object.assign({ id: b.id }, S.sitems[b.id] || b), bt));
@@ -314,7 +324,16 @@ function docEditor(sp, ro) {
   }
   host.addEventListener('click', e => { if (!ro && e.target === host) { const g = host.querySelector('.ghost .bt'); if (g) g.focus(); } });
   const addSec = () => { if (!canWrite()) return; if (!freeLanes().length) { notify('Every product section is already in this sprint', 'info'); return; } const ids = insert('', [{ k: 'n' }]); redraw(ids[0]); const bt = host.querySelector('.blk[data-id="' + ids[0] + '"] .bt'); pickLane(Object.assign({ id: ids[0] }, S.sitems[ids[0]]), bt); };
-  draw(); host.addSection = addSec; host.redraw = redraw; host.insert = insert;
+  const doUndo = dir => {
+    flushAll(); const r = undoOf(spId).step(dir, id => S.sitems[id], rawSet), word = dir === 'undo' ? 'Undo' : 'Redo';
+    if (!r) { notify('Nothing to ' + word.toLowerCase(), 'info'); return; }
+    notify(word + ': ' + r.label + (r.skipped ? ' (' + r.skipped + ' line' + (r.skipped === 1 ? '' : 's') + ' changed by someone else were kept)' : ''), r.done ? 'ok' : 'info'); redraw();
+  };
+  host.addEventListener('keydown', e => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || ro) return; const k = e.key.toLowerCase();
+    if (k === 'z' && !e.shiftKey) { e.preventDefault(); doUndo('undo'); } else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); doUndo('redo'); }
+  }, true);
+  draw(); host.doUndo = doUndo; host.addSection = addSec; host.redraw = redraw; host.insert = insert;
   return host;
 }
 
@@ -333,6 +352,7 @@ function carryOver(sp, ed) {
   const ids = ed.insert('', specs); specs.forEach((s, n) => { if (s.st) saveItem(ids[n], { st: s.st }); });
   logAct('sprint', 'carried ' + c + ' unfinished scope' + (c === 1 ? '' : 's') + ' into Sprint ' + sp.n); notify(c + ' unfinished scope' + (c === 1 ? '' : 's') + ' carried over from Sprint ' + prev.n); ed.redraw();
 }
+let unsubBar = null;
 function detailView(pg, sp, ro) {
   ensureMigrated(sp); sp = Object.assign({ id: sp.id }, S.sprints[sp.id]);
   pg.append(crumbs([{ label: 'Sprints', href: '#/sprints' }, { label: 'Sprint ' + sp.n }]));
@@ -345,7 +365,11 @@ function detailView(pg, sp, ro) {
   const ed = docEditor(sp, ro);
   const ab = el('button', 'btn primary', '+ Product section'), cb = el('button', 'btn', 'Carry over unfinished'); ab.type = cb.type = 'button'; ab.disabled = cb.disabled = ro;
   ab.addEventListener('click', () => ed.addSection()); cb.addEventListener('click', () => carryOver(sp, ed));
-  const bar = el('div', 'row spbar'); bar.append(ab, cb); pg.append(dr, bar, ed);
+  const ub = el('button', 'btn', '↶ Undo'), rb = el('button', 'btn', '↷ Redo'); ub.type = rb.type = 'button';
+  ub.addEventListener('click', () => ed.doUndo('undo')); rb.addEventListener('click', () => ed.doUndo('redo'));
+  const U = undoOf(sp.id), sync = () => { ub.disabled = ro || !U.canUndo(); rb.disabled = ro || !U.canRedo(); ub.title = U.canUndo() ? 'Undo: ' + U.nextUndo() + ' (Ctrl+Z)' : 'Nothing to undo'; rb.title = U.canRedo() ? 'Redo: ' + U.nextRedo() + ' (Ctrl+Shift+Z)' : 'Nothing to redo'; ub.setAttribute('aria-label', ub.title); rb.setAttribute('aria-label', rb.title); };
+  if (unsubBar) unsubBar(); unsubBar = U.subscribe(sync); sync();
+  const bar = el('div', 'row spbar'); bar.append(ab, cb, ub, rb); pg.append(dr, bar, ed);
 }
 
 export function renderSprints() {
