@@ -317,3 +317,10 @@ body:has(#pg-sprints.sheet:not([hidden]))::before { display: none; }
 .sdoc .blkh:hover { background: rgba(120, 130, 160, .14); color: #46506e; }
 .sdoc .blk.k-h .blkh { top: 12px; }
 @media (max-width: 720px) { #pg-sprints.sheet { padding-inline: 16px; } .sdoc .blkh { opacity: 1; inset-inline-start: -14px; } }
+
+/* ---------- picked line + drag to move ---------- */
+.sdoc { position: relative; }
+.sdoc .blk.picked { background: color-mix(in srgb, var(--brand) 9%, transparent); box-shadow: inset 3px 0 0 var(--brand); border-radius: 6px; }
+.sdoc .dropline { position: absolute; height: 3px; margin-top: -1px; border-radius: 3px; background: var(--brand); pointer-events: none; z-index: 5; box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 25%, transparent); }
+.sdoc .blkh { touch-action: none; }
+body.dragging, body.dragging * { cursor: grabbing !important; user-select: none !important; }

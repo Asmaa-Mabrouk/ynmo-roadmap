@@ -263,6 +263,46 @@ function docEditor(sp, ro) {
     notify(parsed.length + ' line' + (parsed.length === 1 ? '' : 's') + ' added' + (scopes ? ' (' + scopes + ' scope' + (scopes === 1 ? '' : 's') + ')' : '')); redraw(ids[ids.length - 1]);
   };
 
+  /* ---- pick (highlight) and drag to move ---- */
+  let picked = new Set();
+  const applyPicked = () => host.querySelectorAll('.blk').forEach(r => r.classList.toggle('picked', picked.has(r.dataset.id)));
+  const setPicked = ids => { picked = new Set(ids || []); applyPicked(); };
+  /** Put the group of `b` before/after the line `targetId`; it never lands inside another line's own children. */
+  const relocate = (b, targetId, where) => {
+    const all = list(), i = all.findIndex(x => x.id === b.id), g = groupOf(all, i), gi = new Set(g.map(x => x.id)), rest = all.filter(x => !gi.has(x.id)), r = RANK[b.k];
+    let at = rest.findIndex(x => x.id === targetId); if (at < 0) return;
+    if (where === 'after') { at++; while (at < rest.length && RANK[rest[at].k] > r) at++; } else { while (at > 0 && RANK[rest[at].k] > r) at--; }
+    const ords = ordBetween(rest[at - 1] ? rest[at - 1].ord : undefined, rest[at] ? rest[at].ord : undefined, g.length);
+    if (rest[at - 1] && all[i - 1] && rest[at - 1].id === all[i - 1].id && (all[i + g.length] ? rest[at] && rest[at].id === all[i + g.length].id : !rest[at])) return;   /* dropped where it already is */
+    undoOf(spId).mark('Move line'); g.forEach((x, n) => saveItem(x.id, { ord: ords[n] })); notify('Line moved'); redraw();
+  };
+  const handleMenu = (b, x) => {
+    const cur = S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, into = b.k === 'h' ? [] : ['s', 'u', 'n'].filter(k => k !== b.k).map(k => ({ label: 'Turn into ' + KIND_NAME[k].toLowerCase(), value: 'k:' + k }));
+    const all = list(), g = groupOf(all, all.findIndex(z => z.id === b.id)); setPicked(g.map(z => z.id));
+    openMenu(x, [{ label: 'Move up', value: 'up' }, { label: 'Move down', value: 'down' }].concat(into, [{ label: 'Delete', value: 'del' }]), {
+      label: 'Line options', onPick: it => { if (it.value === 'up') move(cur, -1); else if (it.value === 'down') move(cur, 1); else if (it.value === 'del') removeGroup(cur); else { saveItem(b.id, { k: it.value.slice(2) }); redraw(b.id); } }, onClose: p => { setPicked(null); if (!p) focusLater(b.id); }
+    });
+  };
+  function startDrag(e, b, x) {
+    const all = list(), g = groupOf(all, all.findIndex(z => z.id === b.id)), ids = new Set(g.map(z => z.id)), sx = e.clientX, sy = e.clientY;
+    let dragging = false, target = null, where = 'before'; const line = el('div', 'dropline'); line.hidden = true; host.append(line); setPicked(ids);
+    try { x.setPointerCapture(e.pointerId); } catch (err) { /* not capturable */ }
+    const end = () => { x.removeEventListener('pointermove', mv); x.removeEventListener('pointerup', up); x.removeEventListener('pointercancel', cancel); document.removeEventListener('keydown', esc, true); document.body.classList.remove('dragging'); line.remove(); };
+    const mv = ev => {
+      if (!dragging && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 5) return;
+      dragging = true; document.body.classList.add('dragging');
+      if (ev.clientY < 90) window.scrollBy(0, -14); else if (ev.clientY > window.innerHeight - 90) window.scrollBy(0, 14);
+      const at = document.elementFromPoint(ev.clientX, ev.clientY), row = at && at.closest ? at.closest('.blk') : null;
+      if (!row || !host.contains(row) || ids.has(row.dataset.id) || row.classList.contains('ghost')) { line.hidden = true; target = null; return; }
+      const r = row.getBoundingClientRect(), hr = host.getBoundingClientRect(); where = ev.clientY < r.top + r.height / 2 ? 'before' : 'after'; target = row.dataset.id;
+      line.hidden = false; line.style.top = (where === 'before' ? r.top : r.bottom) - hr.top + 'px'; line.style.left = r.left - hr.left + 'px'; line.style.width = r.width + 'px';
+    };
+    const up = () => { const t = target, w = where, was = dragging; end(); if (was && t) { relocate(b, t, w); setPicked(ids); setTimeout(() => setPicked(null), 900); } else if (!was) handleMenu(b, x); else setPicked(null); };
+    const cancel = () => { end(); setPicked(null); };
+    const esc = ev => { if (ev.key === 'Escape') { ev.preventDefault(); cancel(); } };
+    x.addEventListener('pointermove', mv); x.addEventListener('pointerup', up); x.addEventListener('pointercancel', cancel); document.addEventListener('keydown', esc, true);
+  }
+
   function blockRow(b, c, info) {
     const r = el('div', 'blk k-' + b.k); r.dataset.id = b.id; r.style.setProperty('--c', c);
     if (b.k === 'h') {
@@ -285,13 +325,9 @@ function docEditor(sp, ro) {
       const tags = el('span', 'btags'); (b.tags || []).forEach(n => { const ch = el('button', 'tgchip tg-' + (tagMap(spId)[n] || 'gray'), '#' + n); ch.type = 'button'; ch.disabled = ro; ch.setAttribute('aria-label', 'Tag ' + n + ': change colour or remove'); ch.addEventListener('click', () => chipMenu(b, n, ch)); tags.append(ch); }); r.append(tags);
     }
     if (!ro) {
-      const x = el('button', 'blkh', '⋮⋮'); x.type = 'button'; x.setAttribute('aria-label', 'Options for this ' + KIND_NAME[b.k].toLowerCase()); x.setAttribute('aria-haspopup', 'menu');
-      x.addEventListener('click', () => {
-        const cur = S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, into = b.k === 'h' ? [] : ['s', 'u', 'n'].filter(k => k !== b.k).map(k => ({ label: 'Turn into ' + KIND_NAME[k].toLowerCase(), value: 'k:' + k }));
-        openMenu(x, [{ label: 'Move up', value: 'up' }, { label: 'Move down', value: 'down' }].concat(into, [{ label: 'Delete', value: 'del' }]), {
-          label: 'Line options', onPick: it => { if (it.value === 'up') move(cur, -1); else if (it.value === 'down') move(cur, 1); else if (it.value === 'del') removeGroup(cur); else { saveItem(b.id, { k: it.value.slice(2) }); redraw(b.id); } }, onClose: p => { if (!p) focusLater(b.id); }
-        });
-      });
+      const x = el('button', 'blkh', '⋮⋮'); x.type = 'button'; x.setAttribute('aria-label', 'Drag to move, or click for options: ' + KIND_NAME[b.k].toLowerCase()); x.setAttribute('aria-haspopup', 'menu');
+      x.addEventListener('pointerdown', e => { if (e.button === 0) { e.preventDefault(); startDrag(e, b, x); } });
+      x.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleMenu(b, x); } });
       r.prepend(x);
     }
     return r;
@@ -320,6 +356,7 @@ function docEditor(sp, ro) {
       host.append(blockRow(b, c, info));
     });
     if (!ro) host.append(ghostRow(all));
+    applyPicked();
     if (!all.length && ro) host.append(el('p', 'empty', 'Nothing written in this sprint yet.'));
   }
   host.addEventListener('click', e => { if (!ro && e.target === host) { const g = host.querySelector('.ghost .bt'); if (g) g.focus(); } });
@@ -329,10 +366,6 @@ function docEditor(sp, ro) {
     if (!r) { notify('Nothing to ' + word.toLowerCase(), 'info'); return; }
     notify(word + ': ' + r.label + (r.skipped ? ' (' + r.skipped + ' line' + (r.skipped === 1 ? '' : 's') + ' changed by someone else were kept)' : ''), r.done ? 'ok' : 'info'); redraw();
   };
-  host.addEventListener('keydown', e => {
-    if (!(e.ctrlKey || e.metaKey) || e.altKey || ro) return; const k = e.key.toLowerCase();
-    if (k === 'z' && !e.shiftKey) { e.preventDefault(); doUndo('undo'); } else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); doUndo('redo'); }
-  }, true);
   draw(); host.doUndo = doUndo; host.addSection = addSec; host.redraw = redraw; host.insert = insert;
   return host;
 }
@@ -352,7 +385,14 @@ function carryOver(sp, ed) {
   const ids = ed.insert('', specs); specs.forEach((s, n) => { if (s.st) saveItem(ids[n], { st: s.st }); });
   logAct('sprint', 'carried ' + c + ' unfinished scope' + (c === 1 ? '' : 's') + ' into Sprint ' + sp.n); notify(c + ' unfinished scope' + (c === 1 ? '' : 's') + ' carried over from Sprint ' + prev.n); ed.redraw();
 }
-let unsubBar = null;
+let unsubBar = null, activeEd = null;
+/* Ctrl/Cmd+Z works anywhere on a sprint page (not while typing in a date/number/search box, which keep their own undo). */
+document.addEventListener('keydown', e => {
+  if (!activeEd || state.page !== 'sprints' || !routeId() || !(e.ctrlKey || e.metaKey) || e.altKey || $('xdlg')) return;
+  const k = e.key.toLowerCase(); if (k !== 'z' && k !== 'y') return;
+  const t = e.target; if (t && t.tagName && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+  e.preventDefault(); activeEd.doUndo(k === 'y' || e.shiftKey ? 'redo' : 'undo');
+}, true);
 function detailView(pg, sp, ro) {
   ensureMigrated(sp); sp = Object.assign({ id: sp.id }, S.sprints[sp.id]);
   pg.append(crumbs([{ label: 'Sprints', href: '#/sprints' }, { label: 'Sprint ' + sp.n }]));
@@ -362,7 +402,7 @@ function detailView(pg, sp, ro) {
   const chg = () => setDates(sp, fa.value, fb.value, fa, fb); fa.addEventListener('change', chg); fb.addEventListener('change', chg);
   const nn = el('input'); nn.type = 'number'; nn.min = 1; nn.max = 9999; nn.step = 1; nn.value = sp.n; nn.disabled = ro; nn.setAttribute('aria-label', 'Sprint number'); nn.addEventListener('change', () => setNumber(sp, nn));
   dr.append(fld('Sprint number', nn), fld('From', fa), fld('To', fb), el('span', 'sub', (parseIso(sp.b) >= parseIso(sp.a) ? Math.round((parseIso(sp.b) - parseIso(sp.a)) / DAY) + 1 : 0) + ' days'));
-  const ed = docEditor(sp, ro);
+  const ed = docEditor(sp, ro); activeEd = ro ? null : ed;
   const ab = el('button', 'btn primary', '+ Product section'), cb = el('button', 'btn', 'Carry over unfinished'); ab.type = cb.type = 'button'; ab.disabled = cb.disabled = ro;
   ab.addEventListener('click', () => ed.addSection()); cb.addEventListener('click', () => carryOver(sp, ed));
   const ub = el('button', 'btn', '↶ Undo'), rb = el('button', 'btn', '↷ Redo'); ub.type = rb.type = 'button';
@@ -373,7 +413,7 @@ function detailView(pg, sp, ro) {
 }
 
 export function renderSprints() {
-  const pg = $('pg-sprints'); if (!pg) return; closeMenu(); pg.textContent = '';
+  const pg = $('pg-sprints'); if (!pg) return; closeMenu(); pg.textContent = ''; activeEd = null;
   const ro = !canEdit() || !canWrite(), id = routeId(), sp = id ? sprintList().find(s => s.id === id) : null;
   pg.classList.toggle('sheet', !!sp);
   if (id && !sp) { pg.append(crumbs([{ label: 'Sprints', href: '#/sprints' }, { label: 'Not found' }]), pageHead('Sprint not found', 'It may have been deleted, or it is still loading.')); return; }

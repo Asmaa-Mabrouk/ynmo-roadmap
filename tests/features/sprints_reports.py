@@ -83,6 +83,20 @@ with sync_playwright() as pw:
     P.locator('.sdoc .blk.k-s .bt').last.click(); P.keyboard.press('End'); P.keyboard.type(' typed'); P.wait_for_timeout(900)
     ok('typed text saved', blocks()[-1][1].endswith('typed'))
     ub.click(); P.wait_for_timeout(400); ok('Undo reverts typed text as one step', not blocks()[-1][1].endswith('typed'))
+    # ---- drag with the handle: pick highlights the line, drop line shows where it lands
+    order=lambda: [x[1] for x in blocks() if x[0]=='s'][:3]
+    o0=order(); src=P.locator('.sdoc .blk.k-s').nth(2); dst=P.locator('.sdoc .blk.k-s').nth(0); src.hover(); hb=src.locator('.blkh').bounding_box(); db=dst.bounding_box()
+    P.mouse.move(hb['x']+hb['width']/2, hb['y']+hb['height']/2); P.mouse.down(); P.mouse.move(hb['x']+20, hb['y']-30, steps=4); P.mouse.move(db['x']+120, db['y']+3, steps=6); P.wait_for_timeout(150)
+    ok('picked line is highlighted while dragging', P.locator('.sdoc .blk.picked').count()>=1 and P.locator('.sdoc .dropline:not([hidden])').count()==1)
+    P.mouse.up(); P.wait_for_timeout(500)
+    ok('dropping above another line moves it there', order()[0]==o0[2] and order()[1:]==o0[:2])
+    P.locator('#pg-sprints h1').click(); P.keyboard.press('Control+z'); P.wait_for_timeout(400)
+    ok('Ctrl+Z works directly, even with nothing focused', order()==o0)
+    P.locator('#pg-sprints h1').click(); P.keyboard.press('Control+Shift+z'); P.wait_for_timeout(400)
+    ok('Ctrl+Shift+Z redoes it', order()[0]==o0[2])
+    P.keyboard.press('Control+z'); P.wait_for_timeout(300)
+    P.locator('input[aria-label="Sprint number"]').click(); P.keyboard.press('Control+z'); P.wait_for_timeout(200)
+    ok('inside a date/number box Ctrl+Z keeps the browser behaviour', order()==o0)
     P.reload(); P.wait_for_timeout(1500); ok('undo history is per session/user (empty after a reload)', P.locator('button:text-is("↶ Undo")').is_disabled())
     # status on pasted scope
     P.locator('.sdoc .blk.k-s', has_text='Parent chat').locator('.stp').click(); typ('blocked'); key('Enter'); P.wait_for_timeout(300)
