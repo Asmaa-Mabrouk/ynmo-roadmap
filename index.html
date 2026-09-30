@@ -4921,6 +4921,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       }
     } catch (x) {
     }
+    if (!st && e && (e.name === "FunctionsFetchError" || /Failed to send a request/i.test(e.message || ""))) return "Could not reach the AI function. Most likely `weekly-draft` is not deployed on Supabase yet (or is named differently). Deploy it, then try again.";
     if (st === 404) return "The AI function is not deployed yet (weekly-draft). Deploy it in Supabase, then try again.";
     if (st === 401 || st === 403) return "Not allowed: only signed-in editors and admins can use AI.";
     if (/GEMINI_API_KEY/i.test(msg)) return "GEMINI_API_KEY is missing in Supabase Secrets.";
