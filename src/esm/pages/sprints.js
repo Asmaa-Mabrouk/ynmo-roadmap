@@ -6,7 +6,7 @@
  */
 import { S } from '../core/state.js';
 import { DAY, LANES, canEdit, directory, el, parseIso, $ } from '../core/model.js';
-import { fld, fmtIso, logAct, pageHead, selOf } from '../core/shared.js';
+import { fld, fmtIso, logAct, pageHead, selOf, todayIso } from '../core/shared.js';
 import { write } from '../core/saving.js';
 import { openDlg, closeDlg, canWrite } from '../features/safety.js';
 import { SKIND, SSTATUS } from '../features/report-model.js';
@@ -38,7 +38,7 @@ export function parsePaste(txt) {
 function newSprint() {
   const l = sprintList(), last = l[0];
   const n = last ? last.n + 1 : 1, a = last ? iso(parseIso(last.b) + DAY) : iso(Date.now());
-  const b = iso(parseIso(a) + 6 * DAY), id = 'sp' + n;
+  const b = iso(parseIso(a) + 13 * DAY), id = 'sp' + n;
   if (S.sprints[id]) { spUI.id = id; renderSprints(); return; }
   saveSprint(id, { n: n, a: a, b: b, note: '' }); spUI.id = id; logAct('sprint', 'created Sprint ' + n + ' (' + fmtIso(a) + ')'); renderSprints();
 }
@@ -75,7 +75,7 @@ function itemRow(it, ro) {
   const j = el('input', 'spjira'); j.value = it.jira || ''; j.placeholder = 'Jira'; j.disabled = ro; j.setAttribute('aria-label', 'Jira key');
   j.addEventListener('change', () => saveItem(it.id, { jira: /^[A-Z][A-Z0-9]+-\d+$/.test(j.value.trim()) ? j.value.trim() : '' }));
   const k = selOf(Object.keys(SKIND).map(x => [x, SKIND[x]]), it.kind || 'feature', 'spsel'); k.disabled = ro; k.setAttribute('aria-label', 'Type'); k.addEventListener('change', () => saveItem(it.id, { kind: k.value }));
-  const s = selOf(Object.keys(SSTATUS).map(x => [x, SSTATUS[x]]), it.st || 'planned', 'spsel st-' + (it.st || 'planned')); s.disabled = ro; s.setAttribute('aria-label', 'Status'); s.addEventListener('change', () => { saveItem(it.id, { st: s.value }); s.className = 'spsel st-' + s.value; });
+  const s = selOf(Object.keys(SSTATUS).map(x => [x, SSTATUS[x]]), it.st || 'planned', 'spsel st-' + (it.st || 'planned')); s.disabled = ro; s.setAttribute('aria-label', 'Status'); s.addEventListener('change', () => { saveItem(it.id, { st: s.value, dn: s.value === 'done' ? todayIso() : '' }); s.className = 'spsel st-' + s.value; });
   const x = el('button', 'btn sm danger', '✕'); x.type = 'button'; x.title = 'Delete item'; x.setAttribute('aria-label', 'Delete item'); x.disabled = ro;
   x.addEventListener('click', () => { delItem(it.id); renderSprints(); });
   r.append(t, j, k, s, x); return r;
@@ -90,7 +90,7 @@ export function renderSprints() {
   const pg = $('pg-sprints'); if (!pg) return; pg.textContent = '';
   const ro = !canEdit() || !canWrite(), l = sprintList(), sp = curSprint();
   const nb = el('button', 'btn primary', '+ New sprint'); nb.type = 'button'; nb.disabled = ro; nb.addEventListener('click', newSprint);
-  pg.append(pageHead('Sprints', 'Plan each weekly sprint here. The weekly executive report is built from it and from the roadmap.', nb));
+  pg.append(pageHead('Sprints', 'Plan each two-week sprint here. The weekly executive report is built from it and from the roadmap.', nb));
   if (!sp) { pg.append(el('p', 'empty', 'No sprint yet. Create the first one.')); return; }
   const dl = el('datalist'); dl.id = 'sp-people'; [...directory().keys()].sort().forEach(n => { const o = el('option'); o.value = n; dl.append(o); }); pg.append(dl);
   const bar = el('div', 'row spbar'), sel = selOf(l.map(s => [s.id, 'Sprint ' + s.n + ' · ' + fmtIso(s.a)]), sp.id); sel.setAttribute('aria-label', 'Sprint');

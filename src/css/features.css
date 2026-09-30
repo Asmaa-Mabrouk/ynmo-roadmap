@@ -149,3 +149,24 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
   body.print-report .rline button, body.print-report .rline .spsel:not(.rst-on):not([class*="rst-"]) { display: none; }
   body.print-report .rline select { appearance: none; border: 0; background: none; }
 }
+
+/* weekly report: visual layout for executives */
+:root { --rc-on: #2e9d6b; --rc-risk: #e5a513; --rc-late: #c0392b; --rc-done: #563cca; }
+.rhero { background: linear-gradient(135deg, #563cca, #39cbf9); color: #fff; border-radius: 16px; padding: 18px 22px; margin-bottom: 14px; }
+.rhero small { opacity: .85; font-weight: 600; letter-spacing: .02em; }
+.rhero .rtitle { font-size: 1.5rem; margin: 4px 0 6px; color: #fff; }
+.rhero .rsp { display: inline-block; background: rgba(255,255,255,.2); border-radius: 999px; padding: 2px 12px; font-size: 13px; font-weight: 600; }
+.rglance { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.rtile { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; background: var(--surface); border: 1.5px solid var(--line); border-top: 4px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.rtile.rs-on { border-top-color: var(--rc-on); } .rtile.rs-risk { border-top-color: var(--rc-risk); } .rtile.rs-late { border-top-color: var(--rc-late); } .rtile.rs-done { border-top-color: var(--rc-done); }
+.rtile small { color: var(--muted); }
+.rprod { border-inline-start: 5px solid var(--rc, var(--line)); }
+.rprod.rview { --rc: var(--rc-on); padding: 16px 20px; }
+.rprod.rview .rphead h2 { font-size: 1.25rem; }
+.rsumv { font-size: 1.02rem; line-height: 1.6; margin: 6px 0 10px; }
+.rgrp h3 { text-transform: uppercase; letter-spacing: .04em; font-size: .78rem; }
+.rv { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); line-height: 1.5; }
+.rv .rvt { flex: 1; }
+.rv .dot { flex: none; width: 10px; height: 10px; border-radius: 50%; margin-top: 7px; background: var(--rc-on); }
+.rv .dot.rs-risk { background: var(--rc-risk); } .rv .dot.rs-late { background: var(--rc-late); } .rv .dot.rs-done { background: var(--rc-done); }
+@media print { body.print-report .rhero { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }

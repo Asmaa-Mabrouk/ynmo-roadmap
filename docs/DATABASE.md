@@ -25,7 +25,7 @@ Generic document tables: `id text PK, data jsonb, updated_at timestamptz, update
 | baselines | Frozen snapshots (`active` flag is the only mutable field) |
 | sprints | Sprint definitions `sp<n>`: `{n, a, b, note}` (editors/admins only) |
 | sprint_items | Sprint work items `{sp, squad, person, t, jira, kind, st, ord}` (editors/admins only) |
-| reports | Weekly reports `rp<n>`: `{sp, n, a, b, status draft/submitted, pl, prods{key:{sum,sumEdited,items[]}}, ai, subBy, subAt}`. Editors read/write drafts; approved viewers read `submitted` only; only admins submit/reopen/delete (RLS in sql/06) |
+| reports | Weekly reports `rp<yyyymmdd of week start>`: `{sp, n, a, b, status draft/submitted, pl, prods{key:{sum,sumEdited,items[]}}, ai, subBy, subAt}`. Editors read/write drafts; approved viewers read `submitted` only; editors and admins submit/reopen; deleting a submitted report is admin-only (RLS in sql/06) |
 | share_links | Public share tokens (readable only by approved members) |
 | profiles | `id → auth.users`, email, name, role, avatar, `approved`, `is_admin`, `access` |
 | admin_emails | Emails auto-promoted to admin after confirming (no policy ⇒ unreadable from the app) |

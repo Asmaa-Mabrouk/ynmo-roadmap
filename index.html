@@ -572,6 +572,27 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
   body.print-report .rline button, body.print-report .rline .spsel:not(.rst-on):not([class*="rst-"]) { display: none; }
   body.print-report .rline select { appearance: none; border: 0; background: none; }
 }
+
+/* weekly report: visual layout for executives */
+:root { --rc-on: #2e9d6b; --rc-risk: #e5a513; --rc-late: #c0392b; --rc-done: #563cca; }
+.rhero { background: linear-gradient(135deg, #563cca, #39cbf9); color: #fff; border-radius: 16px; padding: 18px 22px; margin-bottom: 14px; }
+.rhero small { opacity: .85; font-weight: 600; letter-spacing: .02em; }
+.rhero .rtitle { font-size: 1.5rem; margin: 4px 0 6px; color: #fff; }
+.rhero .rsp { display: inline-block; background: rgba(255,255,255,.2); border-radius: 999px; padding: 2px 12px; font-size: 13px; font-weight: 600; }
+.rglance { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.rtile { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; background: var(--surface); border: 1.5px solid var(--line); border-top: 4px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.rtile.rs-on { border-top-color: var(--rc-on); } .rtile.rs-risk { border-top-color: var(--rc-risk); } .rtile.rs-late { border-top-color: var(--rc-late); } .rtile.rs-done { border-top-color: var(--rc-done); }
+.rtile small { color: var(--muted); }
+.rprod { border-inline-start: 5px solid var(--rc, var(--line)); }
+.rprod.rview { --rc: var(--rc-on); padding: 16px 20px; }
+.rprod.rview .rphead h2 { font-size: 1.25rem; }
+.rsumv { font-size: 1.02rem; line-height: 1.6; margin: 6px 0 10px; }
+.rgrp h3 { text-transform: uppercase; letter-spacing: .04em; font-size: .78rem; }
+.rv { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); line-height: 1.5; }
+.rv .rvt { flex: 1; }
+.rv .dot { flex: none; width: 10px; height: 10px; border-radius: 50%; margin-top: 7px; background: var(--rc-on); }
+.rv .dot.rs-risk { background: var(--rc-risk); } .rv .dot.rs-late { background: var(--rc-late); } .rv .dot.rs-done { background: var(--rc-done); }
+@media print { body.print-report .rhero { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -4656,10 +4677,14 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     if (!key || !/^https:\/\//i.test(base2 || "")) return "";
     return base2.replace(/\/+$/, "") + "/browse/" + encodeURIComponent(key);
   }
-  function sourceLines(prod, sitems, road, ka, kb) {
+  function sourceLines(prod, sitems, road, ka, kb, a, b) {
     const out = [];
     sitems.filter((s) => prod.squads.includes(s.squad)).forEach((s) => {
-      const m = ST_OF[s.st] || ST_OF.planned;
+      let m = ST_OF[s.st] || ST_OF.planned;
+      if (s.st === "done" && s.dn && a && b) {
+        if (s.dn < a) return;
+        if (s.dn > b) m = ST_OF.progress;
+      }
       out.push({ src: "si:" + s.id, g: m[0], st: m[1], t: s.t, jira: s.jira || "", kind: s.kind || "feature", ord: s.ord || 0 });
     });
     if (Number.isFinite(ka) && Number.isFinite(kb)) {
@@ -4703,11 +4728,11 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     if (v.some((l) => l.st === "risk")) return "risk";
     return v.length && v.every((l) => l.st === "done") ? "done" : "on";
   }
-  function buildProds(products, prevProds, sitems, road, ka, kb) {
+  function buildProds(products, prevProds, sitems, road, ka, kb, a, b) {
     const out = {};
     products.forEach((p) => {
-      const old = prevProds && prevProds[p.k] || {}, lines = mergeLines(old.items, sourceLines(p, sitems, road, ka, kb));
-      lines.sort((a, b) => GROUPS.findIndex((g) => g[0] === a.g) - GROUPS.findIndex((g) => g[0] === b.g));
+      const old = prevProds && prevProds[p.k] || {}, lines = mergeLines(old.items, sourceLines(p, sitems, road, ka, kb, a, b));
+      lines.sort((a2, b2) => GROUPS.findIndex((g) => g[0] === a2.g) - GROUPS.findIndex((g) => g[0] === b2.g));
       out[p.k] = { items: lines, sum: old.sumEdited ? old.sum : ruleSummary(p.n, lines), sumEdited: !!old.sumEdited };
     });
     return out;
@@ -4790,7 +4815,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
   function newSprint() {
     const l = sprintList(), last = l[0];
     const n = last ? last.n + 1 : 1, a = last ? iso3(parseIso(last.b) + DAY) : iso3(Date.now());
-    const b = iso3(parseIso(a) + 6 * DAY), id = "sp" + n;
+    const b = iso3(parseIso(a) + 13 * DAY), id = "sp" + n;
     if (S.sprints[id]) {
       spUI.id = id;
       renderSprints();
@@ -4872,7 +4897,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     s.disabled = ro;
     s.setAttribute("aria-label", "Status");
     s.addEventListener("change", () => {
-      saveItem(it.id, { st: s.value });
+      saveItem(it.id, { st: s.value, dn: s.value === "done" ? todayIso() : "" });
       s.className = "spsel st-" + s.value;
     });
     const x = el("button", "btn sm danger", "✕");
@@ -4914,7 +4939,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     nb.type = "button";
     nb.disabled = ro;
     nb.addEventListener("click", newSprint);
-    pg.append(pageHead("Sprints", "Plan each weekly sprint here. The weekly executive report is built from it and from the roadmap.", nb));
+    pg.append(pageHead("Sprints", "Plan each two-week sprint here. The weekly executive report is built from it and from the roadmap.", nb));
     if (!sp) {
       pg.append(el("p", "empty", "No sprint yet. Create the first one."));
       return;
@@ -4982,7 +5007,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
   var rUI = { id: null, busy: false, note: "" };
   var cfg = () => S.ideas.reportcfg || {};
   var canBuild = () => !isViewer() && canWrite();
-  var reportList = () => Object.keys(S.reports).map((id) => Object.assign({ id }, S.reports[id])).filter((r) => r.a && (!isViewer() || r.status === "submitted")).sort((x, y) => y.n - x.n);
+  var reportList = () => Object.keys(S.reports).map((id) => Object.assign({ id }, S.reports[id])).filter((r) => r.a && (!isViewer() || r.status === "submitted")).sort((x, y) => x.a < y.a ? 1 : -1);
   var cur = () => {
     const l = reportList();
     return l.find((r) => r.id === rUI.id) || l[0] || null;
@@ -5001,14 +5026,23 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     if (!rm) return { road: [], ka: NaN, kb: NaN };
     return withRm(rm.id, () => ({ road: items().map((i) => ({ id: i.id, t: i.t, sq: i.sq, d0: i.d0, d1: i.d1, st: i.st, ms: !!i.ms })), ka: kOfIso(a), kb: kOfIso(b) }));
   }
-  function newReport(sp) {
-    const id = "rp" + sp.n;
+  var addDays = (s, n) => new Date(Date.parse(s + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
+  function missingWeeks() {
+    const out = [];
+    sprintList().forEach((sp) => [1, 2].forEach((w) => {
+      const a = addDays(sp.a, (w - 1) * 7), id = "rp" + a.replace(/-/g, "");
+      if (!S.reports[id]) out.push({ id, sp: sp.id, n: sp.n, w, a, b: addDays(a, 6) });
+    }));
+    return out.sort((x, y) => x.a < y.a ? 1 : -1);
+  }
+  function newReport(wk) {
+    const id = wk.id;
     if (S.reports[id]) {
       rUI.id = id;
       renderReports();
       return;
     }
-    const rep = { id, sp: sp.id, n: sp.n, a: sp.a, b: sp.b, status: "draft", pl: productsOf(cfg()), prods: {} };
+    const rep = { id, sp: wk.sp, n: wk.n, w: wk.w, a: wk.a, b: wk.b, status: "draft", pl: productsOf(cfg()), prods: {} };
     sync(rep, false, true);
   }
   async function sync(rep, ai, isNew) {
@@ -5017,10 +5051,10 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     rUI.note = "";
     const pl = productsOf(cfg()), { road, ka, kb } = roadFor(rep.a, rep.b);
     rep.pl = pl;
-    rep.prods = buildProds(pl, rep.prods, itemsOf(rep.sp), road, ka, kb);
+    rep.prods = buildProds(pl, rep.prods, itemsOf(rep.sp), road, ka, kb, rep.a, rep.b);
     let note = isNew ? "Draft created" : "Synced from Sprint and Roadmap";
     rUI.id = rep.id;
-    save(rep, isNew ? "created the weekly report for Sprint " + rep.n : "synced the weekly report for Sprint " + rep.n);
+    save(rep, isNew ? "created the weekly report for " + fmtIso(rep.a) : "synced the weekly report for " + fmtIso(rep.a));
     renderReports();
     if (ai) {
       toast("Writing with Gemini…");
@@ -5104,7 +5138,24 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       box.append(el("p", "sub", "One section per product. Tick the squads that belong to it."), list, add, fld("Jira base URL (optional, https only)", jb), row);
     });
   }
+  function viewLine(l) {
+    const r = el("div", "rv st-" + l.st);
+    r.append(el("span", "dot rs-" + l.st), el("span", "rvt", l.t));
+    const u = jiraUrl(cfg().jira, l.jira);
+    if (l.jira) {
+      const a = el(u ? "a" : "span", "jira", l.jira);
+      if (u) {
+        a.href = u;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+      }
+      r.append(a);
+    }
+    if (l.st === "risk" || l.st === "late") r.append(el("span", "chip rs-" + l.st, RSTATUS[l.st]));
+    return r;
+  }
   function lineRow(rep, d, l, ro) {
+    if (ro) return viewLine(l);
     const r = el("div", "rline st-" + l.st + (l.hide ? " hid" : ""));
     r.dataset.id = l.id;
     const touch = (patch) => {
@@ -5187,6 +5238,11 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     const hd = el("div", "rphead"), s = overall(d.items);
     hd.append(el("h2", "", p.n), el("span", "chip rs-" + s, RSTATUS[s]));
     sec.append(hd);
+    if (ro) {
+      sec.classList.add("rview");
+      sec.style.setProperty("--rc", "var(--rc-" + s + ")");
+      if (d.sum) sec.append(el("p", "rsumv", d.sum));
+    }
     const sm = el("textarea", "rsum");
     sm.value = d.sum || "";
     sm.rows = 3;
@@ -5197,7 +5253,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       d.sumEdited = !!sm.value.trim();
       save(rep);
     });
-    sec.append(sm);
+    if (!ro) sec.append(sm);
     GROUPS.forEach((g) => {
       const ls = d.items.filter((l) => l.g === g[0] && (!ro || !l.hide));
       if (!ls.length && ro) return;
@@ -5228,13 +5284,13 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     if (!pg) return;
     pg.textContent = "";
     const viewer = isViewer(), l = reportList(), rep = cur();
-    pg.append(pageHead("Weekly report", viewer ? "Submitted weekly updates per product." : "Built from the sprint plan and the roadmap. Edit anything, then an admin submits it."));
+    pg.append(pageHead("Weekly report", viewer ? "Submitted weekly updates per product." : "Built from the sprint plan and the roadmap. Edit anything, then submit it to the executives."));
     const bar = el("div", "row spbar");
     if (l.length) {
       const sel = el("select");
       sel.setAttribute("aria-label", "Report");
       l.forEach((r) => {
-        const o = el("option", "", "Sprint " + r.n + " · " + fmtIso(r.a) + (viewer ? "" : r.status === "submitted" ? " · submitted" : " · draft"));
+        const o = el("option", "", "Week of " + fmtIso(r.a) + " · Sprint " + r.n + (viewer ? "" : r.status === "submitted" ? " · submitted" : " · draft"));
         o.value = r.id;
         o.selected = rep && r.id === rep.id;
         sel.append(o);
@@ -5247,12 +5303,12 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       bar.append(sel);
     }
     if (!viewer) {
-      const free = sprintList().filter((s) => !S.reports["rp" + s.n]);
-      if (free.length) {
-        const nb = el("button", "btn primary", "New report for Sprint " + free[0].n);
+      const free = missingWeeks(), t = todayIso(), pick = free.find((w) => w.a <= t) || free[free.length - 1];
+      if (pick) {
+        const nb = el("button", "btn primary", "New report for week of " + fmtIso(pick.a));
         nb.type = "button";
         nb.disabled = !canBuild();
-        nb.addEventListener("click", () => newReport(free[0]));
+        nb.addEventListener("click", () => newReport(pick));
         bar.append(nb);
       }
       const sb2 = el("button", "btn", "Report settings");
@@ -5266,7 +5322,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       pg.append(el("p", "empty", viewer ? "No report has been submitted yet." : sprintList().length ? "No report yet. Create one for the latest sprint." : "Create a sprint first (Sprints page), then build the report."));
       return;
     }
-    const sub = rep.status === "submitted", admin = !!(S.me && S.me.is_admin), ro = viewer || sub || !canBuild();
+    const sub = rep.status === "submitted", ro = viewer || sub || !canBuild();
     const meta = el("p", "sub rmeta", sub ? "Submitted" + (rep.subBy ? " by " + rep.subBy : "") + (rep.subAt ? " on " + fmtIso(rep.subAt.slice(0, 10)) : "") : "Draft" + (rep.ai ? " · wording by " + (rep.ai.model || "AI") : "") + " · last edit " + (rep.by || ""));
     const tools = el("div", "row rtools");
     const btn = (t, cls, fn, dis) => {
@@ -5294,25 +5350,36 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       window.addEventListener("afterprint", off);
       window.print();
     });
-    if (admin && !sub) btn("Submit to executives", "primary", () => {
+    if (!viewer && !sub) btn("Submit to executives", "primary", () => {
       rep.status = "submitted";
       rep.subAt = (/* @__PURE__ */ new Date()).toISOString();
       rep.subBy = S.me.name || S.me.email;
-      save(rep, "submitted the weekly report for Sprint " + rep.n);
+      save(rep, "submitted the weekly report for " + fmtIso(rep.a));
       renderReports();
     }, !canBuild());
-    if (admin && sub) btn("Reopen as draft", "", () => {
+    if (!viewer && sub) btn("Reopen as draft", "", () => {
       rep.status = "draft";
       delete rep.subAt;
       delete rep.subBy;
-      save(rep, "reopened the weekly report for Sprint " + rep.n);
+      save(rep, "reopened the weekly report for " + fmtIso(rep.a));
       renderReports();
     }, !canBuild());
-    const body = el("div", "rbody");
-    body.append(el("h2", "rtitle", "Weekly update · " + fmtIso(rep.a) + " to " + fmtIso(rep.b) + " · Sprint " + rep.n));
-    (rep.pl || productsOf(cfg())).forEach((p) => body.append(prodBlock(rep, p, ro)));
+    const body = el("div", "rbody"), pls = rep.pl || productsOf(cfg());
+    const hero = el("div", "rhero");
+    hero.append(el("small", "", "Ynmo · Weekly product update"), el("h2", "rtitle", fmtIso(rep.a) + " – " + fmtIso(rep.b)), el("span", "rsp", "Sprint " + rep.n + " · week " + (rep.w || 1) + " of 2"));
+    body.append(hero);
+    const glance = el("div", "rglance");
+    pls.forEach((p) => {
+      const d = rep.prods[p.k];
+      if (!d) return;
+      const v = d.items.filter((l2) => !l2.hide), s = overall(d.items), t = el("div", "rtile rs-" + s);
+      t.append(el("b", "", p.n), el("span", "chip rs-" + s, RSTATUS[s]), el("small", "", v.filter((l2) => l2.g === "done").length + " delivered · " + v.filter((l2) => l2.g === "prog").length + " in progress · " + v.filter((l2) => l2.st === "risk" || l2.st === "late").length + " at risk"));
+      glance.append(t);
+    });
+    body.append(glance);
+    pls.forEach((p) => body.append(prodBlock(rep, p, ro)));
     pg.append(meta, tools);
-    if (rUI.note && !viewer) {
+    if (rUI.note && !viewer && !sub) {
       const nt = el("p", "rnote", rUI.note);
       nt.setAttribute("role", "status");
       pg.append(nt);

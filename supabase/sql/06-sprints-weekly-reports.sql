@@ -25,7 +25,7 @@ end $$;
 
 -- Reports:
 --  * editors see drafts and submitted reports; approved viewers (executives) see SUBMITTED reports only
---  * editors create/edit drafts; only an ADMIN can submit (status -> 'submitted'), edit or reopen a submitted report, or delete one
+--  * editors and admins create, edit, submit and reopen reports; only an ADMIN can delete a SUBMITTED report (editors can delete drafts)
 drop policy if exists "report read"   on public.reports;
 drop policy if exists "report add"    on public.reports;
 drop policy if exists "report change" on public.reports;
@@ -33,11 +33,11 @@ drop policy if exists "report remove" on public.reports;
 create policy "report read" on public.reports for select to authenticated
   using (public.is_editor() or (public.is_approved() and (data->>'status') = 'submitted'));
 create policy "report add" on public.reports for insert to authenticated
-  with check (public.is_editor() and ((data->>'status') <> 'submitted' or public.is_admin()));
+  with check (public.is_editor());
 create policy "report change" on public.reports for update to authenticated
-  using (public.is_editor() and ((data->>'status') <> 'submitted' or public.is_admin()))
-  with check (public.is_editor() and ((data->>'status') <> 'submitted' or public.is_admin()));
-create policy "report remove" on public.reports for delete to authenticated using (public.is_admin());
+  using (public.is_editor()) with check (public.is_editor());
+create policy "report remove" on public.reports for delete to authenticated
+  using (public.is_admin() or (public.is_editor() and (data->>'status') <> 'submitted'));
 
 -- Realtime (the client re-reads a table when it changes)
 do $$ declare t text; begin

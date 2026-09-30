@@ -32,14 +32,15 @@ export function jiraUrl(base, key) {
 
 /**
  * Source lines for one product: sprint items of its squads + roadmap bars of its squads that overlap the sprint week.
- * @param {{a:string,b:string}} sprint
+ * @param {string} a week start (ISO) @param {string} b week end (ISO)
  * @param {Array} sitems sprint items ({id,squad,t,jira,kind,st})
  * @param {Array} road roadmap items ({id,t,sq,d0,d1,st}) plus `ka`,`kb` = week as day indexes
  */
-export function sourceLines(prod, sitems, road, ka, kb) {
+export function sourceLines(prod, sitems, road, ka, kb, a, b) {
   const out = [];
   sitems.filter(s => prod.squads.includes(s.squad)).forEach(s => {
-    const m = ST_OF[s.st] || ST_OF.planned;
+    let m = ST_OF[s.st] || ST_OF.planned;
+    if (s.st === 'done' && s.dn && a && b) { if (s.dn < a) return; if (s.dn > b) m = ST_OF.progress; }   /* sprints last 2 weeks, reports are weekly: done in an earlier week is not news, done later is still in progress */
     out.push({ src: 'si:' + s.id, g: m[0], st: m[1], t: s.t, jira: s.jira || '', kind: s.kind || 'feature', ord: s.ord || 0 });
   });
   if (Number.isFinite(ka) && Number.isFinite(kb)) {
@@ -88,10 +89,10 @@ export function overall(lines) {
 }
 
 /** Rule-based draft for every product, merged into an existing report's `prods` (or {}). Keeps edited summaries. */
-export function buildProds(products, prevProds, sitems, road, ka, kb) {
+export function buildProds(products, prevProds, sitems, road, ka, kb, a, b) {
   const out = {};
   products.forEach(p => {
-    const old = (prevProds && prevProds[p.k]) || {}, lines = mergeLines(old.items, sourceLines(p, sitems, road, ka, kb));
+    const old = (prevProds && prevProds[p.k]) || {}, lines = mergeLines(old.items, sourceLines(p, sitems, road, ka, kb, a, b));
     lines.sort((a, b) => GROUPS.findIndex(g => g[0] === a.g) - GROUPS.findIndex(g => g[0] === b.g));
     out[p.k] = { items: lines, sum: old.sumEdited ? old.sum : ruleSummary(p.n, lines), sumEdited: !!old.sumEdited };
   });

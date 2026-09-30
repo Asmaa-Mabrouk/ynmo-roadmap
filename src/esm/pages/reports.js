@@ -2,11 +2,11 @@
  * @module pages/reports
  * Weekly executive report. Editors build a draft per sprint (rules from the sprint plan + roadmap, optional Gemini wording via the
  * `weekly-draft` Edge Function), edit it, and an ADMIN submits it. Viewers (executives) see submitted reports only (also enforced by RLS).
- * Doc `reports/rp<n>`: {sp,n,a,b,status:'draft'|'submitted',pl:[{k,n,squads}],prods:{[k]:{sum,sumEdited,items:[...]}},by,ts,subAt,subBy,ai}.
+ * One report per WEEK (sprints last two weeks). Doc `reports/rp<yyyymmdd of week start>`: {sp,n,w(1|2),a,b,status:'draft'|'submitted',pl:[{k,n,squads}],prods:{[k]:{sum,sumEdited,items:[...]}},by,ts,subAt,subBy,ai}.
  */
 import { S } from '../core/state.js';
 import { $, LANES, el } from '../core/model.js';
-import { fld, fmtIso, kOfIso, logAct, pageHead, toast } from '../core/shared.js';
+import { fld, fmtIso, kOfIso, logAct, pageHead, toast, todayIso } from '../core/shared.js';
 import { write } from '../core/saving.js';
 import { sb } from '../core/supabase.js';
 import { canWrite, isViewer, openDlg, closeDlg } from '../features/safety.js';
@@ -20,7 +20,7 @@ const rUI = { id: null, busy: false, note: '' };
 const cfg = () => S.ideas.reportcfg || {};
 const uidr = () => 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const canBuild = () => !isViewer() && canWrite();
-export const reportList = () => Object.keys(S.reports).map(id => Object.assign({ id: id }, S.reports[id])).filter(r => r.a && (!isViewer() || r.status === 'submitted')).sort((x, y) => y.n - x.n);
+export const reportList = () => Object.keys(S.reports).map(id => Object.assign({ id: id }, S.reports[id])).filter(r => r.a && (!isViewer() || r.status === 'submitted')).sort((x, y) => (x.a < y.a ? 1 : -1));
 const cur = () => { const l = reportList(); return l.find(r => r.id === rUI.id) || l[0] || null; };
 
 function save(rep, log) { const id = rep.id, d = Object.assign({}, rep); delete d.id; d.by = (S.me && (S.me.name || S.me.email)) || ''; d.ts = Date.now(); S.reports[id] = d; write('reports/' + id, d); if (log) logAct('report', log); }
@@ -29,18 +29,25 @@ function roadFor(a, b) {
   const rm = allRoadmaps().find(r => r.a <= a && r.b >= a); if (!rm) return { road: [], ka: NaN, kb: NaN };
   return withRm(rm.id, () => ({ road: items().map(i => ({ id: i.id, t: i.t, sq: i.sq, d0: i.d0, d1: i.d1, st: i.st, ms: !!i.ms })), ka: kOfIso(a), kb: kOfIso(b) }));
 }
-function newReport(sp) {
-  const id = 'rp' + sp.n; if (S.reports[id]) { rUI.id = id; renderReports(); return; }
-  const rep = { id: id, sp: sp.id, n: sp.n, a: sp.a, b: sp.b, status: 'draft', pl: productsOf(cfg()), prods: {} };
+const addDays = (s, n) => new Date(Date.parse(s + 'T00:00:00Z') + n * 864e5).toISOString().slice(0, 10);
+/** Weeks (2 per sprint) that have no report yet, newest first. */
+export function missingWeeks() {
+  const out = [];
+  sprintList().forEach(sp => [1, 2].forEach(w => { const a = addDays(sp.a, (w - 1) * 7), id = 'rp' + a.replace(/-/g, ''); if (!S.reports[id]) out.push({ id: id, sp: sp.id, n: sp.n, w: w, a: a, b: addDays(a, 6) }); }));
+  return out.sort((x, y) => (x.a < y.a ? 1 : -1));
+}
+function newReport(wk) {
+  const id = wk.id; if (S.reports[id]) { rUI.id = id; renderReports(); return; }
+  const rep = { id: id, sp: wk.sp, n: wk.n, w: wk.w, a: wk.a, b: wk.b, status: 'draft', pl: productsOf(cfg()), prods: {} };
   sync(rep, false, true);
 }
 /** Rules-only re-sync (never overwrites edited lines/summaries), then optionally the AI wording. */
 async function sync(rep, ai, isNew) {
   if (rUI.busy) return; rUI.busy = true; rUI.note = '';
   const pl = productsOf(cfg()), { road, ka, kb } = roadFor(rep.a, rep.b);
-  rep.pl = pl; rep.prods = buildProds(pl, rep.prods, itemsOf(rep.sp), road, ka, kb);
+  rep.pl = pl; rep.prods = buildProds(pl, rep.prods, itemsOf(rep.sp), road, ka, kb, rep.a, rep.b);
   let note = isNew ? 'Draft created' : 'Synced from Sprint and Roadmap';
-  rUI.id = rep.id; save(rep, isNew ? 'created the weekly report for Sprint ' + rep.n : 'synced the weekly report for Sprint ' + rep.n); renderReports();
+  rUI.id = rep.id; save(rep, isNew ? 'created the weekly report for ' + fmtIso(rep.a) : 'synced the weekly report for ' + fmtIso(rep.a)); renderReports();
   if (ai) {
     toast('Writing with Gemini…');
     try {
@@ -78,7 +85,14 @@ function settingsDlg() {
   });
 }
 
+function viewLine(l) {
+  const r = el('div', 'rv st-' + l.st); r.append(el('span', 'dot rs-' + l.st), el('span', 'rvt', l.t));
+  const u = jiraUrl(cfg().jira, l.jira); if (l.jira) { const a = el(u ? 'a' : 'span', 'jira', l.jira); if (u) { a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer'; } r.append(a); }
+  if (l.st === 'risk' || l.st === 'late') r.append(el('span', 'chip rs-' + l.st, RSTATUS[l.st]));
+  return r;
+}
 function lineRow(rep, d, l, ro) {
+  if (ro) return viewLine(l);
   const r = el('div', 'rline st-' + l.st + (l.hide ? ' hid' : '')); r.dataset.id = l.id;
   const touch = patch => { Object.assign(l, patch, { edited: true }); save(rep); };
   const st = el('select', 'spsel rst-' + l.st); st.disabled = ro; st.setAttribute('aria-label', 'Status'); Object.keys(RSTATUS).forEach(k => { const o = el('option', '', RSTATUS[k]); o.value = k; o.selected = k === l.st; st.append(o); });
@@ -100,9 +114,10 @@ function prodBlock(rep, p, ro) {
   const d = rep.prods[p.k]; if (!d) return el('div');
   const sec = el('section', 'card rprod'); sec.dataset.k = p.k;
   const hd = el('div', 'rphead'), s = overall(d.items); hd.append(el('h2', '', p.n), el('span', 'chip rs-' + s, RSTATUS[s])); sec.append(hd);
+  if (ro) { sec.classList.add('rview'); sec.style.setProperty('--rc', 'var(--rc-' + s + ')'); if (d.sum) sec.append(el('p', 'rsumv', d.sum)); }
   const sm = el('textarea', 'rsum'); sm.value = d.sum || ''; sm.rows = 3; sm.disabled = ro; sm.setAttribute('aria-label', 'Summary for ' + p.n);
   sm.addEventListener('change', () => { d.sum = sm.value.trim() || ruleSummary(p.n, d.items); d.sumEdited = !!sm.value.trim(); save(rep); });
-  sec.append(sm);
+  if (!ro) sec.append(sm);
   GROUPS.forEach(g => {
     const ls = d.items.filter(l => l.g === g[0] && (!ro || !l.hide));
     if (!ls.length && ro) return;
@@ -115,26 +130,30 @@ function prodBlock(rep, p, ro) {
 export function renderReports() {
   const pg = $('pg-reports'); if (!pg) return; pg.textContent = '';
   const viewer = isViewer(), l = reportList(), rep = cur();
-  pg.append(pageHead('Weekly report', viewer ? 'Submitted weekly updates per product.' : 'Built from the sprint plan and the roadmap. Edit anything, then an admin submits it.'));
+  pg.append(pageHead('Weekly report', viewer ? 'Submitted weekly updates per product.' : 'Built from the sprint plan and the roadmap. Edit anything, then submit it to the executives.'));
   const bar = el('div', 'row spbar');
-  if (l.length) { const sel = el('select'); sel.setAttribute('aria-label', 'Report'); l.forEach(r => { const o = el('option', '', 'Sprint ' + r.n + ' · ' + fmtIso(r.a) + (viewer ? '' : r.status === 'submitted' ? ' · submitted' : ' · draft')); o.value = r.id; o.selected = rep && r.id === rep.id; sel.append(o); }); sel.addEventListener('change', () => { rUI.id = sel.value; rUI.note = ''; renderReports(); }); bar.append(sel); }
+  if (l.length) { const sel = el('select'); sel.setAttribute('aria-label', 'Report'); l.forEach(r => { const o = el('option', '', 'Week of ' + fmtIso(r.a) + ' · Sprint ' + r.n + (viewer ? '' : r.status === 'submitted' ? ' · submitted' : ' · draft')); o.value = r.id; o.selected = rep && r.id === rep.id; sel.append(o); }); sel.addEventListener('change', () => { rUI.id = sel.value; rUI.note = ''; renderReports(); }); bar.append(sel); }
   if (!viewer) {
-    const free = sprintList().filter(s => !S.reports['rp' + s.n]);
-    if (free.length) { const nb = el('button', 'btn primary', 'New report for Sprint ' + free[0].n); nb.type = 'button'; nb.disabled = !canBuild(); nb.addEventListener('click', () => newReport(free[0])); bar.append(nb); }
+    const free = missingWeeks(), t = todayIso(), pick = free.find(w => w.a <= t) || free[free.length - 1];
+    if (pick) { const nb = el('button', 'btn primary', 'New report for week of ' + fmtIso(pick.a)); nb.type = 'button'; nb.disabled = !canBuild(); nb.addEventListener('click', () => newReport(pick)); bar.append(nb); }
     const sb2 = el('button', 'btn', 'Report settings'); sb2.type = 'button'; sb2.disabled = !canBuild(); sb2.addEventListener('click', settingsDlg); bar.append(sb2);
   }
   pg.append(bar);
   if (!rep) { pg.append(el('p', 'empty', viewer ? 'No report has been submitted yet.' : sprintList().length ? 'No report yet. Create one for the latest sprint.' : 'Create a sprint first (Sprints page), then build the report.')); return; }
-  const sub = rep.status === 'submitted', admin = !!(S.me && S.me.is_admin), ro = viewer || sub || !canBuild();
+  const sub = rep.status === 'submitted', ro = viewer || sub || !canBuild();
   const meta = el('p', 'sub rmeta', sub ? 'Submitted' + (rep.subBy ? ' by ' + rep.subBy : '') + (rep.subAt ? ' on ' + fmtIso(rep.subAt.slice(0, 10)) : '') : 'Draft' + (rep.ai ? ' · wording by ' + (rep.ai.model || 'AI') : '') + ' · last edit ' + (rep.by || ''));
   const tools = el('div', 'row rtools');
   const btn = (t, cls, fn, dis) => { const b = el('button', 'btn ' + (cls || ''), t); b.type = 'button'; b.disabled = !!dis; b.addEventListener('click', fn); tools.append(b); return b; };
   if (!viewer && !sub) { btn('Sync from Sprint & Roadmap', '', () => sync(rep, false), !canBuild() || rUI.busy); btn('Draft with AI', '', () => sync(rep, true), !canBuild() || rUI.busy); }
   btn('Copy text', '', () => { const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast('Copied'), () => toast('Copy failed')); });
   btn('Print / PDF', '', () => { document.body.classList.add('print-report'); const off = () => { document.body.classList.remove('print-report'); window.removeEventListener('afterprint', off); }; window.addEventListener('afterprint', off); window.print(); });
-  if (admin && !sub) btn('Submit to executives', 'primary', () => { rep.status = 'submitted'; rep.subAt = new Date().toISOString(); rep.subBy = S.me.name || S.me.email; save(rep, 'submitted the weekly report for Sprint ' + rep.n); renderReports(); }, !canBuild());
-  if (admin && sub) btn('Reopen as draft', '', () => { rep.status = 'draft'; delete rep.subAt; delete rep.subBy; save(rep, 'reopened the weekly report for Sprint ' + rep.n); renderReports(); }, !canBuild());
-  const body = el('div', 'rbody'); body.append(el('h2', 'rtitle', 'Weekly update · ' + fmtIso(rep.a) + ' to ' + fmtIso(rep.b) + ' · Sprint ' + rep.n));
-  (rep.pl || productsOf(cfg())).forEach(p => body.append(prodBlock(rep, p, ro)));
-  pg.append(meta, tools); if (rUI.note && !viewer) { const nt = el('p', 'rnote', rUI.note); nt.setAttribute('role', 'status'); pg.append(nt); } pg.append(body);
+  if (!viewer && !sub) btn('Submit to executives', 'primary', () => { rep.status = 'submitted'; rep.subAt = new Date().toISOString(); rep.subBy = S.me.name || S.me.email; save(rep, 'submitted the weekly report for ' + fmtIso(rep.a)); renderReports(); }, !canBuild());
+  if (!viewer && sub) btn('Reopen as draft', '', () => { rep.status = 'draft'; delete rep.subAt; delete rep.subBy; save(rep, 'reopened the weekly report for ' + fmtIso(rep.a)); renderReports(); }, !canBuild());
+  const body = el('div', 'rbody'), pls = rep.pl || productsOf(cfg());
+  const hero = el('div', 'rhero'); hero.append(el('small', '', 'Ynmo · Weekly product update'), el('h2', 'rtitle', fmtIso(rep.a) + ' – ' + fmtIso(rep.b)), el('span', 'rsp', 'Sprint ' + rep.n + ' · week ' + (rep.w || 1) + ' of 2')); body.append(hero);
+  const glance = el('div', 'rglance');
+  pls.forEach(p => { const d = rep.prods[p.k]; if (!d) return; const v = d.items.filter(l => !l.hide), s = overall(d.items), t = el('div', 'rtile rs-' + s); t.append(el('b', '', p.n), el('span', 'chip rs-' + s, RSTATUS[s]), el('small', '', v.filter(l => l.g === 'done').length + ' delivered · ' + v.filter(l => l.g === 'prog').length + ' in progress · ' + v.filter(l => l.st === 'risk' || l.st === 'late').length + ' at risk')); glance.append(t); });
+  body.append(glance);
+  pls.forEach(p => body.append(prodBlock(rep, p, ro)));
+  pg.append(meta, tools); if (rUI.note && !viewer && !sub) { const nt = el('p', 'rnote', rUI.note); nt.setAttribute('role', 'status'); pg.append(nt); } pg.append(body);
 }
