@@ -108,3 +108,13 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
 /* a bar being renamed must show the whole input even when the bar is narrow (week/month zoom) */
 .bar:has(.bi) { overflow: visible; z-index: 40; }
+
+/* person rows: reorder grip and options menu (by-person view) */
+.pn.hasgrip { padding-inline-start: 26px; padding-inline-end: 34px; }
+.pn .pgrip { position: absolute; inset-inline-start: 4px; top: 50%; transform: translateY(-50%); cursor: grab; color: var(--muted); font-size: 16px; line-height: 1; letter-spacing: -3px; padding: 8px 4px; user-select: none; touch-action: none; border-radius: 6px; }
+.pn .pgrip:hover, .pn .pgrip:focus-visible { color: var(--brand); background: color-mix(in srgb, var(--brand) 10%, transparent); }
+.pn .pmore { position: absolute; inset-inline-end: 4px; top: 6px; min-width: 28px; height: 28px; border: 1px solid transparent; background: transparent; border-radius: 8px; color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; }
+.pn .pmore:hover, .pn .pmore:focus-visible { border-color: var(--line); background: var(--surface); color: var(--ink); }
+.pn.dragging { opacity: .45; }
+.pn.dropbefore { box-shadow: inset 0 3px 0 var(--brand); }
+.pn.dropafter { box-shadow: inset 0 -3px 0 var(--brand); }

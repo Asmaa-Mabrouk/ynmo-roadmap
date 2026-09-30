@@ -14,6 +14,7 @@ import { offAt, offRange } from './people-picker.js';
 import { afterRender } from '../features/dependencies.js';
 import { vacsOf } from '../pages/vacations.js';
 import { fmtIso, kOfIso } from '../core/shared.js';
+import { comparePeople, decoratePersonRow, primaryLane } from '../features/people-rows.js';
 
 /* ---------- render ---------- */
 function renderSummary(list) {
@@ -123,12 +124,7 @@ function renderPeople(g, put, list) {
   let people = [...map.values()].filter(p => p.name !== '__none');
   if (state.person !== 'all') people = people.filter(p => p.name === state.person);
   else if (filtersActive()) people = people.filter(p => p.its.length);
-  const primary = p => {
-    const d = dir.get(p.name);
-    const idx = d ? [...d.sqs].map(k => LANES.findIndex(l => l.k === k)).filter(i => i >= 0) : [];
-    return idx.length ? Math.min.apply(null, idx) : 0;
-  };
-  people.sort((a, b) => primary(a) - primary(b) || a.name.localeCompare(b.name));
+  people.sort(comparePeople);   // custom drag order, then squad, then A-Z
   let r = 3;
   const block = (p, title, sub, color) => {
     const pk = pack(p.its), n = pk.n, minH = (8 + n * H) + 'px';
@@ -142,6 +138,7 @@ function renderPeople(g, put, list) {
     const pv = vacsOf(p.name); let vdays = 0;
     pv.forEach(v => { const ra = kOfIso(v.a0), rb = kOfIso(v.a1 || v.a0); if (rb >= 0 && ra <= NDAYS - 1) vdays += Math.min(NDAYS - 1, rb) - Math.max(0, ra) + 1; });
     if (vdays) { const vs = el('small', '', '⚑ ' + vdays + (vdays === 1 ? ' leave day' : ' leave days')); vs.style.color = 'var(--brand-2)'; c1.append(vs); }
+    if (title === p.name) decoratePersonRow(c1, p.name);   // grip + ⋯ menu on real people (not on the Unassigned row)
     put(c1, r, 1);
     const bg = el('div', 'rowbg'); bg.dataset.person = p.name; bg.style.minHeight = minH; put(bg, r, null);
     let k = 0;
@@ -165,7 +162,7 @@ function renderPeople(g, put, list) {
   people.forEach(p => {
     const d = dir.get(p.name);
     const sub = d ? d.domain + ' · ' + [...d.sqs].map(k => laneOf(k).n).join(', ') : '';
-    block(p, p.name, sub, LANES[primary(p)].c);
+    block(p, p.name, sub, LANES[primaryLane(p.name)].c);
   });
   const none = map.get('__none');
   if (none && none.its.length && state.person === 'all') block(none, 'Unassigned', 'Features nobody owns yet', 'var(--muted)');

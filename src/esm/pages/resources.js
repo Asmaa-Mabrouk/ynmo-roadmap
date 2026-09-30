@@ -24,7 +24,7 @@ function savePerson(name, patch, sum) {
   if (sum) logAct('resource', sum);
   fillPersons(); render(); renderResources();
 }
-function removePerson2(name) {
+export function removePerson2(name) {
   const id = personDocId(name), base0 = Object.keys(TEAMS).some(sq => ['pm', 'dev', 'qa', 'ux'].some(r => (TEAMS[sq][r] || []).includes(name)));
   if (id && !base0) { delete S.extras[id]; write('people/' + id, null); }
   else { const hid = id || ('ov-' + slug(name)); S.extras[hid] = { n: name, hidden: true }; write('people/' + hid, S.extras[hid]); }

@@ -28,7 +28,7 @@ replaced by creating new roadmaps with their own date range.
 | Milestones & dependencies | Diamond milestones; "depends on" arrows; warning when a bar starts before its predecessor ends | Surfaces schedule risk early |
 | **Ideas** | Trello-style board; editable/recolourable/reorderable product columns; drag cards between products; impact/effort score; schedule an idea onto the roadmap | Keeps the backlog next to the plan, no lost ideas |
 | **Roadmaps** | Multiple roadmaps with own date ranges (H2, Q1, …) | Reuse the tool across periods |
-| **Resources** | Team directory (roles, domain, avatar) | Assignment source |
+| **Resources** | Team directory (roles, domain, avatar). In the by-person roadmap each row has a drag grip to reorder (shared by everyone) and a ⋯ menu: Move up/down and Remove from the chart | Assignment source; rows ordered the way the team thinks |
 | **Vacations** | Leave calendar, affected features per person | Realistic delivery dates |
 | **Capacity** | Weekly heat-map of load vs. availability | Spot over-allocation before it hurts |
 | **Baselines** | Immutable checkpoints + "Plan vs now" diff and ghost bars on the Gantt | Accountability: what moved since we committed |

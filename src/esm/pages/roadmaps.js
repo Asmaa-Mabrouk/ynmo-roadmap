@@ -17,7 +17,7 @@ export function allRoadmaps() {
   return [H2].concat(Object.keys(S.roadmaps).map(id => Object.assign({ id: id }, S.roadmaps[id])).filter(r => r.a && r.b).sort((x, y) => x.a < y.a ? -1 : 1));
 }
 export function curRm() { return allRoadmaps().find(r => r.id === state.rm) || H2; }
-function withRm(id, fn) {
+export function withRm(id, fn) {
   const keep = state.rm, r = allRoadmaps().find(x => x.id === id) || H2;
   state.rm = r.id; setRange(r.a, r.b);
   try { return fn(); } finally { const k = allRoadmaps().find(x => x.id === keep) || H2; state.rm = k.id; setRange(k.a, k.b); }
