@@ -67,8 +67,7 @@ function confirmDlg(title, msg, yes, onYes) {
 function newSprint() {
   const l = sprintList(), last = l[0];
   const n = last ? last.n + 1 : 1, a = last ? iso(parseIso(last.b) + DAY) : iso(Date.now());
-  const id = 'sp' + n;
-  if (S.sprints[id]) { location.hash = '#/sprints/' + id; return; }
+  const id = S.sprints['sp' + n] ? uid('sp') : 'sp' + n;
   saveSprint(id, { n: n, a: a, b: iso(parseIso(a) + 13 * DAY), note: '', tags: {} });
   logAct('sprint', 'created Sprint ' + n + ' (' + fmtIso(a) + ')'); notify('Sprint ' + n + ' created. Choose the dates, then press / to add a product section.'); location.hash = '#/sprints/' + id;
 }
@@ -102,6 +101,13 @@ function listView(pg, ro) {
 }
 
 /* ---------- one sprint: dates ---------- */
+function setNumber(sp, inp) {
+  const n = Math.floor(Number(inp.value));
+  if (!Number.isFinite(n) || n < 1 || n > 9999) { notify('Sprint number must be between 1 and 9999', 'err'); inp.value = sp.n; return; }
+  if (n === sp.n) return;
+  if (sprintList().some(x => x.id !== sp.id && x.n === n)) { notify('Sprint ' + n + ' already exists', 'err'); inp.value = sp.n; return; }
+  saveSprint(sp.id, Object.assign(base(sp), { n: n })); logAct('sprint', 'renumbered Sprint ' + sp.n + ' as Sprint ' + n); notify('Now Sprint ' + n); renderSprints();
+}
 function setDates(sp, a, b, fromEl, toEl) {
   if (!parseIso(a) || !parseIso(b)) { notify('Choose both dates', 'err'); return; }
   if (b < a) { notify('The end date is before the start date', 'err'); fromEl.value = sp.a; toEl.value = sp.b; return; }
@@ -304,7 +310,7 @@ function docEditor(sp, ro) {
 }
 
 function carryOver(sp, ed) {
-  const prev = sprintList().find(s => s.n === sp.n - 1); if (!prev) { notify('There is no previous sprint to carry over from', 'err'); return; }
+  const prev = sprintList().find(s => s.n < sp.n); if (!prev) { notify('There is no previous sprint to carry over from', 'err'); return; }
   ensureMigrated(prev);
   const pb = blocksOf(prev.id), have = new Set(blocksOf(sp.id).filter(b => b.k === 's').map(b => b.t.toLowerCase())), specs = []; let h = null, p = null, hEmit = false, pEmit = false, c = 0;
   pb.forEach((b, i) => {
@@ -325,7 +331,8 @@ function detailView(pg, sp, ro) {
   const sbn = setupBanner(); if (sbn) pg.append(sbn);
   const dr = el('div', 'spdates'), fa = el('input'), fb = el('input'); fa.type = fb.type = 'date'; fa.value = sp.a; fb.value = sp.b; fa.disabled = fb.disabled = ro; fa.setAttribute('aria-label', 'Sprint start date'); fb.setAttribute('aria-label', 'Sprint end date');
   const chg = () => setDates(sp, fa.value, fb.value, fa, fb); fa.addEventListener('change', chg); fb.addEventListener('change', chg);
-  dr.append(fld('From', fa), fld('To', fb), el('span', 'sub', (parseIso(sp.b) >= parseIso(sp.a) ? Math.round((parseIso(sp.b) - parseIso(sp.a)) / DAY) + 1 : 0) + ' days'));
+  const nn = el('input'); nn.type = 'number'; nn.min = 1; nn.max = 9999; nn.step = 1; nn.value = sp.n; nn.disabled = ro; nn.setAttribute('aria-label', 'Sprint number'); nn.addEventListener('change', () => setNumber(sp, nn));
+  dr.append(fld('Sprint number', nn), fld('From', fa), fld('To', fb), el('span', 'sub', (parseIso(sp.b) >= parseIso(sp.a) ? Math.round((parseIso(sp.b) - parseIso(sp.a)) / DAY) + 1 : 0) + ' days'));
   const ed = docEditor(sp, ro);
   const ab = el('button', 'btn primary', '+ Product section'), cb = el('button', 'btn', 'Carry over unfinished'); ab.type = cb.type = 'button'; ab.disabled = cb.disabled = ro;
   ab.addEventListener('click', () => ed.addSection()); cb.addEventListener('click', () => carryOver(sp, ed));

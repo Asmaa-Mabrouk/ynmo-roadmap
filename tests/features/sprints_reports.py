@@ -21,6 +21,10 @@ with sync_playwright() as pw:
     fb.fill('2026-10-20'); A.wait_for_timeout(500)
     ok('end date can be chosen', A.evaluate("Object.values(JSON.parse(localStorage.getItem('fk3')).sprints)[0].b")=='2026-10-20')
     fb.fill(b0); A.wait_for_timeout(400)
+    nn=A.locator('input[aria-label="Sprint number"]'); nn.fill('228'); nn.press('Tab'); A.wait_for_timeout(500)
+    ok('sprint number can be changed (title and breadcrumb follow)', A.locator('#pg-sprints h1').inner_text()=='Sprint 228' and A.locator('nav.crumbs [aria-current=page]').inner_text()=='Sprint 228' and A.evaluate("location.hash")=='#/sprints/sp1')
+    A.locator('input[aria-label="Sprint number"]').fill('0'); A.locator('input[aria-label="Sprint number"]').press('Tab'); A.wait_for_timeout(300)
+    ok('invalid sprint number rejected', A.locator('#toasts .toast.err').count()>=1 and A.locator('#pg-sprints h1').inner_text()=='Sprint 228')
     # ---- the document editor
     P=A
     def key(*ks):
@@ -29,7 +33,7 @@ with sync_playwright() as pw:
     def add_lane(name):
         P.locator('.sdoc .ghost .bt').click(); key('/'); typ('Product'); key('Enter'); typ(name); key('Enter'); P.wait_for_timeout(250)
     blocks=lambda: P.evaluate("Object.values(JSON.parse(localStorage.getItem('fk3')).sprint_items||{}).filter(x=>x.sp==='sp1').sort((a,b)=>a.ord-b.ord).map(x=>[x.k,x.t,x.st,(x.tags||[]).join(',')])")
-    ok('breadcrumb shows Sprints > Sprint 1 with a link back', P.locator('nav.crumbs li').count()==2 and P.locator('nav.crumbs li a').get_attribute('href')=='#/sprints' and P.locator('nav.crumbs [aria-current=page]').inner_text()=='Sprint 1')
+    ok('breadcrumb shows Sprints > Sprint 1 with a link back', P.locator('nav.crumbs li').count()==2 and P.locator('nav.crumbs li a').get_attribute('href')=='#/sprints' and P.locator('nav.crumbs [aria-current=page]').inner_text()=='Sprint 228')
     ok('no old back link or Jira field', P.locator('.spback').count()==0 and P.locator('.spjira').count()==0)
     ok('empty document explains how to start', 'Press / and choose Product section' in P.locator('.sdoc .ghost .bt').get_attribute('data-ph'))
     add_lane('Tifli')
@@ -73,7 +77,7 @@ with sync_playwright() as pw:
     A.locator('.spcard .spmore').click(); A.wait_for_timeout(150); A.locator('.cmenu .copt', has_text='Open in new tab').click(); A.wait_for_timeout(200)
     ok('new tab link keeps the sprint route and is opened without opener', A.evaluate("window.__opened")[0].endswith('#/sprints/sp1') and 'noopener' in A.evaluate("window.__opened")[2])
     A.goto(URL+'#/sprints/sp1'); A.reload(); A.wait_for_timeout(1500)
-    ok('opening the sprint fresh (new tab / reload) shows the same breadcrumb', A.locator('nav.crumbs li').count()==2 and A.locator('nav.crumbs [aria-current=page]').inner_text()=='Sprint 1')
+    ok('opening the sprint fresh (new tab / reload) shows the same breadcrumb', A.locator('nav.crumbs li').count()==2 and A.locator('nav.crumbs [aria-current=page]').inner_text()=='Sprint 228')
     # old-format sprint is converted when opened
     A.evaluate("""()=>{const d=JSON.parse(localStorage.getItem('fk3'));d.sprints.sp9={n:9,a:'2026-01-05',b:'2026-01-18',note:'',secs:{tifli:{people:['Lea']}}};d.sprint_items.old1={sp:'sp9',squad:'tifli',person:'Lea',par:'',t:'Legacy scope',kind:'fix',st:'progress',ord:1};d.sprint_items.old2={sp:'sp9',squad:'tifli',person:'Lea',par:'old1',t:'Legacy child',kind:'fix',st:'done',ord:2};localStorage.setItem('fk3',JSON.stringify(d));}""")
     A.reload(); A.wait_for_timeout(1500); A.goto(URL+'#/sprints/sp9'); A.wait_for_timeout(1200)
@@ -158,7 +162,7 @@ with sync_playwright() as pw:
     B.reload(); B.wait_for_timeout(1500); C.reload(); C.wait_for_timeout(1500)
     ok('viewer nav: no Sprints, has Reports', C.locator('#nav button[data-p="sprints"]').count()==0 and C.locator('#nav button[data-p="reports"]').count()==1)
     C.click('#nav button[data-p="reports"]'); C.wait_for_timeout(500)
-    ok('viewer sees only submitted report, read-only', C.locator('#pg-reports select[aria-label="Report"] option').count()==1 and 'Sprint 1' in C.locator('#pg-reports').inner_text() and C.locator('#pg-reports textarea:not([disabled]), #pg-reports .rline input:not([disabled])').count()==0 and C.locator('button:text-is("Submit to executives")').count()==0)
+    ok('viewer sees only submitted report, read-only', C.locator('#pg-reports select[aria-label="Report"] option').count()==1 and 'Sprint 228' in C.locator('#pg-reports').inner_text() and C.locator('#pg-reports textarea:not([disabled]), #pg-reports .rline input:not([disabled])').count()==0 and C.locator('button:text-is("Submit to executives")').count()==0)
     C.goto(URL+'#/sprints'); C.wait_for_timeout(800); ok('viewer cannot open Sprints by URL', C.locator('#pg-sprints').is_hidden())
     B.click('#nav button[data-p="reports"]'); B.wait_for_timeout(500)
     ok('editor sees drafts and can submit', B.locator('#pg-reports select[aria-label="Report"] option').count()==2 and B.locator('button:text-is("Submit to executives")').count()==1)
