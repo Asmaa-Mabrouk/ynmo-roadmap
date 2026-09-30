@@ -13,7 +13,8 @@ import { canWrite, isViewer, openDlg, closeDlg } from '../features/safety.js';
 import { allRoadmaps, withRm } from './roadmaps.js';
 import { items } from '../core/model.js';
 import { saveIdea } from './ideas.js';
-import { itemsOf, sprintList } from './sprints.js';
+import { itemsOf, parsePaste, sprintList } from './sprints.js';
+import { cleanHtml, hasFormat, showRich, toPlain } from '../features/rich-text.js';
 import { GROUPS, RSTATUS, aiPayload, applyAi, buildProds, jiraUrl, newManualLine, overall, productsOf, reportToText, ruleSummary } from '../features/report-model.js';
 
 const SPARK = '<svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8L2.5 17.5l1.8-.7z"/></svg>';
@@ -112,8 +113,29 @@ function settingsDlg() {
   });
 }
 
+/** Toolbar shared by every rich field of the report; it acts on the field that has focus. */
+function richBar() {
+  const bar = el('div', 'rbar'); bar.setAttribute('role', 'toolbar'); bar.setAttribute('aria-label', 'Text formatting');
+  const b = (label, title, fn) => { const x = el('button', 'btn sm', label); x.type = 'button'; x.title = title; x.setAttribute('aria-label', title); x.addEventListener('mousedown', e => e.preventDefault()); x.addEventListener('click', () => { if (document.activeElement && document.activeElement.classList.contains('rt')) fn(); else toast('Click inside a text box first'); }); bar.append(x); return x; };
+  b('B', 'Bold', () => document.execCommand('bold')).style.fontWeight = '800';
+  b('I', 'Italic', () => document.execCommand('italic')).style.fontStyle = 'italic';
+  b('U', 'Underline', () => document.execCommand('underline')).style.textDecoration = 'underline';
+  b('• List', 'Bulleted list', () => document.execCommand('insertUnorderedList'));
+  b('1. List', 'Numbered list', () => document.execCommand('insertOrderedList'));
+  b('Link', 'Add link (https)', () => { const u = window.prompt('Link address (https://…)', 'https://'); if (u && /^https:\/\//i.test(u.trim())) document.execCommand('createLink', false, u.trim()); });
+  b('Clear', 'Remove formatting', () => document.execCommand('removeFormat'));
+  return bar;
+}
+/** A rich, editable box. `onSave(html, plain)` runs when the user leaves it. */
+function richBox(cls, html, plain, label, onSave) {
+  const d = el('div', 'rt ' + cls); d.contentEditable = 'true'; d.setAttribute('role', 'textbox'); d.setAttribute('aria-multiline', 'true'); d.setAttribute('aria-label', label); d.spellcheck = true;
+  showRich(d, html, plain); d.dataset.init = d.innerHTML;
+  d.addEventListener('paste', e => { const cd = e.clipboardData; if (!cd) return; e.preventDefault(); const h = cd.getData('text/html'); if (h) document.execCommand('insertHTML', false, cleanHtml(h)); else document.execCommand('insertText', false, cd.getData('text/plain')); });
+  d.addEventListener('blur', () => { const h = cleanHtml(d.innerHTML), pl = toPlain(h); if (d.dataset.init === h) return; d.dataset.init = h; onSave(hasFormat(h) ? h : '', pl); });
+  return d;
+}
 function viewLine(l) {
-  const r = el('div', 'rv st-' + l.st); r.append(el('span', 'dot rs-' + l.st), el('span', 'rvt', l.t));
+  const r = el('div', 'rv st-' + l.st), t = el('span', 'rvt'); showRich(t, l.h, l.t); r.append(el('span', 'dot rs-' + l.st), t);
   const u = jiraUrl(cfg().jira, l.jira); if (l.jira) { const a = el(u ? 'a' : 'span', 'jira', l.jira); if (u) { a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer'; } r.append(a); }
   if (l.st === 'risk' || l.st === 'late') r.append(el('span', 'chip rs-' + l.st, RSTATUS[l.st]));
   return r;
@@ -122,34 +144,36 @@ function lineRow(rep, d, l, ro) {
   if (ro) return viewLine(l);
   const r = el('div', 'rline st-' + l.st + (l.hide ? ' hid' : '')); r.dataset.id = l.id;
   const touch = patch => { Object.assign(l, patch, { edited: true }); save(rep); };
-  const st = el('select', 'spsel rst-' + l.st); st.disabled = ro; st.setAttribute('aria-label', 'Status'); Object.keys(RSTATUS).forEach(k => { const o = el('option', '', RSTATUS[k]); o.value = k; o.selected = k === l.st; st.append(o); });
+  const st = el('select', 'spsel rst-' + l.st); st.setAttribute('aria-label', 'Status'); Object.keys(RSTATUS).forEach(k => { const o = el('option', '', RSTATUS[k]); o.value = k; o.selected = k === l.st; st.append(o); });
   st.addEventListener('change', () => { touch({ st: st.value }); renderReports(); });
-  const t = el('input', 'sptext'); t.value = l.t; t.disabled = ro; t.setAttribute('aria-label', 'Line text'); t.addEventListener('change', () => { const v = t.value.trim(); if (!v) { t.value = l.t; return; } touch({ t: v.slice(0, 400) }); });
+  const t = richBox('sptext', l.h, l.t, 'Line text', (h, pl) => { if (!pl) { showRich(t, l.h, l.t); return; } touch({ t: pl.slice(0, 1200), h: h.slice(0, 4000) }); });
   r.append(st, t);
   const u = jiraUrl(cfg().jira, l.jira);
   if (l.jira) { const a = el(u ? 'a' : 'span', 'jira', l.jira); if (u) { a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer'; } r.append(a); }
-  if (!ro) {
-    const g = el('select', 'spsel'); g.setAttribute('aria-label', 'Group'); GROUPS.forEach(x => { const o = el('option', '', x[1]); o.value = x[0]; o.selected = x[0] === l.g; g.append(o); });
-    g.addEventListener('change', () => { touch({ g: g.value }); renderReports(); });
-    const h = el('button', 'btn sm', l.hide ? 'Show' : 'Hide'); h.type = 'button'; h.addEventListener('click', () => { touch({ hide: !l.hide }); renderReports(); });
-    const x = el('button', 'btn sm danger', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Delete line'); x.addEventListener('click', () => { if (l.src === 'man') d.items = d.items.filter(z => z.id !== l.id); else touch({ hide: true }); save(rep); renderReports(); });
-    r.append(g, h, x);
-  }
+  const g = el('select', 'spsel'); g.setAttribute('aria-label', 'Group'); GROUPS.forEach(x => { const o = el('option', '', x[1]); o.value = x[0]; o.selected = x[0] === l.g; g.append(o); });
+  g.addEventListener('change', () => { touch({ g: g.value }); renderReports(); });
+  const h = el('button', 'btn sm', l.hide ? 'Show' : 'Hide'); h.type = 'button'; h.addEventListener('click', () => { touch({ hide: !l.hide }); renderReports(); });
+  const x = el('button', 'btn sm danger', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Delete line'); x.addEventListener('click', () => { if (l.src === 'man') d.items = d.items.filter(z => z.id !== l.id); else touch({ hide: true }); save(rep); renderReports(); });
+  r.append(g, h, x);
   return r;
 }
 function prodBlock(rep, p, ro) {
   const d = rep.prods[p.k]; if (!d) return el('div');
   const sec = el('section', 'card rprod'); sec.dataset.k = p.k;
   const hd = el('div', 'rphead'), s = overall(d.items); hd.append(el('h2', '', p.n), el('span', 'chip rs-' + s, RSTATUS[s])); sec.append(hd);
-  if (ro) { sec.classList.add('rview'); sec.style.setProperty('--rc', 'var(--rc-' + s + ')'); if (d.sum) sec.append(el('p', 'rsumv', d.sum)); }
-  const sm = el('textarea', 'rsum'); sm.value = d.sum || ''; sm.rows = 3; sm.disabled = ro; sm.setAttribute('aria-label', 'Summary for ' + p.n);
-  sm.addEventListener('change', () => { d.sum = sm.value.trim() || ruleSummary(p.n, d.items); d.sumEdited = !!sm.value.trim(); save(rep); });
-  if (!ro) sec.append(sm);
+  if (ro) { sec.classList.add('rview'); sec.style.setProperty('--rc', 'var(--rc-' + s + ')'); if (d.sum) { const sv = el('div', 'rsumv'); showRich(sv, d.sumH, d.sum); sec.append(sv); } }
+  else sec.append(richBox('rsum', d.sumH, d.sum, 'Summary for ' + p.n, (h, pl) => { d.sum = pl || ruleSummary(p.n, d.items); d.sumH = pl ? h : ''; d.sumEdited = !!pl; save(rep); }));
   GROUPS.forEach(g => {
     const ls = d.items.filter(l => l.g === g[0] && (!ro || !l.hide));
     if (!ls.length && ro) return;
     const gh = el('div', 'rgrp'); gh.append(el('h3', '', g[1])); ls.forEach(l => gh.append(lineRow(rep, d, l, ro)));
-    if (!ro) { const f = el('form', 'spadd'), i = el('input'); i.placeholder = 'Add a line to "' + g[1] + '"'; i.setAttribute('aria-label', 'Add line to ' + g[1]); f.append(i); f.addEventListener('submit', e => { e.preventDefault(); const v = i.value.trim(); if (!v) return; d.items.push(newManualLine(g[0], v.slice(0, 400))); save(rep); renderReports(); }); gh.append(f); }
+    if (!ro) {
+      const f = el('form', 'spadd'), ta = el('textarea'), go = el('button', 'btn sm', 'Add items'); go.type = 'submit';
+      ta.rows = 2; ta.placeholder = 'Add to "' + g[1] + '": type or paste one or many items, one per line (bullets and Jira keys are recognised)'; ta.setAttribute('aria-label', 'Add items to ' + g[1]);
+      f.append(ta, go);
+      f.addEventListener('submit', e => { e.preventDefault(); const rows = parsePaste(ta.value); if (!rows.length) return; rows.forEach(r => { const n = newManualLine(g[0], r.t); n.jira = r.jira; d.items.push(n); }); save(rep, 'added ' + rows.length + ' line' + (rows.length === 1 ? '' : 's') + ' to the weekly report'); renderReports(); });
+      gh.append(f);
+    }
     sec.append(gh);
   });
   return sec;
@@ -182,7 +206,7 @@ export function renderReports() {
   const hero = el('div', 'rhero'); hero.append(el('small', '', 'Ynmo · Weekly product update'), el('h2', 'rtitle', fmtIso(rep.a) + ' – ' + fmtIso(rep.b)), el('span', 'rsp', 'Sprint ' + rep.n + ' · week ' + (rep.w || 1) + ' of 2')); body.append(hero);
   const glance = el('div', 'rglance');
   pls.forEach(p => { const d = rep.prods[p.k]; if (!d) return; const v = d.items.filter(l => !l.hide), s = overall(d.items), t = el('div', 'rtile rs-' + s); t.append(el('b', '', p.n), el('span', 'chip rs-' + s, RSTATUS[s]), el('small', '', v.filter(l => l.g === 'done').length + ' delivered · ' + v.filter(l => l.g === 'prog').length + ' in progress · ' + v.filter(l => l.st === 'risk' || l.st === 'late').length + ' at risk')); glance.append(t); });
-  body.append(glance);
+  body.append(glance); if (!ro) body.append(richBar());
   pls.forEach(p => body.append(prodBlock(rep, p, ro)));
   pg.append(meta, tools); if (rUI.note && !viewer && !sub) { const nt = el('p', 'rnote' + (rUI.err ? ' bad' : ''), rUI.note); nt.setAttribute('role', 'status'); pg.append(nt); } pg.append(body);
 }

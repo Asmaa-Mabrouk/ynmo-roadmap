@@ -602,6 +602,20 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .rnote { margin: 4px 0 12px; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--brand) 10%, #fff); font-size: .92rem; }
 .rnote.bad, .rerr { background: #fdecea; color: #8a1c14; border: 1.5px solid #c0392b; }
 .rerr { border-radius: 10px; padding: 10px 14px; margin: 0 0 12px; }
+
+/* rich text boxes */
+.rt { min-height: 38px; padding: 8px 10px; border: 1.5px solid var(--line); border-radius: 8px; background: var(--surface); line-height: 1.55; overflow-wrap: anywhere; }
+.rt:focus { outline: 2px solid var(--focus, var(--brand)); outline-offset: 1px; }
+.rt.rsum { min-height: 150px; font-size: 1.02rem; margin: 8px 0 12px; resize: vertical; overflow: auto; }
+.rt.sptext { flex: 1 1 320px; min-height: 42px; }
+.rt ul, .rt ol, .rsumv ul, .rsumv ol, .rvt ul, .rvt ol { margin: 4px 0; padding-inline-start: 22px; }
+.rt p, .rsumv p { margin: 0 0 6px; }
+.rt a, .rsumv a, .rvt a { color: var(--brand); text-decoration: underline; }
+.rbar { position: sticky; top: 0; z-index: 20; display: flex; gap: 6px; flex-wrap: wrap; padding: 8px; margin: 0 0 12px; background: var(--surface); border: 1.5px solid var(--line); border-radius: 10px; box-shadow: 0 2px 8px rgba(20, 24, 50, .08); }
+.spadd textarea { width: 100%; font: inherit; padding: 8px 10px; border: 1.5px solid var(--line); border-radius: 8px; resize: vertical; min-height: 56px; }
+.spadd { display: flex; gap: 8px; align-items: flex-start; }
+.spadd .btn { flex: none; }
+.rsumv, .rvt { white-space: pre-line; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -1553,13 +1567,13 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     return Array.isArray(it.dep) ? it.dep : [];
   }
   function dependents(id, all) {
-    const out = /* @__PURE__ */ new Set(), walk = (x) => all.forEach((i) => {
+    const out = /* @__PURE__ */ new Set(), walk2 = (x) => all.forEach((i) => {
       if (depsOf(i).includes(x) && !out.has(i.id)) {
         out.add(i.id);
-        walk(i.id);
+        walk2(i.id);
       }
     });
-    walk(id);
+    walk2(id);
     return out;
   }
   function depIssues(all) {
@@ -4711,7 +4725,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       const p = by.get(f.src);
       if (!p) out.push({ id: uid(), src: f.src, g: f.g, st: f.st, t: f.t, t0: f.t, jira: f.jira, kind: f.kind, hide: false, edited: false });
       else if (p.edited) out.push(p);
-      else out.push(Object.assign({}, p, { g: f.g, st: f.st, t: f.t, t0: f.t, jira: f.jira, kind: f.kind }));
+      else out.push(Object.assign({}, p, { g: f.g, st: f.st, t: f.t, t0: f.t, jira: f.jira, kind: f.kind, h: "" }));
     });
     (prev || []).forEach((p) => {
       if (!seen.has(p.src) && (p.src === "man" || p.edited)) out.push(p);
@@ -4743,7 +4757,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     products.forEach((p) => {
       const old = prevProds && prevProds[p.k] || {}, lines = mergeLines(old.items, sourceLines(p, sitems, road, ka, kb, a, b));
       lines.sort((a2, b2) => GROUPS.findIndex((g) => g[0] === a2.g) - GROUPS.findIndex((g) => g[0] === b2.g));
-      out[p.k] = { items: lines, sum: old.sumEdited ? old.sum : ruleSummary(p.n, lines), sumEdited: !!old.sumEdited };
+      out[p.k] = { items: lines, sum: old.sumEdited ? old.sum : ruleSummary(p.n, lines), sumH: old.sumEdited ? old.sumH || "" : "", sumEdited: !!old.sumEdited };
     });
     return out;
   }
@@ -4757,6 +4771,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       if (!p || !r) return;
       if (r.summary && !p.sumEdited && r.summary !== p.sum) {
         p.sum = String(r.summary);
+        p.sumH = "";
         n++;
       }
       const by = new Map((r.items || []).map((i) => [i.id, i.text]));
@@ -4764,6 +4779,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
         const t = by.get(l.id);
         if (t && !l.edited && t !== l.t) {
           l.t = String(t);
+          l.h = "";
           n++;
         }
       });
@@ -4785,6 +4801,71 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       out.push("");
     });
     return out.join("\n").trim() + "\n";
+  }
+
+  // src/esm/features/rich-text.js
+  var KEEP = { B: "b", STRONG: "b", I: "i", EM: "i", U: "u", UL: "ul", OL: "ol", LI: "li", BR: "br", P: "p", DIV: "p" };
+  var DROP = /* @__PURE__ */ new Set(["SCRIPT", "STYLE", "IFRAME", "OBJECT", "EMBED", "NOSCRIPT", "TEMPLATE", "SVG", "MATH"]);
+  function walk(src, out) {
+    src.childNodes.forEach((n) => {
+      if (n.nodeType === 3) {
+        out.appendChild(document.createTextNode(n.nodeValue));
+        return;
+      }
+      if (n.nodeType !== 1 || DROP.has(n.tagName)) return;
+      const tag = KEEP[n.tagName];
+      if (n.tagName === "A") {
+        const href = n.getAttribute("href") || "";
+        if (/^https:\/\//i.test(href) || /^mailto:/i.test(href)) {
+          const a = document.createElement("a");
+          a.href = href;
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
+          walk(n, a);
+          out.appendChild(a);
+        } else walk(n, out);
+      } else if (tag === "br") out.appendChild(document.createElement("br"));
+      else if (tag) {
+        const e = document.createElement(tag);
+        walk(n, e);
+        out.appendChild(e);
+      } else walk(n, out);
+    });
+  }
+  function cleanFragment(html) {
+    const doc = new DOMParser().parseFromString("<body>" + String(html || "") + "</body>", "text/html"), frag = document.createDocumentFragment();
+    walk(doc.body, frag);
+    return frag;
+  }
+  function cleanHtml(html) {
+    const box = document.createElement("div");
+    box.appendChild(cleanFragment(html));
+    return box.innerHTML;
+  }
+  function toPlain(html) {
+    const out = [];
+    const go = (n, pre) => n.childNodes.forEach((c) => {
+      if (c.nodeType === 3) out.push(c.nodeValue);
+      else if (c.tagName === "BR") out.push("\n");
+      else if (c.tagName === "LI") {
+        out.push("\n- ");
+        go(c, pre);
+      } else if (c.tagName === "P") {
+        out.push("\n");
+        go(c, pre);
+        out.push("\n");
+      } else go(c, pre);
+    });
+    const box = document.createElement("div");
+    box.appendChild(cleanFragment(html));
+    go(box, "");
+    return out.join("").replace(/\n{3,}/g, "\n\n").trim();
+  }
+  var hasFormat = (html) => /<(b|i|u|ul|ol|li|a|p|br)[\s>]/i.test(cleanHtml(html));
+  function showRich(target, html, plain) {
+    target.textContent = "";
+    if (html) target.appendChild(cleanFragment(html));
+    else target.textContent = plain || "";
   }
 
   // src/esm/pages/reports.js
@@ -4962,9 +5043,64 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       box.append(el("p", "sub", "One section per product. Tick the squads that belong to it."), list, add, fld("Jira base URL (optional, https only)", jb), row);
     });
   }
+  function richBar() {
+    const bar = el("div", "rbar");
+    bar.setAttribute("role", "toolbar");
+    bar.setAttribute("aria-label", "Text formatting");
+    const b = (label, title, fn) => {
+      const x = el("button", "btn sm", label);
+      x.type = "button";
+      x.title = title;
+      x.setAttribute("aria-label", title);
+      x.addEventListener("mousedown", (e) => e.preventDefault());
+      x.addEventListener("click", () => {
+        if (document.activeElement && document.activeElement.classList.contains("rt")) fn();
+        else toast("Click inside a text box first");
+      });
+      bar.append(x);
+      return x;
+    };
+    b("B", "Bold", () => document.execCommand("bold")).style.fontWeight = "800";
+    b("I", "Italic", () => document.execCommand("italic")).style.fontStyle = "italic";
+    b("U", "Underline", () => document.execCommand("underline")).style.textDecoration = "underline";
+    b("• List", "Bulleted list", () => document.execCommand("insertUnorderedList"));
+    b("1. List", "Numbered list", () => document.execCommand("insertOrderedList"));
+    b("Link", "Add link (https)", () => {
+      const u = window.prompt("Link address (https://…)", "https://");
+      if (u && /^https:\/\//i.test(u.trim())) document.execCommand("createLink", false, u.trim());
+    });
+    b("Clear", "Remove formatting", () => document.execCommand("removeFormat"));
+    return bar;
+  }
+  function richBox(cls, html, plain, label, onSave) {
+    const d = el("div", "rt " + cls);
+    d.contentEditable = "true";
+    d.setAttribute("role", "textbox");
+    d.setAttribute("aria-multiline", "true");
+    d.setAttribute("aria-label", label);
+    d.spellcheck = true;
+    showRich(d, html, plain);
+    d.dataset.init = d.innerHTML;
+    d.addEventListener("paste", (e) => {
+      const cd = e.clipboardData;
+      if (!cd) return;
+      e.preventDefault();
+      const h = cd.getData("text/html");
+      if (h) document.execCommand("insertHTML", false, cleanHtml(h));
+      else document.execCommand("insertText", false, cd.getData("text/plain"));
+    });
+    d.addEventListener("blur", () => {
+      const h = cleanHtml(d.innerHTML), pl = toPlain(h);
+      if (d.dataset.init === h) return;
+      d.dataset.init = h;
+      onSave(hasFormat(h) ? h : "", pl);
+    });
+    return d;
+  }
   function viewLine(l) {
-    const r = el("div", "rv st-" + l.st);
-    r.append(el("span", "dot rs-" + l.st), el("span", "rvt", l.t));
+    const r = el("div", "rv st-" + l.st), t = el("span", "rvt");
+    showRich(t, l.h, l.t);
+    r.append(el("span", "dot rs-" + l.st), t);
     const u = jiraUrl(cfg().jira, l.jira);
     if (l.jira) {
       const a = el(u ? "a" : "span", "jira", l.jira);
@@ -4987,7 +5123,6 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       save(rep);
     };
     const st = el("select", "spsel rst-" + l.st);
-    st.disabled = ro;
     st.setAttribute("aria-label", "Status");
     Object.keys(RSTATUS).forEach((k) => {
       const o = el("option", "", RSTATUS[k]);
@@ -4999,17 +5134,12 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       touch({ st: st.value });
       renderReports();
     });
-    const t = el("input", "sptext");
-    t.value = l.t;
-    t.disabled = ro;
-    t.setAttribute("aria-label", "Line text");
-    t.addEventListener("change", () => {
-      const v = t.value.trim();
-      if (!v) {
-        t.value = l.t;
+    const t = richBox("sptext", l.h, l.t, "Line text", (h2, pl) => {
+      if (!pl) {
+        showRich(t, l.h, l.t);
         return;
       }
-      touch({ t: v.slice(0, 400) });
+      touch({ t: pl.slice(0, 1200), h: h2.slice(0, 4e3) });
     });
     r.append(st, t);
     const u = jiraUrl(cfg().jira, l.jira);
@@ -5022,36 +5152,34 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       }
       r.append(a);
     }
-    if (!ro) {
-      const g = el("select", "spsel");
-      g.setAttribute("aria-label", "Group");
-      GROUPS.forEach((x2) => {
-        const o = el("option", "", x2[1]);
-        o.value = x2[0];
-        o.selected = x2[0] === l.g;
-        g.append(o);
-      });
-      g.addEventListener("change", () => {
-        touch({ g: g.value });
-        renderReports();
-      });
-      const h = el("button", "btn sm", l.hide ? "Show" : "Hide");
-      h.type = "button";
-      h.addEventListener("click", () => {
-        touch({ hide: !l.hide });
-        renderReports();
-      });
-      const x = el("button", "btn sm danger", "✕");
-      x.type = "button";
-      x.setAttribute("aria-label", "Delete line");
-      x.addEventListener("click", () => {
-        if (l.src === "man") d.items = d.items.filter((z) => z.id !== l.id);
-        else touch({ hide: true });
-        save(rep);
-        renderReports();
-      });
-      r.append(g, h, x);
-    }
+    const g = el("select", "spsel");
+    g.setAttribute("aria-label", "Group");
+    GROUPS.forEach((x2) => {
+      const o = el("option", "", x2[1]);
+      o.value = x2[0];
+      o.selected = x2[0] === l.g;
+      g.append(o);
+    });
+    g.addEventListener("change", () => {
+      touch({ g: g.value });
+      renderReports();
+    });
+    const h = el("button", "btn sm", l.hide ? "Show" : "Hide");
+    h.type = "button";
+    h.addEventListener("click", () => {
+      touch({ hide: !l.hide });
+      renderReports();
+    });
+    const x = el("button", "btn sm danger", "✕");
+    x.type = "button";
+    x.setAttribute("aria-label", "Delete line");
+    x.addEventListener("click", () => {
+      if (l.src === "man") d.items = d.items.filter((z) => z.id !== l.id);
+      else touch({ hide: true });
+      save(rep);
+      renderReports();
+    });
+    r.append(g, h, x);
     return r;
   }
   function prodBlock(rep, p, ro) {
@@ -5065,19 +5193,17 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     if (ro) {
       sec.classList.add("rview");
       sec.style.setProperty("--rc", "var(--rc-" + s + ")");
-      if (d.sum) sec.append(el("p", "rsumv", d.sum));
-    }
-    const sm = el("textarea", "rsum");
-    sm.value = d.sum || "";
-    sm.rows = 3;
-    sm.disabled = ro;
-    sm.setAttribute("aria-label", "Summary for " + p.n);
-    sm.addEventListener("change", () => {
-      d.sum = sm.value.trim() || ruleSummary(p.n, d.items);
-      d.sumEdited = !!sm.value.trim();
+      if (d.sum) {
+        const sv2 = el("div", "rsumv");
+        showRich(sv2, d.sumH, d.sum);
+        sec.append(sv2);
+      }
+    } else sec.append(richBox("rsum", d.sumH, d.sum, "Summary for " + p.n, (h, pl) => {
+      d.sum = pl || ruleSummary(p.n, d.items);
+      d.sumH = pl ? h : "";
+      d.sumEdited = !!pl;
       save(rep);
-    });
-    if (!ro) sec.append(sm);
+    }));
     GROUPS.forEach((g) => {
       const ls = d.items.filter((l) => l.g === g[0] && (!ro || !l.hide));
       if (!ls.length && ro) return;
@@ -5085,16 +5211,22 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       gh.append(el("h3", "", g[1]));
       ls.forEach((l) => gh.append(lineRow(rep, d, l, ro)));
       if (!ro) {
-        const f = el("form", "spadd"), i = el("input");
-        i.placeholder = 'Add a line to "' + g[1] + '"';
-        i.setAttribute("aria-label", "Add line to " + g[1]);
-        f.append(i);
+        const f = el("form", "spadd"), ta = el("textarea"), go = el("button", "btn sm", "Add items");
+        go.type = "submit";
+        ta.rows = 2;
+        ta.placeholder = 'Add to "' + g[1] + '": type or paste one or many items, one per line (bullets and Jira keys are recognised)';
+        ta.setAttribute("aria-label", "Add items to " + g[1]);
+        f.append(ta, go);
         f.addEventListener("submit", (e) => {
           e.preventDefault();
-          const v = i.value.trim();
-          if (!v) return;
-          d.items.push(newManualLine(g[0], v.slice(0, 400)));
-          save(rep);
+          const rows = parsePaste(ta.value);
+          if (!rows.length) return;
+          rows.forEach((r) => {
+            const n = newManualLine(g[0], r.t);
+            n.jira = r.jira;
+            d.items.push(n);
+          });
+          save(rep, "added " + rows.length + " line" + (rows.length === 1 ? "" : "s") + " to the weekly report");
           renderReports();
         });
         gh.append(f);
@@ -5209,6 +5341,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       glance.append(t);
     });
     body.append(glance);
+    if (!ro) body.append(richBar());
     pls.forEach((p) => body.append(prodBlock(rep, p, ro)));
     pg.append(meta, tools);
     if (rUI.note && !viewer && !sub) {

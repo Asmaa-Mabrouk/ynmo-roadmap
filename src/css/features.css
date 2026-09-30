@@ -179,3 +179,17 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .rnote { margin: 4px 0 12px; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--brand) 10%, #fff); font-size: .92rem; }
 .rnote.bad, .rerr { background: #fdecea; color: #8a1c14; border: 1.5px solid #c0392b; }
 .rerr { border-radius: 10px; padding: 10px 14px; margin: 0 0 12px; }
+
+/* rich text boxes */
+.rt { min-height: 38px; padding: 8px 10px; border: 1.5px solid var(--line); border-radius: 8px; background: var(--surface); line-height: 1.55; overflow-wrap: anywhere; }
+.rt:focus { outline: 2px solid var(--focus, var(--brand)); outline-offset: 1px; }
+.rt.rsum { min-height: 150px; font-size: 1.02rem; margin: 8px 0 12px; resize: vertical; overflow: auto; }
+.rt.sptext { flex: 1 1 320px; min-height: 42px; }
+.rt ul, .rt ol, .rsumv ul, .rsumv ol, .rvt ul, .rvt ol { margin: 4px 0; padding-inline-start: 22px; }
+.rt p, .rsumv p { margin: 0 0 6px; }
+.rt a, .rsumv a, .rvt a { color: var(--brand); text-decoration: underline; }
+.rbar { position: sticky; top: 0; z-index: 20; display: flex; gap: 6px; flex-wrap: wrap; padding: 8px; margin: 0 0 12px; background: var(--surface); border: 1.5px solid var(--line); border-radius: 10px; box-shadow: 0 2px 8px rgba(20, 24, 50, .08); }
+.spadd textarea { width: 100%; font: inherit; padding: 8px 10px; border: 1.5px solid var(--line); border-radius: 8px; resize: vertical; min-height: 56px; }
+.spadd { display: flex; gap: 8px; align-items: flex-start; }
+.spadd .btn { flex: none; }
+.rsumv, .rvt { white-space: pre-line; }

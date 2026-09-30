@@ -23,6 +23,8 @@ only usability. The only key in the client is the *publishable* key. Never commi
 | Executives seeing unsent drafts / sprint internals | `reports` readable by viewers only when `status='submitted'`; `sprints`/`sprint_items` editor-only; editors/admins submit; only admins delete submitted reports | sql/06 |
 | Gemini key leak / prompt injection | Key only in Edge Function secrets; caller must be an editor; item text treated as untrusted data; output schema-constrained and filtered to known ids; only titles are sent | functions/weekly-draft |
 
+| Stored XSS through rich text in reports | HTML is never inserted as-is: `cleanFragment` rebuilds nodes from a tag whitelist (b, i, u, ul, ol, li, br, p, https/mailto links); scripts, handlers, styles and `javascript:` links are dropped on paste and on display | features/rich-text.js |
+
 ## Known limits / residual risk
 - CSP keeps `'unsafe-inline'` for script/style because the app is one inline file; moving to hashed/nonce inline or external files would remove it.
 - Anyone with a share link can read that snapshot until revoked.

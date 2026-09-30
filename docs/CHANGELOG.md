@@ -7,6 +7,8 @@
 
 - **Weekly report UX:** sparkle "Generate with AI" button (gradient, visually the main action); explicit errors instead of silent fallbacks (no data for the week, AI function not deployed, key missing, not allowed); the AI is never called without data; the report shows what it was built from; a red "Database setup needed" banner when SQL 06 has not been run (previously shown as a misleading "offline" banner).
 
+- **Report editing:** large summary box, rich text (bold, italic, underline, bullet/numbered lists, https links) via a shared toolbar, and a multi-line "Add items" box per section (paste a list, one line per item, Jira keys recognised). Rich text is stored as HTML but always rebuilt through a whitelist sanitizer (`features/rich-text.js`) before it is shown.
+
 ## Engineering hygiene
 - **Person rows:** drag grip (⋮⋮) to reorder rows and a ⋯ menu (Move up/down, Hide from this roadmap) in the by-person roadmap; order shared via `ideas/peopleorder`, hidden rows per roadmap via `ideas/peoplehide` (only empty rows; "Show hidden" restores).
 - **Fixes from the live QA run:** a realtime refresh could revert an edit that was still being saved (new roadmap not selected for Editors, column "Move left" appearing to do nothing) - now unsaved local documents are kept (`snapDocs`); deleting a roadmap returns its scheduled ideas to the backlog; leaving a dead share link by URL works; stale vacation notice cleared; "1 dependency" wording; partial-leave weeks flagged on Capacity (⚑); schedule/remove-column confirmations; reversed-date explanation; edit hint hidden for viewers/shared; rename box no longer clipped on narrow bars.

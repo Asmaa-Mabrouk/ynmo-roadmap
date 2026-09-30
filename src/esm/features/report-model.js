@@ -61,7 +61,7 @@ export function mergeLines(prev, fresh) {
     seen.add(f.src); const p = by.get(f.src);
     if (!p) out.push({ id: uid(), src: f.src, g: f.g, st: f.st, t: f.t, t0: f.t, jira: f.jira, kind: f.kind, hide: false, edited: false });
     else if (p.edited) out.push(p);
-    else out.push(Object.assign({}, p, { g: f.g, st: f.st, t: f.t, t0: f.t, jira: f.jira, kind: f.kind }));
+    else out.push(Object.assign({}, p, { g: f.g, st: f.st, t: f.t, t0: f.t, jira: f.jira, kind: f.kind, h: '' }));
   });
   (prev || []).forEach(p => { if (!seen.has(p.src) && (p.src === 'man' || p.edited)) out.push(p); });
   return out;
@@ -94,7 +94,7 @@ export function buildProds(products, prevProds, sitems, road, ka, kb, a, b) {
   products.forEach(p => {
     const old = (prevProds && prevProds[p.k]) || {}, lines = mergeLines(old.items, sourceLines(p, sitems, road, ka, kb, a, b));
     lines.sort((a, b) => GROUPS.findIndex(g => g[0] === a.g) - GROUPS.findIndex(g => g[0] === b.g));
-    out[p.k] = { items: lines, sum: old.sumEdited ? old.sum : ruleSummary(p.n, lines), sumEdited: !!old.sumEdited };
+    out[p.k] = { items: lines, sum: old.sumEdited ? old.sum : ruleSummary(p.n, lines), sumH: old.sumEdited ? (old.sumH || '') : '', sumEdited: !!old.sumEdited };
   });
   return out;
 }
@@ -108,9 +108,9 @@ export function applyAi(prods, ai) {
   let n = 0;
   Object.keys((ai && ai.products) || {}).forEach(k => {
     const p = prods[k], r = ai.products[k]; if (!p || !r) return;
-    if (r.summary && !p.sumEdited && r.summary !== p.sum) { p.sum = String(r.summary); n++; }
+    if (r.summary && !p.sumEdited && r.summary !== p.sum) { p.sum = String(r.summary); p.sumH = ''; n++; }
     const by = new Map((r.items || []).map(i => [i.id, i.text]));
-    p.items.forEach(l => { const t = by.get(l.id); if (t && !l.edited && t !== l.t) { l.t = String(t); n++; } });
+    p.items.forEach(l => { const t = by.get(l.id); if (t && !l.edited && t !== l.t) { l.t = String(t); l.h = ''; n++; } });
   });
   return n;
 }
