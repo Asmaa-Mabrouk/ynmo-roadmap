@@ -29,5 +29,9 @@ The bundle is an IIFE, so tests reach internals through `window.__ynmo` (`items,
 4. Anyone: `UPDATE baselines set data = …` (other than `active`) → error. 5. Anonymous: `select * from items` → 0 rows; `rpc('shared_snapshot', {t:'bad'})` → null.
 6. Unapproved user sees nothing.
 
+7. Weekly report: as viewer, `select` on `reports` returns submitted rows only and `sprints`/`sprint_items` return none; as editor, updating a report to `status='submitted'` fails; calling `weekly-draft` as a viewer returns 403.
+
+`tests/features/sprints_reports.py` covers the sprint/report flow with a fake AI (`window.__aiFail` simulates an outage).
+
 ## Adding a test
 Use the `@T(area, id, title)` decorator in `tests/e2e_qa.py`, helpers `signup/login/nav/newpage`; keep scenarios independent (unique emails).

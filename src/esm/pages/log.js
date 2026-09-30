@@ -17,7 +17,7 @@ export function renderLog() {
   const root = $('pg-log'); root.textContent = '';
   const every = allLogs(), done = undoneSet();
   const users = [...new Set(every.map(l => l.data.name))].sort();
-  const su = selOf([['all', 'Everyone']].concat(users.map(u => [u, u])), logUI.u), sa = selOf([['all', 'All changes'], ['edit', 'Edits'], ['roadmap', 'Roadmaps'], ['idea', 'Ideas'], ['resource', 'Resources'], ['vacation', 'Vacations'], ['access', 'Access']], logUI.a);
+  const su = selOf([['all', 'Everyone']].concat(users.map(u => [u, u])), logUI.u), sa = selOf([['all', 'All changes'], ['edit', 'Edits'], ['roadmap', 'Roadmaps'], ['idea', 'Ideas'], ['sprint', 'Sprints'], ['report', 'Reports'], ['resource', 'Resources'], ['vacation', 'Vacations'], ['access', 'Access']], logUI.a);
   su.setAttribute('aria-label', 'Filter by person'); sa.setAttribute('aria-label', 'Filter by type of change'); su.addEventListener('change', () => { logUI.u = su.value; renderLog(); }); sa.addEventListener('change', () => { logUI.a = sa.value; renderLog(); });
   const rows = every.filter(l => (logUI.u === 'all' || l.data.name === logUI.u) && (logUI.a === 'all' || l.data.act === logUI.a));
   const ex = el('button', 'btn', 'Export CSV'); ex.type = 'button'; ex.id = 'logexport'; ex.addEventListener('click', () => exportLog(rows.map(l => l.data)));

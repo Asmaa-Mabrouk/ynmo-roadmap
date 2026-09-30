@@ -34,4 +34,7 @@ export const S = {
   undoStack: [],
   baselines: {},
   shares: {},
+  sprints: {},
+  sitems: {},
+  reports: {},
 };

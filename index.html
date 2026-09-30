@@ -542,6 +542,36 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .pn.dropbefore { box-shadow: inset 0 3px 0 var(--brand); }
 .pn.dropafter { box-shadow: inset 0 -3px 0 var(--brand); }
 .addrow { gap: 8px; flex-wrap: wrap; }
+
+/* sprint planning */
+.spbar { gap: 10px; flex-wrap: wrap; align-items: center; margin: 8px 0 12px; }
+.spsq { border-top: 4px solid var(--c, var(--brand)); margin-bottom: 14px; }
+.spgrp h3, .rgrp h3 { font-size: .9rem; margin: 10px 0 4px; color: var(--muted); }
+.sprow, .rline { display: flex; gap: 6px; align-items: center; margin: 4px 0; flex-wrap: wrap; }
+.sprow .sptext, .rline .sptext { flex: 1 1 260px; min-width: 0; }
+.spjira { width: 110px; }
+.spsel { font: inherit; padding: 4px 6px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--surface); }
+.spadd input { width: 100%; }
+.st-done, .rst-done { border-color: #2e9d6b; } .st-blocked, .rst-risk { border-color: var(--warn); } .rst-late { border-color: #c0392b; }
+.chip { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; border: 1.5px solid var(--line); }
+.chip.rs-on { color: #1d7a52; border-color: #2e9d6b; } .chip.rs-risk { color: #a8630a; border-color: #e5a513; } .chip.rs-late { color: #b3261e; border-color: #c0392b; } .chip.rs-done { color: #4a4fa3; border-color: #563cca; }
+
+/* weekly report */
+.rtools { gap: 8px; flex-wrap: wrap; margin: 8px 0 14px; }
+.rprod { margin-bottom: 14px; }
+.rphead { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+.rsum { width: 100%; font: inherit; padding: 8px; border: 1.5px solid var(--line); border-radius: 8px; margin: 6px 0; }
+.rline.hid { opacity: .5; }
+.rline .jira { font-size: 12.5px; color: var(--brand); }
+.rsets .rsrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+.rtitle { font-size: 1.1rem; margin: 4px 0 10px; }
+@media print {
+  body.print-report .rail, body.print-report .topbar, body.print-report .pghead, body.print-report .spbar, body.print-report .rtools, body.print-report .page:not(#pg-reports), body.print-report .umenu, body.print-report #save { display: none !important; }
+  body.print-report main, body.print-report #pg-reports { display: block !important; margin: 0; padding: 0; }
+  body.print-report .rprod { break-inside: avoid; box-shadow: none; }
+  body.print-report .rline button, body.print-report .rline .spsel:not(.rst-on):not([class*="rst-"]) { display: none; }
+  body.print-report .rline select { appearance: none; border: 0; background: none; }
+}
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -608,6 +638,8 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 </section>
 <section class="pg page" id="pg-ideas" hidden></section>
 <section class="pg page" id="pg-roadmaps" hidden></section>
+<section class="pg page" id="pg-sprints" hidden></section>
+<section class="pg page" id="pg-reports" hidden></section>
 <section class="pg page" id="pg-resources" hidden></section>
 <section class="pg page" id="pg-vacations" hidden></section>
 <section class="pg page" id="pg-capacity" hidden></section>
@@ -653,7 +685,10 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     ghostOn: false,
     undoStack: [],
     baselines: {},
-    shares: {}
+    shares: {},
+    sprints: {},
+    sitems: {},
+    reports: {}
   };
 
   // src/esm/core/model.js
@@ -984,9 +1019,9 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
             if (r.error) throw err(r.error);
           },
           async merge(fields, full) {
-            const cur = await sb.from(t).select("data").eq("id", id).maybeSingle();
-            if (cur.error) throw err(cur.error);
-            const base2 = cur.data && cur.data.data || {};
+            const cur2 = await sb.from(t).select("data").eq("id", id).maybeSingle();
+            if (cur2.error) throw err(cur2.error);
+            const base2 = cur2.data && cur2.data.data || {};
             const r = await sb.from(t).upsert({ id, data: Object.assign({}, base2, fields) });
             if (r.error) throw err(r.error);
           },
@@ -1206,17 +1241,17 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     q.placeholder = "Search people";
     const list = el("div", "plist");
     const draw = () => {
-      const cur = pickerItem();
-      if (!cur) return;
+      const cur2 = pickerItem();
+      if (!cur2) return;
       list.textContent = "";
       const f = q.value.trim().toLowerCase();
       const dir = [...directory().values()].filter((x) => !f || x.name.toLowerCase().includes(f));
-      dir.sort((a, b) => b.sqs.has(cur.sq) - a.sqs.has(cur.sq) || a.name.localeCompare(b.name));
+      dir.sort((a, b) => b.sqs.has(cur2.sq) - a.sqs.has(cur2.sq) || a.name.localeCompare(b.name));
       if (!dir.length) list.append(el("div", "sub2", "No one matches. Add them below."));
       dir.forEach((x) => {
         const row = el("label", "prow"), cb = el("input");
         cb.type = "checkbox";
-        cb.checked = cur.res.includes(x.name);
+        cb.checked = cur2.res.includes(x.name);
         cb.addEventListener("change", () => {
           const now = pickerItem();
           if (!now) return;
@@ -1254,15 +1289,15 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
         nn.focus();
         return;
       }
-      const cur = pickerItem();
-      if (!cur) return;
+      const cur2 = pickerItem();
+      if (!cur2) return;
       if (!directory().has(name)) {
         const pid = "p" + Date.now().toString(36);
-        S.extras[pid] = { n: name, role: rs.value, sq: cur.sq };
+        S.extras[pid] = { n: name, role: rs.value, sq: cur2.sq };
         write("people/" + pid, S.extras[pid]);
         fillPersons();
       }
-      commit(cur.id, { res: [...new Set(cur.res.concat([name]))] });
+      commit(cur2.id, { res: [...new Set(cur2.res.concat([name]))] });
       nn.value = "";
       draw();
     };
@@ -1507,7 +1542,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     return out;
   }
   function openDeps(it) {
-    const all = items(), block = dependents(it.id, all), cur = new Set(depsOf(it));
+    const all = items(), block = dependents(it.id, all), cur2 = new Set(depsOf(it));
     const cands = all.filter((i) => i.id !== it.id && !block.has(i.id)).sort((a, b) => a.d0 - b.d0 || a.t.localeCompare(b.t));
     openDlg("Depends on… " + it.t, (box) => {
       box.append(el("p", "hint", "This bar should start after the ones you tick have finished. An arrow is drawn, and it turns red if the dates clash."));
@@ -1522,13 +1557,13 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       const draw = () => {
         list.textContent = "";
         const t = q.value.trim().toLowerCase();
-        cands.filter((i) => !t || i.t.toLowerCase().includes(t) || i.res.join(" ").toLowerCase().includes(t) || cur.has(i.id)).forEach((i) => {
+        cands.filter((i) => !t || i.t.toLowerCase().includes(t) || i.res.join(" ").toLowerCase().includes(t) || cur2.has(i.id)).forEach((i) => {
           const l = el("label", "deprow"), c = el("input");
           c.type = "checkbox";
-          c.checked = cur.has(i.id);
+          c.checked = cur2.has(i.id);
           c.addEventListener("change", () => {
-            if (c.checked) cur.add(i.id);
-            else cur.delete(i.id);
+            if (c.checked) cur2.add(i.id);
+            else cur2.delete(i.id);
           });
           l.append(c, el("span", "", (i.ms ? "◆ " : "") + i.t), el("small", "", dlabel(i.d0) + (i.ms ? "" : " to " + dlabel(i.d1)) + (i.res.length ? " · " + i.res.join(", ") : "")));
           list.append(l);
@@ -1537,18 +1572,18 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       };
       q.addEventListener("input", draw);
       draw();
-      const save = el("button", "btn primary", "Save");
-      save.type = "button";
+      const save2 = el("button", "btn primary", "Save");
+      save2.type = "button";
       const cancel = el("button", "btn", "Cancel");
       cancel.type = "button";
       cancel.addEventListener("click", closeDlg);
-      save.addEventListener("click", () => {
+      save2.addEventListener("click", () => {
         closeDlg();
-        const next = [...cur];
+        const next = [...cur2];
         if (JSON.stringify(next.sort()) !== JSON.stringify(depsOf(it).slice().sort())) commit(it.id, { dep: next });
       });
       const row = el("div", "formrow");
-      row.append(save, cancel);
+      row.append(save2, cancel);
       box.append(row);
     });
   }
@@ -1668,7 +1703,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     root.textContent = "";
     const every = allLogs(), done = undoneSet();
     const users = [...new Set(every.map((l) => l.data.name))].sort();
-    const su = selOf([["all", "Everyone"]].concat(users.map((u) => [u, u])), logUI.u), sa = selOf([["all", "All changes"], ["edit", "Edits"], ["roadmap", "Roadmaps"], ["idea", "Ideas"], ["resource", "Resources"], ["vacation", "Vacations"], ["access", "Access"]], logUI.a);
+    const su = selOf([["all", "Everyone"]].concat(users.map((u) => [u, u])), logUI.u), sa = selOf([["all", "All changes"], ["edit", "Edits"], ["roadmap", "Roadmaps"], ["idea", "Ideas"], ["sprint", "Sprints"], ["report", "Reports"], ["resource", "Resources"], ["vacation", "Vacations"], ["access", "Access"]], logUI.a);
     su.setAttribute("aria-label", "Filter by person");
     sa.setAttribute("aria-label", "Filter by type of change");
     su.addEventListener("change", () => {
@@ -1773,10 +1808,10 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
   function undoFromLog(l) {
     const u = l.data.u;
     if (!u || !canWrite()) return;
-    const cur = S.over[u.id], isSame = (a, b) => JSON.stringify(a === void 0 ? null : a) === JSON.stringify(b === void 0 ? null : b);
+    const cur2 = S.over[u.id], isSame = (a, b) => JSON.stringify(a === void 0 ? null : a) === JSON.stringify(b === void 0 ? null : b);
     let clash = false;
     if (u.after) Object.keys(u.after).forEach((k) => {
-      if (!isSame(cur && cur[k], u.after[k])) clash = true;
+      if (!isSame(cur2 && cur2[k], u.after[k])) clash = true;
     });
     if (u.whole !== void 0 && u.after === void 0) clash = false;
     const run = () => {
@@ -2613,9 +2648,9 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     r1.append(lab("Impact", im), lab("Effort", ef));
     const score = el("span", "score", "Score " + ideaScore(i));
     const stat = el("span", "badge" + (i.st === "scheduled" ? " ok" : ""), (ISTAT.find((x) => x[0] === (i.st || "idea")) || ISTAT[0])[1]);
-    const save = el("button", "btn primary sm", "Save");
-    save.type = "button";
-    save.hidden = true;
+    const save2 = el("button", "btn primary sm", "Save");
+    save2.type = "button";
+    save2.hidden = true;
     const saved = el("span", "hint", "");
     const r2 = el("div", "row2");
     r2.append(stat, score);
@@ -2624,11 +2659,11 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       const rr = allRoadmaps().find((x) => x.id === i.rm);
       r3.append(el("span", "badge ok", "On " + (rr ? rr.n : "a roadmap")));
     }
-    r3.append(save, saved);
+    r3.append(save2, saved);
     const dirty = () => t.value.trim() !== i.t || n.value !== (i.n || "") || +im.value !== (i.im || 2) || +ef.value !== (i.ef || 2);
     const mark = () => {
       const dv = dirty();
-      save.hidden = !dv;
+      save2.hidden = !dv;
       saved.textContent = "";
       score.textContent = "Score " + ideaScore({ im: +im.value, ef: +ef.value });
     };
@@ -2644,13 +2679,13 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       saveIdea(id, { t: v, n: n.value, im: +im.value, ef: +ef.value }, "idea", 'saved idea "' + v + '"' + (v !== i.t ? ' (was "' + i.t + '")' : ""));
       return true;
     };
-    save.addEventListener("click", () => {
+    save2.addEventListener("click", () => {
       if (doSave()) renderIdeas(true);
     });
     c.addEventListener("keydown", (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !save.hidden) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !save2.hidden) {
         e.preventDefault();
-        save.click();
+        save2.click();
       }
     });
     more.addEventListener("click", (e) => {
@@ -2899,7 +2934,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       if (nm.dataset.touched) return;
       nm.value = kd.value === "Custom" ? "" : kd.value === "Year" ? "Full year " + yr.value : kd.value + " " + yr.value;
     };
-    const sync = () => {
+    const sync2 = () => {
       const cu = kd.value === "Custom";
       da.parentElement.hidden = db2.parentElement.hidden = !cu;
       if (!cu) {
@@ -2912,8 +2947,8 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     nm.addEventListener("input", () => {
       nm.dataset.touched = "1";
     });
-    yr.addEventListener("change", sync);
-    kd.addEventListener("change", sync);
+    yr.addEventListener("change", sync2);
+    kd.addEventListener("change", sync2);
     const row = el("div", "formrow");
     row.append(fld("Name", nm), fld("Year", yr), fld("Scope", kd), fld("From", da), fld("To", db2), fld("Features", cp));
     const go = el("button", "btn primary", "Create roadmap");
@@ -2921,7 +2956,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     go.disabled = !canEdit();
     const msg = el("div", "gerr");
     f.append(row, msg, go);
-    sync();
+    sync2();
     f.addEventListener("submit", (e) => {
       e.preventDefault();
       const a = da.value, b = db2.value;
@@ -2989,7 +3024,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
   // src/esm/core/shared.js
   var ideaUI = { st: "open", q: "" };
   var H2 = { id: H2_ID, n: "H2 2026", a: "2026-10-01", b: "2027-01-31", kind: "H2", builtin: true };
-  var PAGES = [["roadmap", "Roadmap"], ["ideas", "Ideas"], ["roadmaps", "Roadmaps"], ["resources", "Resources"], ["vacations", "Vacations"], ["capacity", "Capacity"], ["baselines", "Baselines"], ["log", "Log"], ["admin", "Approvals"]];
+  var PAGES = [["roadmap", "Roadmap"], ["ideas", "Ideas"], ["roadmaps", "Roadmaps"], ["sprints", "Sprints"], ["reports", "Reports"], ["resources", "Resources"], ["vacations", "Vacations"], ["capacity", "Capacity"], ["baselines", "Baselines"], ["log", "Log"], ["admin", "Approvals"]];
   var DOMAINS = ["PM", "Mobile", "Backend", "Frontend", "Full-stack", "Engineering", "QA", "UX / Design", "AI / ML", "Other"];
   var VTYPES = ["Annual leave", "Training", "Public holiday", "Other"];
   var slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "x";
@@ -3015,18 +3050,18 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     const t = parseIso(s);
     return t === null ? NaN : Math.round((t - START) / DAY);
   }
-  function ago(iso3) {
-    const s = Math.max(0, (Date.now() - new Date(iso3).getTime()) / 1e3);
+  function ago(iso4) {
+    const s = Math.max(0, (Date.now() - new Date(iso4).getTime()) / 1e3);
     if (s < 60) return "just now";
     if (s < 3600) return Math.floor(s / 60) + " min ago";
     if (s < 86400) return Math.floor(s / 3600) + " h ago";
     return Math.floor(s / 86400) + " d ago";
   }
-  function clock(iso3) {
+  function clock(iso4) {
     try {
-      return new Date(iso3).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
+      return new Date(iso4).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
     } catch (e) {
-      return iso3;
+      return iso4;
     }
   }
   function fld(label, ctl) {
@@ -4601,6 +4636,690 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     root.append(card);
   }
 
+  // src/esm/features/report-model.js
+  var DEFAULT_PRODUCTS = [
+    { k: "plan_daycare", n: "Plan / Daycare", squads: ["plan", "daycare"] },
+    { k: "tifli", n: "Tifli", squads: ["tifli"] },
+    { k: "ai", n: "AI (Sara)", squads: ["ai"] }
+  ];
+  var RSTATUS = { on: "On Track", risk: "At Risk", late: "Delayed", done: "Done" };
+  var GROUPS = [["done", "Delivered this week"], ["prog", "In progress"], ["next", "Next"], ["risk", "Risks & decisions"], ["road", "Roadmap milestones"]];
+  var SKIND = { feature: "Feature", fix: "Fix", support: "Support" };
+  var SSTATUS = { planned: "Planned", progress: "In progress", done: "Done", blocked: "Blocked" };
+  var ST_OF = { done: ["done", "done"], progress: ["prog", "on"], planned: ["next", "on"], blocked: ["risk", "risk"] };
+  var uid = () => "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  function productsOf(cfg2) {
+    const p = cfg2 && Array.isArray(cfg2.products) && cfg2.products.length ? cfg2.products : DEFAULT_PRODUCTS;
+    return p.map((x) => ({ k: String(x.k), n: String(x.n || x.k), squads: (x.squads || []).map(String) }));
+  }
+  function jiraUrl(base2, key) {
+    if (!key || !/^https:\/\//i.test(base2 || "")) return "";
+    return base2.replace(/\/+$/, "") + "/browse/" + encodeURIComponent(key);
+  }
+  function sourceLines(prod, sitems, road, ka, kb) {
+    const out = [];
+    sitems.filter((s) => prod.squads.includes(s.squad)).forEach((s) => {
+      const m = ST_OF[s.st] || ST_OF.planned;
+      out.push({ src: "si:" + s.id, g: m[0], st: m[1], t: s.t, jira: s.jira || "", kind: s.kind || "feature", ord: s.ord || 0 });
+    });
+    if (Number.isFinite(ka) && Number.isFinite(kb)) {
+      road.filter((r) => prod.squads.includes(r.sq) && r.d0 <= kb && r.d1 >= ka).forEach((r) => {
+        out.push({ src: "rf:" + r.id, g: "road", st: r.st === "done" ? "done" : r.st === "decide" || r.st === "contract" ? "risk" : "on", t: r.t, jira: "", kind: r.ms ? "milestone" : "roadmap", ord: 1e6 + r.d0 });
+      });
+    }
+    return out;
+  }
+  function mergeLines(prev, fresh) {
+    const by = new Map((prev || []).map((p) => [p.src, p])), seen = /* @__PURE__ */ new Set(), out = [];
+    fresh.forEach((f) => {
+      seen.add(f.src);
+      const p = by.get(f.src);
+      if (!p) out.push({ id: uid(), src: f.src, g: f.g, st: f.st, t: f.t, t0: f.t, jira: f.jira, kind: f.kind, hide: false, edited: false });
+      else if (p.edited) out.push(p);
+      else out.push(Object.assign({}, p, { g: f.g, st: f.st, t: f.t, t0: f.t, jira: f.jira, kind: f.kind }));
+    });
+    (prev || []).forEach((p) => {
+      if (!seen.has(p.src) && (p.src === "man" || p.edited)) out.push(p);
+    });
+    return out;
+  }
+  function newManualLine(g, t) {
+    return { id: uid(), src: "man", g, st: "on", t, t0: t, jira: "", kind: "manual", hide: false, edited: true };
+  }
+  var plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
+  function ruleSummary(name, lines) {
+    const v = lines.filter((l) => !l.hide), c = (g) => v.filter((l) => l.g === g).length;
+    const parts = [];
+    if (c("done")) parts.push(plural(c("done"), "item") + " delivered");
+    if (c("prog")) parts.push(plural(c("prog"), "item") + " in progress");
+    if (c("next")) parts.push(plural(c("next"), "item") + " planned next");
+    const bits = parts.length ? parts.join(", ") : "no sprint activity recorded";
+    const risks = v.filter((l) => l.st === "risk" || l.st === "late").length;
+    return name + ": " + bits + (risks ? ". " + plural(risks, "item") + " at risk or waiting on a decision." : ".");
+  }
+  function overall(lines) {
+    const v = lines.filter((l) => !l.hide);
+    if (v.some((l) => l.st === "late")) return "late";
+    if (v.some((l) => l.st === "risk")) return "risk";
+    return v.length && v.every((l) => l.st === "done") ? "done" : "on";
+  }
+  function buildProds(products, prevProds, sitems, road, ka, kb) {
+    const out = {};
+    products.forEach((p) => {
+      const old = prevProds && prevProds[p.k] || {}, lines = mergeLines(old.items, sourceLines(p, sitems, road, ka, kb));
+      lines.sort((a, b) => GROUPS.findIndex((g) => g[0] === a.g) - GROUPS.findIndex((g) => g[0] === b.g));
+      out[p.k] = { items: lines, sum: old.sumEdited ? old.sum : ruleSummary(p.n, lines), sumEdited: !!old.sumEdited };
+    });
+    return out;
+  }
+  function aiPayload(week, products, prods) {
+    return { week, products: products.map((p) => ({ key: p.k, name: p.n, items: ((prods[p.k] || {}).items || []).filter((l) => !l.hide).map((l) => ({ id: l.id, t: l.t, jira: l.jira || "", kind: l.kind || "", st: l.st, tags: [], group: l.g })) })) };
+  }
+  function applyAi(prods, ai) {
+    let n = 0;
+    Object.keys(ai && ai.products || {}).forEach((k) => {
+      const p = prods[k], r = ai.products[k];
+      if (!p || !r) return;
+      if (r.summary && !p.sumEdited && r.summary !== p.sum) {
+        p.sum = String(r.summary);
+        n++;
+      }
+      const by = new Map((r.items || []).map((i) => [i.id, i.text]));
+      p.items.forEach((l) => {
+        const t = by.get(l.id);
+        if (t && !l.edited && t !== l.t) {
+          l.t = String(t);
+          n++;
+        }
+      });
+    });
+    return n;
+  }
+  function reportToText(rep, products, fmt) {
+    const out = ["Weekly update - " + (fmt ? fmt(rep.a) : rep.a) + (rep.b ? " to " + (fmt ? fmt(rep.b) : rep.b) : "") + (rep.n ? " (Sprint " + rep.n + ")" : ""), ""];
+    products.forEach((p) => {
+      const d = (rep.prods || {})[p.k];
+      if (!d) return;
+      out.push(p.n.toUpperCase() + " - " + RSTATUS[overall(d.items)], d.sum || "");
+      GROUPS.forEach((g) => {
+        const ls = d.items.filter((l) => !l.hide && l.g === g[0]);
+        if (!ls.length) return;
+        out.push("", g[1] + ":");
+        ls.forEach((l) => out.push("- " + l.t + (l.jira ? " [" + l.jira + "]" : "") + (l.st === "risk" || l.st === "late" ? " (" + RSTATUS[l.st] + ")" : "")));
+      });
+      out.push("");
+    });
+    return out.join("\n").trim() + "\n";
+  }
+
+  // src/esm/pages/sprints.js
+  var spUI = { id: null };
+  var iso3 = (t) => new Date(t).toISOString().slice(0, 10);
+  var uid2 = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  var sprintList = () => Object.keys(S.sprints).map((id) => Object.assign({ id }, S.sprints[id])).filter((s) => s.a && s.b).sort((x, y) => y.n - x.n);
+  var itemsOf = (sp) => Object.keys(S.sitems).map((id) => Object.assign({ id }, S.sitems[id])).filter((i) => i.sp === sp).sort((a, b) => (a.ord || 0) - (b.ord || 0) || (a.id < b.id ? -1 : 1));
+  var curSprint = () => {
+    const l = sprintList();
+    return l.find((s) => s.id === spUI.id) || l[0] || null;
+  };
+  function saveSprint(id, d) {
+    S.sprints[id] = d;
+    write("sprints/" + id, d);
+  }
+  function saveItem(id, patch) {
+    const d = Object.assign({}, S.sitems[id] || {}, patch);
+    S.sitems[id] = d;
+    write("sprint_items/" + id, d);
+  }
+  function delItem(id) {
+    delete S.sitems[id];
+    write("sprint_items/" + id, null);
+  }
+  function parsePaste(txt) {
+    const out = [];
+    String(txt || "").split(/\r?\n/).forEach((raw) => {
+      let s = raw.replace(/^\s*(?:[-*•▪◦·]|\d+[.)])\s*/, "").trim();
+      if (!s) return;
+      const m = /\b([A-Z][A-Z0-9]+-\d+)\b/.exec(s), jira = m ? m[1] : "";
+      if (m) s = s.replace(m[0], "").replace(/\s*[-–:|]\s*$/, "").replace(/^\s*[-–:|]\s*/, "").replace(/\s{2,}/g, " ").trim();
+      s = s.replace(/\[[^\]]*\]/g, "").trim();
+      if (s) out.push({ t: s.slice(0, 300), jira });
+    });
+    return out;
+  }
+  function newSprint() {
+    const l = sprintList(), last = l[0];
+    const n = last ? last.n + 1 : 1, a = last ? iso3(parseIso(last.b) + DAY) : iso3(Date.now());
+    const b = iso3(parseIso(a) + 6 * DAY), id = "sp" + n;
+    if (S.sprints[id]) {
+      spUI.id = id;
+      renderSprints();
+      return;
+    }
+    saveSprint(id, { n, a, b, note: "" });
+    spUI.id = id;
+    logAct("sprint", "created Sprint " + n + " (" + fmtIso(a) + ")");
+    renderSprints();
+  }
+  function carryOver(sp) {
+    const prev = sprintList().find((s) => s.n === sp.n - 1);
+    if (!prev) return 0;
+    const have = new Set(itemsOf(sp.id).map((i) => i.t.toLowerCase()));
+    let c = 0;
+    itemsOf(prev.id).filter((i) => i.st !== "done").forEach((i) => {
+      if (have.has(i.t.toLowerCase())) return;
+      saveItem(uid2("si"), { sp: sp.id, squad: i.squad, person: i.person, t: i.t, jira: i.jira, kind: i.kind, st: i.st === "blocked" ? "blocked" : "planned", ord: Date.now() + c });
+      c++;
+    });
+    if (c) logAct("sprint", "carried " + c + " unfinished item" + (c === 1 ? "" : "s") + " into Sprint " + sp.n);
+    return c;
+  }
+  function pasteDlg(sp) {
+    openDlg("Paste sprint items", (box) => {
+      const sq = selOf(LANES.map((l) => [l.k, l.n]), LANES[0].k), pe = el("input");
+      pe.placeholder = "Person (optional)";
+      pe.setAttribute("list", "sp-people");
+      const kd = selOf(Object.keys(SKIND).map((k) => [k, SKIND[k]]), "feature"), ta = el("textarea");
+      ta.rows = 9;
+      ta.placeholder = "One item per line. Bullets and Jira keys (ABC-123) are recognised.";
+      ta.setAttribute("aria-label", "Items");
+      const info = el("p", "sub", "Nothing yet");
+      ta.addEventListener("input", () => {
+        info.textContent = parsePaste(ta.value).length + " item(s) found";
+      });
+      const ok = el("button", "btn primary", "Add items"), no = el("button", "btn", "Cancel");
+      ok.type = no.type = "button";
+      ok.addEventListener("click", () => {
+        const rows = parsePaste(ta.value);
+        if (!rows.length) return;
+        rows.forEach((r, i) => saveItem(uid2("si"), { sp: sp.id, squad: sq.value, person: pe.value.trim(), t: r.t, jira: r.jira, kind: kd.value, st: "planned", ord: Date.now() + i }));
+        logAct("sprint", "pasted " + rows.length + " item" + (rows.length === 1 ? "" : "s") + " into Sprint " + sp.n);
+        closeDlg();
+        renderSprints();
+      });
+      no.addEventListener("click", closeDlg);
+      const row = el("div", "row");
+      row.append(ok, no);
+      box.append(fld("Squad", sq), fld("Person", pe), fld("Type", kd), fld("Items", ta), info, row);
+    });
+  }
+  function itemRow(it, ro) {
+    const r = el("div", "sprow");
+    r.dataset.id = it.id;
+    const t = el("input", "sptext");
+    t.value = it.t;
+    t.disabled = ro;
+    t.setAttribute("aria-label", "Item title");
+    t.addEventListener("change", () => {
+      const v = t.value.trim();
+      if (!v) {
+        t.value = it.t;
+        return;
+      }
+      saveItem(it.id, { t: v.slice(0, 300) });
+    });
+    const j = el("input", "spjira");
+    j.value = it.jira || "";
+    j.placeholder = "Jira";
+    j.disabled = ro;
+    j.setAttribute("aria-label", "Jira key");
+    j.addEventListener("change", () => saveItem(it.id, { jira: /^[A-Z][A-Z0-9]+-\d+$/.test(j.value.trim()) ? j.value.trim() : "" }));
+    const k = selOf(Object.keys(SKIND).map((x2) => [x2, SKIND[x2]]), it.kind || "feature", "spsel");
+    k.disabled = ro;
+    k.setAttribute("aria-label", "Type");
+    k.addEventListener("change", () => saveItem(it.id, { kind: k.value }));
+    const s = selOf(Object.keys(SSTATUS).map((x2) => [x2, SSTATUS[x2]]), it.st || "planned", "spsel st-" + (it.st || "planned"));
+    s.disabled = ro;
+    s.setAttribute("aria-label", "Status");
+    s.addEventListener("change", () => {
+      saveItem(it.id, { st: s.value });
+      s.className = "spsel st-" + s.value;
+    });
+    const x = el("button", "btn sm danger", "✕");
+    x.type = "button";
+    x.title = "Delete item";
+    x.setAttribute("aria-label", "Delete item");
+    x.disabled = ro;
+    x.addEventListener("click", () => {
+      delItem(it.id);
+      renderSprints();
+    });
+    r.append(t, j, k, s, x);
+    return r;
+  }
+  function addLine(sp, squad, person, ro) {
+    const f = el("form", "spadd"), i = el("input");
+    i.placeholder = "Add an item and press Enter";
+    i.disabled = ro;
+    i.setAttribute("aria-label", "New item");
+    f.append(i);
+    f.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const v = i.value.trim();
+      if (!v || !canWrite()) return;
+      saveItem(uid2("si"), { sp: sp.id, squad, person, t: v.slice(0, 300), jira: (/\b([A-Z][A-Z0-9]+-\d+)\b/.exec(v) || [])[1] || "", kind: "feature", st: "planned", ord: Date.now() });
+      renderSprints();
+      const n = document.querySelector('#pg-sprints [data-add="' + squad + "|" + person + '"] input');
+      if (n) n.focus();
+    });
+    f.dataset.add = squad + "|" + person;
+    return f;
+  }
+  function renderSprints() {
+    const pg = $("pg-sprints");
+    if (!pg) return;
+    pg.textContent = "";
+    const ro = !canEdit() || !canWrite(), l = sprintList(), sp = curSprint();
+    const nb = el("button", "btn primary", "+ New sprint");
+    nb.type = "button";
+    nb.disabled = ro;
+    nb.addEventListener("click", newSprint);
+    pg.append(pageHead("Sprints", "Plan each weekly sprint here. The weekly executive report is built from it and from the roadmap.", nb));
+    if (!sp) {
+      pg.append(el("p", "empty", "No sprint yet. Create the first one."));
+      return;
+    }
+    const dl2 = el("datalist");
+    dl2.id = "sp-people";
+    [...directory().keys()].sort().forEach((n) => {
+      const o = el("option");
+      o.value = n;
+      dl2.append(o);
+    });
+    pg.append(dl2);
+    const bar = el("div", "row spbar"), sel = selOf(l.map((s) => [s.id, "Sprint " + s.n + " · " + fmtIso(s.a)]), sp.id);
+    sel.setAttribute("aria-label", "Sprint");
+    sel.addEventListener("change", () => {
+      spUI.id = sel.value;
+      renderSprints();
+    });
+    const pb = el("button", "btn", "Paste items"), cb = el("button", "btn", "Carry over unfinished");
+    pb.type = cb.type = "button";
+    pb.disabled = cb.disabled = ro;
+    pb.addEventListener("click", () => pasteDlg(sp));
+    cb.addEventListener("click", () => {
+      const c = carryOver(sp);
+      $("save").textContent = c ? c + " item(s) carried over" : "Nothing to carry over";
+      renderSprints();
+    });
+    bar.append(sel, el("span", "sub", fmtIso(sp.a) + " to " + fmtIso(sp.b)), pb, cb);
+    pg.append(bar);
+    const all = itemsOf(sp.id), sum = el("p", "sub", all.length + " items · " + all.filter((i) => i.st === "done").length + " done · " + all.filter((i) => i.st === "blocked").length + " blocked");
+    pg.append(sum);
+    LANES.forEach((ln) => {
+      const mine = all.filter((i) => i.squad === ln.k), people = [...new Set(mine.map((i) => i.person || ""))].sort((a, b) => (a === "") - (b === "") || a.localeCompare(b));
+      const card = el("section", "card spsq");
+      card.style.setProperty("--c", ln.c);
+      card.append(el("h2", "", ln.n));
+      people.forEach((p) => {
+        const g = el("div", "spgrp");
+        g.append(el("h3", "", p || "Unassigned"));
+        mine.filter((i) => (i.person || "") === p).forEach((i) => g.append(itemRow(i, ro)));
+        g.append(addLine(sp, ln.k, p, ro));
+        card.append(g);
+      });
+      if (!people.length) card.append(addLine(sp, ln.k, "", ro));
+      else {
+        const pe = el("form", "spadd"), i = el("input");
+        i.placeholder = "Add for another person: Name: item";
+        i.disabled = ro;
+        i.setAttribute("aria-label", "New item for a person");
+        pe.append(i);
+        pe.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const m = /^([^:]{1,60}):\s*(.+)$/.exec(i.value.trim());
+          if (!m || !canWrite()) return;
+          saveItem(uid2("si"), { sp: sp.id, squad: ln.k, person: m[1].trim(), t: m[2].slice(0, 300), jira: "", kind: "feature", st: "planned", ord: Date.now() });
+          renderSprints();
+        });
+        card.append(pe);
+      }
+      pg.append(card);
+    });
+  }
+
+  // src/esm/pages/reports.js
+  var rUI = { id: null, busy: false, note: "" };
+  var cfg = () => S.ideas.reportcfg || {};
+  var canBuild = () => !isViewer() && canWrite();
+  var reportList = () => Object.keys(S.reports).map((id) => Object.assign({ id }, S.reports[id])).filter((r) => r.a && (!isViewer() || r.status === "submitted")).sort((x, y) => y.n - x.n);
+  var cur = () => {
+    const l = reportList();
+    return l.find((r) => r.id === rUI.id) || l[0] || null;
+  };
+  function save(rep, log) {
+    const id = rep.id, d = Object.assign({}, rep);
+    delete d.id;
+    d.by = S.me && (S.me.name || S.me.email) || "";
+    d.ts = Date.now();
+    S.reports[id] = d;
+    write("reports/" + id, d);
+    if (log) logAct("report", log);
+  }
+  function roadFor(a, b) {
+    const rm = allRoadmaps().find((r) => r.a <= a && r.b >= a);
+    if (!rm) return { road: [], ka: NaN, kb: NaN };
+    return withRm(rm.id, () => ({ road: items().map((i) => ({ id: i.id, t: i.t, sq: i.sq, d0: i.d0, d1: i.d1, st: i.st, ms: !!i.ms })), ka: kOfIso(a), kb: kOfIso(b) }));
+  }
+  function newReport(sp) {
+    const id = "rp" + sp.n;
+    if (S.reports[id]) {
+      rUI.id = id;
+      renderReports();
+      return;
+    }
+    const rep = { id, sp: sp.id, n: sp.n, a: sp.a, b: sp.b, status: "draft", pl: productsOf(cfg()), prods: {} };
+    sync(rep, false, true);
+  }
+  async function sync(rep, ai, isNew) {
+    if (rUI.busy) return;
+    rUI.busy = true;
+    rUI.note = "";
+    const pl = productsOf(cfg()), { road, ka, kb } = roadFor(rep.a, rep.b);
+    rep.pl = pl;
+    rep.prods = buildProds(pl, rep.prods, itemsOf(rep.sp), road, ka, kb);
+    let note = isNew ? "Draft created" : "Synced from Sprint and Roadmap";
+    rUI.id = rep.id;
+    save(rep, isNew ? "created the weekly report for Sprint " + rep.n : "synced the weekly report for Sprint " + rep.n);
+    renderReports();
+    if (ai) {
+      toast("Writing with Gemini…");
+      try {
+        const r = await sb.functions.invoke("weekly-draft", { body: aiPayload(rep.a, pl, rep.prods) });
+        if (r.error || !r.data || !r.data.products) throw new Error(r.error && r.error.message || "no answer");
+        const n = applyAi(rep.prods, r.data);
+        rep.ai = { model: r.data.model || "", at: (/* @__PURE__ */ new Date()).toISOString() };
+        save(rep);
+        note = n ? "AI wording applied (" + n + " changes)" : "AI had nothing to change";
+      } catch (e) {
+        note = "AI unavailable, kept the rule-based draft";
+      }
+    }
+    rUI.busy = false;
+    rUI.note = note;
+    toast(note);
+    renderReports();
+  }
+  function settingsDlg() {
+    const cur0 = productsOf(cfg()).map((p) => Object.assign({}, p, { squads: p.squads.slice() }));
+    openDlg("Report settings", (box) => {
+      const list = el("div", "rsets");
+      const draw = () => {
+        list.textContent = "";
+        cur0.forEach((p, i) => {
+          const r = el("div", "rsrow"), n = el("input");
+          n.value = p.n;
+          n.setAttribute("aria-label", "Product name");
+          n.addEventListener("input", () => {
+            p.n = n.value;
+          });
+          r.append(n);
+          LANES.forEach((l) => {
+            const c = el("input");
+            c.type = "checkbox";
+            c.checked = p.squads.includes(l.k);
+            c.addEventListener("change", () => {
+              p.squads = p.squads.filter((x2) => x2 !== l.k);
+              if (c.checked) p.squads.push(l.k);
+            });
+            const lb = el("label", "chk");
+            lb.append(c, document.createTextNode(" " + l.n));
+            r.append(lb);
+          });
+          const x = el("button", "btn sm danger", "✕");
+          x.type = "button";
+          x.setAttribute("aria-label", "Remove product");
+          x.addEventListener("click", () => {
+            cur0.splice(i, 1);
+            draw();
+          });
+          r.append(x);
+          list.append(r);
+        });
+      };
+      draw();
+      const add = el("button", "btn sm", "+ Product");
+      add.type = "button";
+      add.addEventListener("click", () => {
+        cur0.push({ k: "p" + Date.now().toString(36), n: "New product", squads: [] });
+        draw();
+      });
+      const jb = el("input");
+      jb.value = cfg().jira || "";
+      jb.placeholder = "https://your-company.atlassian.net";
+      jb.setAttribute("aria-label", "Jira base URL");
+      const ok = el("button", "btn primary", "Save"), no = el("button", "btn", "Cancel");
+      ok.type = no.type = "button";
+      ok.addEventListener("click", () => {
+        const ps = cur0.filter((p) => p.n.trim()).map((p) => ({ k: p.k, n: p.n.trim(), squads: p.squads }));
+        if (!ps.length) return;
+        const j = jb.value.trim();
+        saveIdea("reportcfg", { cfg: true, products: ps, jira: /^https:\/\//i.test(j) ? j : "" }, "report", "updated the report settings");
+        closeDlg();
+        renderReports();
+      });
+      no.addEventListener("click", closeDlg);
+      const row = el("div", "row");
+      row.append(ok, no);
+      box.append(el("p", "sub", "One section per product. Tick the squads that belong to it."), list, add, fld("Jira base URL (optional, https only)", jb), row);
+    });
+  }
+  function lineRow(rep, d, l, ro) {
+    const r = el("div", "rline st-" + l.st + (l.hide ? " hid" : ""));
+    r.dataset.id = l.id;
+    const touch = (patch) => {
+      Object.assign(l, patch, { edited: true });
+      save(rep);
+    };
+    const st = el("select", "spsel rst-" + l.st);
+    st.disabled = ro;
+    st.setAttribute("aria-label", "Status");
+    Object.keys(RSTATUS).forEach((k) => {
+      const o = el("option", "", RSTATUS[k]);
+      o.value = k;
+      o.selected = k === l.st;
+      st.append(o);
+    });
+    st.addEventListener("change", () => {
+      touch({ st: st.value });
+      renderReports();
+    });
+    const t = el("input", "sptext");
+    t.value = l.t;
+    t.disabled = ro;
+    t.setAttribute("aria-label", "Line text");
+    t.addEventListener("change", () => {
+      const v = t.value.trim();
+      if (!v) {
+        t.value = l.t;
+        return;
+      }
+      touch({ t: v.slice(0, 400) });
+    });
+    r.append(st, t);
+    const u = jiraUrl(cfg().jira, l.jira);
+    if (l.jira) {
+      const a = el(u ? "a" : "span", "jira", l.jira);
+      if (u) {
+        a.href = u;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+      }
+      r.append(a);
+    }
+    if (!ro) {
+      const g = el("select", "spsel");
+      g.setAttribute("aria-label", "Group");
+      GROUPS.forEach((x2) => {
+        const o = el("option", "", x2[1]);
+        o.value = x2[0];
+        o.selected = x2[0] === l.g;
+        g.append(o);
+      });
+      g.addEventListener("change", () => {
+        touch({ g: g.value });
+        renderReports();
+      });
+      const h = el("button", "btn sm", l.hide ? "Show" : "Hide");
+      h.type = "button";
+      h.addEventListener("click", () => {
+        touch({ hide: !l.hide });
+        renderReports();
+      });
+      const x = el("button", "btn sm danger", "✕");
+      x.type = "button";
+      x.setAttribute("aria-label", "Delete line");
+      x.addEventListener("click", () => {
+        if (l.src === "man") d.items = d.items.filter((z) => z.id !== l.id);
+        else touch({ hide: true });
+        save(rep);
+        renderReports();
+      });
+      r.append(g, h, x);
+    }
+    return r;
+  }
+  function prodBlock(rep, p, ro) {
+    const d = rep.prods[p.k];
+    if (!d) return el("div");
+    const sec = el("section", "card rprod");
+    sec.dataset.k = p.k;
+    const hd = el("div", "rphead"), s = overall(d.items);
+    hd.append(el("h2", "", p.n), el("span", "chip rs-" + s, RSTATUS[s]));
+    sec.append(hd);
+    const sm = el("textarea", "rsum");
+    sm.value = d.sum || "";
+    sm.rows = 3;
+    sm.disabled = ro;
+    sm.setAttribute("aria-label", "Summary for " + p.n);
+    sm.addEventListener("change", () => {
+      d.sum = sm.value.trim() || ruleSummary(p.n, d.items);
+      d.sumEdited = !!sm.value.trim();
+      save(rep);
+    });
+    sec.append(sm);
+    GROUPS.forEach((g) => {
+      const ls = d.items.filter((l) => l.g === g[0] && (!ro || !l.hide));
+      if (!ls.length && ro) return;
+      const gh = el("div", "rgrp");
+      gh.append(el("h3", "", g[1]));
+      ls.forEach((l) => gh.append(lineRow(rep, d, l, ro)));
+      if (!ro) {
+        const f = el("form", "spadd"), i = el("input");
+        i.placeholder = 'Add a line to "' + g[1] + '"';
+        i.setAttribute("aria-label", "Add line to " + g[1]);
+        f.append(i);
+        f.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const v = i.value.trim();
+          if (!v) return;
+          d.items.push(newManualLine(g[0], v.slice(0, 400)));
+          save(rep);
+          renderReports();
+        });
+        gh.append(f);
+      }
+      sec.append(gh);
+    });
+    return sec;
+  }
+  function renderReports() {
+    const pg = $("pg-reports");
+    if (!pg) return;
+    pg.textContent = "";
+    const viewer = isViewer(), l = reportList(), rep = cur();
+    pg.append(pageHead("Weekly report", viewer ? "Submitted weekly updates per product." : "Built from the sprint plan and the roadmap. Edit anything, then an admin submits it."));
+    const bar = el("div", "row spbar");
+    if (l.length) {
+      const sel = el("select");
+      sel.setAttribute("aria-label", "Report");
+      l.forEach((r) => {
+        const o = el("option", "", "Sprint " + r.n + " · " + fmtIso(r.a) + (viewer ? "" : r.status === "submitted" ? " · submitted" : " · draft"));
+        o.value = r.id;
+        o.selected = rep && r.id === rep.id;
+        sel.append(o);
+      });
+      sel.addEventListener("change", () => {
+        rUI.id = sel.value;
+        rUI.note = "";
+        renderReports();
+      });
+      bar.append(sel);
+    }
+    if (!viewer) {
+      const free = sprintList().filter((s) => !S.reports["rp" + s.n]);
+      if (free.length) {
+        const nb = el("button", "btn primary", "New report for Sprint " + free[0].n);
+        nb.type = "button";
+        nb.disabled = !canBuild();
+        nb.addEventListener("click", () => newReport(free[0]));
+        bar.append(nb);
+      }
+      const sb2 = el("button", "btn", "Report settings");
+      sb2.type = "button";
+      sb2.disabled = !canBuild();
+      sb2.addEventListener("click", settingsDlg);
+      bar.append(sb2);
+    }
+    pg.append(bar);
+    if (!rep) {
+      pg.append(el("p", "empty", viewer ? "No report has been submitted yet." : sprintList().length ? "No report yet. Create one for the latest sprint." : "Create a sprint first (Sprints page), then build the report."));
+      return;
+    }
+    const sub = rep.status === "submitted", admin = !!(S.me && S.me.is_admin), ro = viewer || sub || !canBuild();
+    const meta = el("p", "sub rmeta", sub ? "Submitted" + (rep.subBy ? " by " + rep.subBy : "") + (rep.subAt ? " on " + fmtIso(rep.subAt.slice(0, 10)) : "") : "Draft" + (rep.ai ? " · wording by " + (rep.ai.model || "AI") : "") + " · last edit " + (rep.by || ""));
+    const tools = el("div", "row rtools");
+    const btn = (t, cls, fn, dis) => {
+      const b = el("button", "btn " + (cls || ""), t);
+      b.type = "button";
+      b.disabled = !!dis;
+      b.addEventListener("click", fn);
+      tools.append(b);
+      return b;
+    };
+    if (!viewer && !sub) {
+      btn("Sync from Sprint & Roadmap", "", () => sync(rep, false), !canBuild() || rUI.busy);
+      btn("Draft with AI", "", () => sync(rep, true), !canBuild() || rUI.busy);
+    }
+    btn("Copy text", "", () => {
+      const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso);
+      (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast("Copied"), () => toast("Copy failed"));
+    });
+    btn("Print / PDF", "", () => {
+      document.body.classList.add("print-report");
+      const off = () => {
+        document.body.classList.remove("print-report");
+        window.removeEventListener("afterprint", off);
+      };
+      window.addEventListener("afterprint", off);
+      window.print();
+    });
+    if (admin && !sub) btn("Submit to executives", "primary", () => {
+      rep.status = "submitted";
+      rep.subAt = (/* @__PURE__ */ new Date()).toISOString();
+      rep.subBy = S.me.name || S.me.email;
+      save(rep, "submitted the weekly report for Sprint " + rep.n);
+      renderReports();
+    }, !canBuild());
+    if (admin && sub) btn("Reopen as draft", "", () => {
+      rep.status = "draft";
+      delete rep.subAt;
+      delete rep.subBy;
+      save(rep, "reopened the weekly report for Sprint " + rep.n);
+      renderReports();
+    }, !canBuild());
+    const body = el("div", "rbody");
+    body.append(el("h2", "rtitle", "Weekly update · " + fmtIso(rep.a) + " to " + fmtIso(rep.b) + " · Sprint " + rep.n));
+    (rep.pl || productsOf(cfg())).forEach((p) => body.append(prodBlock(rep, p, ro)));
+    pg.append(meta, tools);
+    if (rUI.note && !viewer) {
+      const nt = el("p", "rnote", rUI.note);
+      nt.setAttribute("role", "status");
+      pg.append(nt);
+    }
+    pg.append(body);
+  }
+
   // src/esm/ui/loading.js
   function showLoading(msg) {
     let l = $("ldg");
@@ -4656,9 +5375,9 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     ({ roadmap: render, ideas: () => renderIdeas(true), roadmaps: renderRoadmaps, resources: renderResources, admin: () => {
       loadMembers();
       renderAdmin();
-    }, vacations: () => renderVacations(true), log: renderLog, capacity: renderCapacity, baselines: renderBaselines })[p]();
+    }, vacations: () => renderVacations(true), log: renderLog, capacity: renderCapacity, baselines: renderBaselines, sprints: renderSprints, reports: renderReports })[p]();
   }
-  var VIEWER_PAGES = ["roadmap", "capacity", "baselines", "log"];
+  var VIEWER_PAGES = ["roadmap", "capacity", "baselines", "log", "reports"];
   function showPage(p) {
     if (!PAGES.some((x) => x[0] === p) || p === "admin" && !(S.me && S.me.is_admin) || isViewer() && !VIEWER_PAGES.includes(p)) p = "roadmap";
     state.page = p;
@@ -4685,6 +5404,8 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     admin: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.4 2.9 8.3 7 10 4.1-1.7 7-5.6 7-10V6l-7-3z" /><path d="m9 12 2 2 4-4" /></svg>',
     capacity: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>',
     baselines: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4v16M5 6h11l-2 3.5L16 13H5" /></svg>',
+    sprints: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 3-6.2M4 4v4h4" /><path d="M12 8v4l2.5 2" /></svg>',
+    reports: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 13h6M9 17h6M9 9h2" /></svg>',
     log: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>'
   };
   function buildNav() {
@@ -4781,6 +5502,30 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       if (state.page === "roadmaps") renderRoadmaps();
     }, () => {
     });
+    S.db.collection("reports").onSnapshot((s) => {
+      const n = snapDocs("reports", s, S.reports);
+      if (same(n, S.reports)) return;
+      S.reports = n;
+      if (state.page === "reports" && !state.edit && !document.activeElement.closest("#pg-reports")) renderReports();
+    }, () => {
+    });
+    if (!isViewer()) {
+      S.db.collection("sprints").onSnapshot((s) => {
+        const n = snapDocs("sprints", s, S.sprints);
+        if (same(n, S.sprints)) return;
+        S.sprints = n;
+        if (state.page === "sprints" && !document.activeElement.closest("#pg-sprints")) renderSprints();
+        if (state.page === "reports") renderReports();
+      }, () => {
+      });
+      S.db.collection("sprint_items").onSnapshot((s) => {
+        const n = snapDocs("sprint_items", s, S.sitems);
+        if (same(n, S.sitems)) return;
+        S.sitems = n;
+        if (state.page === "sprints" && !document.activeElement.closest("#pg-sprints")) renderSprints();
+      }, () => {
+      });
+    }
     S.db.collection("vacations").onSnapshot((s) => {
       const n = snapDocs("vacations", s, S.vacs);
       if (same(n, S.vacs)) return;
@@ -5660,8 +6405,8 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     const below = window.innerHeight - b.bottom, top = below >= h + 12 || below >= b.top ? b.bottom + 6 : b.top - h - 6;
     box.style.top = Math.max(8, top) + "px";
     box.style.left = Math.max(8, Math.min(b.left, window.innerWidth - box.offsetWidth - 8)) + "px";
-    const cur = box.querySelector(".sel");
-    if (cur) cur.scrollIntoView({ block: "nearest" });
+    const cur2 = box.querySelector(".sel");
+    if (cur2) cur2.scrollIntoView({ block: "nearest" });
   }
   document.addEventListener("mousedown", (e) => {
     const s = e.target.closest && e.target.closest("select");

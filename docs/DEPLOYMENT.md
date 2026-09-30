@@ -18,6 +18,15 @@ supabase secrets set WEBHOOK_SECRET=<long random> SMTP_USER=<mailbox> SMTP_PASS=
 ```
 Dashboard → Database → Webhooks → on `profiles` INSERT → HTTP request to the function URL with header `x-webhook-secret: <same value>`.
 
+## 2b. Weekly report AI (Edge Function `weekly-draft`)
+Run `supabase/sql/06-sprints-weekly-reports.sql` once, then:
+```bash
+supabase functions deploy weekly-draft
+supabase secrets set GEMINI_API_KEY=<your key>      # or Dashboard > Edge Functions > Secrets. Never in the repo or in chat.
+supabase secrets set GEMINI_MODEL=<model id>        # optional; the default is set in the function, change it if Google renames models
+```
+The function accepts only signed-in editors/admins, sends **only item titles, Jira keys and status** to Gemini (no names, notes or dates) and never stores anything. If it fails, the app keeps the rule-based draft. Use a paid-tier Gemini project if the report content must not be used for model training.
+
 ## 3. Vercel
 Import the GitHub repo, framework *Other*. `vercel.json` sets install `npm ci`, build `node build.mjs --dist`, output `dist/` (index.html + vendor) and the security headers.
 Every push to `main` deploys; Vercel rebuilds from `src/`, the committed `index.html` is only for local use and tests.

@@ -11,7 +11,7 @@ with sync_playwright() as pw:
     A.evaluate("location.hash='#/forgot'"); A.wait_for_timeout(200); ok('forgot route renders', A.evaluate("location.hash")=='#/forgot' and A.locator('#gate h1').count()==1)
     A.evaluate("location.hash='#/login'"); A.wait_for_timeout(200)
     signup(A,'Admin','adm@x.com')
-    ok('app shell after signup', A.locator('#nav button').count()==9)
+    ok('app shell after signup', A.locator('#nav button').count()==11)
     # ideas: add + drag card between products; Clear-all removed
     A.click('#nav button[data-p="ideas"]'); A.wait_for_timeout(300)
     A.locator('.col').first.locator('input[type=text]').fill('Idea X'); A.keyboard.press('Enter'); A.wait_for_timeout(500)

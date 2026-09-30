@@ -53,10 +53,10 @@ with sync_playwright() as p:
     @T('Auth','A4','Sign-up: first user becomes approved admin and lands in app')
     def _():
         A.locator('input[type=email]').fill('asmaa@x.com'); A.click('button:text-is("Create account")'); A.wait_for_timeout(900)
-        return (A.locator('#nav button').count()==9, 'nav items %d'%A.locator('#nav button').count())
+        return (A.locator('#nav button').count()==11, 'nav items %d'%A.locator('#nav button').count())
     @T('Auth','A5','Session survives reload')
     def _():
-        A.reload(); A.wait_for_timeout(900); return (A.locator('#nav button').count()==9,'')
+        A.reload(); A.wait_for_timeout(900); return (A.locator('#nav button').count()==11,'')
     B=newpage(); B.goto(URL); B.wait_for_timeout(400)
     @T('Auth','A6','Sign-up: duplicate email shows error')
     def _():
@@ -78,7 +78,7 @@ with sync_playwright() as p:
         return (ok, 'Approve button present' if ok else 'no Approve button')
     @T('Auth','A10','Approved user gets in via "Check again" without re-login')
     def _():
-        B.click('button:has-text("Check again")'); B.wait_for_timeout(800); return (B.locator('#nav button').count()==8, 'editor sees 8 pages')
+        B.click('button:has-text("Check again")'); B.wait_for_timeout(800); return (B.locator('#nav button').count()==10, 'editor sees 10 pages')
     @T('Auth','A11','Login: wrong password message generic (no user enumeration)')
     def _():
         C=newpage(); C.goto(URL); C.wait_for_timeout(300); login(C,'asmaa@x.com','wrong'); m=gerr(C); C.close(); return ('not right' in m, m)

@@ -1,5 +1,5 @@
 (function(){
-const T=['items','people','daysoff','roadmaps','ideas','vacations','activity','baselines','share_links'];
+const T=['items','people','daysoff','roadmaps','ideas','vacations','activity','baselines','share_links','sprints','sprint_items','reports'];
 const fresh=()=>{const s={profiles:[]};T.forEach(t=>s[t]={});return s};
 const rd=()=>{const s=JSON.parse(localStorage.getItem('fk3')||'null')||fresh();T.forEach(t=>{if(!s[t])s[t]={}});return s};
 const wr=s=>localStorage.setItem('fk3',JSON.stringify(s));
@@ -32,6 +32,7 @@ window.supabase={createClient:()=>({
    insert:async r=>{await gate(); const s=rd();s[t][r.id]=r.data;wr(s);return {}},
    delete:()=>({eq:async(c,id)=>{await gate(); const s=rd();delete s[t][id];wr(s);return {};}})};},
  rpc:async(fn,args)=>{ await gate(); const s=rd(); if(fn==='shared_snapshot'){ const l=s.share_links[args.t]; if(!l) return {data:null}; const items={}; Object.keys(s.items).forEach(id=>{ if((s.items[id].rm||'h2-2026')===l.rm) items[id]=s.items[id]; }); return {data:{rm:l.rm,roadmap:s.roadmaps[l.rm]||null,items,people:s.people,daysoff:s.daysoff}}; } return {error:{message:'no such function'}}; },
+ functions:{invoke:async(name,o)=>{ await gate(); if(window.__aiFail) return {error:{message:'AI unavailable'}}; const b=(o&&o.body)||{}; const out={products:{}}; (b.products||[]).forEach(p=>{ out.products[p.key]={summary:'AI summary for '+p.name+' ('+p.items.length+' items)',items:p.items.map(i=>({id:i.id,text:'AI: '+i.t}))}; }); window.__aiCalls=(window.__aiCalls||0)+1; return {data:out}; }},
  channel:(name,cfg)=>{ const key=cfg&&cfg.config&&cfg.config.presence&&cfg.config.presence.key; const k='fp3:'+name; let sync=null;
   const ch={on(ev,c,cb){ if(ev==='presence') sync=cb; else cbs.push(cb); return ch; },
    subscribe(cb){ window.addEventListener('storage',e=>{ if(e.key===k&&sync) sync(); }); window.addEventListener('pagehide',()=>{ try{const s=JSON.parse(localStorage.getItem(k)||'{}'); delete s[key]; localStorage.setItem(k,JSON.stringify(s));}catch(e){} }); setTimeout(()=>{ cb&&cb('SUBSCRIBED'); if(sync) sync(); },10); return ch; },

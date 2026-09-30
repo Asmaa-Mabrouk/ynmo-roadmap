@@ -119,3 +119,33 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .pn.dropbefore { box-shadow: inset 0 3px 0 var(--brand); }
 .pn.dropafter { box-shadow: inset 0 -3px 0 var(--brand); }
 .addrow { gap: 8px; flex-wrap: wrap; }
+
+/* sprint planning */
+.spbar { gap: 10px; flex-wrap: wrap; align-items: center; margin: 8px 0 12px; }
+.spsq { border-top: 4px solid var(--c, var(--brand)); margin-bottom: 14px; }
+.spgrp h3, .rgrp h3 { font-size: .9rem; margin: 10px 0 4px; color: var(--muted); }
+.sprow, .rline { display: flex; gap: 6px; align-items: center; margin: 4px 0; flex-wrap: wrap; }
+.sprow .sptext, .rline .sptext { flex: 1 1 260px; min-width: 0; }
+.spjira { width: 110px; }
+.spsel { font: inherit; padding: 4px 6px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--surface); }
+.spadd input { width: 100%; }
+.st-done, .rst-done { border-color: #2e9d6b; } .st-blocked, .rst-risk { border-color: var(--warn); } .rst-late { border-color: #c0392b; }
+.chip { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; border: 1.5px solid var(--line); }
+.chip.rs-on { color: #1d7a52; border-color: #2e9d6b; } .chip.rs-risk { color: #a8630a; border-color: #e5a513; } .chip.rs-late { color: #b3261e; border-color: #c0392b; } .chip.rs-done { color: #4a4fa3; border-color: #563cca; }
+
+/* weekly report */
+.rtools { gap: 8px; flex-wrap: wrap; margin: 8px 0 14px; }
+.rprod { margin-bottom: 14px; }
+.rphead { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+.rsum { width: 100%; font: inherit; padding: 8px; border: 1.5px solid var(--line); border-radius: 8px; margin: 6px 0; }
+.rline.hid { opacity: .5; }
+.rline .jira { font-size: 12.5px; color: var(--brand); }
+.rsets .rsrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+.rtitle { font-size: 1.1rem; margin: 4px 0 10px; }
+@media print {
+  body.print-report .rail, body.print-report .topbar, body.print-report .pghead, body.print-report .spbar, body.print-report .rtools, body.print-report .page:not(#pg-reports), body.print-report .umenu, body.print-report #save { display: none !important; }
+  body.print-report main, body.print-report #pg-reports { display: block !important; margin: 0; padding: 0; }
+  body.print-report .rprod { break-inside: avoid; box-shadow: none; }
+  body.print-report .rline button, body.print-report .rline .spsel:not(.rst-on):not([class*="rst-"]) { display: none; }
+  body.print-report .rline select { appearance: none; border: 0; background: none; }
+}

@@ -10,7 +10,7 @@ slides and spreadsheets: outdated the day after a meeting, no single owner, no h
 |---|---|---|
 | **Admin** | Product lead(s), listed in `admin_emails` | Everything + approve/revoke users, set Editor/Viewer, delete baselines |
 | **Editor** | PMs, engineers, QA, UX | Create/edit/move/delete features, ideas, people, vacations, roadmaps, baselines |
-| **Viewer** | Executives (CEO/CTO/…) and stakeholders | Read-only: Roadmap, Capacity, Baselines, Log |
+| **Viewer** | Executives (CEO/CTO/…) and stakeholders | Read-only: Roadmap, Capacity, Baselines, Log, submitted Weekly reports |
 | **Public link visitor** | Anyone with a share link | Read-only snapshot of one roadmap, no login, revocable |
 
 Sign-up is open to anyone, but **nobody sees data until an admin approves** them (email notification to admins).
@@ -31,6 +31,7 @@ replaced by creating new roadmaps with their own date range.
 | **Resources** | Team directory (roles, domain, avatar). In the by-person roadmap each row has a drag grip to reorder (shared by everyone) and a ⋯ menu: Move up/down and Hide from this roadmap (empty rows only; other roadmaps and the team are untouched; "Show hidden" brings it back) | Assignment source; rows ordered the way the team thinks |
 | **Vacations** | Leave calendar, affected features per person | Realistic delivery dates |
 | **Capacity** | Weekly heat-map of load vs. availability | Spot over-allocation before it hurts |
+| **Sprints & Weekly report** | Weekly sprint plan typed in the tool; a per-product executive report is auto-drafted from it and the roadmap (optionally worded by AI), edited by the team, submitted by an admin and read by executives | Replaces the manual sprint doc and newsletter |
 | **Baselines** | Immutable checkpoints + "Plan vs now" diff and ghost bars on the Gantt | Accountability: what moved since we committed |
 | **Log** | Every change with who/when; export; undo | Audit trail and safe experimentation |
 | **Sharing** | Read-only public link per roadmap; Editor/Viewer access | Stakeholder transparency without accounts |

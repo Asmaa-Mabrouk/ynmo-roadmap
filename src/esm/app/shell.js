@@ -14,6 +14,8 @@ import { renderVacations } from '../pages/vacations.js';
 import { renderLog } from '../pages/log.js';
 import { renderCapacity } from '../features/capacity.js';
 import { renderBaselines } from '../features/baselines.js';
+import { renderSprints } from '../pages/sprints.js';
+import { renderReports } from '../pages/reports.js';
 import { PAGES } from '../core/shared.js';
 import { ACTIVE_LOG_PAGE, isViewer } from '../features/safety.js';
 import { closeCtx } from '../ui/editing.js';
@@ -28,8 +30,8 @@ import { bootShared } from '../features/sharing.js';
 
 /* ---------- shell: navigation and start ---------- */
 export function refreshPage() { renderPage(state.page); }
-function renderPage(p) { ({ roadmap: render, ideas: () => renderIdeas(true), roadmaps: renderRoadmaps, resources: renderResources, admin: () => { loadMembers(); renderAdmin(); }, vacations: () => renderVacations(true), log: renderLog, capacity: renderCapacity, baselines: renderBaselines })[p](); }
-const VIEWER_PAGES = ['roadmap', 'capacity', 'baselines', 'log'];
+function renderPage(p) { ({ roadmap: render, ideas: () => renderIdeas(true), roadmaps: renderRoadmaps, resources: renderResources, admin: () => { loadMembers(); renderAdmin(); }, vacations: () => renderVacations(true), log: renderLog, capacity: renderCapacity, baselines: renderBaselines, sprints: renderSprints, reports: renderReports })[p](); }
+const VIEWER_PAGES = ['roadmap', 'capacity', 'baselines', 'log', 'reports'];
 export function showPage(p) {
   if (!PAGES.some(x => x[0] === p) || (p === 'admin' && !(S.me && S.me.is_admin)) || (isViewer() && !VIEWER_PAGES.includes(p))) p = 'roadmap';
   state.page = p; closeCtx(); closePicker();
@@ -48,6 +50,8 @@ const NAV_ICONS = {
   admin: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.4 2.9 8.3 7 10 4.1-1.7 7-5.6 7-10V6l-7-3z" /><path d="m9 12 2 2 4-4" /></svg>',
   capacity: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>',
   baselines: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4v16M5 6h11l-2 3.5L16 13H5" /></svg>',
+  sprints: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 3-6.2M4 4v4h4" /><path d="M12 8v4l2.5 2" /></svg>',
+  reports: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 13h6M9 17h6M9 9h2" /></svg>',
   log: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>'
 };
 function buildNav() {
@@ -74,6 +78,11 @@ export function start() {
     if (state.page === 'roadmaps') renderRoadmaps();
   }, () => {});
   S.db.collection('ideas').onSnapshot(s => { const n = snapDocs('ideas', s, S.ideas); if (same(n, S.ideas)) return; const orderChanged = JSON.stringify([n.peopleorder, n.peoplehide]) !== JSON.stringify([S.ideas.peopleorder, S.ideas.peoplehide]); S.ideas = n; if (orderChanged) softRender(); /* shared row order of the by-person view */ renderDrawer(); if (state.page === 'ideas') renderIdeas(); if (state.page === 'roadmaps') renderRoadmaps(); }, () => {});
+  S.db.collection('reports').onSnapshot(s => { const n = snapDocs('reports', s, S.reports); if (same(n, S.reports)) return; S.reports = n; if (state.page === 'reports' && !state.edit && !document.activeElement.closest('#pg-reports')) renderReports(); }, () => {});
+  if (!isViewer()) {
+    S.db.collection('sprints').onSnapshot(s => { const n = snapDocs('sprints', s, S.sprints); if (same(n, S.sprints)) return; S.sprints = n; if (state.page === 'sprints' && !document.activeElement.closest('#pg-sprints')) renderSprints(); if (state.page === 'reports') renderReports(); }, () => {});
+    S.db.collection('sprint_items').onSnapshot(s => { const n = snapDocs('sprint_items', s, S.sitems); if (same(n, S.sitems)) return; S.sitems = n; if (state.page === 'sprints' && !document.activeElement.closest('#pg-sprints')) renderSprints(); }, () => {});
+  }
   S.db.collection('vacations').onSnapshot(s => { const n = snapDocs('vacations', s, S.vacs); if (same(n, S.vacs)) return; S.vacs = n; softRender(); if (state.page === 'vacations') renderVacations(); }, () => {});
   S.db.collection('activity').onSnapshot(s => { S.logs = s.docs.map(d => ({ id: d.id, data: d.data() })).sort((a, b) => a.data.at < b.data.at ? 1 : -1); if (!S.logsOld.length) S.logsMore = s.docs.length >= ACTIVE_LOG_PAGE; if (state.page === 'log') renderLog(); }, () => {});
   setSave('ready'); fillRm(); startExtras();

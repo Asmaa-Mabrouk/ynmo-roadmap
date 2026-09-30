@@ -20,6 +20,9 @@ only usability. The only key in the client is the *publishable* key. Never commi
 | Brute force / stolen device | Password meter (min 8), idle logout 30 min, sign-out-everywhere | src/esm/features/safety.js |
 | Public link leakage | Token-based, revocable, RPC returns only one roadmap's bars, people, company days off | sql/04 |
 
+| Executives seeing unsent drafts / sprint internals | `reports` readable by viewers only when `status='submitted'`; `sprints`/`sprint_items` editor-only; only admins may submit | sql/06 |
+| Gemini key leak / prompt injection | Key only in Edge Function secrets; caller must be an editor; item text treated as untrusted data; output schema-constrained and filtered to known ids; only titles are sent | functions/weekly-draft |
+
 ## Known limits / residual risk
 - CSP keeps `'unsafe-inline'` for script/style because the app is one inline file; moving to hashed/nonce inline or external files would remove it.
 - Anyone with a share link can read that snapshot until revoked.
