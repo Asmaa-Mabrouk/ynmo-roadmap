@@ -5,7 +5,7 @@
  * Dependencies are explicit ES imports; shared mutable state lives in `S` (core/state.js).
  */
 import { S } from '../core/state.js';
-import { $, COLORS, LANES, NDAYS, ROLES, STATUS, canEdit, dayFromIso, dlabel, directory, el, iso, items, state } from '../core/model.js';
+import { $, COLORS, PALETTE, isHex, LANES, NDAYS, ROLES, STATUS, canEdit, dayFromIso, dlabel, directory, el, iso, items, state } from '../core/model.js';
 import { lockCheck, trackPres } from '../features/presence.js';
 import { render } from './gantt-render.js';
 import { commit, persist, pushHistory, removeItem, write } from '../core/saving.js';
@@ -65,6 +65,10 @@ export function barMenu(it, owner, x, y) {
     const def = el('button', 'swatch def'); def.type = 'button'; def.title = 'Product color'; def.setAttribute('aria-label', 'Product color'); def.setAttribute('aria-pressed', String(!it.c));
     def.addEventListener('click', () => { closeCtx(); commit(it.id, { c: null }); }); row.append(def);
     COLORS.forEach(k => { const b = el('button', 'swatch'); b.type = 'button'; b.style.setProperty('--c', 'var(--' + k + ')'); b.setAttribute('aria-label', 'Color ' + k.slice(1)); b.setAttribute('aria-pressed', String(it.c === k)); b.addEventListener('click', () => { closeCtx(); commit(it.id, { c: k }); }); row.append(b); });
+    PALETTE.forEach(h => { const b = el('button', 'swatch sm'); b.type = 'button'; b.style.setProperty('--c', h); b.title = h; b.setAttribute('aria-label', 'Color ' + h); b.setAttribute('aria-pressed', String(String(it.c || '').toLowerCase() === h)); b.addEventListener('click', () => { closeCtx(); commit(it.id, { c: h }); }); row.append(b); });
+    const any = el('label', 'swatch any'); any.title = 'Pick any colour'; const ci = el('input'); ci.type = 'color'; ci.value = isHex(it.c) ? it.c : '#2f6fb3'; ci.setAttribute('aria-label', 'Pick any colour');
+    if (isHex(it.c) && !PALETTE.includes(String(it.c).toLowerCase())) any.classList.add('on');
+    ci.addEventListener('change', () => { closeCtx(); commit(it.id, { c: ci.value.toLowerCase() }); }); any.append(ci); row.append(any);
     c.append(row);
     mlab(c, 'Dates');
     const dr = el('div', 'mrow');

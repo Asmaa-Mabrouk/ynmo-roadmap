@@ -5,7 +5,7 @@
  * Dependencies are explicit ES imports; shared mutable state lives in `S` (core/state.js).
  */
 import { S } from '../core/state.js';
-import { $, DAYS, H2_ID, LANES, LOWPRI, MGROUPS, NDAYS, STARTDOW, STATUS, canEdit, directory, dlabel, el, state, todayK, visible } from '../core/model.js';
+import { $, DAYS, H2_ID, LANES, LOWPRI, MGROUPS, NDAYS, STARTDOW, STATUS, canEdit, directory, dlabel, barColorCss, onColor, el, state, todayK, visible } from '../core/model.js';
 import { finishEdit, openAddPerson, startEdit } from './editing.js';
 import { startDrag } from './drag.js';
 import { commit } from '../core/saving.js';
@@ -48,9 +48,9 @@ function showBarTip(bar) {
 }
 window.addEventListener('scroll', hideBarTip, true);
 function buildBar(it, owner) {
-  const l = laneOf(it.sq), col = it.c ? 'var(--' + it.c + ')' : l.c;
+  const l = laneOf(it.sq), col = barColorCss(it.c) || l.c;
   const bar = el('div', 'bar st-' + it.st + (canEdit() ? '' : ' ro') + (it.ms ? ' ms' : ''));
-  bar.style.setProperty('--c', col); bar.dataset.person = owner || ''; bar.dataset.id = it.id;
+  bar.style.setProperty('--c', col); if (onColor(it.c)) bar.style.setProperty('--on-bar', onColor(it.c)); bar.dataset.person = owner || ''; bar.dataset.id = it.id;
   bar.tabIndex = 0; bar.setAttribute('role', 'button'); 
   bar.setAttribute('aria-label', it.t + ', ' + dlabel(it.d0) + ' to ' + dlabel(it.d1) + ', ' + STATUS[it.st]);
   bar.dataset.tip = it.t; bar.dataset.tipSub = l.n + ' · ' + dlabel(it.d0) + ' to ' + dlabel(it.d1) + ' · ' + STATUS[it.st];

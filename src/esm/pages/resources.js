@@ -9,7 +9,8 @@ import { $, LANES, TEAMS, canEdit, directory, el, items, state } from '../core/m
 import { DOMAINS, fld, logAct, pageHead, selOf, slug, toast } from '../core/shared.js';
 import { persist, write } from '../core/saving.js';
 import { saveIdea } from './ideas.js';
-import { allRoadmaps, withRm } from './roadmaps.js';
+import { allRoadmaps, useRoadmap, withRm } from './roadmaps.js';
+import { closeDlg, openDlg } from '../features/safety.js';
 import { applySquadNames, defaultSquadName, squadNames } from '../features/squad-names.js';
 import { fillPersons } from '../ui/people-picker.js';
 import { laneOf, render } from '../ui/gantt-render.js';
@@ -61,6 +62,36 @@ function renameSquad(k, v) {
   if (LANES.some(l => l.k !== k && l.n.toLowerCase() === v.toLowerCase())) { notify('Another squad is already called ' + v, 'err'); renderResources(); return; }
   const names = Object.assign({}, cur); if (v === defaultSquadName(k)) delete names[k]; else names[k] = v;
   saveIdea('squadnames', { cfg: true, names: names }, 'resource', 'renamed the squad ' + name + ' to ' + v); applySquadNames(); fillPersons(); render(); renderResources(); notify('Squad renamed to ' + v);
+}
+/** Features of every roadmap that still list `name` as an owner: [{id, n, titles[]}]. */
+function assignedWork(name) {
+  const out = [];
+  allRoadmaps().forEach(rm => withRm(rm.id, () => { const ts = items().filter(i => i.res.includes(name)).map(i => i.t); if (ts.length) out.push({ id: rm.id, n: rm.n, titles: ts }); }));
+  return out;
+}
+/** Remove a member: confirm first; if the person still owns roadmap features, explain and ask to edit the roadmap before removing. */
+function askRemove(name) {
+  openDlg('Remove ' + name + '?', box => {
+    box.append(el('p', 'sub', name + ' will be removed from the team list, the assign menus and the roadmap rows.'));
+    const no = el('button', 'btn', 'Cancel'), yes = el('button', 'btn danger', 'Remove'); no.type = yes.type = 'button';
+    no.addEventListener('click', closeDlg);
+    yes.addEventListener('click', () => { const w = assignedWork(name); closeDlg(); if (w.length) warnAssigned(name, w); else removePerson2(name); });
+    const row = el('div', 'formrow'); row.append(no, yes); box.append(row);
+  });
+}
+function warnAssigned(name, work) {
+  const total = work.reduce((n, w) => n + w.titles.length, 0);
+  openDlg('Cannot remove ' + name + ' yet', box => {
+    const wr = el('p', 'gerr', name + ' is still assigned to ' + total + (total === 1 ? ' feature' : ' features') + ' on the roadmap. Edit the roadmap first (reassign or unassign them), then remove ' + name + '.'); wr.setAttribute('role', 'alert'); box.append(wr);
+    work.forEach(w => {
+      const row = el('div', 'wkrow'); row.append(el('b', '', w.n + ' (' + w.titles.length + ')'));
+      const ul = el('ul'); w.titles.slice(0, 6).forEach(t => ul.append(el('li', '', t))); if (w.titles.length > 6) ul.append(el('li', '', '… and ' + (w.titles.length - 6) + ' more')); row.append(ul);
+      const go = el('button', 'btn sm primary', 'Open ' + w.n); go.type = 'button';
+      go.addEventListener('click', () => { closeDlg(); useRoadmap(w.id); state.person = name; fillPersons(); render(); const nb = document.querySelector('#nav button[data-p="roadmap"]'); if (nb) nb.click(); });
+      row.append(go); box.append(row);
+    });
+    const ok = el('button', 'btn', 'Close'); ok.type = 'button'; ok.addEventListener('click', closeDlg); box.append(ok);
+  });
 }
 export function removePerson2(name) {
   const id = personDocId(name), base0 = Object.keys(TEAMS).some(sq => ['pm', 'dev', 'qa', 'ux'].some(r => (TEAMS[sq][r] || []).includes(name)));
@@ -131,7 +162,7 @@ export function renderResources() {
     LANES.forEach(l => { const b = el('button', 'pill', (p.sqs.has(l.k) ? '✓ ' : '') + l.n); b.type = 'button'; b.title = (p.sqs.has(l.k) ? 'Remove ' : 'Add ') + p.name + (p.sqs.has(l.k) ? ' from ' : ' to ') + l.n; b.prepend(el('i')); b.style.setProperty('--c', l.c); b.setAttribute('aria-pressed', String(p.sqs.has(l.k))); b.disabled = !canEdit();
       b.addEventListener('click', () => { const s = new Set(p.sqs); s.has(l.k) ? s.delete(l.k) : s.add(l.k); if (!s.size) { notify(p.name + ' must stay in at least one squad', 'err'); return; } notify(p.name + (s.has(l.k) ? ' added to ' : ' removed from ') + l.n); savePerson(p.name, { sqs: [...s], over: true }, 'changed squads of ' + p.name + ': ' + [...s].map(k => laneOf(k).n).join(' + ')); }); sw.append(b); });
     c3.append(sw);
-    const c4 = el('td'); if (canEdit()) { let armed = false; const rm = el('button', 'btn danger sm', 'Remove'); rm.type = 'button'; rm.addEventListener('click', () => { if (armed) { removePerson2(p.name); return; } armed = true; rm.textContent = 'Click again'; setTimeout(() => { armed = false; rm.textContent = 'Remove'; }, 3000); }); c4.append(rm); }
+    const c4 = el('td'); if (canEdit()) { const rm = el('button', 'btn danger sm', 'Remove'); rm.type = 'button'; rm.addEventListener('click', () => askRemove(p.name)); c4.append(rm); }
     tr.append(c1, c2, c3, c4); tb.append(tr);
   });
   t.append(tb); const sc = el('div', 'tscroll'); sc.append(t); card.append(sc); root.append(card);

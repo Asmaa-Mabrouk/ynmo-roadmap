@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased – Sprints + Weekly executive report
+- **Bar colours:** the bar menu now has a 52-colour palette plus a rainbow "pick any colour" circle. Stored as `#rrggbb` (validated) next to the old `p1..p6` keys; text colour switches to dark on light bars.
+- **Removing a team member:** a confirmation dialog first; if the member still owns features on any roadmap, removal is blocked with a warning that lists them per roadmap and a button to open that roadmap filtered to the person. Test: `tests/features/colors_remove.py`.
 - **Roadmap bars:** hovering (or focusing) a bar shows a card with its full text, squad, dates and status. Overlapping bars stack vertically in creation order, so a newly added bar goes under the existing ones and the row grows, instead of jumping to the top and shifting the others. Test: `tests/features/bar_stack.py`.
 - **Rename team members and squads (Resources page):** a ✎ next to each name renames a person everywhere (roadmap features on every roadmap, vacations, sprint `@person` lines, saved row order and hidden rows); a new Squads card renames the four squads (display name only; keys and colours stay) with a Reset button. Duplicates are rejected. Saved in the new meta doc `ideas/squadnames` (no SQL change). Test: `tests/features/rename.py`.
 - **Sprints page** (editors/admins): two-week sprints, work items grouped squad > person, quick add, bulk paste (bullets and Jira keys recognised), carry over unfinished items.

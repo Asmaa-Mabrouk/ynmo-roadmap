@@ -50,6 +50,21 @@ const PRODUCTS = [
 ];
 export const ROLES = { pm: 'PM', dev: 'Engineer', qa: 'Quality', ux: 'UX' };
 export const COLORS = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'];
+/** More bar colours: a wide palette (hue rows, dark to light) plus any colour from the picker. A stored colour is a key from COLORS or `#rrggbb`. */
+export const PALETTE = [
+  '#b91c1c', '#dc2626', '#ef4444', '#f87171', '#c2410c', '#ea580c', '#f97316', '#fb923c',
+  '#a16207', '#ca8a04', '#eab308', '#facc15', '#4d7c0f', '#65a30d', '#84cc16', '#a3e635',
+  '#15803d', '#16a34a', '#22c55e', '#4ade80', '#0f766e', '#0d9488', '#14b8a6', '#2dd4bf',
+  '#0e7490', '#0891b2', '#06b6d4', '#22d3ee', '#1d4ed8', '#2563eb', '#3b82f6', '#60a5fa',
+  '#4338ca', '#4f46e5', '#6366f1', '#818cf8', '#6d28d9', '#7c3aed', '#8b5cf6', '#a78bfa',
+  '#a21caf', '#c026d3', '#d946ef', '#e879f9', '#be185d', '#db2777', '#ec4899', '#f472b6',
+  '#1f2937', '#374151', '#6b7280', '#9ca3af'
+];
+export const isHex = c => /^#[0-9a-f]{6}$/i.test(String(c || ''));
+/** CSS colour of a stored bar colour (null = the product colour). */
+export const barColorCss = c => (isHex(c) ? c : COLORS.includes(c) ? 'var(--' + c + ')' : null);
+/** Text colour that stays readable on a bar of colour `c`. */
+export const onColor = c => { if (!isHex(c)) return null; const n = parseInt(c.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255; return (0.299 * r + 0.587 * g + 0.114 * b) > 165 ? '#14161f' : '#ffffff'; };
 
 export const TEAMS = {
   tifli:   { pm: ['Emad'], dev: ['Aya Fathy', 'Hamid Shahin', 'Mario'], qa: ['Mona'], ux: ['Mostafa'] },

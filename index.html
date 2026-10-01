@@ -759,6 +759,15 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .bartip { position: fixed; z-index: 90; max-width: min(420px, calc(100vw - 16px)); background: var(--ink); color: var(--surface); border-radius: 8px; padding: 8px 11px; font-size: 13px; line-height: 1.4; box-shadow: 0 8px 24px rgba(10, 12, 30, .3); pointer-events: none; }
 .bartip b { display: block; font-weight: 700; overflow-wrap: anywhere; white-space: pre-wrap; }
 .bartip small { display: block; margin-top: 3px; opacity: .75; font-size: 11.5px; }
+
+/* bar colour palette + any-colour circle */
+.mrow:has(.swatch.sm) { max-width: 236px; gap: 5px; }
+.swatch.sm { width: 20px; height: 20px; border-width: 1.5px; }
+.swatch.any { position: relative; width: 26px; height: 26px; overflow: hidden; display: inline-block; background: conic-gradient(#ef4444, #eab308, #22c55e, #06b6d4, #6366f1, #d946ef, #ef4444); }
+.swatch.any.on { border-color: var(--ink); }
+.swatch.any input { position: absolute; inset: -6px; width: 40px; height: 40px; opacity: 0; cursor: pointer; border: 0; padding: 0; }
+
+.wkrow { margin: 8px 0 12px; } .wkrow ul { margin: 4px 0 8px; padding-inline-start: 18px; font-size: 13px; } .wkrow .btn { margin-top: 2px; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -940,6 +949,67 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   var STATUS = { planned: "Planned", decide: "Needs decision", contract: "Waiting on contract", done: "Done" };
   var ROLES = { pm: "PM", dev: "Engineer", qa: "Quality", ux: "UX" };
   var COLORS = ["p1", "p2", "p3", "p4", "p5", "p6"];
+  var PALETTE = [
+    "#b91c1c",
+    "#dc2626",
+    "#ef4444",
+    "#f87171",
+    "#c2410c",
+    "#ea580c",
+    "#f97316",
+    "#fb923c",
+    "#a16207",
+    "#ca8a04",
+    "#eab308",
+    "#facc15",
+    "#4d7c0f",
+    "#65a30d",
+    "#84cc16",
+    "#a3e635",
+    "#15803d",
+    "#16a34a",
+    "#22c55e",
+    "#4ade80",
+    "#0f766e",
+    "#0d9488",
+    "#14b8a6",
+    "#2dd4bf",
+    "#0e7490",
+    "#0891b2",
+    "#06b6d4",
+    "#22d3ee",
+    "#1d4ed8",
+    "#2563eb",
+    "#3b82f6",
+    "#60a5fa",
+    "#4338ca",
+    "#4f46e5",
+    "#6366f1",
+    "#818cf8",
+    "#6d28d9",
+    "#7c3aed",
+    "#8b5cf6",
+    "#a78bfa",
+    "#a21caf",
+    "#c026d3",
+    "#d946ef",
+    "#e879f9",
+    "#be185d",
+    "#db2777",
+    "#ec4899",
+    "#f472b6",
+    "#1f2937",
+    "#374151",
+    "#6b7280",
+    "#9ca3af"
+  ];
+  var isHex = (c) => /^#[0-9a-f]{6}$/i.test(String(c || ""));
+  var barColorCss = (c) => isHex(c) ? c : COLORS.includes(c) ? "var(--" + c + ")" : null;
+  var onColor = (c) => {
+    if (!isHex(c)) return null;
+    const n = parseInt(c.slice(1), 16), r = n >> 16, g = n >> 8 & 255, b = n & 255;
+    return 0.299 * r + 0.587 * g + 0.114 * b > 165 ? "#14161f" : "#ffffff";
+  };
   var TEAMS = {
     tifli: { pm: ["Emad"], dev: ["Aya Fathy", "Hamid Shahin", "Mario"], qa: ["Mona"], ux: ["Mostafa"] },
     plan: { pm: ["Asmaa", "Engy"], dev: ["Soliman", "Amal", "Waradny"], qa: ["Sherif", "Zahran", "Mwrohan"], ux: ["Saad", "Khalid"] },
@@ -3539,6 +3609,32 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         });
         row.append(b);
       });
+      PALETTE.forEach((h) => {
+        const b = el("button", "swatch sm");
+        b.type = "button";
+        b.style.setProperty("--c", h);
+        b.title = h;
+        b.setAttribute("aria-label", "Color " + h);
+        b.setAttribute("aria-pressed", String(String(it.c || "").toLowerCase() === h));
+        b.addEventListener("click", () => {
+          closeCtx();
+          commit(it.id, { c: h });
+        });
+        row.append(b);
+      });
+      const any = el("label", "swatch any");
+      any.title = "Pick any colour";
+      const ci = el("input");
+      ci.type = "color";
+      ci.value = isHex(it.c) ? it.c : "#2f6fb3";
+      ci.setAttribute("aria-label", "Pick any colour");
+      if (isHex(it.c) && !PALETTE.includes(String(it.c).toLowerCase())) any.classList.add("on");
+      ci.addEventListener("change", () => {
+        closeCtx();
+        commit(it.id, { c: ci.value.toLowerCase() });
+      });
+      any.append(ci);
+      row.append(any);
       c.append(row);
       mlab(c, "Dates");
       const dr = el("div", "mrow");
@@ -4234,9 +4330,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   }
   window.addEventListener("scroll", hideBarTip, true);
   function buildBar(it, owner) {
-    const l = laneOf(it.sq), col = it.c ? "var(--" + it.c + ")" : l.c;
+    const l = laneOf(it.sq), col = barColorCss(it.c) || l.c;
     const bar = el("div", "bar st-" + it.st + (canEdit() ? "" : " ro") + (it.ms ? " ms" : ""));
     bar.style.setProperty("--c", col);
+    if (onColor(it.c)) bar.style.setProperty("--on-bar", onColor(it.c));
     bar.dataset.person = owner || "";
     bar.dataset.id = it.id;
     bar.tabIndex = 0;
@@ -4685,6 +4782,64 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     renderResources();
     notify("Squad renamed to " + v);
   }
+  function assignedWork(name) {
+    const out = [];
+    allRoadmaps().forEach((rm) => withRm(rm.id, () => {
+      const ts = items().filter((i) => i.res.includes(name)).map((i) => i.t);
+      if (ts.length) out.push({ id: rm.id, n: rm.n, titles: ts });
+    }));
+    return out;
+  }
+  function askRemove(name) {
+    openDlg("Remove " + name + "?", (box2) => {
+      box2.append(el("p", "sub", name + " will be removed from the team list, the assign menus and the roadmap rows."));
+      const no = el("button", "btn", "Cancel"), yes = el("button", "btn danger", "Remove");
+      no.type = yes.type = "button";
+      no.addEventListener("click", closeDlg);
+      yes.addEventListener("click", () => {
+        const w = assignedWork(name);
+        closeDlg();
+        if (w.length) warnAssigned(name, w);
+        else removePerson2(name);
+      });
+      const row = el("div", "formrow");
+      row.append(no, yes);
+      box2.append(row);
+    });
+  }
+  function warnAssigned(name, work) {
+    const total = work.reduce((n, w) => n + w.titles.length, 0);
+    openDlg("Cannot remove " + name + " yet", (box2) => {
+      const wr = el("p", "gerr", name + " is still assigned to " + total + (total === 1 ? " feature" : " features") + " on the roadmap. Edit the roadmap first (reassign or unassign them), then remove " + name + ".");
+      wr.setAttribute("role", "alert");
+      box2.append(wr);
+      work.forEach((w) => {
+        const row = el("div", "wkrow");
+        row.append(el("b", "", w.n + " (" + w.titles.length + ")"));
+        const ul = el("ul");
+        w.titles.slice(0, 6).forEach((t) => ul.append(el("li", "", t)));
+        if (w.titles.length > 6) ul.append(el("li", "", "… and " + (w.titles.length - 6) + " more"));
+        row.append(ul);
+        const go = el("button", "btn sm primary", "Open " + w.n);
+        go.type = "button";
+        go.addEventListener("click", () => {
+          closeDlg();
+          useRoadmap(w.id);
+          state.person = name;
+          fillPersons();
+          render();
+          const nb = document.querySelector('#nav button[data-p="roadmap"]');
+          if (nb) nb.click();
+        });
+        row.append(go);
+        box2.append(row);
+      });
+      const ok = el("button", "btn", "Close");
+      ok.type = "button";
+      ok.addEventListener("click", closeDlg);
+      box2.append(ok);
+    });
+  }
   function removePerson2(name) {
     const id = personDocId(name), base0 = Object.keys(TEAMS).some((sq) => ["pm", "dev", "qa", "ux"].some((r) => (TEAMS[sq][r] || []).includes(name)));
     if (id && !base0) {
@@ -4889,21 +5044,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       c3.append(sw);
       const c4 = el("td");
       if (canEdit()) {
-        let armed = false;
         const rm = el("button", "btn danger sm", "Remove");
         rm.type = "button";
-        rm.addEventListener("click", () => {
-          if (armed) {
-            removePerson2(p.name);
-            return;
-          }
-          armed = true;
-          rm.textContent = "Click again";
-          setTimeout(() => {
-            armed = false;
-            rm.textContent = "Remove";
-          }, 3e3);
-        });
+        rm.addEventListener("click", () => askRemove(p.name));
         c4.append(rm);
       }
       tr.append(c1, c2, c3, c4);
