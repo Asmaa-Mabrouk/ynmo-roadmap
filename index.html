@@ -4855,12 +4855,34 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     render();
     renderResources();
   }
-  function addMember(name, domain, sqs) {
-    if ([...directory().keys()].some((k) => k.trim().toLowerCase() === name.trim().toLowerCase())) return "Already on the chart.";
+  function setRoadmapRows(name, picked, hideRest) {
+    const ph = S.ideas.peoplehide, by = {};
+    Object.keys(ph && ph.byRm || {}).forEach((k) => {
+      by[k] = ph.byRm[k].slice();
+    });
+    allRoadmaps().forEach((rm) => {
+      const list = (by[rm.id] || []).filter((x) => x !== name);
+      if (!picked.has(rm.id) && hideRest) list.push(name);
+      if (list.length || by[rm.id]) by[rm.id] = list;
+    });
+    saveIdea("peoplehide", { cfg: true, byRm: by });
+    return allRoadmaps().filter((rm) => !(by[rm.id] || []).includes(name)).map((rm) => rm.n);
+  }
+  function addMember(name, domain, sqs, picked) {
+    const dup = [...directory().keys()].find((k) => k.trim().toLowerCase() === name.trim().toLowerCase());
+    if (dup) {
+      const shown2 = setRoadmapRows(dup, picked, false);
+      logAct("resource", "showed " + dup + " on " + [...picked].map((id2) => (allRoadmaps().find((r) => r.id === id2) || {}).n).filter(Boolean).join(" + "));
+      render();
+      renderResources();
+      notify(dup + " is already on the team, so no duplicate was added. Shown on: " + (shown2.join(", ") || "no roadmap") + ".");
+      return "";
+    }
     const id = "p" + Date.now().toString(36);
     S.extras[id] = { n: name, domain, sqs };
     write("people/" + id, S.extras[id]);
-    logAct("resource", "added " + name + " (" + domain + ", " + sqs.map((k) => laneOf(k).n).join(" + ") + ")");
+    const shown = setRoadmapRows(name, picked, true);
+    logAct("resource", "added " + name + " (" + domain + ", " + sqs.map((k) => laneOf(k).n).join(" + ") + ")" + (shown.length ? " on " + shown.join(" + ") : " (no roadmap row yet)"));
     fillPersons();
     render();
     renderResources();
@@ -4905,13 +4927,25 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       });
       sq.append(b);
     });
+    const rmRow = el("div", "formrow"), rmPick = new Set(allRoadmaps().map((r) => r.id));
+    allRoadmaps().forEach((r) => {
+      const b = el("button", "pill", r.n);
+      b.type = "button";
+      b.setAttribute("aria-pressed", "true");
+      b.prepend(el("i"));
+      b.addEventListener("click", () => {
+        rmPick.has(r.id) ? rmPick.delete(r.id) : rmPick.add(r.id);
+        b.setAttribute("aria-pressed", String(rmPick.has(r.id)));
+      });
+      rmRow.append(b);
+    });
     const msg = el("div", "gerr");
     const go = el("button", "btn primary", "Add member");
     go.type = "submit";
     go.disabled = !canEdit();
     const r1 = el("div", "formrow");
     r1.append(fld("Name", nm), fld("Domain", dm));
-    f.append(r1, fld("Squads", sq), msg, go);
+    f.append(r1, fld("Squads", sq), fld("Show a row on these roadmaps (also fixes a person already added from the roadmap, no duplicate)", rmRow), msg, go);
     f.addEventListener("submit", (e) => {
       e.preventDefault();
       const v = nm.value.trim();
@@ -4920,7 +4954,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         msg.textContent = "Pick at least one squad.";
         return;
       }
-      const m = addMember(v, dm.value, [...picked]);
+      const m = addMember(v, dm.value, [...picked], rmPick);
       if (m) msg.textContent = m;
     });
     root.append(f);

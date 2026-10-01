@@ -100,11 +100,27 @@ export function removePerson2(name) {
   logAct('resource', 'removed ' + name + ' from the chart');
   fillPersons(); render(); renderResources();
 }
-function addMember(name, domain, sqs) {
-  if ([...directory().keys()].some(k => k.trim().toLowerCase() === name.trim().toLowerCase())) return 'Already on the chart.';
+/** Show `name` on the picked roadmaps. `hideRest` also hides the row on the other roadmaps (new members only). Returns the names of the roadmaps where the row is now visible. */
+function setRoadmapRows(name, picked, hideRest) {
+  const ph = S.ideas.peoplehide, by = {}; Object.keys((ph && ph.byRm) || {}).forEach(k => { by[k] = ph.byRm[k].slice(); });
+  allRoadmaps().forEach(rm => {
+    const list = (by[rm.id] || []).filter(x => x !== name);
+    if (!picked.has(rm.id) && hideRest) list.push(name);
+    if (list.length || by[rm.id]) by[rm.id] = list;
+  });
+  saveIdea('peoplehide', { cfg: true, byRm: by });
+  return allRoadmaps().filter(rm => !(by[rm.id] || []).includes(name)).map(rm => rm.n);
+}
+function addMember(name, domain, sqs, picked) {
+  const dup = [...directory().keys()].find(k => k.trim().toLowerCase() === name.trim().toLowerCase());
+  if (dup) {   // already added (for example from the roadmap's "+ Add person"): do not duplicate, just show the row where it was asked for
+    const shown = setRoadmapRows(dup, picked, false); logAct('resource', 'showed ' + dup + ' on ' + [...picked].map(id => (allRoadmaps().find(r => r.id === id) || {}).n).filter(Boolean).join(' + '));
+    render(); renderResources(); notify(dup + ' is already on the team, so no duplicate was added. Shown on: ' + (shown.join(', ') || 'no roadmap') + '.'); return '';
+  }
   const id = 'p' + Date.now().toString(36);
   S.extras[id] = { n: name, domain: domain, sqs: sqs }; write('people/' + id, S.extras[id]);
-  logAct('resource', 'added ' + name + ' (' + domain + ', ' + sqs.map(k => laneOf(k).n).join(' + ') + ')');
+  const shown = setRoadmapRows(name, picked, true);
+  logAct('resource', 'added ' + name + ' (' + domain + ', ' + sqs.map(k => laneOf(k).n).join(' + ') + ')' + (shown.length ? ' on ' + shown.join(' + ') : ' (no roadmap row yet)'));
   fillPersons(); render(); renderResources(); return '';
 }
 export async function loadMembers() {
@@ -125,10 +141,12 @@ export function renderResources() {
   const dm = selOf(DOMAINS, 'Engineering');
   const sq = el('div', 'formrow'); const picked = new Set(['tifli']);
   LANES.forEach(l => { const b = el('button', 'pill', l.n); b.type = 'button'; b.style.setProperty('--c', l.c); b.setAttribute('aria-pressed', String(picked.has(l.k))); b.prepend(el('i')); b.addEventListener('click', () => { picked.has(l.k) ? picked.delete(l.k) : picked.add(l.k); b.setAttribute('aria-pressed', String(picked.has(l.k))); }); sq.append(b); });
+  const rmRow = el('div', 'formrow'), rmPick = new Set(allRoadmaps().map(r => r.id));
+  allRoadmaps().forEach(r => { const b = el('button', 'pill', r.n); b.type = 'button'; b.setAttribute('aria-pressed', 'true'); b.prepend(el('i')); b.addEventListener('click', () => { rmPick.has(r.id) ? rmPick.delete(r.id) : rmPick.add(r.id); b.setAttribute('aria-pressed', String(rmPick.has(r.id))); }); rmRow.append(b); });
   const msg = el('div', 'gerr'); const go = el('button', 'btn primary', 'Add member'); go.type = 'submit'; go.disabled = !canEdit();
   const r1 = el('div', 'formrow'); r1.append(fld('Name', nm), fld('Domain', dm));
-  f.append(r1, fld('Squads', sq), msg, go);
-  f.addEventListener('submit', e => { e.preventDefault(); const v = nm.value.trim(); if (!v) return; if (!picked.size) { msg.textContent = 'Pick at least one squad.'; return; } const m = addMember(v, dm.value, [...picked]); if (m) msg.textContent = m; });
+  f.append(r1, fld('Squads', sq), fld('Show a row on these roadmaps (also fixes a person already added from the roadmap, no duplicate)', rmRow), msg, go);
+  f.addEventListener('submit', e => { e.preventDefault(); const v = nm.value.trim(); if (!v) return; if (!picked.size) { msg.textContent = 'Pick at least one squad.'; return; } const m = addMember(v, dm.value, [...picked], rmPick); if (m) msg.textContent = m; });
   root.append(f);
   const dir = directory(), prim = d => Math.min.apply(null, [...d.sqs].map(k => LANES.findIndex(l => l.k === k)).filter(i => i >= 0).concat([9]));
   const people = [...dir.values()].sort((a, b) => prim(a) - prim(b) || a.name.localeCompare(b.name));

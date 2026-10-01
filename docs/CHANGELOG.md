@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased – Sprints + Weekly executive report
+- **Add member on Resources:** choose which roadmaps get a row for the new person (all by default; unticked ones hide the row via `ideas/peoplehide`). A name that was already added from the roadmap's "+ Add person" is not duplicated: the existing person is just shown on the chosen roadmaps. Test: `tests/features/add_member.py`.
 - **Bar colours:** the bar menu now has a 52-colour palette plus a rainbow "pick any colour" circle. Stored as `#rrggbb` (validated) next to the old `p1..p6` keys; text colour switches to dark on light bars.
 - **Removing a team member:** a confirmation dialog first; if the member still owns features on any roadmap, removal is blocked with a warning that lists them per roadmap and a button to open that roadmap filtered to the person. Test: `tests/features/colors_remove.py`.
 - **Roadmap bars:** hovering (or focusing) a bar shows a card with its full text, squad, dates and status. Overlapping bars stack vertically in creation order, so a newly added bar goes under the existing ones and the row grows, instead of jumping to the top and shifting the others. Test: `tests/features/bar_stack.py`.
