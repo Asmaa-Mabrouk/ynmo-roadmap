@@ -54,20 +54,21 @@ export function startDrag(ev, it, bar, mode) {
   if (!canEdit() || (ev.button != null && ev.button !== 0)) return;
   const g = $('grid'), wk = g.querySelector('.wk');
   const mw = wk ? wk.getBoundingClientRect().width : 26;
-  const owner = bar.dataset.person || '';
+  const owner = bar.dataset.person || '', ch = g.closest('.chartwrap') || document.scrollingElement, sx0 = ch.scrollLeft, sy0 = ch.scrollTop;
+  let lastE = null, raf = 0;
   const st = { x: ev.clientX, y: ev.clientY, lastY: ev.clientY, mode: mode, d0: it.d0, d1: it.d1, sq: it.sq, person: owner, moved: false, cur: { d0: it.d0, d1: it.d1, sq: it.sq, person: owner } };
   bar.setPointerCapture(ev.pointerId);
   const move = e => {
-    const dx = e.clientX - st.x, dy = e.clientY - st.y; st.lastY = e.clientY;
+    lastE = e; const dx = e.clientX - st.x + (ch.scrollLeft - sx0), dy = e.clientY - st.y + (ch.scrollTop - sy0); st.lastY = e.clientY;
     if (!st.moved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
-    if (!st.moved) { st.moved = true; S.dragging = true; bar.classList.add('dragging'); }
+    if (!st.moved) { st.moved = true; S.dragging = true; bar.classList.add('dragging'); raf = requestAnimationFrame(tick); }
     const dm = Math.round(dx / mw);
     let a = st.d0, b = st.d1;
     if (mode === 'move') { const len = b - a; a = Math.max(0, Math.min(NDAYS - 1 - len, st.d0 + dm)); b = a + len; }
     else if (mode === 'l') { a = Math.max(0, Math.min(st.d1, st.d0 + dm)); }
     else { b = Math.min(NDAYS - 1, Math.max(st.d0, st.d1 + dm)); }
     st.cur.d0 = a; st.cur.d1 = b;
-    { const tip = $('dtip') || document.body.appendChild(Object.assign(document.createElement('div'), { id: 'dtip', className: 'dtip' })); tip.textContent = dlabel(a) + ' → ' + dlabel(b) + ' · ' + (b - a + 1) + ' d'; tip.style.left = (e.clientX + 14) + 'px'; tip.style.top = (e.clientY + 16) + 'px'; }
+    { const tip = $('dtip') || document.body.appendChild(Object.assign(document.createElement('div'), { id: 'dtip', className: 'dtip' })); tip.textContent = dlabel(a) + ' → ' + dlabel(b) + ' · ' + (b - a + 1) + ' d' + (mode === 'move' && state.view === 'person' && st.cur.person && st.cur.person !== st.person && st.cur.person !== '__none' ? ' · to ' + st.cur.person : ''); tip.style.left = (e.clientX + 14) + 'px'; tip.style.top = (e.clientY + 16) + 'px'; }
     bar.style.gridColumn = (a + 2) + ' / ' + (b + 3);
     if (mode === 'move') {
       bar.style.transform = 'translate(' + (dx - (a - st.d0) * mw) + 'px,' + dy + 'px)';
@@ -82,7 +83,18 @@ export function startDrag(ev, it, bar, mode) {
       }
     } else bar.style.transform = '';
   };
+  /** Scroll the chart while the bar is held near its top, bottom or sides, so a row that is out of view can still be reached. */
+  const tick = () => {
+    if (!S.dragging || !lastE) return;
+    const r = ch.getBoundingClientRect ? ch.getBoundingClientRect() : { top: 0, bottom: window.innerHeight, left: 0, right: window.innerWidth };
+    const top = r.top + 84, bot = r.bottom - 48, left = r.left + 230, right = r.right - 40;   // 84 = sticky header, 230 = name column
+    const v = lastE.clientY < top ? -Math.min(24, (top - lastE.clientY) / 3 + 4) : lastE.clientY > bot ? Math.min(24, (lastE.clientY - bot) / 3 + 4) : 0;
+    const h = mode === 'move' ? (lastE.clientX < left ? -Math.min(22, (left - lastE.clientX) / 3 + 3) : lastE.clientX > right ? Math.min(22, (lastE.clientX - right) / 3 + 3) : 0) : 0;
+    if (v || h) { const a = ch.scrollTop, b = ch.scrollLeft; ch.scrollTop += v; ch.scrollLeft += h; if (ch.scrollTop !== a || ch.scrollLeft !== b) move(lastE); }
+    raf = requestAnimationFrame(tick);
+  };
   const up = () => {
+    cancelAnimationFrame(raf);
     const dt = $('dtip'); if (dt) dt.remove();
     bar.removeEventListener('pointermove', move); bar.removeEventListener('pointerup', up); bar.removeEventListener('pointercancel', up);
     setDrop(g, null); setDropP(g, null); S.dragging = false;
