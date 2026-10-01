@@ -5,7 +5,7 @@
  * Dependencies are explicit ES imports; shared mutable state lives in `S` (core/state.js).
  */
 import { S } from '../core/state.js';
-import { $, LANES, NDAYS, byOrd, canEdit, dlabel, items, state } from '../core/model.js';
+import { $, LANES, NDAYS, byOrd, canEdit, dlabel, items, rangePatch, state } from '../core/model.js';
 import { commit, squadPatch } from '../core/saving.js';
 import { render } from './gantt-render.js';
 
@@ -87,16 +87,18 @@ export function startDrag(ev, it, bar, mode) {
     bar.removeEventListener('pointermove', move); bar.removeEventListener('pointerup', up); bar.removeEventListener('pointercancel', up);
     setDrop(g, null); setDropP(g, null); S.dragging = false;
     if (!st.moved) return;
-    const patch = {};
-    if (st.cur.d0 !== st.d0) patch.d0 = st.cur.d0;
-    if (st.cur.d1 !== st.d1) patch.d1 = st.cur.d1;
+    const patch = {}, dated = st.cur.d0 !== st.d0 || st.cur.d1 !== st.d1, raw = items().find(i => i.id === it.id) || it;
+    let resAfter = null, pdBase;
     if (state.view === 'person') {
       if (st.cur.person !== st.person && st.cur.person !== '') {
         let nr = it.res.filter(n => n !== st.person);
         if (st.cur.person !== '__none') nr = [...new Set(nr.concat([st.cur.person]))];
-        patch.res = nr;
+        patch.res = nr; resAfter = nr;
+        if (raw.pd && st.person) { pdBase = Object.assign({}, raw.pd); if (st.cur.person !== '__none') pdBase[st.cur.person] = [st.cur.d0, st.cur.d1]; delete pdBase[st.person]; if (!dated) patch.pd = pdBase; }
       }
-    } else if (st.cur.sq !== st.sq) Object.assign(patch, squadPatch(it, st.cur.sq));
+    }
+    if (dated) Object.assign(patch, rangePatch(it, state.view === 'person' ? st.cur.person : '', st.cur.d0, st.cur.d1, resAfter, pdBase));
+    if (state.view !== 'person' && st.cur.sq !== st.sq) Object.assign(patch, squadPatch(it, st.cur.sq));
     if (state.view !== 'person' && mode === 'move' && (st.cur.sq !== st.sq || Math.abs(st.lastY - st.y) > 20)) {
       const o = newOrd(it.id, st.cur.sq, st.lastY);
       if (o !== it.ord) patch.ord = o;

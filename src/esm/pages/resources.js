@@ -45,7 +45,7 @@ function renamePerson(old, nw) {
     S.extras[hid] = { n: old, hidden: true }; write('people/' + hid, S.extras[hid]);
   }
   let feats = 0;
-  allRoadmaps().forEach(rm => withRm(rm.id, () => items().forEach(it => { if (it.res.includes(old)) { S.over[it.id] = Object.assign({}, S.over[it.id] || {}, { res: it.res.map(x => (x === old ? nw : x)) }); persist(it.id); feats++; } })));
+  allRoadmaps().forEach(rm => withRm(rm.id, () => items().forEach(it => { if (it.res.includes(old)) { const patch = { res: it.res.map(x => (x === old ? nw : x)) }; if (it.pd && it.pd[old]) { patch.pd = Object.assign({}, it.pd); patch.pd[nw] = patch.pd[old]; delete patch.pd[old]; } S.over[it.id] = Object.assign({}, S.over[it.id] || {}, patch); persist(it.id); feats++; } })));
   Object.keys(S.vacs).forEach(v => { if (S.vacs[v] && S.vacs[v].p === old) { S.vacs[v] = Object.assign({}, S.vacs[v], { p: nw }); write('vacations/' + v, S.vacs[v]); } });
   Object.keys(S.sitems).forEach(i => { const x = S.sitems[i]; if (x && x.k === 'p' && x.t === old) { S.sitems[i] = Object.assign({}, x, { t: nw }); write('sprint_items/' + i, S.sitems[i]); } else if (x && !x.k && x.person === old) { S.sitems[i] = Object.assign({}, x, { person: nw }); write('sprint_items/' + i, S.sitems[i]); } });
   const po = S.ideas.peopleorder; if (po && (po.ord || []).includes(old)) saveIdea('peopleorder', { cfg: true, ord: po.ord.map(x => (x === old ? nw : x)) });

@@ -5,7 +5,7 @@
  * Dependencies are explicit ES imports; shared mutable state lives in `S` (core/state.js).
  */
 import { S } from '../core/state.js';
-import { $, DAYS, H2_ID, LANES, LOWPRI, MGROUPS, NDAYS, STARTDOW, STATUS, canEdit, directory, dlabel, barColorCss, onColor, el, state, todayK, visible } from '../core/model.js';
+import { $, DAYS, H2_ID, LANES, LOWPRI, MGROUPS, NDAYS, STARTDOW, STATUS, canEdit, directory, dlabel, barColorCss, onColor, eff, rangePatch, el, state, todayK, visible } from '../core/model.js';
 import { finishEdit, openAddPerson, startEdit } from './editing.js';
 import { startDrag } from './drag.js';
 import { commit } from '../core/saving.js';
@@ -78,8 +78,8 @@ function buildBar(it, owner) {
     if (!canEdit() || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
     e.preventDefault();
     const d = e.key === 'ArrowRight' ? 1 : -1;
-    if (e.shiftKey) commit(it.id, { d1: Math.max(it.d0, Math.min(NDAYS - 1, it.d1 + d)) });
-    else { const len = it.d1 - it.d0, a = Math.max(0, Math.min(NDAYS - 1 - len, it.d0 + d)); commit(it.id, { d0: a, d1: a + len }); }
+    if (e.shiftKey) commit(it.id, rangePatch(it, owner, it.d0, Math.max(it.d0, Math.min(NDAYS - 1, it.d1 + d))));
+    else { const len = it.d1 - it.d0, a = Math.max(0, Math.min(NDAYS - 1 - len, it.d0 + d)); commit(it.id, rangePatch(it, owner, a, a + len)); }
     state.refocusBar = it.id;
   });
   return bar;
@@ -138,7 +138,7 @@ function renderPeople(g, put, list) {
   const dir = directory(), map = new Map(), H = 34;
   const ensure = n => { if (!map.has(n)) map.set(n, { name: n, its: [] }); return map.get(n); };
   dir.forEach((p, n) => ensure(n));
-  list.forEach(it => { if (!it.res.length) ensure('__none').its.push(it); else it.res.forEach(n => ensure(n).its.push(it)); });
+  list.forEach(it => { if (!it.res.length) ensure('__none').its.push(it); else it.res.forEach(n => ensure(n).its.push(eff(it, n))); });
   let people = [...map.values()].filter(p => p.name !== '__none');
   if (state.person !== 'all') people = people.filter(p => p.name === state.person);
   else if (filtersActive()) people = people.filter(p => p.its.length);

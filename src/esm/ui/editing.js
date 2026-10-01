@@ -5,7 +5,7 @@
  * Dependencies are explicit ES imports; shared mutable state lives in `S` (core/state.js).
  */
 import { S } from '../core/state.js';
-import { $, COLORS, PALETTE, isHex, LANES, NDAYS, ROLES, STATUS, canEdit, dayFromIso, dlabel, directory, el, iso, items, state } from '../core/model.js';
+import { $, COLORS, PALETTE, isHex, LANES, NDAYS, ROLES, STATUS, canEdit, dayFromIso, dlabel, directory, el, iso, items, rangePatch, state } from '../core/model.js';
 import { lockCheck, trackPres } from '../features/presence.js';
 import { render } from './gantt-render.js';
 import { commit, persist, pushHistory, removeItem, write } from '../core/saving.js';
@@ -39,9 +39,10 @@ export function addAt(person, k) {
   render(); persist(id);
 }
 function duplicate(it) {
+  const raw = items().find(i => i.id === it.id) || it;
   pushHistory();
   const id = 'c' + Date.now().toString(36);
-  S.over[id] = { custom: true, rm: state.rm, t: it.t + ' (copy)', sq: it.sq, pr: it.pr.slice(), d0: it.d0, d1: it.d1, st: it.st, n: it.n || '', res: it.res.slice(), c: it.c || null, ord: it.ord + 0.5 };
+  S.over[id] = { custom: true, rm: state.rm, t: it.t + ' (copy)', sq: it.sq, pr: it.pr.slice(), d0: raw.d0, d1: raw.d1, pd: raw.pd ? JSON.parse(JSON.stringify(raw.pd)) : null, st: it.st, n: it.n || '', res: it.res.slice(), c: it.c || null, ord: it.ord + 0.5 };
   logAct('edit', 'duplicated "' + it.t + '"', { id: id, whole: null });
   render(); persist(id);
 }
@@ -70,12 +71,12 @@ export function barMenu(it, owner, x, y) {
     if (isHex(it.c) && !PALETTE.includes(String(it.c).toLowerCase())) any.classList.add('on');
     ci.addEventListener('change', () => { closeCtx(); commit(it.id, { c: ci.value.toLowerCase() }); }); any.append(ci); row.append(any);
     c.append(row);
-    mlab(c, 'Dates');
+    mlab(c, it.res.length > 1 && owner ? 'Dates for ' + owner : 'Dates');
     const dr = el('div', 'mrow');
     const dateIn = (val, on) => { const i = el('input'); i.type = 'date'; i.min = iso(0); i.max = iso(NDAYS - 1); i.value = iso(val); i.addEventListener('change', () => { const k = dayFromIso(i.value); if (k === null) return; closeCtx(); on(k); }); return i; };
     dr.append(
-      dateIn(it.d0, k => { if (k > it.d1) toast('Start is after the end, so the end moved to ' + dlabel(k) + '.'); commit(it.id, { d0: k, d1: Math.max(k, it.d1) }); }),
-      dateIn(it.d1, k => { if (k < it.d0) toast('End is before the start, so the start moved to ' + dlabel(k) + '.'); commit(it.id, { d1: k, d0: Math.min(k, it.d0) }); }));
+      dateIn(it.d0, k => { if (k > it.d1) toast('Start is after the end, so the end moved to ' + dlabel(k) + '.'); commit(it.id, rangePatch(it, owner, k, Math.max(k, it.d1))); }),
+      dateIn(it.d1, k => { if (k < it.d0) toast('End is before the start, so the start moved to ' + dlabel(k) + '.'); commit(it.id, rangePatch(it, owner, Math.min(k, it.d0), k)); }));
     c.append(dr);
     c.append(el('div', 'msep'));
     mi(c, 'Assign people…' + (it.res.length ? ' (' + it.res.length + ')' : ''), b => openPicker(it.id, b));

@@ -159,7 +159,7 @@ const NOTES = [
   'Edits are shared: anyone with edit access sees your changes.'
 ];
 
-const FIELDS = ['t', 'sq', 'pr', 'd0', 'd1', 'st', 'n', 'res', 'c', 'ord', 'dep', 'ms'];
+const FIELDS = ['t', 'sq', 'pr', 'd0', 'd1', 'st', 'n', 'res', 'c', 'ord', 'dep', 'ms', 'pd'];
 export const base = new Map();
 LANES.forEach(l => {
   ITEMS.map((it, i) => ({ it: it, i: i })).filter(x => x.it.sq === l.k)
@@ -182,6 +182,30 @@ function finish(it) {
   if (it.ms) it.d1 = it.d0;
   if (it.res === undefined) it.res = TEAMS[it.sq].pm.slice();
   return it;
+}
+/* ---------- per-person dates: `pd` = {person: [d0, d1]}; the item's own d0/d1 is then the span of all of them ---------- */
+const cl = k => Math.max(0, Math.min(NDAYS - 1, Math.round(k)));
+function rangeIn(it, pd, n) { const r = pd && pd[n]; if (!Array.isArray(r) || r.length < 2) return [it.d0, it.d1]; const a = cl(r[0]); return [a, Math.max(a, cl(r[1]))]; }
+/** Dates of `it` for one owner (the shared dates unless that person has their own). */
+export const rangeOf = (it, n) => rangeIn(it, it.pd, n);
+/** The item as shown on one person's row. */
+export function eff(it, n) { if (!it.pd || it.ms || !Array.isArray(it.pd[n])) return it; const r = rangeOf(it, n); return r[0] === it.d0 && r[1] === it.d1 ? it : Object.assign({}, it, { d0: r[0], d1: r[1] }); }
+/**
+ * Fields to save when `owner`'s bar of `it` gets the dates a..b.
+ * With several owners only that person's dates change (everyone else keeps theirs; d0/d1 become the span of all). Without an owner (squad view) or with one owner the whole item moves.
+ * `resAfter` / `pdBase` are used when the same edit also changes the owners.
+ */
+export function rangePatch(it, owner, a, b, resAfter, pdBase) {
+  const raw = items().find(i => i.id === it.id) || it, res = resAfter || raw.res, pd0 = pdBase !== undefined ? pdBase : raw.pd;
+  if (owner && owner !== '__none' && res.includes(owner) && res.length > 1 && !raw.ms) {
+    const m = {}; res.forEach(n => { m[n] = n === owner ? [a, b] : rangeIn(raw, pd0, n); });
+    return { pd: m, d0: Math.min.apply(null, res.map(n => m[n][0])), d1: Math.max.apply(null, res.map(n => m[n][1])) };
+  }
+  if (!pd0 || !Object.keys(pd0).length) return { d0: a, d1: b };
+  if (owner && res.includes(owner)) return { d0: a, d1: b, pd: null };   // down to one owner: the shared dates are the only dates
+  const dd0 = a - raw.d0, dd1 = b - raw.d1, m = {};
+  Object.keys(pd0).forEach(n => { const r = rangeIn(raw, pd0, n), x = cl(r[0] + dd0); m[n] = [x, Math.max(x, cl(r[1] + dd1))]; });
+  return { d0: a, d1: b, pd: m };
 }
 export function items() {
   const out = [];

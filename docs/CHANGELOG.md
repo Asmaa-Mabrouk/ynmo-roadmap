@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased – Sprints + Weekly executive report
+- **Per-person dates on a shared epic:** when an epic has several owners, resizing, moving, arrow-keying or dating one person's bar changes only that person's dates (one may take longer, another only supports). Stored as `pd: {person: [d0, d1]}` on the item (no SQL change); the item's own `d0/d1` become the span of all owners so reports and the squad view still work. Editing in the squad view (no owner) moves everyone together; going down to one owner drops `pd`. Test: `tests/features/person_dates.py`.
 - **Add member on Resources:** choose which roadmaps get a row for the new person (all by default; unticked ones hide the row via `ideas/peoplehide`). A name that was already added from the roadmap's "+ Add person" is not duplicated: the existing person is just shown on the chosen roadmaps. Test: `tests/features/add_member.py`.
 - **Bar colours:** the bar menu now has a 52-colour palette plus a rainbow "pick any colour" circle. Stored as `#rrggbb` (validated) next to the old `p1..p6` keys; text colour switches to dark on light bars.
 - **Removing a team member:** a confirmation dialog first; if the member still owns features on any roadmap, removal is blocked with a warning that lists them per roadmap and a button to open that roadmap filtered to the person. Test: `tests/features/colors_remove.py`.

@@ -1122,7 +1122,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     { id: "d7", t: "Staff self check-in in the Mahd app", sq: "daycare", pr: ["daycare"], s: 2, e: 2, st: "planned", src: [CP] },
     { id: "d8", t: "Export data and reports across all features", sq: "daycare", pr: ["daycare"], s: 2, e: 2, st: "decide", src: [CP], n: "Define the reports with Doaa." }
   ];
-  var FIELDS = ["t", "sq", "pr", "d0", "d1", "st", "n", "res", "c", "ord", "dep", "ms"];
+  var FIELDS = ["t", "sq", "pr", "d0", "d1", "st", "n", "res", "c", "ord", "dep", "ms", "pd"];
   var base = /* @__PURE__ */ new Map();
   LANES.forEach((l) => {
     ITEMS.map((it, i) => ({ it, i })).filter((x) => x.it.sq === l.k).sort((a, b) => a.it.s - b.it.s || a.i - b.i).forEach((x, r) => base.set(x.it.id, Object.assign({}, x.it, { d0: MSTART[x.it.s], d1: MEND[x.it.e], ord: r })));
@@ -1158,6 +1158,37 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     if (it.ms) it.d1 = it.d0;
     if (it.res === void 0) it.res = TEAMS[it.sq].pm.slice();
     return it;
+  }
+  var cl = (k) => Math.max(0, Math.min(NDAYS - 1, Math.round(k)));
+  function rangeIn(it, pd, n) {
+    const r = pd && pd[n];
+    if (!Array.isArray(r) || r.length < 2) return [it.d0, it.d1];
+    const a = cl(r[0]);
+    return [a, Math.max(a, cl(r[1]))];
+  }
+  var rangeOf = (it, n) => rangeIn(it, it.pd, n);
+  function eff(it, n) {
+    if (!it.pd || it.ms || !Array.isArray(it.pd[n])) return it;
+    const r = rangeOf(it, n);
+    return r[0] === it.d0 && r[1] === it.d1 ? it : Object.assign({}, it, { d0: r[0], d1: r[1] });
+  }
+  function rangePatch(it, owner, a, b, resAfter, pdBase) {
+    const raw = items().find((i) => i.id === it.id) || it, res = resAfter || raw.res, pd0 = pdBase !== void 0 ? pdBase : raw.pd;
+    if (owner && owner !== "__none" && res.includes(owner) && res.length > 1 && !raw.ms) {
+      const m2 = {};
+      res.forEach((n) => {
+        m2[n] = n === owner ? [a, b] : rangeIn(raw, pd0, n);
+      });
+      return { pd: m2, d0: Math.min.apply(null, res.map((n) => m2[n][0])), d1: Math.max.apply(null, res.map((n) => m2[n][1])) };
+    }
+    if (!pd0 || !Object.keys(pd0).length) return { d0: a, d1: b };
+    if (owner && res.includes(owner)) return { d0: a, d1: b, pd: null };
+    const dd0 = a - raw.d0, dd1 = b - raw.d1, m = {};
+    Object.keys(pd0).forEach((n) => {
+      const r = rangeIn(raw, pd0, n), x = cl(r[0] + dd0);
+      m[n] = [x, Math.max(x, cl(r[1] + dd1))];
+    });
+    return { d0: a, d1: b, pd: m };
   }
   function items() {
     const out = [];
@@ -2202,9 +2233,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       ck.type = "checkbox";
       ck.checked = !mine.some((b) => b.active);
       ck.id = "snapactive";
-      const cl = el("label", "chk");
-      cl.htmlFor = "snapactive";
-      cl.append(ck, document.createTextNode(" Use as the baseline to compare against"));
+      const cl2 = el("label", "chk");
+      cl2.htmlFor = "snapactive";
+      cl2.append(ck, document.createTextNode(" Use as the baseline to compare against"));
       const go = el("button", "btn primary", "Save snapshot");
       go.type = "button";
       const msg = el("div", "gerr");
@@ -2227,7 +2258,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       });
       const row = el("div", "formrow");
       row.style.alignItems = "center";
-      row.append(nm, cl, go);
+      row.append(nm, cl2, go);
       nm.style.flex = "1 1 260px";
       c.append(row, msg);
       root.append(c);
@@ -3540,9 +3571,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     persist(id);
   }
   function duplicate(it) {
+    const raw = items().find((i) => i.id === it.id) || it;
     pushHistory();
     const id = "c" + Date.now().toString(36);
-    S.over[id] = { custom: true, rm: state.rm, t: it.t + " (copy)", sq: it.sq, pr: it.pr.slice(), d0: it.d0, d1: it.d1, st: it.st, n: it.n || "", res: it.res.slice(), c: it.c || null, ord: it.ord + 0.5 };
+    S.over[id] = { custom: true, rm: state.rm, t: it.t + " (copy)", sq: it.sq, pr: it.pr.slice(), d0: raw.d0, d1: raw.d1, pd: raw.pd ? JSON.parse(JSON.stringify(raw.pd)) : null, st: it.st, n: it.n || "", res: it.res.slice(), c: it.c || null, ord: it.ord + 0.5 };
     logAct("edit", 'duplicated "' + it.t + '"', { id, whole: null });
     render();
     persist(id);
@@ -3636,7 +3668,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       any.append(ci);
       row.append(any);
       c.append(row);
-      mlab(c, "Dates");
+      mlab(c, it.res.length > 1 && owner ? "Dates for " + owner : "Dates");
       const dr = el("div", "mrow");
       const dateIn = (val, on) => {
         const i = el("input");
@@ -3655,11 +3687,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       dr.append(
         dateIn(it.d0, (k) => {
           if (k > it.d1) toast("Start is after the end, so the end moved to " + dlabel(k) + ".");
-          commit(it.id, { d0: k, d1: Math.max(k, it.d1) });
+          commit(it.id, rangePatch(it, owner, k, Math.max(k, it.d1)));
         }),
         dateIn(it.d1, (k) => {
           if (k < it.d0) toast("End is before the start, so the start moved to " + dlabel(k) + ".");
-          commit(it.id, { d1: k, d0: Math.min(k, it.d0) });
+          commit(it.id, rangePatch(it, owner, Math.min(k, it.d0), k));
         })
       );
       c.append(dr);
@@ -3884,16 +3916,24 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       setDropP(g, null);
       S.dragging = false;
       if (!st.moved) return;
-      const patch = {};
-      if (st.cur.d0 !== st.d0) patch.d0 = st.cur.d0;
-      if (st.cur.d1 !== st.d1) patch.d1 = st.cur.d1;
+      const patch = {}, dated = st.cur.d0 !== st.d0 || st.cur.d1 !== st.d1, raw = items().find((i) => i.id === it.id) || it;
+      let resAfter = null, pdBase;
       if (state.view === "person") {
         if (st.cur.person !== st.person && st.cur.person !== "") {
           let nr = it.res.filter((n) => n !== st.person);
           if (st.cur.person !== "__none") nr = [...new Set(nr.concat([st.cur.person]))];
           patch.res = nr;
+          resAfter = nr;
+          if (raw.pd && st.person) {
+            pdBase = Object.assign({}, raw.pd);
+            if (st.cur.person !== "__none") pdBase[st.cur.person] = [st.cur.d0, st.cur.d1];
+            delete pdBase[st.person];
+            if (!dated) patch.pd = pdBase;
+          }
         }
-      } else if (st.cur.sq !== st.sq) Object.assign(patch, squadPatch(it, st.cur.sq));
+      }
+      if (dated) Object.assign(patch, rangePatch(it, state.view === "person" ? st.cur.person : "", st.cur.d0, st.cur.d1, resAfter, pdBase));
+      if (state.view !== "person" && st.cur.sq !== st.sq) Object.assign(patch, squadPatch(it, st.cur.sq));
       if (state.view !== "person" && mode === "move" && (st.cur.sq !== st.sq || Math.abs(st.lastY - st.y) > 20)) {
         const o = newOrd(it.id, st.cur.sq, st.lastY);
         if (o !== it.ord) patch.ord = o;
@@ -4402,10 +4442,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       if (!canEdit() || e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
       e.preventDefault();
       const d = e.key === "ArrowRight" ? 1 : -1;
-      if (e.shiftKey) commit(it.id, { d1: Math.max(it.d0, Math.min(NDAYS - 1, it.d1 + d)) });
+      if (e.shiftKey) commit(it.id, rangePatch(it, owner, it.d0, Math.max(it.d0, Math.min(NDAYS - 1, it.d1 + d))));
       else {
         const len = it.d1 - it.d0, a = Math.max(0, Math.min(NDAYS - 1 - len, it.d0 + d));
-        commit(it.id, { d0: a, d1: a + len });
+        commit(it.id, rangePatch(it, owner, a, a + len));
       }
       state.refocusBar = it.id;
     });
@@ -4502,7 +4542,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     dir.forEach((p, n) => ensure(n));
     list.forEach((it) => {
       if (!it.res.length) ensure("__none").its.push(it);
-      else it.res.forEach((n) => ensure(n).its.push(it));
+      else it.res.forEach((n) => ensure(n).its.push(eff(it, n)));
     });
     let people = [...map.values()].filter((p) => p.name !== "__none");
     if (state.person !== "all") people = people.filter((p) => p.name === state.person);
@@ -4719,7 +4759,13 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     let feats = 0;
     allRoadmaps().forEach((rm) => withRm(rm.id, () => items().forEach((it) => {
       if (it.res.includes(old)) {
-        S.over[it.id] = Object.assign({}, S.over[it.id] || {}, { res: it.res.map((x) => x === old ? nw : x) });
+        const patch = { res: it.res.map((x) => x === old ? nw : x) };
+        if (it.pd && it.pd[old]) {
+          patch.pd = Object.assign({}, it.pd);
+          patch.pd[nw] = patch.pd[old];
+          delete patch.pd[old];
+        }
+        S.over[it.id] = Object.assign({}, S.over[it.id] || {}, patch);
         persist(it.id);
         feats++;
       }

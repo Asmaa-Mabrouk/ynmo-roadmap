@@ -15,7 +15,7 @@ if any statement fails nothing from that script is applied.
 Generic document tables: `id text PK, data jsonb, updated_at timestamptz, updated_by text`.
 | Table | Holds |
 |---|---|
-| items | Per-feature overrides (dates, status, assignees, `dep`, `ms`, …) keyed by feature id |
+| items | Per-feature overrides (dates, status, assignees, `dep`, `ms`, `pd` = per-person dates `{name:[d0,d1]}`, …) keyed by feature id |
 | people | Team directory |
 | daysoff | Time off per person |
 | roadmaps | Roadmap definitions (name, range, kind) |
