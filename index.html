@@ -754,6 +754,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .sqdot { width: 14px; height: 14px; border-radius: 50%; flex: none; }
 .iconbtn { padding: 2px 8px; opacity: .55; }
 .tbl tr:hover .iconbtn, .iconbtn:focus-visible { opacity: 1; }
+
+/* hover card with the full text of a roadmap bar */
+.bartip { position: fixed; z-index: 90; max-width: min(420px, calc(100vw - 16px)); background: var(--ink); color: var(--surface); border-radius: 8px; padding: 8px 11px; font-size: 13px; line-height: 1.4; box-shadow: 0 8px 24px rgba(10, 12, 30, .3); pointer-events: none; }
+.bartip b { display: block; font-weight: 700; overflow-wrap: anywhere; white-space: pre-wrap; }
+.bartip small { display: block; margin-top: 3px; opacity: .75; font-size: 11.5px; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -4202,6 +4207,32 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   function laneOf(k) {
     return LANES.find((l) => l.k === k) || LANES[0];
   }
+  var tipEl = null;
+  var tipTimer = 0;
+  function hideBarTip() {
+    clearTimeout(tipTimer);
+    if (tipEl) {
+      tipEl.remove();
+      tipEl = null;
+    }
+  }
+  function showBarTip(bar) {
+    hideBarTip();
+    if (S.dragging || !bar.dataset.tip) return;
+    tipTimer = setTimeout(() => {
+      if (!bar.isConnected || S.dragging || bar.classList.contains("editing")) return;
+      const t = el("div", "bartip");
+      t.setAttribute("role", "tooltip");
+      t.append(el("b", "", bar.dataset.tip), el("small", "", bar.dataset.tipSub || ""));
+      document.body.append(t);
+      tipEl = t;
+      const r = bar.getBoundingClientRect(), w = t.offsetWidth, h = t.offsetHeight;
+      const top = r.top - h - 8 >= 8 ? r.top - h - 8 : r.bottom + 8;
+      t.style.top = top + "px";
+      t.style.left = Math.max(8, Math.min(Math.max(r.left, 8), window.innerWidth - w - 8)) + "px";
+    }, 120);
+  }
+  window.addEventListener("scroll", hideBarTip, true);
   function buildBar(it, owner) {
     const l = laneOf(it.sq), col = it.c ? "var(--" + it.c + ")" : l.c;
     const bar = el("div", "bar st-" + it.st + (canEdit() ? "" : " ro") + (it.ms ? " ms" : ""));
@@ -4211,7 +4242,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     bar.tabIndex = 0;
     bar.setAttribute("role", "button");
     bar.setAttribute("aria-label", it.t + ", " + dlabel(it.d0) + " to " + dlabel(it.d1) + ", " + STATUS[it.st]);
-    bar.title = it.t + " · " + l.n + " · " + dlabel(it.d0) + " to " + dlabel(it.d1) + " · " + STATUS[it.st];
+    bar.dataset.tip = it.t;
+    bar.dataset.tipSub = l.n + " · " + dlabel(it.d0) + " to " + dlabel(it.d1) + " · " + STATUS[it.st];
     const editing = state.edit === it.id + "|" + (owner || "");
     if (editing) {
       bar.classList.add("editing");
@@ -4258,6 +4290,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     bar.addEventListener("pointerleave", () => {
       $("grid").classList.remove("hov");
     });
+    bar.addEventListener("pointerenter", () => showBarTip(bar));
+    bar.addEventListener("pointerleave", hideBarTip);
+    bar.addEventListener("pointerdown", hideBarTip);
+    bar.addEventListener("focus", () => showBarTip(bar));
+    bar.addEventListener("blur", hideBarTip);
     bar.addEventListener("keydown", (e) => {
       if (e.target !== bar) return;
       if (e.key === "Enter" || e.key === "F2") {
@@ -4279,6 +4316,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   }
   var ZOOM = { day: 26, week: 12, month: 4 };
   function render() {
+    hideBarTip();
     const list = visible();
     renderSummary(list);
     $("undo").disabled = !S.undoStack.length || !canEdit();
@@ -4345,17 +4383,18 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     afterRender();
   }
   function pack(its) {
-    const ends = [], out = [];
-    its.slice().sort((a, b) => a.d0 - b.d0 || a.d1 - b.d1 || a.ord - b.ord).forEach((it) => {
-      let i = ends.findIndex((e) => e < it.d0);
+    const lanes = [], out = [];
+    its.slice().sort((a, b) => a.ord - b.ord || a.d0 - b.d0 || (a.id < b.id ? -1 : 1)).forEach((it) => {
+      const end = it.ms ? it.d1 + 5 : it.d1;
+      let i = lanes.findIndex((l) => l.every((o) => o.end < it.d0 || o.d0 > end));
       if (i < 0) {
-        i = ends.length;
-        ends.push(-1);
+        i = lanes.length;
+        lanes.push([]);
       }
-      ends[i] = it.ms ? it.d1 + 5 : it.d1;
+      lanes[i].push({ d0: it.d0, end });
       out.push({ it, lane: i });
     });
-    return { out, n: Math.max(1, ends.length) };
+    return { out, n: Math.max(1, lanes.length) };
   }
   function renderPeople(g, put, list) {
     const dir = directory(), map = /* @__PURE__ */ new Map(), H = 34;
@@ -4442,7 +4481,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         if (hit.length) {
           b.classList.add("vconf");
           b.append(el("span", "vbadge", "⚑ leave"));
-          b.title += " · overlaps leave: " + hit.map((v) => fmtIso(v.a0)).join(", ");
+          b.dataset.tipSub += " · overlaps leave: " + hit.map((v) => fmtIso(v.a0)).join(", ");
         }
         put(b, r, x.it.d0 + 2 + " / " + (x.it.d1 + 3));
       });

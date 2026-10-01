@@ -224,6 +224,7 @@ with sync_playwright() as pw:
     # --- empty data: clear error, AI never called
     ctx2=mkctx(b); e2=[]; D=newpage(ctx2,e2); signup(D,'Admin','adm@x.com')
     D.click('#nav button[data-p="sprints"]'); D.click('button:text-is("+ New sprint")'); D.wait_for_timeout(400)
+    D.locator('input[aria-label="Sprint end date"]').fill('2031-01-14'); D.wait_for_timeout(300); D.locator('input[aria-label="Sprint start date"]').fill('2031-01-01'); D.wait_for_timeout(500)   # far from any roadmap bar, so the date of the test run does not matter
     D.click('#nav button[data-p="reports"]'); D.click('button:has-text("New report for week of")'); D.wait_for_timeout(700)
     ok('empty week shows a clear error', 'No data found' in D.locator('#pg-reports .rnote.bad').inner_text())
     D.click('button:has-text("Generate with AI")'); D.wait_for_timeout(600)

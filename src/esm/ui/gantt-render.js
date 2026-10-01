@@ -33,13 +33,27 @@ function select(id, opts, val, on) {
 function fit(t) { t.style.height = 'auto'; t.style.height = Math.max(34, t.scrollHeight + 2) + 'px'; }
 function filtersActive() { return state.sq.size < LANES.length || state.status !== 'all' || state.q.trim() !== ''; }
 export function laneOf(k) { return LANES.find(l => l.k === k) || LANES[0]; }
+let tipEl = null, tipTimer = 0;
+export function hideBarTip() { clearTimeout(tipTimer); if (tipEl) { tipEl.remove(); tipEl = null; } }
+/** Hover card with the full text of a bar (the bar itself shows at most two lines). */
+function showBarTip(bar) {
+  hideBarTip(); if (S.dragging || !bar.dataset.tip) return;
+  tipTimer = setTimeout(() => {
+    if (!bar.isConnected || S.dragging || bar.classList.contains('editing')) return;
+    const t = el('div', 'bartip'); t.setAttribute('role', 'tooltip'); t.append(el('b', '', bar.dataset.tip), el('small', '', bar.dataset.tipSub || '')); document.body.append(t); tipEl = t;
+    const r = bar.getBoundingClientRect(), w = t.offsetWidth, h = t.offsetHeight;
+    const top = r.top - h - 8 >= 8 ? r.top - h - 8 : r.bottom + 8;
+    t.style.top = top + 'px'; t.style.left = Math.max(8, Math.min(Math.max(r.left, 8), window.innerWidth - w - 8)) + 'px';
+  }, 120);
+}
+window.addEventListener('scroll', hideBarTip, true);
 function buildBar(it, owner) {
   const l = laneOf(it.sq), col = it.c ? 'var(--' + it.c + ')' : l.c;
   const bar = el('div', 'bar st-' + it.st + (canEdit() ? '' : ' ro') + (it.ms ? ' ms' : ''));
   bar.style.setProperty('--c', col); bar.dataset.person = owner || ''; bar.dataset.id = it.id;
   bar.tabIndex = 0; bar.setAttribute('role', 'button'); 
   bar.setAttribute('aria-label', it.t + ', ' + dlabel(it.d0) + ' to ' + dlabel(it.d1) + ', ' + STATUS[it.st]);
-  bar.title = it.t + ' · ' + l.n + ' · ' + dlabel(it.d0) + ' to ' + dlabel(it.d1) + ' · ' + STATUS[it.st];
+  bar.dataset.tip = it.t; bar.dataset.tipSub = l.n + ' · ' + dlabel(it.d0) + ' to ' + dlabel(it.d1) + ' · ' + STATUS[it.st];
   const editing = state.edit === it.id + '|' + (owner || '');
   if (editing) {
     bar.classList.add('editing');
@@ -57,6 +71,7 @@ function buildBar(it, owner) {
   bar.addEventListener('pointerdown', e => { if (e.target.tagName === 'INPUT') return; const mode = e.target === hl ? 'l' : e.target === hr ? 'r' : 'move'; if (canEdit()) startDrag(e, it, bar, mode); });
   bar.addEventListener('pointerenter', () => { if (S.dragging) return; const g = $('grid'); g.classList.add('hov'); g.querySelectorAll('.bar').forEach(b => b.classList.toggle('same', b.dataset.id === it.id)); });
   bar.addEventListener('pointerleave', () => { $('grid').classList.remove('hov'); });
+  bar.addEventListener('pointerenter', () => showBarTip(bar)); bar.addEventListener('pointerleave', hideBarTip); bar.addEventListener('pointerdown', hideBarTip); bar.addEventListener('focus', () => showBarTip(bar)); bar.addEventListener('blur', hideBarTip);
   bar.addEventListener('keydown', e => {
     if (e.target !== bar) return;
     if (e.key === 'Enter' || e.key === 'F2') { e.preventDefault(); startEdit(it, owner); return; }
@@ -71,6 +86,7 @@ function buildBar(it, owner) {
 }
 export const ZOOM = { day: 26, week: 12, month: 4 };
 export function render() {
+  hideBarTip();
   const list = visible();
   renderSummary(list);
   $('undo').disabled = !S.undoStack.length || !canEdit();
@@ -107,14 +123,16 @@ export function render() {
   state.refocus = null;
   afterRender();
 }
+/** Stack bars that overlap in time into lanes. Bars keep their creation order, so a newly added bar goes UNDER the existing ones (the row grows) instead of pushing them down. */
 function pack(its) {
-  const ends = [], out = [];
-  its.slice().sort((a, b) => a.d0 - b.d0 || a.d1 - b.d1 || a.ord - b.ord).forEach(it => {
-    let i = ends.findIndex(e => e < it.d0);
-    if (i < 0) { i = ends.length; ends.push(-1); }
-    ends[i] = it.ms ? it.d1 + 5 : it.d1; out.push({ it: it, lane: i });
+  const lanes = [], out = [];
+  its.slice().sort((a, b) => a.ord - b.ord || a.d0 - b.d0 || (a.id < b.id ? -1 : 1)).forEach(it => {
+    const end = it.ms ? it.d1 + 5 : it.d1;
+    let i = lanes.findIndex(l => l.every(o => o.end < it.d0 || o.d0 > end));
+    if (i < 0) { i = lanes.length; lanes.push([]); }
+    lanes[i].push({ d0: it.d0, end: end }); out.push({ it: it, lane: i });
   });
-  return { out: out, n: Math.max(1, ends.length) };
+  return { out: out, n: Math.max(1, lanes.length) };
 }
 function renderPeople(g, put, list) {
   const dir = directory(), map = new Map(), H = 34;
@@ -156,7 +174,7 @@ function renderPeople(g, put, list) {
     pk.out.forEach(x => {
       const b = buildBar(x.it, p.name); b.classList.add('pb'); b.style.marginTop = (4 + x.lane * H) + 'px';
       const hit = pv.filter(v => x.it.d1 >= kOfIso(v.a0) && x.it.d0 <= kOfIso(v.a1 || v.a0));
-      if (hit.length) { b.classList.add('vconf'); b.append(el('span', 'vbadge', '⚑ leave')); b.title += ' · overlaps leave: ' + hit.map(v => fmtIso(v.a0)).join(', '); }
+      if (hit.length) { b.classList.add('vconf'); b.append(el('span', 'vbadge', '⚑ leave')); b.dataset.tipSub += ' · overlaps leave: ' + hit.map(v => fmtIso(v.a0)).join(', '); }
       put(b, r, (x.it.d0 + 2) + ' / ' + (x.it.d1 + 3));
     });
     r++;
