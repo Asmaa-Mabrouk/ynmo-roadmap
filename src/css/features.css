@@ -324,3 +324,10 @@ body:has(#pg-sprints.sheet:not([hidden]))::before { display: none; }
 .sdoc .dropline { position: absolute; height: 3px; margin-top: -1px; border-radius: 3px; background: var(--brand); pointer-events: none; z-index: 5; box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 25%, transparent); }
 .sdoc .blkh { touch-action: none; }
 body.dragging, body.dragging * { cursor: grabbing !important; user-select: none !important; }
+
+/* ---------- resources: squad names, rename pencil ---------- */
+.sqrow { align-items: center; gap: 10px; margin: 6px 0; }
+.sqrow input { max-width: 320px; }
+.sqdot { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+.iconbtn { padding: 2px 8px; opacity: .55; }
+.tbl tr:hover .iconbtn, .iconbtn:focus-visible { opacity: 1; }

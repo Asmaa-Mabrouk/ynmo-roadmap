@@ -747,6 +747,13 @@ body:has(#pg-sprints.sheet:not([hidden]))::before { display: none; }
 .sdoc .dropline { position: absolute; height: 3px; margin-top: -1px; border-radius: 3px; background: var(--brand); pointer-events: none; z-index: 5; box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 25%, transparent); }
 .sdoc .blkh { touch-action: none; }
 body.dragging, body.dragging * { cursor: grabbing !important; user-select: none !important; }
+
+/* ---------- resources: squad names, rename pencil ---------- */
+.sqrow { align-items: center; gap: 10px; margin: 6px 0; }
+.sqrow input { max-width: 320px; }
+.sqdot { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+.iconbtn { padding: 2px 8px; opacity: .55; }
+.tbl tr:hover .iconbtn, .iconbtn:focus-visible { opacity: 1; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -4475,6 +4482,18 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return r;
   }
 
+  // src/esm/features/squad-names.js
+  var original = LANES.map((l) => [l.k, l.n]);
+  var defaultSquadName = (k) => (original.find((o) => o[0] === k) || [])[1] || k;
+  var squadNames = () => S.ideas.squadnames && S.ideas.squadnames.names || {};
+  function applySquadNames() {
+    const m = squadNames();
+    LANES.forEach((l) => {
+      const v = m[l.k] && String(m[l.k]).trim();
+      l.n = v || defaultSquadName(l.k);
+    });
+  }
+
   // src/esm/ui/notify.js
   var box = null;
   function host() {
@@ -4538,6 +4557,94 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     fillPersons();
     render();
     renderResources();
+  }
+  function renamePerson(old, nw) {
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    nw = String(nw || "").trim().replace(/\s+/g, " ").slice(0, 60);
+    if (!nw || nw === old) return false;
+    if ([...directory().keys()].some((n) => n !== old && n.toLowerCase() === nw.toLowerCase())) {
+      notify(nw + " is already in the team", "err");
+      return false;
+    }
+    const d = directory().get(old) || { sqs: /* @__PURE__ */ new Set(["tifli"]), domain: "Other" }, id = personDocId(old);
+    const base0 = Object.keys(TEAMS).some((sq) => ["pm", "dev", "qa", "ux"].some((r) => (TEAMS[sq][r] || []).includes(old)));
+    if (id && !base0) {
+      S.extras[id] = Object.assign({}, S.extras[id], { n: nw });
+      write("people/" + id, S.extras[id]);
+    } else {
+      let nid = "ov-" + slug(nw);
+      const hid = id || "ov-" + slug(old);
+      if (nid === hid || S.extras[nid]) nid += "-" + Date.now().toString(36);
+      S.extras[nid] = { n: nw, over: true, domain: d.domain || "Other", sqs: [...d.sqs] };
+      write("people/" + nid, S.extras[nid]);
+      S.extras[hid] = { n: old, hidden: true };
+      write("people/" + hid, S.extras[hid]);
+    }
+    let feats = 0;
+    allRoadmaps().forEach((rm) => withRm(rm.id, () => items().forEach((it) => {
+      if (it.res.includes(old)) {
+        S.over[it.id] = Object.assign({}, S.over[it.id] || {}, { res: it.res.map((x) => x === old ? nw : x) });
+        persist(it.id);
+        feats++;
+      }
+    })));
+    Object.keys(S.vacs).forEach((v) => {
+      if (S.vacs[v] && S.vacs[v].p === old) {
+        S.vacs[v] = Object.assign({}, S.vacs[v], { p: nw });
+        write("vacations/" + v, S.vacs[v]);
+      }
+    });
+    Object.keys(S.sitems).forEach((i) => {
+      const x = S.sitems[i];
+      if (x && x.k === "p" && x.t === old) {
+        S.sitems[i] = Object.assign({}, x, { t: nw });
+        write("sprint_items/" + i, S.sitems[i]);
+      } else if (x && !x.k && x.person === old) {
+        S.sitems[i] = Object.assign({}, x, { person: nw });
+        write("sprint_items/" + i, S.sitems[i]);
+      }
+    });
+    const po = S.ideas.peopleorder;
+    if (po && (po.ord || []).includes(old)) saveIdea("peopleorder", { cfg: true, ord: po.ord.map((x) => x === old ? nw : x) });
+    const ph = S.ideas.peoplehide;
+    if (ph && ph.byRm && Object.keys(ph.byRm).some((k) => ph.byRm[k].includes(old))) {
+      const by = {};
+      Object.keys(ph.byRm).forEach((k) => {
+        by[k] = ph.byRm[k].map((x) => x === old ? nw : x);
+      });
+      saveIdea("peoplehide", { cfg: true, byRm: by });
+    }
+    logAct("resource", "renamed " + old + " to " + nw + (feats ? " (" + feats + " feature" + (feats === 1 ? "" : "s") + " updated)" : ""));
+    fillPersons();
+    render();
+    renderResources();
+    notify(old + " is now " + nw + (feats ? ". " + feats + " feature" + (feats === 1 ? "" : "s") + " updated." : "."));
+    return true;
+  }
+  function renameSquad(k, v) {
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    v = String(v || "").trim().replace(/\s+/g, " ").slice(0, 40);
+    const cur2 = squadNames(), name = LANES.find((l) => l.k === k).n;
+    if (!v) {
+      notify("A squad needs a name", "err");
+      renderResources();
+      return;
+    }
+    if (v === name) return;
+    if (LANES.some((l) => l.k !== k && l.n.toLowerCase() === v.toLowerCase())) {
+      notify("Another squad is already called " + v, "err");
+      renderResources();
+      return;
+    }
+    const names = Object.assign({}, cur2);
+    if (v === defaultSquadName(k)) delete names[k];
+    else names[k] = v;
+    saveIdea("squadnames", { cfg: true, names }, "resource", "renamed the squad " + name + " to " + v);
+    applySquadNames();
+    fillPersons();
+    render();
+    renderResources();
+    notify("Squad renamed to " + v);
   }
   function removePerson2(name) {
     const id = personDocId(name), base0 = Object.keys(TEAMS).some((sq) => ["pm", "dev", "qa", "ux"].some((r) => (TEAMS[sq][r] || []).includes(name)));
@@ -4625,6 +4732,46 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     root.append(f);
     const dir = directory(), prim = (d) => Math.min.apply(null, [...d.sqs].map((k) => LANES.findIndex((l) => l.k === k)).filter((i) => i >= 0).concat([9]));
     const people = [...dir.values()].sort((a, b) => prim(a) - prim(b) || a.name.localeCompare(b.name));
+    const sqCard = el("div", "card");
+    sqCard.append(el("h2", "", "Squads"), el("p", "sub", "Rename a squad (press Enter or click away to save). The new name shows everywhere: roadmap, team list, sprints. Colours stay the same."));
+    LANES.forEach((l) => {
+      const row = el("div", "formrow sqrow"), dot = el("i", "sqdot");
+      dot.style.background = l.c;
+      const inp = el("input");
+      inp.value = l.n;
+      inp.disabled = !canEdit();
+      inp.maxLength = 40;
+      inp.setAttribute("aria-label", "Name of the " + defaultSquadName(l.k) + " squad");
+      let done2 = false;
+      const go2 = () => {
+        if (done2) return;
+        done2 = true;
+        renameSquad(l.k, inp.value);
+      };
+      inp.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          go2();
+        } else if (e.key === "Escape") {
+          inp.value = l.n;
+          inp.blur();
+        }
+      });
+      inp.addEventListener("blur", go2);
+      inp.addEventListener("focus", () => {
+        done2 = false;
+      });
+      row.append(dot, inp);
+      if (l.n !== defaultSquadName(l.k) && canEdit()) {
+        const rs = el("button", "btn sm", "Reset to " + defaultSquadName(l.k));
+        rs.type = "button";
+        rs.addEventListener("mousedown", (e) => e.preventDefault());
+        rs.addEventListener("click", () => renameSquad(l.k, defaultSquadName(l.k)));
+        row.append(rs);
+      }
+      sqCard.append(row);
+    });
+    root.append(sqCard);
     const card = el("div", "card");
     card.append(el("h2", "", "Team (" + people.length + ")"), el("p", "sub", "Squads: a coloured chip with a ✓ means the person works in that squad. Click a chip to add or remove the squad (saved automatically). They decide whose rows show on each squad's roadmap and who is suggested first on the sprint page."));
     const t = el("table", "tbl"), th = el("thead"), hr = el("tr");
@@ -4640,7 +4787,39 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       const tr = el("tr"), c1 = el("td");
       const w = el("div", "formrow");
       w.style.alignItems = "center";
-      w.append(avatarEl("", 30, p.name), el("b", "", p.name));
+      const nameB = el("b", "", p.name);
+      w.append(avatarEl("", 30, p.name), nameB);
+      if (canEdit()) {
+        const ed = el("button", "btn sm iconbtn", "✎");
+        ed.type = "button";
+        ed.title = "Rename " + p.name;
+        ed.setAttribute("aria-label", "Rename " + p.name);
+        ed.addEventListener("click", () => {
+          const inp = el("input");
+          inp.value = p.name;
+          inp.maxLength = 60;
+          inp.setAttribute("aria-label", "New name for " + p.name);
+          nameB.replaceWith(inp);
+          ed.hidden = true;
+          inp.focus();
+          inp.select();
+          let done2 = false;
+          const fin = (ok) => {
+            if (done2) return;
+            done2 = true;
+            if (ok && renamePerson(p.name, inp.value)) return;
+            renderResources();
+          };
+          inp.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              fin(true);
+            } else if (e.key === "Escape") fin(false);
+          });
+          inp.addEventListener("blur", () => fin(true));
+        });
+        w.append(ed);
+      }
       c1.append(w);
       const c2 = el("td"), ds = selOf(DOMAINS, p.domain);
       ds.disabled = !canEdit();
@@ -7094,8 +7273,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     S.db.collection("ideas").onSnapshot((s) => {
       const n = snapDocs("ideas", s, S.ideas);
       if (same(n, S.ideas)) return;
-      const orderChanged = JSON.stringify([n.peopleorder, n.peoplehide]) !== JSON.stringify([S.ideas.peopleorder, S.ideas.peoplehide]);
+      const orderChanged = JSON.stringify([n.peopleorder, n.peoplehide, n.squadnames]) !== JSON.stringify([S.ideas.peopleorder, S.ideas.peoplehide, S.ideas.squadnames]);
       S.ideas = n;
+      applySquadNames();
       if (orderChanged) softRender();
       renderDrawer();
       if (state.page === "ideas") renderIdeas();
@@ -8109,6 +8289,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   // src/esm/main.js
   window.__ynmo = {
     S,
+    LANES,
     state,
     items,
     directory,

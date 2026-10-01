@@ -15,6 +15,7 @@ import { renderLog } from '../pages/log.js';
 import { renderCapacity } from '../features/capacity.js';
 import { renderBaselines } from '../features/baselines.js';
 import { renderSprints } from '../pages/sprints.js';
+import { applySquadNames } from '../features/squad-names.js';
 import { renderReports } from '../pages/reports.js';
 import { PAGES } from '../core/shared.js';
 import { ACTIVE_LOG_PAGE, isViewer } from '../features/safety.js';
@@ -77,7 +78,7 @@ export function start() {
     else if (!allRoadmaps().some(r => r.id === state.rm)) useRoadmap(H2_ID); else fillRm();
     if (state.page === 'roadmaps') renderRoadmaps();
   }, () => {});
-  S.db.collection('ideas').onSnapshot(s => { const n = snapDocs('ideas', s, S.ideas); if (same(n, S.ideas)) return; const orderChanged = JSON.stringify([n.peopleorder, n.peoplehide]) !== JSON.stringify([S.ideas.peopleorder, S.ideas.peoplehide]); S.ideas = n; if (orderChanged) softRender(); /* shared row order of the by-person view */ renderDrawer(); if (state.page === 'ideas') renderIdeas(); if (state.page === 'roadmaps') renderRoadmaps(); }, () => {});
+  S.db.collection('ideas').onSnapshot(s => { const n = snapDocs('ideas', s, S.ideas); if (same(n, S.ideas)) return; const orderChanged = JSON.stringify([n.peopleorder, n.peoplehide, n.squadnames]) !== JSON.stringify([S.ideas.peopleorder, S.ideas.peoplehide, S.ideas.squadnames]); S.ideas = n; applySquadNames(); if (orderChanged) softRender(); /* shared row order of the by-person view */ renderDrawer(); if (state.page === 'ideas') renderIdeas(); if (state.page === 'roadmaps') renderRoadmaps(); }, () => {});
   S.db.collection('reports').onSnapshot(s => { const n = snapDocs('reports', s, S.reports); if (same(n, S.reports)) return; S.reports = n; if (state.page === 'reports' && !state.edit && !document.activeElement.closest('#pg-reports')) renderReports(); }, e => { if (e && e.code === 'missing_table') { S.setup['reports'] = true; if (state.page === 'reports' || state.page === 'sprints') refreshPage(); } });
   if (!isViewer()) {
     S.db.collection('sprints').onSnapshot(s => { const n = snapDocs('sprints', s, S.sprints); if (same(n, S.sprints)) return; S.sprints = n; if (state.page === 'sprints' && !document.activeElement.closest('#pg-sprints')) renderSprints(); if (state.page === 'reports') renderReports(); }, e => { if (e && e.code === 'missing_table') { S.setup['sprints'] = true; if (state.page === 'reports' || state.page === 'sprints') refreshPage(); } });

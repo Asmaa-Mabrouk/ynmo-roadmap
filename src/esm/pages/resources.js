@@ -5,9 +5,12 @@
  * Dependencies are explicit ES imports; shared mutable state lives in `S` (core/state.js).
  */
 import { S } from '../core/state.js';
-import { $, LANES, TEAMS, canEdit, directory, el, state } from '../core/model.js';
+import { $, LANES, TEAMS, canEdit, directory, el, items, state } from '../core/model.js';
 import { DOMAINS, fld, logAct, pageHead, selOf, slug, toast } from '../core/shared.js';
-import { write } from '../core/saving.js';
+import { persist, write } from '../core/saving.js';
+import { saveIdea } from './ideas.js';
+import { allRoadmaps, withRm } from './roadmaps.js';
+import { applySquadNames, defaultSquadName, squadNames } from '../features/squad-names.js';
 import { fillPersons } from '../ui/people-picker.js';
 import { laneOf, render } from '../ui/gantt-render.js';
 import { sb } from '../core/supabase.js';
@@ -24,6 +27,40 @@ function savePerson(name, patch, sum) {
   S.extras[id] = Object.assign({}, S.extras[id], patch); write('people/' + id, S.extras[id]);
   if (sum) logAct('resource', sum);
   fillPersons(); render(); renderResources();
+}
+
+/** Rename a team member everywhere the name is used: the person record, features on every roadmap, vacations, sprint plans and saved row order. */
+function renamePerson(old, nw) {
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  nw = String(nw || '').trim().replace(/\s+/g, ' ').slice(0, 60);
+  if (!nw || nw === old) return false;
+  if ([...directory().keys()].some(n => n !== old && n.toLowerCase() === nw.toLowerCase())) { notify(nw + ' is already in the team', 'err'); return false; }
+  const d = directory().get(old) || { sqs: new Set(['tifli']), domain: 'Other' }, id = personDocId(old);
+  const base0 = Object.keys(TEAMS).some(sq => ['pm', 'dev', 'qa', 'ux'].some(r => (TEAMS[sq][r] || []).includes(old)));
+  if (id && !base0) { S.extras[id] = Object.assign({}, S.extras[id], { n: nw }); write('people/' + id, S.extras[id]); }
+  else {
+    let nid = 'ov-' + slug(nw); const hid = id || ('ov-' + slug(old)); if (nid === hid || S.extras[nid]) nid += '-' + Date.now().toString(36);
+    S.extras[nid] = { n: nw, over: true, domain: d.domain || 'Other', sqs: [...d.sqs] }; write('people/' + nid, S.extras[nid]);
+    S.extras[hid] = { n: old, hidden: true }; write('people/' + hid, S.extras[hid]);
+  }
+  let feats = 0;
+  allRoadmaps().forEach(rm => withRm(rm.id, () => items().forEach(it => { if (it.res.includes(old)) { S.over[it.id] = Object.assign({}, S.over[it.id] || {}, { res: it.res.map(x => (x === old ? nw : x)) }); persist(it.id); feats++; } })));
+  Object.keys(S.vacs).forEach(v => { if (S.vacs[v] && S.vacs[v].p === old) { S.vacs[v] = Object.assign({}, S.vacs[v], { p: nw }); write('vacations/' + v, S.vacs[v]); } });
+  Object.keys(S.sitems).forEach(i => { const x = S.sitems[i]; if (x && x.k === 'p' && x.t === old) { S.sitems[i] = Object.assign({}, x, { t: nw }); write('sprint_items/' + i, S.sitems[i]); } else if (x && !x.k && x.person === old) { S.sitems[i] = Object.assign({}, x, { person: nw }); write('sprint_items/' + i, S.sitems[i]); } });
+  const po = S.ideas.peopleorder; if (po && (po.ord || []).includes(old)) saveIdea('peopleorder', { cfg: true, ord: po.ord.map(x => (x === old ? nw : x)) });
+  const ph = S.ideas.peoplehide; if (ph && ph.byRm && Object.keys(ph.byRm).some(k => ph.byRm[k].includes(old))) { const by = {}; Object.keys(ph.byRm).forEach(k => { by[k] = ph.byRm[k].map(x => (x === old ? nw : x)); }); saveIdea('peoplehide', { cfg: true, byRm: by }); }
+  logAct('resource', 'renamed ' + old + ' to ' + nw + (feats ? ' (' + feats + ' feature' + (feats === 1 ? '' : 's') + ' updated)' : ''));
+  fillPersons(); render(); renderResources(); notify(old + ' is now ' + nw + (feats ? '. ' + feats + ' feature' + (feats === 1 ? '' : 's') + ' updated.' : '.'));
+  return true;
+}
+function renameSquad(k, v) {
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); /* a focused input would stop the page from re-drawing */
+  v = String(v || '').trim().replace(/\s+/g, ' ').slice(0, 40); const cur = squadNames(), name = LANES.find(l => l.k === k).n;
+  if (!v) { notify('A squad needs a name', 'err'); renderResources(); return; }
+  if (v === name) return;
+  if (LANES.some(l => l.k !== k && l.n.toLowerCase() === v.toLowerCase())) { notify('Another squad is already called ' + v, 'err'); renderResources(); return; }
+  const names = Object.assign({}, cur); if (v === defaultSquadName(k)) delete names[k]; else names[k] = v;
+  saveIdea('squadnames', { cfg: true, names: names }, 'resource', 'renamed the squad ' + name + ' to ' + v); applySquadNames(); fillPersons(); render(); renderResources(); notify('Squad renamed to ' + v);
 }
 export function removePerson2(name) {
   const id = personDocId(name), base0 = Object.keys(TEAMS).some(sq => ['pm', 'dev', 'qa', 'ux'].some(r => (TEAMS[sq][r] || []).includes(name)));
@@ -64,11 +101,30 @@ export function renderResources() {
   root.append(f);
   const dir = directory(), prim = d => Math.min.apply(null, [...d.sqs].map(k => LANES.findIndex(l => l.k === k)).filter(i => i >= 0).concat([9]));
   const people = [...dir.values()].sort((a, b) => prim(a) - prim(b) || a.name.localeCompare(b.name));
+  const sqCard = el('div', 'card'); sqCard.append(el('h2', '', 'Squads'), el('p', 'sub', 'Rename a squad (press Enter or click away to save). The new name shows everywhere: roadmap, team list, sprints. Colours stay the same.'));
+  LANES.forEach(l => {
+    const row = el('div', 'formrow sqrow'), dot = el('i', 'sqdot'); dot.style.background = l.c; const inp = el('input'); inp.value = l.n; inp.disabled = !canEdit(); inp.maxLength = 40; inp.setAttribute('aria-label', 'Name of the ' + defaultSquadName(l.k) + ' squad');
+    let done = false; const go = () => { if (done) return; done = true; renameSquad(l.k, inp.value); };
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } else if (e.key === 'Escape') { inp.value = l.n; inp.blur(); } }); inp.addEventListener('blur', go); inp.addEventListener('focus', () => { done = false; });
+    row.append(dot, inp); if (l.n !== defaultSquadName(l.k) && canEdit()) { const rs = el('button', 'btn sm', 'Reset to ' + defaultSquadName(l.k)); rs.type = 'button'; rs.addEventListener('mousedown', e => e.preventDefault()); rs.addEventListener('click', () => renameSquad(l.k, defaultSquadName(l.k))); row.append(rs); }
+    sqCard.append(row);
+  });
+  root.append(sqCard);
   const card = el('div', 'card'); card.append(el('h2', '', 'Team (' + people.length + ')'), el('p', 'sub', 'Squads: a coloured chip with a ✓ means the person works in that squad. Click a chip to add or remove the squad (saved automatically). They decide whose rows show on each squad\'s roadmap and who is suggested first on the sprint page.'));
   const t = el('table', 'tbl'), th = el('thead'), hr = el('tr'); ['Name', 'Domain', 'Squads', ''].forEach(x => { const c = el('th', '', x); if (!x) c.append(el('span', 'sr', 'Actions')); hr.append(c); }); th.append(hr); t.append(th);
   const tb = el('tbody');
   people.forEach(p => {
-    const tr = el('tr'), c1 = el('td'); const w = el('div', 'formrow'); w.style.alignItems = 'center'; w.append(avatarEl('', 30, p.name), el('b', '', p.name)); c1.append(w);
+    const tr = el('tr'), c1 = el('td'); const w = el('div', 'formrow'); w.style.alignItems = 'center'; const nameB = el('b', '', p.name); w.append(avatarEl('', 30, p.name), nameB);
+    if (canEdit()) {
+      const ed = el('button', 'btn sm iconbtn', '✎'); ed.type = 'button'; ed.title = 'Rename ' + p.name; ed.setAttribute('aria-label', 'Rename ' + p.name);
+      ed.addEventListener('click', () => {
+        const inp = el('input'); inp.value = p.name; inp.maxLength = 60; inp.setAttribute('aria-label', 'New name for ' + p.name); nameB.replaceWith(inp); ed.hidden = true; inp.focus(); inp.select(); let done = false;
+        const fin = ok => { if (done) return; done = true; if (ok && renamePerson(p.name, inp.value)) return; renderResources(); };
+        inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); fin(true); } else if (e.key === 'Escape') fin(false); }); inp.addEventListener('blur', () => fin(true));
+      });
+      w.append(ed);
+    }
+    c1.append(w);
     const c2 = el('td'), ds = selOf(DOMAINS, p.domain); ds.disabled = !canEdit(); ds.setAttribute('aria-label', 'Domain of ' + p.name);
     ds.addEventListener('change', () => savePerson(p.name, { domain: ds.value }, 'changed domain of ' + p.name + ' to ' + ds.value)); c2.append(ds);
     const c3 = el('td'), sw = el('div', 'formrow');

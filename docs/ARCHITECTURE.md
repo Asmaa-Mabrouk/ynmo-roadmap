@@ -42,7 +42,7 @@ src/esm/
 | auth/gate, auth/profile | Auth screens & hash routes; profile load/edit |
 | ui/* | Rendering & interaction primitives (Gantt, editing, drag, pickers, dropdown popup, loader) |
 | pages/* | One file per page; `ideas-columns` adds Trello-style column management |
-| features/* | Cross-cutting features: safety (dialogs, offline, idle logout, permissions), presence, dependencies, log tools, capacity, baselines, sharing, people-rows (row reorder + hide per roadmap) |
+| features/* | Cross-cutting features: safety (dialogs, offline, idle logout, permissions), presence, dependencies, log tools, capacity, baselines, sharing, people-rows (row reorder + hide per roadmap), squad-names (editable squad labels) |
 | app/shell | `showPage`, navigation, `start()`, `boot()`; app/extras-wiring: `initExtras/startExtras` |
 
 **Rules of the module graph**

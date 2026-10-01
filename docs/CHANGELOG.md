@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased – Sprints + Weekly executive report
+- **Rename team members and squads (Resources page):** a ✎ next to each name renames a person everywhere (roadmap features on every roadmap, vacations, sprint `@person` lines, saved row order and hidden rows); a new Squads card renames the four squads (display name only; keys and colours stay) with a Reset button. Duplicates are rejected. Saved in the new meta doc `ideas/squadnames` (no SQL change). Test: `tests/features/rename.py`.
 - **Sprints page** (editors/admins): two-week sprints, work items grouped squad > person, quick add, bulk paste (bullets and Jira keys recognised), carry over unfinished items.
 - **Weekly report page:** one report per WEEK (two per sprint, `rp<yyyymmdd>`) with a section per product, built from the sprint plan + the roadmap bars that overlap the week; optional Gemini wording through the `weekly-draft` Edge Function; every line/summary is editable and **manual edits always win** on re-sync and AI; executive view = gradient header, per-product status tiles and colour-coded read-only sections; items marked done get a date so an item finished in week 1 is not repeated as news in week 2; Copy text and Print/PDF; report settings (product to squad mapping, Jira base URL). Admins and editors can submit/reopen; viewers (executives) see submitted reports only.
 - New tables `sprints`, `sprint_items`, `reports` (sql/06); new Edge Function `weekly-draft` (secret `GEMINI_API_KEY`); new log filters Sprints/Reports; new test `tests/features/sprints_reports.py`.

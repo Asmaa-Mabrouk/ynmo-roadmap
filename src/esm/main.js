@@ -40,7 +40,7 @@ import { init } from './pages/ideas-columns.js';
 
 /** Handles for automated tests and console debugging (the app itself never reads window.__ynmo). */
 window.__ynmo = {
-  S, state: model.state, items: model.items, directory: model.directory, allRoadmaps, commit, removeItem, render, scheduleIdea,
+  S, LANES: model.LANES, state: model.state, items: model.items, directory: model.directory, allRoadmaps, commit, removeItem, render, scheduleIdea,
   get NDAYS() { return model.NDAYS; },
   get vacs() { return S.vacs; },
 };
