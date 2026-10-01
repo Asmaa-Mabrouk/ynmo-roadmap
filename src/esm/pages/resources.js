@@ -11,7 +11,7 @@ import { persist, write } from '../core/saving.js';
 import { saveIdea } from './ideas.js';
 import { allRoadmaps, useRoadmap, withRm } from './roadmaps.js';
 import { closeDlg, openDlg } from '../features/safety.js';
-import { applySquadNames, defaultSquadName, squadNames } from '../features/squad-names.js';
+import { applySquadNames, defaultSquadColor, defaultSquadName, extraSquads, isBaseSquad, squadColors, squadNames } from '../features/squad-names.js';
 import { fillPersons } from '../ui/people-picker.js';
 import { laneOf, render } from '../ui/gantt-render.js';
 import { sb } from '../core/supabase.js';
@@ -54,14 +54,47 @@ function renamePerson(old, nw) {
   fillPersons(); render(); renderResources(); notify(old + ' is now ' + nw + (feats ? '. ' + feats + ' feature' + (feats === 1 ? '' : 's') + ' updated.' : '.'));
   return true;
 }
+/** Save the products meta doc (names, colours, extra products) and redraw everything that shows them. */
+function saveLanes(patch, sum, msg) {
+  const cur = { names: Object.assign({}, squadNames()), colors: Object.assign({}, squadColors()), extra: extraSquads().slice() };
+  saveIdea('squadnames', Object.assign({ cfg: true }, cur, patch), 'resource', sum);
+  applySquadNames(); fillPersons(); render(); renderResources(); if (msg) notify(msg);
+}
 function renameSquad(k, v) {
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); /* a focused input would stop the page from re-drawing */
-  v = String(v || '').trim().replace(/\s+/g, ' ').slice(0, 40); const cur = squadNames(), name = LANES.find(l => l.k === k).n;
-  if (!v) { notify('A squad needs a name', 'err'); renderResources(); return; }
+  v = String(v || '').trim().replace(/\s+/g, ' ').slice(0, 40); const name = LANES.find(l => l.k === k).n;
+  if (!v) { notify('A product needs a name', 'err'); renderResources(); return; }
   if (v === name) return;
-  if (LANES.some(l => l.k !== k && l.n.toLowerCase() === v.toLowerCase())) { notify('Another squad is already called ' + v, 'err'); renderResources(); return; }
-  const names = Object.assign({}, cur); if (v === defaultSquadName(k)) delete names[k]; else names[k] = v;
-  saveIdea('squadnames', { cfg: true, names: names }, 'resource', 'renamed the squad ' + name + ' to ' + v); applySquadNames(); fillPersons(); render(); renderResources(); notify('Squad renamed to ' + v);
+  if (LANES.some(l => l.k !== k && l.n.toLowerCase() === v.toLowerCase())) { notify('Another product is already called ' + v, 'err'); renderResources(); return; }
+  const names = Object.assign({}, squadNames()), ex = extraSquads().map(e => (e.k === k ? Object.assign({}, e, { n: v }) : e));
+  if (isBaseSquad(k) && v === defaultSquadName(k)) delete names[k]; else if (isBaseSquad(k)) names[k] = v; else delete names[k];
+  saveLanes({ names: names, extra: ex }, 'renamed the product ' + name + ' to ' + v, 'Renamed to ' + v);
+}
+function recolorSquad(k, c) {
+  const l = LANES.find(x => x.k === k); if (!l || !/^#[0-9a-f]{6}$/i.test(c)) return; c = c.toLowerCase();
+  const colors = Object.assign({}, squadColors()), ex = extraSquads().map(e => (e.k === k ? Object.assign({}, e, { c: c }) : e));
+  if (isBaseSquad(k) && c === String(defaultSquadColor(k)).toLowerCase()) delete colors[k]; else if (isBaseSquad(k)) colors[k] = c; else delete colors[k];
+  saveLanes({ colors: colors, extra: ex }, 'changed the colour of ' + l.n + ' to ' + c, l.n + ' colour changed');
+}
+function resetSquad(k) {
+  const names = Object.assign({}, squadNames()), colors = Object.assign({}, squadColors()); delete names[k]; delete colors[k];
+  saveLanes({ names: names, colors: colors }, 'reset the product ' + k, 'Back to the default');
+}
+function addProduct(name, c) {
+  name = String(name || '').trim().replace(/\s+/g, ' ').slice(0, 40);
+  if (!name) return 'Give the product a name.';
+  if (LANES.some(l => l.n.toLowerCase() === name.toLowerCase())) return 'A product called ' + name + ' already exists.';
+  if (LANES.some(l => String(l.c).toLowerCase() === c.toLowerCase())) { /* same colour is allowed but warned about in the UI */ }
+  const k = 'x' + Date.now().toString(36);
+  saveLanes({ extra: extraSquads().concat([{ k: k, n: name, c: c }]) }, 'added the product ' + name + ' (' + c + ')', name + ' added. Add members to it and it appears on the roadmap.');
+  return '';
+}
+function removeProduct(k) {
+  const l = LANES.find(x => x.k === k); if (!l || isBaseSquad(k)) return;
+  let used = 0; allRoadmaps().forEach(rm => withRm(rm.id, () => { used += items().filter(i => i.sq === k).length; }));
+  if (used) { notify(l.n + ' still has ' + used + (used === 1 ? ' feature' : ' features') + ' on the roadmap. Move or delete them first.', 'err'); return; }
+  const ex = extraSquads().filter(e => e.k !== k), names = Object.assign({}, squadNames()), colors = Object.assign({}, squadColors()); delete names[k]; delete colors[k];
+  saveLanes({ extra: ex, names: names, colors: colors }, 'removed the product ' + l.n, l.n + ' removed');
 }
 /** Features of every roadmap that still list `name` as an owner: [{id, n, titles[]}]. */
 function assignedWork(name) {
@@ -150,14 +183,28 @@ export function renderResources() {
   root.append(f);
   const dir = directory(), prim = d => Math.min.apply(null, [...d.sqs].map(k => LANES.findIndex(l => l.k === k)).filter(i => i >= 0).concat([9]));
   const people = [...dir.values()].sort((a, b) => prim(a) - prim(b) || a.name.localeCompare(b.name));
-  const sqCard = el('div', 'card'); sqCard.append(el('h2', '', 'Squads'), el('p', 'sub', 'Rename a squad (press Enter or click away to save). The new name shows everywhere: roadmap, team list, sprints. Colours stay the same.'));
+  const sqCard = el('div', 'card'); sqCard.append(el('h2', '', 'Products'), el('p', 'sub', 'Each product has its own colour, so its bars are easy to recognise. Click a colour to change it, edit a name and press Enter. New products can be added below.'));
+  const picker = (l, onPick) => { const lab = el('label', 'colbtn'); lab.style.background = l.c; lab.title = 'Change colour'; const ci = el('input'); ci.type = 'color'; ci.value = /^#[0-9a-f]{6}$/i.test(l.c) ? l.c : '#6b7280'; ci.disabled = !canEdit(); ci.setAttribute('aria-label', 'Colour of ' + l.n); ci.addEventListener('change', () => onPick(ci.value)); lab.append(ci); return lab; };
   LANES.forEach(l => {
-    const row = el('div', 'formrow sqrow'), dot = el('i', 'sqdot'); dot.style.background = l.c; const inp = el('input'); inp.value = l.n; inp.disabled = !canEdit(); inp.maxLength = 40; inp.setAttribute('aria-label', 'Name of the ' + defaultSquadName(l.k) + ' squad');
+    const row = el('div', 'formrow sqrow'); const inp = el('input'); inp.value = l.n; inp.disabled = !canEdit(); inp.maxLength = 40; inp.setAttribute('aria-label', 'Name of the ' + l.n + ' product');
     let done = false; const go = () => { if (done) return; done = true; renameSquad(l.k, inp.value); };
     inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } else if (e.key === 'Escape') { inp.value = l.n; inp.blur(); } }); inp.addEventListener('blur', go); inp.addEventListener('focus', () => { done = false; });
-    row.append(dot, inp); if (l.n !== defaultSquadName(l.k) && canEdit()) { const rs = el('button', 'btn sm', 'Reset to ' + defaultSquadName(l.k)); rs.type = 'button'; rs.addEventListener('mousedown', e => e.preventDefault()); rs.addEventListener('click', () => renameSquad(l.k, defaultSquadName(l.k))); row.append(rs); }
+    row.append(picker(l, c => recolorSquad(l.k, c)), inp);
+    if (canEdit()) {
+      if (isBaseSquad(l.k)) { if (l.n !== defaultSquadName(l.k) || String(l.c).toLowerCase() !== String(defaultSquadColor(l.k)).toLowerCase()) { const rs = el('button', 'btn sm', 'Reset'); rs.type = 'button'; rs.title = 'Back to ' + defaultSquadName(l.k) + ' and its default colour'; rs.addEventListener('mousedown', e => e.preventDefault()); rs.addEventListener('click', () => resetSquad(l.k)); row.append(rs); } }
+      else { const rm = el('button', 'btn danger sm', 'Remove'); rm.type = 'button'; rm.addEventListener('mousedown', e => e.preventDefault()); rm.addEventListener('click', () => removeProduct(l.k)); row.append(rm); }
+    }
     sqCard.append(row);
   });
+  if (canEdit()) {
+    const nf = el('div', 'formrow sqrow sqnew'), nn = el('input'); nn.type = 'text'; nn.maxLength = 40; nn.placeholder = 'New product name'; nn.setAttribute('aria-label', 'New product name');
+    const free = ['#0891b2', '#c2257f', '#ca8a04', '#16a34a', '#dc2626', '#7c3aed', '#ea580c', '#0f766e'].find(c => !LANES.some(l => String(l.c).toLowerCase() === c)) || '#0891b2', nc = { c: free };
+    const pk = picker({ c: free, n: 'new product' }, v => { nc.c = v; pk.style.background = v; }); pk.querySelector('input').disabled = false;
+    const add = el('button', 'btn primary sm', 'Add product'); add.type = 'button'; const em = el('span', 'gerr');
+    const submit = () => { const m = addProduct(nn.value, nc.c); if (m) em.textContent = m; };
+    add.addEventListener('click', submit); nn.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
+    nf.append(pk, nn, add, em); sqCard.append(nf);
+  }
   root.append(sqCard);
   const card = el('div', 'card'); card.append(el('h2', '', 'Team (' + people.length + ')'), el('p', 'sub', 'Squads: a coloured chip with a ✓ means the person works in that squad. Click a chip to add or remove the squad (saved automatically). They decide whose rows show on each squad\'s roadmap and who is suggested first on the sprint page.'));
   const t = el('table', 'tbl'), th = el('thead'), hr = el('tr'); ['Name', 'Domain', 'Squads', ''].forEach(x => { const c = el('th', '', x); if (!x) c.append(el('span', 'sr', 'Actions')); hr.append(c); }); th.append(hr); t.append(th);

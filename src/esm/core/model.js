@@ -180,7 +180,7 @@ function finish(it) {
   it.d0 = Math.max(0, Math.min(NDAYS - 1, Math.round(it.d0)));
   it.d1 = Math.max(it.d0, Math.min(NDAYS - 1, Math.round(it.d1)));
   if (it.ms) it.d1 = it.d0;
-  if (it.res === undefined) it.res = TEAMS[it.sq].pm.slice();
+  if (it.res === undefined) it.res = (TEAMS[it.sq] || { pm: [] }).pm.slice();
   return it;
 }
 /* ---------- per-person dates: `pd` = {person: [d0, d1]}; the item's own d0/d1 is then the span of all of them ---------- */
@@ -232,8 +232,8 @@ export function items() {
   return out;
 }
 function team(it) {
-  const own = TEAMS[it.sq], uniq = a => [...new Set(a)];
-  return { pm: own.pm, dev: own.dev, qa: uniq(it.pr.flatMap(p => TEAMS[p].qa)), ux: uniq(it.pr.flatMap(p => TEAMS[p].ux)) };
+  const none = { pm: [], dev: [], qa: [], ux: [] }, tm = k => TEAMS[k] || none, own = tm(it.sq), uniq = a => [...new Set(a)];
+  return { pm: own.pm, dev: own.dev, qa: uniq(it.pr.flatMap(p => tm(p).qa || [])), ux: uniq(it.pr.flatMap(p => tm(p).ux || [])) };
 }
 const ROLE_DOMAIN = { pm: 'PM', dev: 'Engineering', qa: 'QA', ux: 'UX / Design' };
 const domRole = d => d === 'PM' ? 'pm' : d === 'QA' ? 'qa' : d === 'UX / Design' ? 'ux' : 'dev';

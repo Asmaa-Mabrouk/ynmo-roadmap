@@ -19,7 +19,7 @@ Generic document tables: `id text PK, data jsonb, updated_at timestamptz, update
 | people | Team directory |
 | daysoff | Time off per person |
 | roadmaps | Roadmap definitions (name, range, kind) |
-| ideas | Idea cards **and** meta docs: `col…` custom columns, `cfg_<lane>` built-in overrides, `colorder`, `peopleorder` (row order of the by-person roadmap), `peoplehide` (people hidden per roadmap: `byRm`), `squadnames` (`names:{squadKey:displayName}`, applied to `LANES` by `features/squad-names.js`) |
+| ideas | Idea cards **and** meta docs: `col…` custom columns, `cfg_<lane>` built-in overrides, `colorder`, `peopleorder` (row order of the by-person roadmap), `peoplehide` (people hidden per roadmap: `byRm`), `squadnames` (`names:{key:name}`, `colors:{key:#rrggbb}`, `extra:[{k,n,c}]` = added products; applied to `LANES` by `features/squad-names.js`) |
 | vacations | Leave entries |
 | activity | Append-only audit log (`u` = undo payload, `ref` marks undone entries) |
 | baselines | Frozen snapshots (`active` flag is the only mutable field) |

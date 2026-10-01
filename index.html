@@ -21,7 +21,7 @@
   --focus: #0d8560;
   --brand: #0d8560; --brand-2: #6d48a8; --brand-soft: #18b087;
   --on-bar: #ffffff;
-  --tifli: #563cca;
+  --tifli: #c2257f;
   --plan: #0d8560;
   --daycare: #5a6db5;
   --ai: #c04a17;
@@ -768,6 +768,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .swatch.any input { position: absolute; inset: -6px; width: 40px; height: 40px; opacity: 0; cursor: pointer; border: 0; padding: 0; }
 
 .wkrow { margin: 8px 0 12px; } .wkrow ul { margin: 4px 0 8px; padding-inline-start: 18px; font-size: 13px; } .wkrow .btn { margin-top: 2px; }
+
+/* product colour button (Resources) */
+.colbtn { position: relative; width: 28px; height: 28px; flex: none; border-radius: 50%; border: 2px solid var(--line); overflow: hidden; cursor: pointer; display: inline-block; }
+.colbtn input { position: absolute; inset: -8px; width: 44px; height: 44px; opacity: 0; cursor: pointer; border: 0; padding: 0; }
+.colbtn:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+.sqnew { margin-top: 10px; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -1156,7 +1162,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     it.d0 = Math.max(0, Math.min(NDAYS - 1, Math.round(it.d0)));
     it.d1 = Math.max(it.d0, Math.min(NDAYS - 1, Math.round(it.d1)));
     if (it.ms) it.d1 = it.d0;
-    if (it.res === void 0) it.res = TEAMS[it.sq].pm.slice();
+    if (it.res === void 0) it.res = (TEAMS[it.sq] || { pm: [] }).pm.slice();
     return it;
   }
   var cl = (k) => Math.max(0, Math.min(NDAYS - 1, Math.round(k)));
@@ -2410,6 +2416,48 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     else h.undo();
   }, true);
 
+  // src/esm/features/squad-names.js
+  var original = LANES.map((l) => ({ k: l.k, n: l.n, c: l.c }));
+  var BASE = original.length;
+  var known = new Set(LANES.map((l) => l.k));
+  var listeners = [];
+  var isBaseSquad = (k) => original.some((o) => o.k === k);
+  var defaultSquadName = (k) => (original.find((o) => o.k === k) || {}).n || k;
+  var defaultSquadColor = (k) => (original.find((o) => o.k === k) || {}).c || "";
+  var doc = () => S.ideas.squadnames || {};
+  var squadNames = () => doc().names || {};
+  var squadColors = () => doc().colors || {};
+  var extraSquads = () => (Array.isArray(doc().extra) ? doc().extra : []).filter((e) => e && e.k && e.n);
+  var hex = (c) => /^#[0-9a-f]{6}$/i.test(String(c || ""));
+  var onLanesChanged = (fn) => {
+    listeners.push(fn);
+  };
+  function applySquadNames() {
+    const nm = squadNames(), co = squadColors(), ex = extraSquads();
+    LANES.length = BASE;
+    ex.forEach((e) => {
+      if (!LANES.some((l) => l.k === e.k)) {
+        LANES.push({ k: e.k, n: e.n, c: hex(e.c) ? e.c : "#6b7280" });
+        if (!TEAMS[e.k]) TEAMS[e.k] = { pm: [], dev: [], qa: [], ux: [] };
+      }
+    });
+    LANES.forEach((l) => {
+      const e = ex.find((x) => x.k === l.k), v = nm[l.k] && String(nm[l.k]).trim();
+      l.n = v || (e ? e.n : defaultSquadName(l.k));
+      l.c = hex(co[l.k]) ? co[l.k] : e ? hex(e.c) ? e.c : "#6b7280" : defaultSquadColor(l.k);
+    });
+    LANES.forEach((l) => {
+      if (!known.has(l.k)) {
+        known.add(l.k);
+        state.sq.add(l.k);
+      }
+    });
+    [...state.sq].forEach((k) => {
+      if (!LANES.some((l) => l.k === k)) state.sq.delete(k);
+    });
+    listeners.forEach((f) => f());
+  }
+
   // src/esm/pages/ideas-columns.js
   var COL_COLORS = ["#0d8560", "#6d48a8", "#c04a17", "#5a6db5", "#b8860b", "#c2185b", "#00838f", "#55608a"];
   var isMeta = (i) => !!(i && (i.col || i.cfg));
@@ -2444,7 +2492,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       nm.style.width = "100%";
       nm.value = col ? col.n : "";
       const sel = { v: col ? col.c : COL_COLORS[ideaCols(true).length % COL_COLORS.length] };
-      const hex = (v) => /^#[0-9a-f]{6}$/i.test(v) ? v : "#55608a";
+      const hex2 = (v) => /^#[0-9a-f]{6}$/i.test(v) ? v : "#55608a";
       const sw = el("div", "mrow");
       sw.setAttribute("role", "radiogroup");
       sw.setAttribute("aria-label", "Color");
@@ -2469,7 +2517,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       });
       const cp = el("input");
       cp.type = "color";
-      cp.value = hex(sel.v);
+      cp.value = hex2(sel.v);
       cp.setAttribute("aria-label", "Custom color");
       cp.style.cssText = "width:34px;height:34px;padding:0;border:0;background:none;cursor:pointer";
       cp.addEventListener("input", () => {
@@ -2670,14 +2718,16 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       });
     });
   }
-  function init() {
+  function drawChips() {
     const chips = $("chips");
+    if (!chips) return;
+    chips.textContent = "";
     LANES.forEach((l) => {
       const b = el("button", "chip");
       b.type = "button";
       b.style.setProperty("--c", l.c);
       b.append(el("i"), document.createTextNode(l.n));
-      b.setAttribute("aria-pressed", "true");
+      b.setAttribute("aria-pressed", String(state.sq.has(l.k)));
       b.addEventListener("click", () => {
         state.sq.has(l.k) ? state.sq.delete(l.k) : state.sq.add(l.k);
         b.setAttribute("aria-pressed", String(state.sq.has(l.k)));
@@ -2685,6 +2735,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       });
       chips.append(b);
     });
+  }
+  onLanesChanged(drawChips);
+  function init() {
+    const chips = $("chips");
+    drawChips();
     fillPersons();
     $("person").addEventListener("change", (e) => {
       state.person = e.target.value;
@@ -4676,18 +4731,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return r;
   }
 
-  // src/esm/features/squad-names.js
-  var original = LANES.map((l) => [l.k, l.n]);
-  var defaultSquadName = (k) => (original.find((o) => o[0] === k) || [])[1] || k;
-  var squadNames = () => S.ideas.squadnames && S.ideas.squadnames.names || {};
-  function applySquadNames() {
-    const m = squadNames();
-    LANES.forEach((l) => {
-      const v = m[l.k] && String(m[l.k]).trim();
-      l.n = v || defaultSquadName(l.k);
-    });
-  }
-
   // src/esm/ui/notify.js
   var box = null;
   function host() {
@@ -4821,30 +4864,77 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     notify(old + " is now " + nw + (feats ? ". " + feats + " feature" + (feats === 1 ? "" : "s") + " updated." : "."));
     return true;
   }
+  function saveLanes(patch, sum, msg) {
+    const cur2 = { names: Object.assign({}, squadNames()), colors: Object.assign({}, squadColors()), extra: extraSquads().slice() };
+    saveIdea("squadnames", Object.assign({ cfg: true }, cur2, patch), "resource", sum);
+    applySquadNames();
+    fillPersons();
+    render();
+    renderResources();
+    if (msg) notify(msg);
+  }
   function renameSquad(k, v) {
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     v = String(v || "").trim().replace(/\s+/g, " ").slice(0, 40);
-    const cur2 = squadNames(), name = LANES.find((l) => l.k === k).n;
+    const name = LANES.find((l) => l.k === k).n;
     if (!v) {
-      notify("A squad needs a name", "err");
+      notify("A product needs a name", "err");
       renderResources();
       return;
     }
     if (v === name) return;
     if (LANES.some((l) => l.k !== k && l.n.toLowerCase() === v.toLowerCase())) {
-      notify("Another squad is already called " + v, "err");
+      notify("Another product is already called " + v, "err");
       renderResources();
       return;
     }
-    const names = Object.assign({}, cur2);
-    if (v === defaultSquadName(k)) delete names[k];
-    else names[k] = v;
-    saveIdea("squadnames", { cfg: true, names }, "resource", "renamed the squad " + name + " to " + v);
-    applySquadNames();
-    fillPersons();
-    render();
-    renderResources();
-    notify("Squad renamed to " + v);
+    const names = Object.assign({}, squadNames()), ex = extraSquads().map((e) => e.k === k ? Object.assign({}, e, { n: v }) : e);
+    if (isBaseSquad(k) && v === defaultSquadName(k)) delete names[k];
+    else if (isBaseSquad(k)) names[k] = v;
+    else delete names[k];
+    saveLanes({ names, extra: ex }, "renamed the product " + name + " to " + v, "Renamed to " + v);
+  }
+  function recolorSquad(k, c) {
+    const l = LANES.find((x) => x.k === k);
+    if (!l || !/^#[0-9a-f]{6}$/i.test(c)) return;
+    c = c.toLowerCase();
+    const colors = Object.assign({}, squadColors()), ex = extraSquads().map((e) => e.k === k ? Object.assign({}, e, { c }) : e);
+    if (isBaseSquad(k) && c === String(defaultSquadColor(k)).toLowerCase()) delete colors[k];
+    else if (isBaseSquad(k)) colors[k] = c;
+    else delete colors[k];
+    saveLanes({ colors, extra: ex }, "changed the colour of " + l.n + " to " + c, l.n + " colour changed");
+  }
+  function resetSquad(k) {
+    const names = Object.assign({}, squadNames()), colors = Object.assign({}, squadColors());
+    delete names[k];
+    delete colors[k];
+    saveLanes({ names, colors }, "reset the product " + k, "Back to the default");
+  }
+  function addProduct(name, c) {
+    name = String(name || "").trim().replace(/\s+/g, " ").slice(0, 40);
+    if (!name) return "Give the product a name.";
+    if (LANES.some((l) => l.n.toLowerCase() === name.toLowerCase())) return "A product called " + name + " already exists.";
+    if (LANES.some((l) => String(l.c).toLowerCase() === c.toLowerCase())) {
+    }
+    const k = "x" + Date.now().toString(36);
+    saveLanes({ extra: extraSquads().concat([{ k, n: name, c }]) }, "added the product " + name + " (" + c + ")", name + " added. Add members to it and it appears on the roadmap.");
+    return "";
+  }
+  function removeProduct(k) {
+    const l = LANES.find((x) => x.k === k);
+    if (!l || isBaseSquad(k)) return;
+    let used = 0;
+    allRoadmaps().forEach((rm) => withRm(rm.id, () => {
+      used += items().filter((i) => i.sq === k).length;
+    }));
+    if (used) {
+      notify(l.n + " still has " + used + (used === 1 ? " feature" : " features") + " on the roadmap. Move or delete them first.", "err");
+      return;
+    }
+    const ex = extraSquads().filter((e) => e.k !== k), names = Object.assign({}, squadNames()), colors = Object.assign({}, squadColors());
+    delete names[k];
+    delete colors[k];
+    saveLanes({ extra: ex, names, colors }, "removed the product " + l.n, l.n + " removed");
   }
   function assignedWork(name) {
     const out = [];
@@ -5025,15 +5115,27 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const dir = directory(), prim = (d) => Math.min.apply(null, [...d.sqs].map((k) => LANES.findIndex((l) => l.k === k)).filter((i) => i >= 0).concat([9]));
     const people = [...dir.values()].sort((a, b) => prim(a) - prim(b) || a.name.localeCompare(b.name));
     const sqCard = el("div", "card");
-    sqCard.append(el("h2", "", "Squads"), el("p", "sub", "Rename a squad (press Enter or click away to save). The new name shows everywhere: roadmap, team list, sprints. Colours stay the same."));
+    sqCard.append(el("h2", "", "Products"), el("p", "sub", "Each product has its own colour, so its bars are easy to recognise. Click a colour to change it, edit a name and press Enter. New products can be added below."));
+    const picker = (l, onPick) => {
+      const lab = el("label", "colbtn");
+      lab.style.background = l.c;
+      lab.title = "Change colour";
+      const ci = el("input");
+      ci.type = "color";
+      ci.value = /^#[0-9a-f]{6}$/i.test(l.c) ? l.c : "#6b7280";
+      ci.disabled = !canEdit();
+      ci.setAttribute("aria-label", "Colour of " + l.n);
+      ci.addEventListener("change", () => onPick(ci.value));
+      lab.append(ci);
+      return lab;
+    };
     LANES.forEach((l) => {
-      const row = el("div", "formrow sqrow"), dot = el("i", "sqdot");
-      dot.style.background = l.c;
+      const row = el("div", "formrow sqrow");
       const inp = el("input");
       inp.value = l.n;
       inp.disabled = !canEdit();
       inp.maxLength = 40;
-      inp.setAttribute("aria-label", "Name of the " + defaultSquadName(l.k) + " squad");
+      inp.setAttribute("aria-label", "Name of the " + l.n + " product");
       let done2 = false;
       const go2 = () => {
         if (done2) return;
@@ -5053,16 +5155,56 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       inp.addEventListener("focus", () => {
         done2 = false;
       });
-      row.append(dot, inp);
-      if (l.n !== defaultSquadName(l.k) && canEdit()) {
-        const rs = el("button", "btn sm", "Reset to " + defaultSquadName(l.k));
-        rs.type = "button";
-        rs.addEventListener("mousedown", (e) => e.preventDefault());
-        rs.addEventListener("click", () => renameSquad(l.k, defaultSquadName(l.k)));
-        row.append(rs);
+      row.append(picker(l, (c) => recolorSquad(l.k, c)), inp);
+      if (canEdit()) {
+        if (isBaseSquad(l.k)) {
+          if (l.n !== defaultSquadName(l.k) || String(l.c).toLowerCase() !== String(defaultSquadColor(l.k)).toLowerCase()) {
+            const rs = el("button", "btn sm", "Reset");
+            rs.type = "button";
+            rs.title = "Back to " + defaultSquadName(l.k) + " and its default colour";
+            rs.addEventListener("mousedown", (e) => e.preventDefault());
+            rs.addEventListener("click", () => resetSquad(l.k));
+            row.append(rs);
+          }
+        } else {
+          const rm = el("button", "btn danger sm", "Remove");
+          rm.type = "button";
+          rm.addEventListener("mousedown", (e) => e.preventDefault());
+          rm.addEventListener("click", () => removeProduct(l.k));
+          row.append(rm);
+        }
       }
       sqCard.append(row);
     });
+    if (canEdit()) {
+      const nf = el("div", "formrow sqrow sqnew"), nn = el("input");
+      nn.type = "text";
+      nn.maxLength = 40;
+      nn.placeholder = "New product name";
+      nn.setAttribute("aria-label", "New product name");
+      const free = ["#0891b2", "#c2257f", "#ca8a04", "#16a34a", "#dc2626", "#7c3aed", "#ea580c", "#0f766e"].find((c) => !LANES.some((l) => String(l.c).toLowerCase() === c)) || "#0891b2", nc = { c: free };
+      const pk = picker({ c: free, n: "new product" }, (v) => {
+        nc.c = v;
+        pk.style.background = v;
+      });
+      pk.querySelector("input").disabled = false;
+      const add = el("button", "btn primary sm", "Add product");
+      add.type = "button";
+      const em = el("span", "gerr");
+      const submit = () => {
+        const m = addProduct(nn.value, nc.c);
+        if (m) em.textContent = m;
+      };
+      add.addEventListener("click", submit);
+      nn.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          submit();
+        }
+      });
+      nf.append(pk, nn, add, em);
+      sqCard.append(nf);
+    }
     root.append(sqCard);
     const card = el("div", "card");
     card.append(el("h2", "", "Team (" + people.length + ")"), el("p", "sub", "Squads: a coloured chip with a ✓ means the person works in that squad. Click a chip to add or remove the squad (saved automatically). They decide whose rows show on each squad's roadmap and who is suggested first on the sprint page."));
@@ -5710,8 +5852,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
   }
   function cleanFragment(html) {
-    const doc = new DOMParser().parseFromString("<body>" + String(html || "") + "</body>", "text/html"), frag = document.createDocumentFragment();
-    walk(doc.body, frag);
+    const doc2 = new DOMParser().parseFromString("<body>" + String(html || "") + "</body>", "text/html"), frag = document.createDocumentFragment();
+    walk(doc2.body, frag);
     return frag;
   }
   function cleanHtml(html) {
@@ -5867,11 +6009,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   function reportUndo(dir) {
     const rep = cur();
     if (!rep || rep.status === "submitted" || isViewer() || !canBuild()) return;
-    const r = undoR(rep.id).step(dir, (id) => S.reports[id], (id, doc) => {
-      if (!doc) return;
-      S.reports[id] = doc;
-      write("reports/" + id, doc);
-      baseline[id] = JSON.stringify(doc);
+    const r = undoR(rep.id).step(dir, (id) => S.reports[id], (id, doc2) => {
+      if (!doc2) return;
+      S.reports[id] = doc2;
+      write("reports/" + id, doc2);
+      baseline[id] = JSON.stringify(doc2);
     }), word = dir === "undo" ? "Undo" : "Redo";
     if (!r) {
       notify("Nothing to " + word.toLowerCase(), "info");
@@ -6501,18 +6643,18 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const k = (S.me && S.me.id || "me") + ":" + spId;
     return undoers2[k] || (undoers2[k] = createUndo(100));
   };
-  var rawSet = (id, doc) => {
-    if (doc) S.sitems[id] = doc;
+  var rawSet = (id, doc2) => {
+    if (doc2) S.sitems[id] = doc2;
     else delete S.sitems[id];
-    write("sprint_items/" + id, doc || null);
+    write("sprint_items/" + id, doc2 || null);
   };
   var pendingBefore = {};
-  function putItem(id, doc) {
+  function putItem(id, doc2) {
     const before = pendingBefore[id] || S.sitems[id] || null;
     delete pendingBefore[id];
-    const sp = (doc || before || {}).sp;
-    if (sp) undoOf(sp).rec(id, before, doc);
-    rawSet(id, doc);
+    const sp = (doc2 || before || {}).sp;
+    if (sp) undoOf(sp).rec(id, before, doc2);
+    rawSet(id, doc2);
   }
   function saveItem(id, patch) {
     putItem(id, Object.assign({}, S.sitems[id] || {}, patch));

@@ -345,3 +345,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .swatch.any input { position: absolute; inset: -6px; width: 40px; height: 40px; opacity: 0; cursor: pointer; border: 0; padding: 0; }
 
 .wkrow { margin: 8px 0 12px; } .wkrow ul { margin: 4px 0 8px; padding-inline-start: 18px; font-size: 13px; } .wkrow .btn { margin-top: 2px; }
+
+/* product colour button (Resources) */
+.colbtn { position: relative; width: 28px; height: 28px; flex: none; border-radius: 50%; border: 2px solid var(--line); overflow: hidden; cursor: pointer; display: inline-block; }
+.colbtn input { position: absolute; inset: -8px; width: 44px; height: 44px; opacity: 0; cursor: pointer; border: 0; padding: 0; }
+.colbtn:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+.sqnew { margin-top: 10px; }

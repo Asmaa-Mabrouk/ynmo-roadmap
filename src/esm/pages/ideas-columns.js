@@ -19,6 +19,7 @@ import { LOGO } from '../core/supabase.js';
 import { useRoadmap } from './roadmaps.js';
 import { boot } from '../app/shell.js';
 import { registerUndo } from '../features/undo-router.js';
+import { onLanesChanged } from '../features/squad-names.js';
 
 /* ---------- ideas: editable, colourable, re-orderable product columns (like Trello) ---------- */
 const COL_COLORS = ['#0d8560', '#6d48a8', '#c04a17', '#5a6db5', '#b8860b', '#c2185b', '#00838f', '#55608a'];
@@ -127,17 +128,23 @@ export function moveMenu(m, id, i) {
   ideaCols().forEach(c => { if (c.k === i.pr) return; mi(m, c.n, () => { saveIdea(id, { pr: c.k }, 'idea', 'moved idea "' + i.t + '" to ' + c.n); renderIdeas(true); }); });
 }
 
-export function init() {
-  const chips = $('chips');
+/** (Re)draw the squad filter chips under the roadmap header; called again when products are renamed, recoloured or added. */
+export function drawChips() {
+  const chips = $('chips'); if (!chips) return; chips.textContent = '';
   LANES.forEach(l => {
     const b = el('button', 'chip'); b.type = 'button'; b.style.setProperty('--c', l.c);
-    b.append(el('i'), document.createTextNode(l.n)); b.setAttribute('aria-pressed', 'true');
+    b.append(el('i'), document.createTextNode(l.n)); b.setAttribute('aria-pressed', String(state.sq.has(l.k)));
     b.addEventListener('click', () => {
       state.sq.has(l.k) ? state.sq.delete(l.k) : state.sq.add(l.k);
       b.setAttribute('aria-pressed', String(state.sq.has(l.k))); render();
     });
     chips.append(b);
   });
+}
+onLanesChanged(drawChips);
+export function init() {
+  const chips = $('chips');
+  drawChips();
   fillPersons();
   $('person').addEventListener('change', e => { state.person = e.target.value; render(); });
   $('status').addEventListener('change', e => { state.status = e.target.value; render(); });
