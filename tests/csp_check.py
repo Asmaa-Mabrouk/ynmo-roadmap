@@ -20,7 +20,8 @@ with sync_playwright() as pw:
     P.goto('http://127.0.0.1:%d/index.html'%port); P.wait_for_timeout(500)
     P.click('button:text-is("Create an account")'); P.locator('input[autocomplete=name]').fill('A'); P.locator('input[type=email]').fill('a@x.com'); P.locator('input[autocomplete=new-password]').fill('good1234'); P.click('button:text-is("Create account")'); P.wait_for_timeout(1000)
     for pg in ['ideas','roadmaps','resources','vacations','capacity','baselines','log','roadmap']: P.click('#nav button[data-p="%s"]'%pg); P.wait_for_timeout(250)
-    P.click('#sharebtn'); P.wait_for_timeout(300); P.keyboard.press('Escape')
+    P.evaluate('()=>{window.print=()=>{}}'); P.click('#exportpdf'); P.wait_for_timeout(400)
+    P.click('#nav button[data-p="roadmaps"]'); P.wait_for_timeout(250); P.locator('.rmcard button:text-is("Share")').first.click(); P.wait_for_timeout(300); P.keyboard.press('Escape')
     bad=[l for l in logs if 'Content Security Policy' in l or l.startswith('ERR') or 'Refused' in l]
     print('bars',P.locator('.bar').count(),'| violations/errors:',bad)
     sys.exit(1 if bad or P.locator('.bar').count()==0 else 0)

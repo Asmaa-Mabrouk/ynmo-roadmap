@@ -58,7 +58,7 @@ with sync_playwright() as pw:
     A.click('#nav button[data-p="baselines"]'); A.wait_for_timeout(300); A.click('button:text-is("Compare with now")'); A.wait_for_timeout(300)
     ok('compare shows moved', '1' in A.locator('.cmpbox .summary div').first.inner_text() and 'Moved' in A.locator('.cmpbox').inner_text())
     # ---- share
-    A.click('#nav button[data-p="roadmap"]'); A.wait_for_timeout(300); A.click('#sharebtn'); A.wait_for_timeout(300); A.click('button:text-is("Create share link")'); A.wait_for_timeout(500)
+    A.click('#nav button[data-p="roadmaps"]'); A.wait_for_timeout(300); A.locator('.rmcard button:text-is("Share")').first.click(); A.wait_for_timeout(300); A.click('button:text-is("Create share link")'); A.wait_for_timeout(500)
     url=A.locator('#shareurl').input_value(); ok('share url', '#/share/' in url)
     S2=ctx.new_page(); S2.on('pageerror',lambda e:errs.append(str(e))); S2.goto(url); S2.wait_for_timeout(1200)
     ok('shared view loads bars', S2.locator('.bar').count()>10)

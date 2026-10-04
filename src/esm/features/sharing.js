@@ -18,10 +18,10 @@ import { avatarEl } from '../ui/avatars.js';
 /* ---------- 1. sharing and viewer access ---------- */
 function shareFor(rm) { const k = Object.keys(S.shares).find(t => S.shares[t].rm === rm); return k ? { token: k, data: S.shares[k] } : null; }
 function shareUrl(t) { return location.origin + location.pathname + '#/share/' + t; }
-export function openShare() {
+export function openShare(id) {
   if (!canWrite()) return;
-  const rmId = state.rm;
-  openDlg('Share ' + curRm().n + ' (read only)', box => {
+  const rmId = typeof id === 'string' ? id : state.rm, rmName = (allRoadmaps().find(r => r.id === rmId) || curRm()).n;
+  openDlg('Share ' + rmName + ' (read only)', box => {
     box.append(el('p', 'hint', 'Anyone with the link can look at this roadmap without an account. They cannot change anything, and they do not see leave, ideas or the log. Stop sharing at any time and the link stops working.'));
     const area = el('div'); box.append(area);
     const msg = el('div', 'gerr'); msg.setAttribute('aria-live', 'polite'); box.append(msg);
@@ -32,7 +32,7 @@ export function openShare() {
         const mk = el('button', 'btn primary', 'Create share link'); mk.type = 'button';
         mk.addEventListener('click', async () => {
           mk.disabled = true; const t = (window.crypto && crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()).replace(/-/g, ''); const data = { rm: rmId, by: S.me.name || S.me.email, at: new Date().toISOString() };
-          try { await S.db.doc('share_links/' + t).set(data); S.shares[t] = data; logAct('access', 'created a share link for ' + curRm().n); draw(); } catch (e) { mk.disabled = false; msg.textContent = 'Could not create the link. Ask the admin to run setup v4.'; }
+          try { await S.db.doc('share_links/' + t).set(data); S.shares[t] = data; logAct('access', 'created a share link for ' + rmName); draw(); } catch (e) { mk.disabled = false; msg.textContent = 'Could not create the link. Ask the admin to run setup v4.'; }
         });
         area.append(mk);
       } else {
@@ -41,7 +41,7 @@ export function openShare() {
         const cp = el('button', 'btn primary', 'Copy link'); cp.type = 'button';
         cp.addEventListener('click', async () => { try { await navigator.clipboard.writeText(inp.value); cp.textContent = 'Copied'; } catch (e) { inp.select(); cp.textContent = 'Press Ctrl+C'; } });
         const stop = el('button', 'btn danger', 'Stop sharing'); stop.type = 'button';
-        stop.addEventListener('click', async () => { stop.disabled = true; try { await S.db.doc('share_links/' + s.token).delete(); delete S.shares[s.token]; logAct('access', 'stopped sharing ' + curRm().n); draw(); } catch (e) { stop.disabled = false; msg.textContent = 'Could not stop sharing. Try again.'; } });
+        stop.addEventListener('click', async () => { stop.disabled = true; try { await S.db.doc('share_links/' + s.token).delete(); delete S.shares[s.token]; logAct('access', 'stopped sharing ' + rmName); draw(); } catch (e) { stop.disabled = false; msg.textContent = 'Could not stop sharing. Try again.'; } });
         const row = el('div', 'formrow'); row.append(cp, stop); area.append(inp, row, el('div', 'hint', 'Shared by ' + s.data.by + ' on ' + clock(s.data.at)));
       }
     };

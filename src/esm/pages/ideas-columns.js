@@ -13,7 +13,7 @@ import { renderDrawer, renderIdeas, saveIdea, scheduleIdea } from './ideas.js';
 import { addItem, restoreAll, undo, write } from '../core/saving.js';
 import { addAt, barMenu, closeCtx, dayAt, mi, openCtx, rowMenu, startEdit } from '../ui/editing.js';
 import { closePicker, fillPersons, openOff } from '../ui/people-picker.js';
-import { exportCsv } from '../ui/export.js';
+import { exportPdf } from '../ui/export-pdf.js';
 import { initExtras } from '../app/extras-wiring.js';
 import { LOGO } from '../core/supabase.js';
 import { useRoadmap } from './roadmaps.js';
@@ -190,7 +190,7 @@ export function init() {
     armed = true; rb.textContent = 'Click again to restore'; clearTimeout(t2); t2 = setTimeout(() => { armed = false; rb.textContent = 'Restore roadmap'; }, 3500);
   });
   render();
-  $('export').addEventListener('click', exportCsv);
+  $('exportpdf').addEventListener('click', exportPdf);
   initExtras();
   $('toplogo').src = LOGO;
   const av = $('avbtn'), um = $('umenu');
@@ -200,7 +200,6 @@ export function init() {
   $('rmsel').addEventListener('change', e => useRoadmap(e.target.value));
   try { const z = localStorage.getItem('ynmo-zoom'); if (ZOOM[z]) { state.zoom = z; $('zoom').value = z; } } catch (e) { /* storage unavailable */ }
   $('zoom').addEventListener('change', e => { state.zoom = e.target.value; try { localStorage.setItem('ynmo-zoom', state.zoom); } catch (x) { /* storage unavailable */ } render(); });
-  $('today').addEventListener('click', () => { if (todayK < 0) { toast('Today is outside this roadmap.'); return; } const w = $('wrap'); w.scrollLeft = Math.max(0, (todayK - 3) * (ZOOM[state.zoom] || 26)); });
   $('ideasbtn').addEventListener('click', () => { S.drawerOpen = !S.drawerOpen; renderDrawer(); });
   const rowAt = e => document.elementsFromPoint(e.clientX, e.clientY).find(x => x.matches && x.matches('.rowbg[data-person]')) || null;
   const clearDrop = () => gr.querySelectorAll('.drop').forEach(x => x.classList.remove('drop'));

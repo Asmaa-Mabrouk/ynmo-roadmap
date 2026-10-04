@@ -185,12 +185,12 @@ with sync_playwright() as p:
     @T('Roadmap','R14','Search filters bars; Clear filters restores')
     def _():
         A.fill('input[type=search] >> nth=0','zzzzzz'); A.wait_for_timeout(300); n=A.locator('.pb').count(); A.click('button:text-is("Clear filters")'); A.wait_for_timeout(300); return (n==0 and A.locator('.pb').count()>10,'filtered=%d'%n)
-    @T('Roadmap','R15','Export CSV downloads a file')
+    @T('Roadmap','R15','Export PDF builds the full coloured print view; Share, CSV and Today buttons are gone')
     def _():
-        try:
-            with A.expect_download(timeout=3000) as dl: A.click('#export')
-            return (True, dl.value.suggested_filename)
-        except Exception as e: return (False,'no download triggered')
+        A.evaluate('()=>{window.print=()=>{window.__pp=1}}'); A.click('#exportpdf'); A.wait_for_timeout(500)
+        ok_=A.locator('#printrm .prm-bar').count()>10 and A.evaluate('window.__pp')==1 and A.locator('#export, #today, #sharebtn').count()==0
+        A.evaluate("()=>{document.body.classList.remove('print-roadmap');const v=document.getElementById('printrm');if(v)v.remove()}")
+        return (ok_,'bars=%d'%A.locator('#printrm .prm-bar').count())
     @T('Roadmap','R16','Restore roadmap button removed from home')
     def _(): return (A.locator('#reset').count()==0 and 'Restore roadmap' not in A.locator('.toolbar').inner_text(),'')
     json.dump(R,open(HERE+'/out/qa_partial.json','w'))

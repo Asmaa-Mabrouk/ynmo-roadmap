@@ -5,6 +5,7 @@
  * Dependencies are explicit ES imports; shared mutable state lives in `S` (core/state.js).
  */
 import { S } from '../core/state.js';
+import { fold } from './dropdowns.js';
 import { $, DAY, H2_START, LANES, ROLES, START, canEdit, directory, el, items, parseIso, state } from '../core/model.js';
 import { fmtIso, kOfIso, logAct } from '../core/shared.js';
 import { commit, write } from '../core/saving.js';
@@ -85,8 +86,8 @@ export function buildPicker() {
   const draw = () => {
     const cur = pickerItem(); if (!cur) return;
     list.textContent = '';
-    const f = q.value.trim().toLowerCase();
-    const dir = [...directory().values()].filter(x => !f || x.name.toLowerCase().includes(f));
+    const ws = fold(q.value).split(/\s+/).filter(Boolean);
+    const dir = [...directory().values()].filter(x => { const t = fold(x.name); return ws.every(w => t.includes(w)); });
     dir.sort((a, b) => (b.sqs.has(cur.sq) - a.sqs.has(cur.sq)) || a.name.localeCompare(b.name));
     if (!dir.length) list.append(el('div', 'sub2', 'No one matches. Add them below.'));
     dir.forEach(x => {

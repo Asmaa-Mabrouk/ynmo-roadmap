@@ -4,6 +4,7 @@
  * Reuses the dropdown look (.cpop / .copt). One menu at a time. Depends on the DOM only.
  */
 import { el } from '../core/model.js';
+import { fold } from './dropdowns.js';
 
 let menu = null, done = null;
 export function closeMenu() { if (!menu) return; menu.remove(); menu = null; document.removeEventListener('pointerdown', outside, true); const d = done; done = null; if (d) d(); }
@@ -22,8 +23,8 @@ export function openMenu(at, items, o) {
   let picked = false;
   const pick = it => { if (it.disabled) return; picked = true; const cb = o.onPick; closeMenu(); cb(it); };
   const draw = () => {
-    const s = q.value.trim().toLowerCase(); list.textContent = '';
-    const rows = items.filter(i => !s || (i.label + ' ' + (i.sub || '')).toLowerCase().includes(s));
+    const s = q.value.trim().toLowerCase(), ws = fold(q.value).split(/\s+/).filter(Boolean); list.textContent = '';
+    const rows = items.filter(i => { const t = fold(i.label + ' ' + (i.sub || '')); return ws.every(w => t.includes(w)); });
     const c = o.create && s ? o.create(q.value.trim()) : null;
     if (c && !items.some(i => i.label.toLowerCase() === s)) rows.push(c);
     rows.forEach(it => {

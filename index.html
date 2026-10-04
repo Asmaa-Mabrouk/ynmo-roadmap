@@ -774,6 +774,46 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .colbtn input { position: absolute; inset: -8px; width: 44px; height: 44px; opacity: 0; cursor: pointer; border: 0; padding: 0; }
 .colbtn:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
 .sqnew { margin-top: 10px; }
+
+/* ---------- executive PDF of the roadmap (print only) ---------- */
+#printrm { display: none; }
+@page { size: A3 landscape; margin: 9mm; }
+@media print {
+  body.print-roadmap > *:not(#printrm) { display: none !important; }
+  body.print-roadmap, html:has(body.print-roadmap) { background: #fff !important; background-image: none !important; }
+  body.print-roadmap::before, body.print-roadmap::after { display: none !important; }
+  body.print-roadmap #printrm { display: block; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #1c2033; }
+  #printrm, #printrm * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
+  #printrm .prm-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 8px 24px; border-bottom: 3px solid #563cca; padding-bottom: 8px; margin-bottom: 8px; }
+  #printrm h1 { margin: 0; font-size: 22px; } #printrm .prm-head p { margin: 2px 0 0; color: #5a6180; font-size: 11px; }
+  #printrm .prm-tiles { display: flex; gap: 6px; flex: none; margin-left: auto; } #printrm .prm-tile { border: 1px solid #d9dcea; border-radius: 6px; padding: 4px 9px; min-width: 62px; text-align: center; background: #f5f6fb; }
+  #printrm .prm-tile b { display: block; font-size: 17px; } #printrm .prm-tile span { font-size: 9px; color: #5a6180; }
+  #printrm .prm-filter { margin: 0 0 6px; font-size: 10px; color: #8a4b00; background: #fff4e0; border: 1px solid #f0cf94; border-radius: 4px; padding: 3px 8px; }
+  #printrm .prm-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 10px; margin-bottom: 8px; align-items: center; }
+  #printrm .prm-legend span { display: inline-flex; align-items: center; gap: 5px; }
+  #printrm .prm-dot { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+  #printrm .prm-sw { width: 26px; height: 11px; border-radius: 3px; display: inline-block; }
+  #printrm table.prm { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  #printrm .prm thead { display: table-header-group; } #printrm .prm tr { break-inside: avoid; page-break-inside: avoid; }
+  #printrm .prm-name { width: 120px; text-align: left; padding: 3px 6px; border-bottom: 1px solid #e3e6f1; font-size: 10.5px; vertical-align: middle; }
+  #printrm .prm-name small { display: block; color: #6b7390; font-size: 8.5px; }
+  #printrm th.prm-name { background: #1c2033; color: #fff; font-size: 10px; border: 0; }
+  #printrm .prm-tl { padding: 0; border-bottom: 1px solid #e3e6f1; position: relative; }
+  #printrm th.prm-tl { height: 40px; background: #1c2033; border: 0; }
+  #printrm .prm-months, #printrm .prm-weeks { position: absolute; left: 0; right: 0; } #printrm .prm-months { top: 0; height: 22px; } #printrm .prm-weeks { top: 22px; height: 18px; }
+  #printrm .prm-mo { position: absolute; top: 0; bottom: 0; border-left: 1px solid #4b5170; color: #fff; font-size: 11px; font-weight: 700; padding: 3px 6px; overflow: hidden; white-space: nowrap; }
+  #printrm .prm-wk { position: absolute; top: 2px; color: #c9cee6; font-size: 8px; padding-left: 2px; }
+  #printrm .prm-cell { position: relative; }
+  #printrm .prm-grid { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px solid #eceef7; }
+  #printrm .prm-today { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid #d12f2f; z-index: 3; }
+  #printrm .prm-bar { position: absolute; border-radius: 4px; background: var(--c); color: var(--on, #fff); padding: 1px 5px; display: flex; align-items: center; overflow: hidden; z-index: 2; font-size: 8.5px; font-weight: 600; line-height: 1.15; }
+  #printrm .prm-t { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  #printrm .prm-st-decide { background: repeating-linear-gradient(135deg, var(--c) 0 5px, color-mix(in srgb, var(--c) 72%, #000) 5px 10px); }
+  #printrm .prm-st-contract { background: color-mix(in srgb, var(--c) 10%, #fff); border: 1.5px dashed var(--c); color: var(--c); }
+  #printrm .prm-st-done { background: color-mix(in srgb, var(--c) 28%, #fff); color: #1c2033; border: 1px solid var(--c); }
+  #printrm .prm-sw.prm-st-planned { background: var(--c); } #printrm .prm-sw.prm-st-contract { color: var(--c); }
+  #printrm .prm-foot { margin-top: 8px; font-size: 9px; color: #6b7390; }
+}
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -824,8 +864,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     <button class="btn" id="ideasbtn" type="button">Ideas</button>
     <label class="sr" for="zoom">Zoom</label>
     <select id="zoom"><option value="day">Day</option><option value="week">Week</option><option value="month">Month</option></select>
-    <button class="btn" id="today" type="button">Today</button>
-    <button class="btn" id="export" type="button">Export CSV</button>
+    <button class="btn" id="exportpdf" type="button" title="A coloured, full-timeline PDF to send to executives">Export PDF</button>
     <span class="save" id="save" aria-live="polite"></span>
   </div>
 
@@ -1390,6 +1429,350 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return s;
   }
 
+  // src/esm/features/sharing.js
+  function shareFor(rm) {
+    const k = Object.keys(S.shares).find((t) => S.shares[t].rm === rm);
+    return k ? { token: k, data: S.shares[k] } : null;
+  }
+  function shareUrl(t) {
+    return location.origin + location.pathname + "#/share/" + t;
+  }
+  function openShare(id) {
+    if (!canWrite()) return;
+    const rmId = typeof id === "string" ? id : state.rm, rmName = (allRoadmaps().find((r) => r.id === rmId) || curRm()).n;
+    openDlg("Share " + rmName + " (read only)", (box2) => {
+      box2.append(el("p", "hint", "Anyone with the link can look at this roadmap without an account. They cannot change anything, and they do not see leave, ideas or the log. Stop sharing at any time and the link stops working."));
+      const area = el("div");
+      box2.append(area);
+      const msg = el("div", "gerr");
+      msg.setAttribute("aria-live", "polite");
+      box2.append(msg);
+      const close = el("button", "btn", "Close");
+      close.type = "button";
+      close.addEventListener("click", closeDlg);
+      const draw = () => {
+        area.textContent = "";
+        const s = shareFor(rmId);
+        if (!s) {
+          const mk = el("button", "btn primary", "Create share link");
+          mk.type = "button";
+          mk.addEventListener("click", async () => {
+            mk.disabled = true;
+            const t = (window.crypto && crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()).replace(/-/g, "");
+            const data = { rm: rmId, by: S.me.name || S.me.email, at: (/* @__PURE__ */ new Date()).toISOString() };
+            try {
+              await S.db.doc("share_links/" + t).set(data);
+              S.shares[t] = data;
+              logAct("access", "created a share link for " + rmName);
+              draw();
+            } catch (e) {
+              mk.disabled = false;
+              msg.textContent = "Could not create the link. Ask the admin to run setup v4.";
+            }
+          });
+          area.append(mk);
+        } else {
+          const inp = el("input");
+          inp.type = "text";
+          inp.readOnly = true;
+          inp.value = shareUrl(s.token);
+          inp.id = "shareurl";
+          inp.setAttribute("aria-label", "Share link");
+          inp.style.width = "100%";
+          inp.addEventListener("focus", () => inp.select());
+          const cp = el("button", "btn primary", "Copy link");
+          cp.type = "button";
+          cp.addEventListener("click", async () => {
+            try {
+              await navigator.clipboard.writeText(inp.value);
+              cp.textContent = "Copied";
+            } catch (e) {
+              inp.select();
+              cp.textContent = "Press Ctrl+C";
+            }
+          });
+          const stop = el("button", "btn danger", "Stop sharing");
+          stop.type = "button";
+          stop.addEventListener("click", async () => {
+            stop.disabled = true;
+            try {
+              await S.db.doc("share_links/" + s.token).delete();
+              delete S.shares[s.token];
+              logAct("access", "stopped sharing " + rmName);
+              draw();
+            } catch (e) {
+              stop.disabled = false;
+              msg.textContent = "Could not stop sharing. Try again.";
+            }
+          });
+          const row = el("div", "formrow");
+          row.append(cp, stop);
+          area.append(inp, row, el("div", "hint", "Shared by " + s.data.by + " on " + clock(s.data.at)));
+        }
+      };
+      draw();
+      box2.append(close);
+    });
+  }
+  function applyShared(p) {
+    S.over = p.items || {};
+    S.extras = p.people || {};
+    S.daysoff = p.daysoff || {};
+    S.roadmaps = p.roadmap ? { [p.rm]: p.roadmap } : {};
+    if (state.rm !== p.rm) {
+      const r = allRoadmaps().find((x) => x.id === p.rm) || H2;
+      state.rm = r.id;
+      setRange(r.a, r.b);
+    }
+    fillRm();
+    render();
+  }
+  async function bootShared(token) {
+    S.SHARE = true;
+    S.readonly = true;
+    const r = await sb.rpc("shared_snapshot", { t: token });
+    if (r.error || !r.data) {
+      const c = gateCard("This link is not active", "The share link was stopped or is wrong. Ask the person who sent it for a new one.");
+      return;
+    }
+    $("gate").hidden = true;
+    $("shell").classList.remove("app-hidden");
+    $("shell").classList.add("shared");
+    document.body.classList.add("sharedview");
+    const nav = $("nav");
+    nav.textContent = "";
+    $("toplogo").src = LOGO;
+    PAGES.forEach((x) => {
+      const s = $("pg-" + x[0]);
+      if (s) s.hidden = x[0] !== "roadmap";
+    });
+    $("ptitle").textContent = "Shared roadmap";
+    const b = netBar();
+    b.classList.add("sharebar");
+    b.hidden = false;
+    b.textContent = "You are looking at a read-only shared roadmap. It updates by itself every minute.";
+    applyShared(r.data);
+    setSave("readonly");
+    $("save").textContent = "View only.";
+    let last = JSON.stringify(r.data);
+    setInterval(async () => {
+      try {
+        const n = await sb.rpc("shared_snapshot", { t: token });
+        if (n.data && JSON.stringify(n.data) !== last) {
+          last = JSON.stringify(n.data);
+          applyShared(n.data);
+        } else if (!n.data && !n.error) {
+          location.reload();
+        }
+      } catch (e) {
+      }
+    }, window.__sharePoll || 6e4);
+  }
+  function renderAccess(root) {
+    if (!(S.me && S.me.is_admin)) return;
+    const done2 = S.members.filter((m) => m.approved);
+    const c = el("div", "card");
+    c.append(el("h2", "", "Who can edit"));
+    c.append(el("div", "hint", "Editors change the plan. Viewers can look at the roadmap, capacity, snapshots and log, but cannot change anything."));
+    done2.forEach((m) => {
+      const row = el("div", "formrow");
+      row.style.alignItems = "center";
+      const who = el("div");
+      who.append(el("b", "", m.name || m.email), el("div", "hint", (m.role ? m.role + " · " : "") + (m.email || "")));
+      row.append(avatarEl(m.avatar, 34, m.name), who);
+      if (m.is_admin) {
+        const a = el("span", "badge", "Admin");
+        a.style.marginInlineStart = "auto";
+        row.append(a);
+      } else {
+        const s = selOf([["editor", "Editor"], ["viewer", "Viewer"]], m.access === "viewer" ? "viewer" : "editor");
+        s.style.marginInlineStart = "auto";
+        s.setAttribute("aria-label", "Access for " + (m.name || m.email));
+        s.addEventListener("change", async () => {
+          const r = await sb.from("profiles").update({ access: s.value }).eq("id", m.id);
+          if (r.error) {
+            s.value = m.access === "viewer" ? "viewer" : "editor";
+            toast("Could not change access. Ask the admin to run setup v4.");
+            return;
+          }
+          m.access = s.value;
+          logAct("access", "set " + (m.name || m.email) + " as " + s.value);
+          toast((m.name || m.email) + " is now a " + s.value + ".");
+        });
+        row.append(s);
+      }
+      c.append(row);
+    });
+    root.append(c);
+  }
+
+  // src/esm/ui/dropdowns.js
+  var cpop = null;
+  var cpopSel = null;
+  var openedAt = 0;
+  function cpopClose(refocus) {
+    if (!cpop) return;
+    const s = cpopSel;
+    cpop.remove();
+    cpop = null;
+    cpopSel = null;
+    if (s) {
+      s.setAttribute("aria-expanded", "false");
+      if (refocus) s.focus();
+    }
+  }
+  var rowsOf = () => [...cpop.querySelectorAll(".copt:not(.dis):not([hidden])")];
+  function cpopMove(d) {
+    const rows2 = rowsOf();
+    if (!rows2.length) return;
+    let i = rows2.findIndex((r) => r.classList.contains("act"));
+    i = Math.max(0, Math.min(rows2.length - 1, i + d));
+    cpop.querySelectorAll(".act").forEach((r) => r.classList.remove("act"));
+    rows2[i].classList.add("act");
+    rows2[i].scrollIntoView({ block: "nearest" });
+  }
+  function cpopPick(opt) {
+    const s = cpopSel;
+    if (!s || opt.disabled) return;
+    const changed = s.value !== opt.value;
+    s.value = opt.value;
+    cpopClose(true);
+    if (changed) {
+      s.dispatchEvent(new Event("input", { bubbles: true }));
+      s.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  }
+  var fold = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f\u064b-\u065f\u0670\u0640]/g, "").replace(/[أإآٱ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").toLowerCase();
+  function cpopFilter(q) {
+    const words = fold(q).split(/\s+/).filter(Boolean);
+    let first = null, any = false;
+    cpop.querySelectorAll(".copt[data-opt]").forEach((r) => {
+      const txt = fold(r.textContent), hit = words.every((w) => txt.includes(w));
+      r.hidden = !hit;
+      r.classList.remove("act");
+      if (hit) {
+        any = true;
+        if (!first && !r.classList.contains("dis")) first = r;
+      }
+    });
+    if (first) first.classList.add("act");
+    cpop.querySelector(".cnone").hidden = any;
+  }
+  function cpopOpen(s) {
+    if (cpop && cpopSel === s) {
+      cpopClose(true);
+      return;
+    }
+    cpopClose();
+    cpopSel = s;
+    s.setAttribute("aria-haspopup", "listbox");
+    s.setAttribute("aria-expanded", "true");
+    const box2 = el("div", "cpop");
+    box2.tabIndex = -1;
+    const q = el("input", "csearch");
+    q.type = "search";
+    q.placeholder = "Search…";
+    q.setAttribute("aria-label", "Search the list");
+    q.autocomplete = "off";
+    q.setAttribute("autocapitalize", "off");
+    q.setAttribute("autocorrect", "off");
+    q.spellcheck = false;
+    q.setAttribute("enterkeyhint", "search");
+    ["input", "keyup", "search", "change", "compositionend"].forEach((ev) => q.addEventListener(ev, () => cpopFilter(q.value)));
+    box2.append(q);
+    const list = el("div", "clist");
+    list.setAttribute("role", "listbox");
+    box2.append(list);
+    [...s.options].forEach((o) => {
+      const r = el("div", "copt" + (o.selected ? " sel act" : "") + (o.disabled ? " dis" : ""));
+      r.dataset.opt = "1";
+      r._opt = o;
+      r.setAttribute("role", "option");
+      r.setAttribute("aria-selected", String(o.selected));
+      r.append(el("span", "", o.textContent));
+      if (o.selected) r.append(el("i", "ck", "✓"));
+      r.addEventListener("pointerdown", (e) => e.preventDefault());
+      r.addEventListener("click", () => cpopPick(o));
+      r.addEventListener("pointermove", () => {
+        box2.querySelectorAll(".act").forEach((x) => x.classList.remove("act"));
+        if (!o.disabled) r.classList.add("act");
+      });
+      list.append(r);
+    });
+    const none = el("div", "copt dis cnone", "No matches");
+    none.hidden = true;
+    list.append(none);
+    document.body.append(box2);
+    cpop = box2;
+    openedAt = Date.now();
+    const b = s.getBoundingClientRect(), h = Math.min(box2.scrollHeight, 320);
+    box2.style.minWidth = Math.max(b.width, 180) + "px";
+    box2.style.maxHeight = "320px";
+    const below = window.innerHeight - b.bottom, top = below >= h + 12 || below >= b.top ? b.bottom + 6 : b.top - h - 6;
+    box2.style.top = Math.max(8, top) + "px";
+    box2.style.left = Math.max(8, Math.min(b.left, window.innerWidth - box2.offsetWidth - 8)) + "px";
+    const cur2 = box2.querySelector(".sel");
+    if (cur2) cur2.scrollIntoView({ block: "nearest" });
+    q.focus({ preventScroll: true });
+    if (document.activeElement !== q) setTimeout(() => {
+      if (cpop === box2) q.focus({ preventScroll: true });
+    }, 30);
+    return q;
+  }
+  document.addEventListener("mousedown", (e) => {
+    const s = e.target.closest && e.target.closest("select");
+    if (s && !s.disabled && !s.multiple) {
+      e.preventDefault();
+      s.focus({ preventScroll: true });
+      cpopOpen(s);
+      return;
+    }
+    if (cpop && !cpop.contains(e.target)) cpopClose();
+  }, true);
+  document.addEventListener("keydown", (e) => {
+    const t = e.target;
+    if (cpop) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        cpopClose(true);
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        cpopMove(1);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        cpopMove(-1);
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        const a = cpop.querySelector(".copt.act:not([hidden])");
+        if (a && a._opt) cpopPick(a._opt);
+        else cpopClose(true);
+      } else if (e.key === "Tab") cpopClose();
+      return;
+    }
+    if (t && t.tagName === "SELECT" && !t.multiple && (e.key === "Enter" || e.key === " " || e.key === "ArrowDown" || e.key === "ArrowUp")) {
+      e.preventDefault();
+      cpopOpen(t);
+    } else if (t && t.tagName === "SELECT" && !t.multiple && !t.disabled && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      const q = cpopOpen(t);
+      if (q) {
+        q.value = e.key;
+        cpopFilter(q.value);
+      }
+    }
+  }, true);
+  var lastW = window.innerWidth;
+  window.addEventListener("resize", () => {
+    const w = window.innerWidth;
+    if (w === lastW) return;
+    lastW = w;
+    cpopClose();
+  });
+  window.addEventListener("scroll", (e) => {
+    if (cpop && Date.now() - openedAt > 250 && !cpop.contains(e.target)) cpopClose();
+  }, true);
+
   // src/esm/ui/people-picker.js
   function fillPersons() {
     const ps = $("person"), keep = state.person;
@@ -1539,8 +1922,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       const cur2 = pickerItem();
       if (!cur2) return;
       list.textContent = "";
-      const f = q.value.trim().toLowerCase();
-      const dir = [...directory().values()].filter((x) => !f || x.name.toLowerCase().includes(f));
+      const ws = fold(q.value).split(/\s+/).filter(Boolean);
+      const dir = [...directory().values()].filter((x) => {
+        const t = fold(x.name);
+        return ws.every((w) => t.includes(w));
+      });
       dir.sort((a, b) => b.sqs.has(cur2.sq) - a.sqs.has(cur2.sq) || a.name.localeCompare(b.name));
       if (!dir.length) list.append(el("div", "sub2", "No one matches. Add them below."));
       dir.forEach((x) => {
@@ -1616,200 +2002,325 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     if (!p.contains(e.target) && !(e.target.closest && (e.target.closest(".res") || e.target.closest("#ed-res") || e.target.closest("#daysoff")))) closePicker();
   });
 
-  // src/esm/ui/export.js
-  function csvCell(v) {
-    v = String(v == null ? "" : v);
-    if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;
-    return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  // src/esm/features/people-rows.js
+  var savedOrder = () => S.ideas.peopleorder && S.ideas.peopleorder.ord || [];
+  function primaryLane(name) {
+    const d = directory().get(name);
+    const idx = d ? [...d.sqs].map((k) => LANES.findIndex((l) => l.k === k)).filter((i) => i >= 0) : [];
+    return idx.length ? Math.min.apply(null, idx) : 0;
   }
-  async function exportCsv() {
-    if (!dl) return;
-    const head = ["Squad", "Feature", "Resources", "Status", "Start", "End", "Notes"];
-    const lines = [head.map(csvCell).join(",")];
-    LANES.forEach((l) => items().filter((i) => i.sq === l.k).sort(byOrd).forEach((it) => {
-      lines.push([l.n, it.t, it.res.join("; "), STATUS[it.st], iso(it.d0), iso(it.d1), it.n || ""].map(csvCell).join(","));
-    }));
-    try {
-      await dl.save({ filename: "ynmo-" + slug(curRm().n) + "-roadmap.csv", data: "\uFEFF" + lines.join("\n") });
-    } catch (e) {
-    }
+  function comparePeople(a, b) {
+    const ord = savedOrder(), ia = ord.indexOf(a.name), ib = ord.indexOf(b.name);
+    if (ia >= 0 || ib >= 0) return (ia < 0 ? 1e6 : ia) - (ib < 0 ? 1e6 : ib) || a.name.localeCompare(b.name);
+    return primaryLane(a.name) - primaryLane(b.name) || a.name.localeCompare(b.name);
   }
-
-  // src/esm/features/sharing.js
-  function shareFor(rm) {
-    const k = Object.keys(S.shares).find((t) => S.shares[t].rm === rm);
-    return k ? { token: k, data: S.shares[k] } : null;
+  function allNamesInOrder() {
+    return [...directory().keys()].map((name) => ({ name })).sort(comparePeople).map((p) => p.name);
   }
-  function shareUrl(t) {
-    return location.origin + location.pathname + "#/share/" + t;
-  }
-  function openShare() {
-    if (!canWrite()) return;
-    const rmId = state.rm;
-    openDlg("Share " + curRm().n + " (read only)", (box2) => {
-      box2.append(el("p", "hint", "Anyone with the link can look at this roadmap without an account. They cannot change anything, and they do not see leave, ideas or the log. Stop sharing at any time and the link stops working."));
-      const area = el("div");
-      box2.append(area);
-      const msg = el("div", "gerr");
-      msg.setAttribute("aria-live", "polite");
-      box2.append(msg);
-      const close = el("button", "btn", "Close");
-      close.type = "button";
-      close.addEventListener("click", closeDlg);
-      const draw = () => {
-        area.textContent = "";
-        const s = shareFor(rmId);
-        if (!s) {
-          const mk = el("button", "btn primary", "Create share link");
-          mk.type = "button";
-          mk.addEventListener("click", async () => {
-            mk.disabled = true;
-            const t = (window.crypto && crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()).replace(/-/g, "");
-            const data = { rm: rmId, by: S.me.name || S.me.email, at: (/* @__PURE__ */ new Date()).toISOString() };
-            try {
-              await S.db.doc("share_links/" + t).set(data);
-              S.shares[t] = data;
-              logAct("access", "created a share link for " + curRm().n);
-              draw();
-            } catch (e) {
-              mk.disabled = false;
-              msg.textContent = "Could not create the link. Ask the admin to run setup v4.";
-            }
-          });
-          area.append(mk);
-        } else {
-          const inp = el("input");
-          inp.type = "text";
-          inp.readOnly = true;
-          inp.value = shareUrl(s.token);
-          inp.id = "shareurl";
-          inp.setAttribute("aria-label", "Share link");
-          inp.style.width = "100%";
-          inp.addEventListener("focus", () => inp.select());
-          const cp = el("button", "btn primary", "Copy link");
-          cp.type = "button";
-          cp.addEventListener("click", async () => {
-            try {
-              await navigator.clipboard.writeText(inp.value);
-              cp.textContent = "Copied";
-            } catch (e) {
-              inp.select();
-              cp.textContent = "Press Ctrl+C";
-            }
-          });
-          const stop = el("button", "btn danger", "Stop sharing");
-          stop.type = "button";
-          stop.addEventListener("click", async () => {
-            stop.disabled = true;
-            try {
-              await S.db.doc("share_links/" + s.token).delete();
-              delete S.shares[s.token];
-              logAct("access", "stopped sharing " + curRm().n);
-              draw();
-            } catch (e) {
-              stop.disabled = false;
-              msg.textContent = "Could not stop sharing. Try again.";
-            }
-          });
-          const row = el("div", "formrow");
-          row.append(cp, stop);
-          area.append(inp, row, el("div", "hint", "Shared by " + s.data.by + " on " + clock(s.data.at)));
-        }
-      };
-      draw();
-      box2.append(close);
-    });
-  }
-  function applyShared(p) {
-    S.over = p.items || {};
-    S.extras = p.people || {};
-    S.daysoff = p.daysoff || {};
-    S.roadmaps = p.roadmap ? { [p.rm]: p.roadmap } : {};
-    if (state.rm !== p.rm) {
-      const r = allRoadmaps().find((x) => x.id === p.rm) || H2;
-      state.rm = r.id;
-      setRange(r.a, r.b);
-    }
-    fillRm();
+  function movePerson(name, target, after) {
+    if (!canEdit() || name === target) return;
+    const list = allNamesInOrder().filter((n) => n !== name), at = list.indexOf(target);
+    if (at < 0) return;
+    list.splice(at + (after ? 1 : 0), 0, name);
+    saveIdea("peopleorder", { cfg: true, ord: list }, "resource", "reordered team rows (" + name + ")");
     render();
   }
-  async function bootShared(token) {
-    S.SHARE = true;
-    S.readonly = true;
-    const r = await sb.rpc("shared_snapshot", { t: token });
-    if (r.error || !r.data) {
-      const c = gateCard("This link is not active", "The share link was stopped or is wrong. Ask the person who sent it for a new one.");
+  function step(name, delta) {
+    const list = allNamesInOrder(), i = list.indexOf(name), t = list[i + delta];
+    if (t) movePerson(name, t, delta > 0);
+  }
+  function hiddenHere() {
+    const h = S.ideas.peoplehide;
+    return h && h.byRm && h.byRm[state.rm] || [];
+  }
+  var featureCount = (name) => items().filter((i) => i.res.includes(name)).length;
+  function setHidden(names, sum) {
+    const old = S.ideas.peoplehide && S.ideas.peoplehide.byRm || {}, byRm = Object.assign({}, old);
+    byRm[state.rm] = names;
+    if (!names.length) delete byRm[state.rm];
+    saveIdea("peoplehide", { cfg: true, byRm }, "resource", sum);
+    render();
+  }
+  function hideHere(name) {
+    const n = featureCount(name);
+    if (n) {
+      toast(name + " has " + n + " feature" + (n === 1 ? "" : "s") + " on this roadmap. Reassign " + (n === 1 ? "it" : "them") + " first, then hide the row.");
       return;
     }
-    $("gate").hidden = true;
-    $("shell").classList.remove("app-hidden");
-    $("shell").classList.add("shared");
-    document.body.classList.add("sharedview");
-    const nav = $("nav");
-    nav.textContent = "";
-    $("toplogo").src = LOGO;
-    PAGES.forEach((x) => {
-      const s = $("pg-" + x[0]);
-      if (s) s.hidden = x[0] !== "roadmap";
-    });
-    $("ptitle").textContent = "Shared roadmap";
-    const b = netBar();
-    b.classList.add("sharebar");
-    b.hidden = false;
-    b.textContent = "You are looking at a read-only shared roadmap. It updates by itself every minute.";
-    applyShared(r.data);
-    setSave("readonly");
-    $("save").textContent = "View only.";
-    let last = JSON.stringify(r.data);
-    setInterval(async () => {
-      try {
-        const n = await sb.rpc("shared_snapshot", { t: token });
-        if (n.data && JSON.stringify(n.data) !== last) {
-          last = JSON.stringify(n.data);
-          applyShared(n.data);
-        } else if (!n.data && !n.error) {
-          location.reload();
-        }
-      } catch (e) {
-      }
-    }, window.__sharePoll || 6e4);
+    setHidden(hiddenHere().concat(name), "hid " + name + " from " + curRm().n);
+    toast(name + " hidden on " + curRm().n + '. Use "Show hidden" under the table to bring the row back.');
   }
-  function renderAccess(root) {
-    if (!(S.me && S.me.is_admin)) return;
-    const done2 = S.members.filter((m) => m.approved);
-    const c = el("div", "card");
-    c.append(el("h2", "", "Who can edit"));
-    c.append(el("div", "hint", "Editors change the plan. Viewers can look at the roadmap, capacity, snapshots and log, but cannot change anything."));
-    done2.forEach((m) => {
-      const row = el("div", "formrow");
-      row.style.alignItems = "center";
-      const who = el("div");
-      who.append(el("b", "", m.name || m.email), el("div", "hint", (m.role ? m.role + " · " : "") + (m.email || "")));
-      row.append(avatarEl(m.avatar, 34, m.name), who);
-      if (m.is_admin) {
-        const a = el("span", "badge", "Admin");
-        a.style.marginInlineStart = "auto";
-        row.append(a);
-      } else {
-        const s = selOf([["editor", "Editor"], ["viewer", "Viewer"]], m.access === "viewer" ? "viewer" : "editor");
-        s.style.marginInlineStart = "auto";
-        s.setAttribute("aria-label", "Access for " + (m.name || m.email));
-        s.addEventListener("change", async () => {
-          const r = await sb.from("profiles").update({ access: s.value }).eq("id", m.id);
-          if (r.error) {
-            s.value = m.access === "viewer" ? "viewer" : "editor";
-            toast("Could not change access. Ask the admin to run setup v4.");
-            return;
-          }
-          m.access = s.value;
-          logAct("access", "set " + (m.name || m.email) + " as " + s.value);
-          toast((m.name || m.email) + " is now a " + s.value + ".");
+  function openHiddenDialog() {
+    openDlg("Hidden on " + curRm().n, (box2) => {
+      const names = hiddenHere().filter((n) => directory().has(n));
+      box2.append(el("p", "sub", "These people are still on the team and on other roadmaps. They only have no row here."));
+      names.forEach((n) => {
+        const row2 = el("div", "formrow"), b = el("button", "btn sm", "Show");
+        b.type = "button";
+        b.addEventListener("click", () => {
+          setHidden(hiddenHere().filter((x) => x !== n), "showed " + n + " on " + curRm().n);
+          closeDlg();
+          if (hiddenHere().some((x) => directory().has(x))) openHiddenDialog();
         });
-        row.append(s);
-      }
-      c.append(row);
+        row2.append(el("strong", "", n), b);
+        box2.append(row2);
+      });
+      const all = el("button", "btn primary", "Show all");
+      all.type = "button";
+      all.addEventListener("click", () => {
+        setHidden([], "showed all hidden people on " + curRm().n);
+        closeDlg();
+      });
+      const no = el("button", "btn", "Close");
+      no.type = "button";
+      no.addEventListener("click", closeDlg);
+      const row = el("div", "formrow");
+      row.append(all, no);
+      box2.append(row);
     });
-    root.append(c);
+  }
+  function decoratePersonRow(c1, name) {
+    if (!canEdit()) return;
+    c1.classList.add("hasgrip");
+    const grip = el("span", "pgrip", "⋮⋮");
+    grip.draggable = true;
+    grip.title = "Drag to reorder";
+    grip.setAttribute("aria-label", "Drag to reorder " + name);
+    grip.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("text/person", name);
+      e.dataTransfer.effectAllowed = "move";
+      c1.classList.add("dragging");
+    });
+    grip.addEventListener("dragend", () => document.querySelectorAll(".pn.dragging,.pn.dropbefore,.pn.dropafter").forEach((x) => x.classList.remove("dragging", "dropbefore", "dropafter")));
+    const more = el("button", "pmore", "⋯");
+    more.type = "button";
+    more.title = "Row options";
+    more.setAttribute("aria-label", "Options for " + name);
+    more.setAttribute("aria-haspopup", "menu");
+    more.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const r = more.getBoundingClientRect(), list = allNamesInOrder(), i = list.indexOf(name);
+      openCtx(r.right - 200, r.bottom + 4, (m) => {
+        if (i > 0) mi(m, "Move up", () => step(name, -1));
+        if (i < list.length - 1) mi(m, "Move down", () => step(name, 1));
+        m.append(el("div", "msep"));
+        mi(m, "Hide " + name + " from this roadmap", () => hideHere(name), "danger");
+      });
+    });
+    const side = (e) => {
+      const r = c1.getBoundingClientRect();
+      return e.clientY > r.top + r.height / 2;
+    };
+    c1.addEventListener("dragover", (e) => {
+      if (![...e.dataTransfer.types].includes("text/person")) return;
+      e.preventDefault();
+      const after = side(e);
+      c1.classList.toggle("dropafter", after);
+      c1.classList.toggle("dropbefore", !after);
+    });
+    c1.addEventListener("dragleave", (e) => {
+      if (!c1.contains(e.relatedTarget)) c1.classList.remove("dropbefore", "dropafter");
+    });
+    c1.addEventListener("drop", (e) => {
+      const who = e.dataTransfer.getData("text/person");
+      if (!who) return;
+      e.preventDefault();
+      c1.classList.remove("dropbefore", "dropafter");
+      movePerson(who, name, side(e));
+    });
+    c1.append(grip, more);
+  }
+
+  // src/esm/ui/notify.js
+  var box = null;
+  function host() {
+    if (box && document.body.contains(box)) return box;
+    box = document.createElement("div");
+    box.id = "toasts";
+    box.setAttribute("aria-live", "polite");
+    document.body.append(box);
+    return box;
+  }
+  function notify(msg, kind, ms) {
+    kind = kind || "ok";
+    const t = document.createElement("div");
+    t.className = "toast " + kind;
+    t.setAttribute("role", kind === "err" ? "alert" : "status");
+    const ic = document.createElement("span");
+    ic.className = "ti";
+    ic.textContent = kind === "err" ? "!" : kind === "ok" ? "✓" : "i";
+    ic.setAttribute("aria-hidden", "true");
+    const tx = document.createElement("span");
+    tx.className = "tt";
+    tx.textContent = msg;
+    const x = document.createElement("button");
+    x.type = "button";
+    x.className = "tx";
+    x.textContent = "×";
+    x.setAttribute("aria-label", "Dismiss");
+    const gone = () => {
+      t.classList.add("out");
+      setTimeout(() => t.remove(), 200);
+    };
+    x.addEventListener("click", gone);
+    t.append(ic, tx, x);
+    const h = host();
+    h.append(t);
+    while (h.children.length > 3) h.firstChild.remove();
+    setTimeout(gone, ms || (kind === "err" ? 7e3 : 3500));
+  }
+  var lastFail = 0;
+  function notifyFailOnce(msg) {
+    const n = Date.now();
+    if (n - lastFail < 8e3) return;
+    lastFail = n;
+    notify(msg, "err");
+  }
+
+  // src/esm/ui/export-pdf.js
+  var H = 30;
+  var pct = (n) => (n / NDAYS * 100).toFixed(3) + "%";
+  function legend(list) {
+    const lg = el("div", "prm-legend");
+    const used = new Set(list.map((i) => i.sq));
+    LANES.filter((l) => used.has(l.k)).forEach((l) => {
+      const s = el("span");
+      const i = el("i", "prm-dot");
+      i.style.background = l.c;
+      s.append(i, document.createTextNode(l.n));
+      lg.append(s);
+    });
+    [["planned", "Planned"], ["decide", "Needs decision"], ["contract", "Waiting on contract"], ["done", "Done"]].forEach((x) => {
+      const s = el("span");
+      const i = el("i", "prm-sw prm-st-" + x[0]);
+      i.style.setProperty("--c", "#5a6180");
+      s.append(i, document.createTextNode(STATUS[x[0]] || x[1]));
+      lg.append(s);
+    });
+    return lg;
+  }
+  function bar(it, laneIdx) {
+    const l = LANES.find((x) => x.k === it.sq) || LANES[0], col = barColorCss(it.c) || l.c, b = el("div", "prm-bar prm-st-" + it.st + (it.ms ? " prm-ms" : ""));
+    b.style.left = pct(it.d0);
+    b.style.width = pct(it.d1 - it.d0 + 1);
+    b.style.top = laneIdx * H + 3 + "px";
+    b.style.height = H - 6 + "px";
+    b.style.setProperty("--c", col);
+    const on = onColor(it.c);
+    if (on) b.style.setProperty("--on", on);
+    const t = (it.st === "done" ? "✓ " : "") + it.t;
+    b.append(el("span", "prm-t", t));
+    return b;
+  }
+  function buildPrintView() {
+    const list = visible(), root = el("div");
+    root.id = "printrm";
+    const rm = curRm();
+    const head = el("div", "prm-head"), ttl = el("div");
+    ttl.append(el("h1", "", "Ynmo roadmap · " + rm.n), el("p", "", fmtIso(rm.a) + " to " + fmtIso(rm.b) + " · prepared " + (/* @__PURE__ */ new Date()).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })));
+    head.append(ttl);
+    const cnt = (k) => list.filter((i) => i.st === k).length, tiles = el("div", "prm-tiles");
+    [[list.length, "features"], [cnt("planned"), "planned"], [cnt("decide"), "need a decision"], [cnt("contract"), "wait on contract"], [cnt("done"), "done"]].forEach((p) => {
+      const t = el("div", "prm-tile");
+      t.append(el("b", "", String(p[0])), el("span", "", p[1]));
+      tiles.append(t);
+    });
+    head.append(tiles);
+    root.append(head);
+    const sq = LANES.filter((l) => !state.sq.has(l.k)).map((l) => l.n);
+    const notes = [state.person !== "all" ? "Person: " + state.person : "", state.status !== "all" ? "Status: " + (STATUS[state.status] || state.status) : "", state.q.trim() ? "Search: " + state.q.trim() : "", sq.length ? "Hidden products: " + sq.join(", ") : ""].filter(Boolean);
+    if (notes.length) root.append(el("p", "prm-filter", "Filtered view · " + notes.join(" · ")));
+    root.append(legend(list));
+    const dir = directory(), map = /* @__PURE__ */ new Map();
+    list.forEach((it) => {
+      if (!it.res.length) {
+        if (!map.has("__none")) map.set("__none", { name: "__none", its: [] });
+        map.get("__none").its.push(it);
+      } else it.res.forEach((n) => {
+        if (!map.has(n)) map.set(n, { name: n, its: [] });
+        map.get(n).its.push(eff(it, n));
+      });
+    });
+    const hid = hiddenHere();
+    let people = [...map.values()].filter((p) => p.name !== "__none" && (!hid.includes(p.name) || p.its.length));
+    people.sort(comparePeople);
+    if (map.has("__none")) people.push(map.get("__none"));
+    const tb = el("table", "prm"), th = el("thead"), r1 = el("tr"), n1 = el("th", "prm-name", "Team member"), t1 = el("th", "prm-tl");
+    const months = el("div", "prm-months"), weeks = el("div", "prm-weeks");
+    MGROUPS.forEach((m) => {
+      const d = el("div", "prm-mo");
+      d.style.left = pct(m.from);
+      d.style.width = pct(m.to - m.from + 1);
+      d.append(el("span", "", m.n));
+      months.append(d);
+    });
+    DAYS.forEach((x) => {
+      if (x.dow === 0) {
+        const w = el("div", "prm-wk", String(x.d.getUTCDate()));
+        w.style.left = pct(x.k);
+        weeks.append(w);
+      }
+    });
+    t1.append(months, weeks);
+    r1.append(n1, t1);
+    th.append(r1);
+    tb.append(th);
+    const body = el("tbody");
+    people.forEach((p) => {
+      const pk = pack(p.its), tr = el("tr"), td1 = el("td", "prm-name"), d = dir.get(p.name);
+      td1.append(el("b", "", p.name === "__none" ? "Unassigned" : p.name));
+      if (d) td1.append(el("small", "", d.domain));
+      const td2 = el("td", "prm-tl"), cell = el("div", "prm-cell");
+      cell.style.height = pk.n * H + 4 + "px";
+      DAYS.forEach((x) => {
+        if (x.dow === 0) {
+          const g = el("i", "prm-grid");
+          g.style.left = pct(x.k);
+          cell.append(g);
+        }
+      });
+      if (todayK >= 0) {
+        const t = el("i", "prm-today");
+        t.style.left = pct(todayK);
+        cell.append(t);
+      }
+      pk.out.forEach((x) => cell.append(bar(x.it, x.lane)));
+      td2.append(cell);
+      tr.append(td1, td2);
+      body.append(tr);
+    });
+    if (!people.length) {
+      const tr = el("tr"), td = el("td");
+      td.colSpan = 2;
+      td.textContent = "No features match the current filters.";
+      tr.append(td);
+      body.append(tr);
+    }
+    tb.append(body);
+    root.append(tb);
+    root.append(el("p", "prm-foot", "Ynmo Roadmaps · bars are coloured by product · " + (todayK >= 0 ? "the red line is " + dlabel(todayK) : "today is outside this roadmap")));
+    return root;
+  }
+  function exportPdf() {
+    if (document.getElementById("printrm")) return;
+    const view = buildPrintView();
+    document.body.append(view);
+    document.body.classList.add("print-roadmap");
+    const done2 = () => {
+      document.body.classList.remove("print-roadmap");
+      view.remove();
+      window.removeEventListener("afterprint", done2);
+    };
+    window.addEventListener("afterprint", done2);
+    notify('In the print window choose "Save as PDF" (landscape). Colours are kept automatically.');
+    setTimeout(() => {
+      try {
+        window.print();
+      } catch (e) {
+        done2();
+      }
+      if (!("onafterprint" in window)) setTimeout(done2, 1500);
+    }, 150);
   }
 
   // src/esm/features/dependencies.js
@@ -1962,10 +2473,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       if (w0) {
         const wr = w0.getBoundingClientRect(), dw = wr.width, L = wr.left - gr.left;
         const bi = new Map((base3.items || []).map((i) => [i.id, i]));
-        first.forEach((bar, id) => {
+        first.forEach((bar2, id) => {
           const o = bi.get(id), it = all.find((i) => i.id === id);
           if (!o || !it || o.d0 === it.d0 && o.d1 === it.d1) return;
-          const r = bar.getBoundingClientRect(), y = r.bottom - gr.top - 1;
+          const r = bar2.getBoundingClientRect(), y = r.bottom - gr.top - 1;
           const g1 = sv("rect", { x: L + o.d0 * dw + 1, y, width: Math.max(4, (o.d1 - o.d0 + 1) * dw - 2), height: 5, rx: 2.5, fill: "#e5a513", opacity: ".9", class: "ghost" });
           const t = sv("title");
           const sl = it.d1 - o.d1;
@@ -2053,6 +2564,13 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       card.append(m);
     } else if (every.length > ACTIVE_LOG_PAGE) card.append(el("div", "hint", "That is everything."));
     root.append(card);
+  }
+
+  // src/esm/ui/export.js
+  function csvCell(v) {
+    v = String(v == null ? "" : v);
+    if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;
+    return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
   }
 
   // src/esm/features/log-tools.js
@@ -2343,8 +2861,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 
   // src/esm/app/extras-wiring.js
   function initExtras() {
-    const today = $("today");
-    if (today && !$("sharebtn")) {
+    const anchor = $("exportpdf");
+    if (anchor && !$("ghostbtn")) {
       const gb = el("button", "btn", "Plan vs now");
       gb.type = "button";
       gb.id = "ghostbtn";
@@ -2359,11 +2877,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         }
         render();
       });
-      const sh = el("button", "btn", "Share");
-      sh.type = "button";
-      sh.id = "sharebtn";
-      sh.addEventListener("click", openShare);
-      today.after(gb, sh);
+      anchor.before(gb);
     }
     netBar();
     netShow();
@@ -2767,12 +3281,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const gr = $("grid");
     gr.addEventListener("contextmenu", (e) => {
       if (!canEdit()) return;
-      const bar = e.target.closest(".bar");
-      if (bar) {
-        const it = items().find((i) => i.id === bar.dataset.id);
+      const bar2 = e.target.closest(".bar");
+      if (bar2) {
+        const it = items().find((i) => i.id === bar2.dataset.id);
         if (it) {
           e.preventDefault();
-          barMenu(it, bar.dataset.person, e.clientX, e.clientY);
+          barMenu(it, bar2.dataset.person, e.clientX, e.clientY);
         }
         return;
       }
@@ -2784,10 +3298,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
     gr.addEventListener("dblclick", (e) => {
       if (!canEdit() || e.target.tagName === "INPUT") return;
-      const bar = e.target.closest(".bar");
-      if (bar) {
-        const it = items().find((i) => i.id === bar.dataset.id);
-        if (it) startEdit(it, bar.dataset.person);
+      const bar2 = e.target.closest(".bar");
+      if (bar2) {
+        const it = items().find((i) => i.id === bar2.dataset.id);
+        if (it) startEdit(it, bar2.dataset.person);
         return;
       }
       const row = e.target.closest(".rowbg[data-person]");
@@ -2830,7 +3344,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       }, 3500);
     });
     render();
-    $("export").addEventListener("click", exportCsv);
+    $("exportpdf").addEventListener("click", exportPdf);
     initExtras();
     $("toplogo").src = LOGO;
     const av = $("avbtn"), um = $("umenu");
@@ -2868,14 +3382,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       } catch (x) {
       }
       render();
-    });
-    $("today").addEventListener("click", () => {
-      if (todayK < 0) {
-        toast("Today is outside this roadmap.");
-        return;
-      }
-      const w = $("wrap");
-      w.scrollLeft = Math.max(0, (todayK - 3) * (ZOOM[state.zoom] || 26));
     });
     $("ideasbtn").addEventListener("click", () => {
       S.drawerOpen = !S.drawerOpen;
@@ -3357,6 +3863,14 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         showPage("roadmap");
       });
       act.append(open);
+      if (canWrite()) {
+        const sh = el("button", "btn sm", "Share");
+        sh.type = "button";
+        sh.id = "sharebtn-" + r.id;
+        sh.title = "Read-only link for people without an account";
+        sh.addEventListener("click", () => openShare(r.id));
+        act.append(sh);
+      }
       if (!r.builtin && canEdit()) {
         let armed = false;
         const del = el("button", "btn danger sm", "Delete");
@@ -3904,14 +4418,14 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     if (before) return before.ord - 1;
     return after.ord + 1;
   }
-  function startDrag(ev, it, bar, mode) {
+  function startDrag(ev, it, bar2, mode) {
     if (!canEdit() || ev.button != null && ev.button !== 0) return;
     const g = $("grid"), wk = g.querySelector(".wk");
     const mw = wk ? wk.getBoundingClientRect().width : 26;
-    const owner = bar.dataset.person || "", ch = g.closest(".chartwrap") || document.scrollingElement, sx0 = ch.scrollLeft, sy0 = ch.scrollTop;
+    const owner = bar2.dataset.person || "", ch = g.closest(".chartwrap") || document.scrollingElement, sx0 = ch.scrollLeft, sy0 = ch.scrollTop;
     let lastE = null, raf = 0;
     const st = { x: ev.clientX, y: ev.clientY, lastY: ev.clientY, mode, d0: it.d0, d1: it.d1, sq: it.sq, person: owner, moved: false, cur: { d0: it.d0, d1: it.d1, sq: it.sq, person: owner } };
-    bar.setPointerCapture(ev.pointerId);
+    bar2.setPointerCapture(ev.pointerId);
     const move = (e) => {
       lastE = e;
       const dx = e.clientX - st.x + (ch.scrollLeft - sx0), dy = e.clientY - st.y + (ch.scrollTop - sy0);
@@ -3920,7 +4434,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       if (!st.moved) {
         st.moved = true;
         S.dragging = true;
-        bar.classList.add("dragging");
+        bar2.classList.add("dragging");
         raf = requestAnimationFrame(tick);
       }
       const dm = Math.round(dx / mw);
@@ -3942,9 +4456,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         tip.style.left = e.clientX + 14 + "px";
         tip.style.top = e.clientY + 16 + "px";
       }
-      bar.style.gridColumn = a + 2 + " / " + (b + 3);
+      bar2.style.gridColumn = a + 2 + " / " + (b + 3);
       if (mode === "move") {
-        bar.style.transform = "translate(" + (dx - (a - st.d0) * mw) + "px," + dy + "px)";
+        bar2.style.transform = "translate(" + (dx - (a - st.d0) * mw) + "px," + dy + "px)";
         if (state.view === "person") {
           const boxes = personBoxes(g);
           let hit = st.cur.person;
@@ -3962,7 +4476,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
           st.cur.sq = hit;
           setDrop(g, hit);
         }
-      } else bar.style.transform = "";
+      } else bar2.style.transform = "";
     };
     const tick = () => {
       if (!S.dragging || !lastE) return;
@@ -3982,9 +4496,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       cancelAnimationFrame(raf);
       const dt = $("dtip");
       if (dt) dt.remove();
-      bar.removeEventListener("pointermove", move);
-      bar.removeEventListener("pointerup", up);
-      bar.removeEventListener("pointercancel", up);
+      bar2.removeEventListener("pointermove", move);
+      bar2.removeEventListener("pointerup", up);
+      bar2.removeEventListener("pointercancel", up);
       setDrop(g, null);
       setDropP(g, null);
       S.dragging = false;
@@ -4014,9 +4528,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       if (Object.keys(patch).length) commit(it.id, patch);
       else render();
     };
-    bar.addEventListener("pointermove", move);
-    bar.addEventListener("pointerup", up);
-    bar.addEventListener("pointercancel", up);
+    bar2.addEventListener("pointermove", move);
+    bar2.addEventListener("pointerup", up);
+    bar2.addEventListener("pointercancel", up);
   }
 
   // src/esm/pages/vacations.js
@@ -4270,135 +4784,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     root.append(card);
   }
 
-  // src/esm/features/people-rows.js
-  var savedOrder = () => S.ideas.peopleorder && S.ideas.peopleorder.ord || [];
-  function primaryLane(name) {
-    const d = directory().get(name);
-    const idx = d ? [...d.sqs].map((k) => LANES.findIndex((l) => l.k === k)).filter((i) => i >= 0) : [];
-    return idx.length ? Math.min.apply(null, idx) : 0;
-  }
-  function comparePeople(a, b) {
-    const ord = savedOrder(), ia = ord.indexOf(a.name), ib = ord.indexOf(b.name);
-    if (ia >= 0 || ib >= 0) return (ia < 0 ? 1e6 : ia) - (ib < 0 ? 1e6 : ib) || a.name.localeCompare(b.name);
-    return primaryLane(a.name) - primaryLane(b.name) || a.name.localeCompare(b.name);
-  }
-  function allNamesInOrder() {
-    return [...directory().keys()].map((name) => ({ name })).sort(comparePeople).map((p) => p.name);
-  }
-  function movePerson(name, target, after) {
-    if (!canEdit() || name === target) return;
-    const list = allNamesInOrder().filter((n) => n !== name), at = list.indexOf(target);
-    if (at < 0) return;
-    list.splice(at + (after ? 1 : 0), 0, name);
-    saveIdea("peopleorder", { cfg: true, ord: list }, "resource", "reordered team rows (" + name + ")");
-    render();
-  }
-  function step(name, delta) {
-    const list = allNamesInOrder(), i = list.indexOf(name), t = list[i + delta];
-    if (t) movePerson(name, t, delta > 0);
-  }
-  function hiddenHere() {
-    const h = S.ideas.peoplehide;
-    return h && h.byRm && h.byRm[state.rm] || [];
-  }
-  var featureCount = (name) => items().filter((i) => i.res.includes(name)).length;
-  function setHidden(names, sum) {
-    const old = S.ideas.peoplehide && S.ideas.peoplehide.byRm || {}, byRm = Object.assign({}, old);
-    byRm[state.rm] = names;
-    if (!names.length) delete byRm[state.rm];
-    saveIdea("peoplehide", { cfg: true, byRm }, "resource", sum);
-    render();
-  }
-  function hideHere(name) {
-    const n = featureCount(name);
-    if (n) {
-      toast(name + " has " + n + " feature" + (n === 1 ? "" : "s") + " on this roadmap. Reassign " + (n === 1 ? "it" : "them") + " first, then hide the row.");
-      return;
-    }
-    setHidden(hiddenHere().concat(name), "hid " + name + " from " + curRm().n);
-    toast(name + " hidden on " + curRm().n + '. Use "Show hidden" under the table to bring the row back.');
-  }
-  function openHiddenDialog() {
-    openDlg("Hidden on " + curRm().n, (box2) => {
-      const names = hiddenHere().filter((n) => directory().has(n));
-      box2.append(el("p", "sub", "These people are still on the team and on other roadmaps. They only have no row here."));
-      names.forEach((n) => {
-        const row2 = el("div", "formrow"), b = el("button", "btn sm", "Show");
-        b.type = "button";
-        b.addEventListener("click", () => {
-          setHidden(hiddenHere().filter((x) => x !== n), "showed " + n + " on " + curRm().n);
-          closeDlg();
-          if (hiddenHere().some((x) => directory().has(x))) openHiddenDialog();
-        });
-        row2.append(el("strong", "", n), b);
-        box2.append(row2);
-      });
-      const all = el("button", "btn primary", "Show all");
-      all.type = "button";
-      all.addEventListener("click", () => {
-        setHidden([], "showed all hidden people on " + curRm().n);
-        closeDlg();
-      });
-      const no = el("button", "btn", "Close");
-      no.type = "button";
-      no.addEventListener("click", closeDlg);
-      const row = el("div", "formrow");
-      row.append(all, no);
-      box2.append(row);
-    });
-  }
-  function decoratePersonRow(c1, name) {
-    if (!canEdit()) return;
-    c1.classList.add("hasgrip");
-    const grip = el("span", "pgrip", "⋮⋮");
-    grip.draggable = true;
-    grip.title = "Drag to reorder";
-    grip.setAttribute("aria-label", "Drag to reorder " + name);
-    grip.addEventListener("dragstart", (e) => {
-      e.dataTransfer.setData("text/person", name);
-      e.dataTransfer.effectAllowed = "move";
-      c1.classList.add("dragging");
-    });
-    grip.addEventListener("dragend", () => document.querySelectorAll(".pn.dragging,.pn.dropbefore,.pn.dropafter").forEach((x) => x.classList.remove("dragging", "dropbefore", "dropafter")));
-    const more = el("button", "pmore", "⋯");
-    more.type = "button";
-    more.title = "Row options";
-    more.setAttribute("aria-label", "Options for " + name);
-    more.setAttribute("aria-haspopup", "menu");
-    more.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const r = more.getBoundingClientRect(), list = allNamesInOrder(), i = list.indexOf(name);
-      openCtx(r.right - 200, r.bottom + 4, (m) => {
-        if (i > 0) mi(m, "Move up", () => step(name, -1));
-        if (i < list.length - 1) mi(m, "Move down", () => step(name, 1));
-        m.append(el("div", "msep"));
-        mi(m, "Hide " + name + " from this roadmap", () => hideHere(name), "danger");
-      });
-    });
-    const side = (e) => {
-      const r = c1.getBoundingClientRect();
-      return e.clientY > r.top + r.height / 2;
-    };
-    c1.addEventListener("dragover", (e) => {
-      if (![...e.dataTransfer.types].includes("text/person")) return;
-      e.preventDefault();
-      const after = side(e);
-      c1.classList.toggle("dropafter", after);
-      c1.classList.toggle("dropbefore", !after);
-    });
-    c1.addEventListener("dragleave", (e) => {
-      if (!c1.contains(e.relatedTarget)) c1.classList.remove("dropbefore", "dropafter");
-    });
-    c1.addEventListener("drop", (e) => {
-      const who = e.dataTransfer.getData("text/person");
-      if (!who) return;
-      e.preventDefault();
-      c1.classList.remove("dropbefore", "dropafter");
-      movePerson(who, name, side(e));
-    });
-    c1.append(grip, more);
-  }
-
   // src/esm/ui/gantt-render.js
   function renderSummary(list) {
     const s = $("summary");
@@ -4425,17 +4810,17 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       tipEl = null;
     }
   }
-  function showBarTip(bar) {
+  function showBarTip(bar2) {
     hideBarTip();
-    if (S.dragging || !bar.dataset.tip) return;
+    if (S.dragging || !bar2.dataset.tip) return;
     tipTimer = setTimeout(() => {
-      if (!bar.isConnected || S.dragging || bar.classList.contains("editing")) return;
+      if (!bar2.isConnected || S.dragging || bar2.classList.contains("editing")) return;
       const t = el("div", "bartip");
       t.setAttribute("role", "tooltip");
-      t.append(el("b", "", bar.dataset.tip), el("small", "", bar.dataset.tipSub || ""));
+      t.append(el("b", "", bar2.dataset.tip), el("small", "", bar2.dataset.tipSub || ""));
       document.body.append(t);
       tipEl = t;
-      const r = bar.getBoundingClientRect(), w = t.offsetWidth, h = t.offsetHeight;
+      const r = bar2.getBoundingClientRect(), w = t.offsetWidth, h = t.offsetHeight;
       const top = r.top - h - 8 >= 8 ? r.top - h - 8 : r.bottom + 8;
       t.style.top = top + "px";
       t.style.left = Math.max(8, Math.min(Math.max(r.left, 8), window.innerWidth - w - 8)) + "px";
@@ -4444,19 +4829,19 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   window.addEventListener("scroll", hideBarTip, true);
   function buildBar(it, owner) {
     const l = laneOf(it.sq), col = barColorCss(it.c) || l.c;
-    const bar = el("div", "bar st-" + it.st + (canEdit() ? "" : " ro") + (it.ms ? " ms" : ""));
-    bar.style.setProperty("--c", col);
-    if (onColor(it.c)) bar.style.setProperty("--on-bar", onColor(it.c));
-    bar.dataset.person = owner || "";
-    bar.dataset.id = it.id;
-    bar.tabIndex = 0;
-    bar.setAttribute("role", "button");
-    bar.setAttribute("aria-label", it.t + ", " + dlabel(it.d0) + " to " + dlabel(it.d1) + ", " + STATUS[it.st]);
-    bar.dataset.tip = it.t;
-    bar.dataset.tipSub = l.n + " · " + dlabel(it.d0) + " to " + dlabel(it.d1) + " · " + STATUS[it.st];
+    const bar2 = el("div", "bar st-" + it.st + (canEdit() ? "" : " ro") + (it.ms ? " ms" : ""));
+    bar2.style.setProperty("--c", col);
+    if (onColor(it.c)) bar2.style.setProperty("--on-bar", onColor(it.c));
+    bar2.dataset.person = owner || "";
+    bar2.dataset.id = it.id;
+    bar2.tabIndex = 0;
+    bar2.setAttribute("role", "button");
+    bar2.setAttribute("aria-label", it.t + ", " + dlabel(it.d0) + " to " + dlabel(it.d1) + ", " + STATUS[it.st]);
+    bar2.dataset.tip = it.t;
+    bar2.dataset.tipSub = l.n + " · " + dlabel(it.d0) + " to " + dlabel(it.d1) + " · " + STATUS[it.st];
     const editing = state.edit === it.id + "|" + (owner || "");
     if (editing) {
-      bar.classList.add("editing");
+      bar2.classList.add("editing");
       const inp = el("input", "bi");
       inp.type = "text";
       inp.value = it.t;
@@ -4481,32 +4866,32 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       inp.addEventListener("blur", () => fin(true));
       inp.addEventListener("pointerdown", (e) => e.stopPropagation());
       inp.addEventListener("dblclick", (e) => e.stopPropagation());
-      bar.append(inp);
-    } else bar.append(el("span", "nm2", (it.st === "done" ? "✓ " : "") + it.t));
-    if (it.tag) bar.append(el("span", "tg", it.tag === "High priority" ? "High" : it.tag === "Low priority" ? "Low" : it.tag));
+      bar2.append(inp);
+    } else bar2.append(el("span", "nm2", (it.st === "done" ? "✓ " : "") + it.t));
+    if (it.tag) bar2.append(el("span", "tg", it.tag === "High priority" ? "High" : it.tag === "Low priority" ? "Low" : it.tag));
     const hl = el("span", "hd l"), hr = el("span", "hd r");
-    bar.append(hl, hr);
-    bar.addEventListener("pointerdown", (e) => {
+    bar2.append(hl, hr);
+    bar2.addEventListener("pointerdown", (e) => {
       if (e.target.tagName === "INPUT") return;
       const mode = e.target === hl ? "l" : e.target === hr ? "r" : "move";
-      if (canEdit()) startDrag(e, it, bar, mode);
+      if (canEdit()) startDrag(e, it, bar2, mode);
     });
-    bar.addEventListener("pointerenter", () => {
+    bar2.addEventListener("pointerenter", () => {
       if (S.dragging) return;
       const g = $("grid");
       g.classList.add("hov");
       g.querySelectorAll(".bar").forEach((b) => b.classList.toggle("same", b.dataset.id === it.id));
     });
-    bar.addEventListener("pointerleave", () => {
+    bar2.addEventListener("pointerleave", () => {
       $("grid").classList.remove("hov");
     });
-    bar.addEventListener("pointerenter", () => showBarTip(bar));
-    bar.addEventListener("pointerleave", hideBarTip);
-    bar.addEventListener("pointerdown", hideBarTip);
-    bar.addEventListener("focus", () => showBarTip(bar));
-    bar.addEventListener("blur", hideBarTip);
-    bar.addEventListener("keydown", (e) => {
-      if (e.target !== bar) return;
+    bar2.addEventListener("pointerenter", () => showBarTip(bar2));
+    bar2.addEventListener("pointerleave", hideBarTip);
+    bar2.addEventListener("pointerdown", hideBarTip);
+    bar2.addEventListener("focus", () => showBarTip(bar2));
+    bar2.addEventListener("blur", hideBarTip);
+    bar2.addEventListener("keydown", (e) => {
+      if (e.target !== bar2) return;
       if (e.key === "Enter" || e.key === "F2") {
         e.preventDefault();
         startEdit(it, owner);
@@ -4522,7 +4907,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       }
       state.refocusBar = it.id;
     });
-    return bar;
+    return bar2;
   }
   var ZOOM = { day: 26, week: 12, month: 4 };
   function render() {
@@ -4607,7 +4992,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return { out, n: Math.max(1, lanes.length) };
   }
   function renderPeople(g, put, list) {
-    const dir = directory(), map = /* @__PURE__ */ new Map(), H = 34;
+    const dir = directory(), map = /* @__PURE__ */ new Map(), H3 = 34;
     const ensure = (n) => {
       if (!map.has(n)) map.set(n, { name: n, its: [] });
       return map.get(n);
@@ -4625,7 +5010,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     people.sort(comparePeople);
     let r = 3;
     const block = (p, title, sub, color) => {
-      const pk = pack(p.its), n = pk.n, minH = 8 + n * H + "px";
+      const pk = pack(p.its), n = pk.n, minH = 8 + n * H3 + "px";
       const counts = new Array(NDAYS).fill(0);
       p.its.forEach((it) => {
         for (let k2 = it.d0; k2 <= it.d1; k2++) counts[k2]++;
@@ -4686,7 +5071,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       pk.out.forEach((x) => {
         const b = buildBar(x.it, p.name);
         b.classList.add("pb");
-        b.style.marginTop = 4 + x.lane * H + "px";
+        b.style.marginTop = 4 + x.lane * H3 + "px";
         const hit = pv.filter((v) => x.it.d1 >= kOfIso(v.a0) && x.it.d0 <= kOfIso(v.a1 || v.a0));
         if (hit.length) {
           b.classList.add("vconf");
@@ -4729,52 +5114,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       put(el("div", "rowbg"), r, null).style.minHeight = "44px";
     }
     return r;
-  }
-
-  // src/esm/ui/notify.js
-  var box = null;
-  function host() {
-    if (box && document.body.contains(box)) return box;
-    box = document.createElement("div");
-    box.id = "toasts";
-    box.setAttribute("aria-live", "polite");
-    document.body.append(box);
-    return box;
-  }
-  function notify(msg, kind, ms) {
-    kind = kind || "ok";
-    const t = document.createElement("div");
-    t.className = "toast " + kind;
-    t.setAttribute("role", kind === "err" ? "alert" : "status");
-    const ic = document.createElement("span");
-    ic.className = "ti";
-    ic.textContent = kind === "err" ? "!" : kind === "ok" ? "✓" : "i";
-    ic.setAttribute("aria-hidden", "true");
-    const tx = document.createElement("span");
-    tx.className = "tt";
-    tx.textContent = msg;
-    const x = document.createElement("button");
-    x.type = "button";
-    x.className = "tx";
-    x.textContent = "×";
-    x.setAttribute("aria-label", "Dismiss");
-    const gone = () => {
-      t.classList.add("out");
-      setTimeout(() => t.remove(), 200);
-    };
-    x.addEventListener("click", gone);
-    t.append(ic, tx, x);
-    const h = host();
-    h.append(t);
-    while (h.children.length > 3) h.firstChild.remove();
-    setTimeout(gone, ms || (kind === "err" ? 7e3 : 3500));
-  }
-  var lastFail = 0;
-  function notifyFailOnce(msg) {
-    const n = Date.now();
-    if (n - lastFail < 8e3) return;
-    lastFail = n;
-    notify(msg, "err");
   }
 
   // src/esm/pages/resources.js
@@ -5396,8 +5735,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
           if (lv.has(k)) leave++;
           else avail++;
         });
-        const pct = avail > 0 ? Math.round(sched / avail * 100) : sched > 0 ? Infinity : null;
-        return { pct, avail, sched, leave, its: [...its] };
+        const pct2 = avail > 0 ? Math.round(sched / avail * 100) : sched > 0 ? Infinity : null;
+        return { pct: pct2, avail, sched, leave, its: [...its] };
       });
       const peak = Math.max.apply(null, cells.map((c) => c.pct === Infinity ? 999 : c.pct || 0));
       rows2.push({ name, cells, peak, over: cells.filter((c) => c.pct === Infinity || (c.pct || 0) > 100).length });
@@ -5905,10 +6244,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
   }
   function richBar() {
-    const bar = document.createElement("div");
-    bar.className = "rbar";
-    bar.setAttribute("role", "toolbar");
-    bar.setAttribute("aria-label", "Text formatting");
+    const bar2 = document.createElement("div");
+    bar2.className = "rbar";
+    bar2.setAttribute("role", "toolbar");
+    bar2.setAttribute("aria-label", "Text formatting");
     const b = (label, title, fn) => {
       const x = document.createElement("button");
       x.className = "btn sm";
@@ -5924,7 +6263,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
           if (s) s.textContent = "Click inside a text box first";
         }
       });
-      bar.append(x);
+      bar2.append(x);
       return x;
     };
     b("B", "Bold", () => document.execCommand("bold")).style.fontWeight = "800";
@@ -5937,7 +6276,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       if (u && /^https:\/\//i.test(u.trim())) document.execCommand("createLink", false, u.trim());
     });
     b("Clear", "Remove formatting", () => document.execCommand("removeFormat"));
-    return bar;
+    return bar2;
   }
   function richBox(cls, html, plain, label, onSave) {
     const d = document.createElement("div");
@@ -6338,7 +6677,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const viewer = isViewer(), l = reportList(), rep = cur();
     if (rep && S.reports[rep.id]) baseline[rep.id] = JSON.stringify(S.reports[rep.id]);
     pg.append(pageHead("Weekly report", viewer ? "Submitted weekly updates per product." : "Built from the sprint plan and the roadmap. Edit anything, then submit it to the executives."));
-    const bar = el("div", "row spbar");
+    const bar2 = el("div", "row spbar");
     if (l.length) {
       const sel = el("select");
       sel.setAttribute("aria-label", "Report");
@@ -6354,7 +6693,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         rUI.err = false;
         renderReports();
       });
-      bar.append(sel);
+      bar2.append(sel);
     }
     if (!viewer) {
       const free = missingWeeks(), t = todayIso(), pick = free.find((w) => w.a <= t) || free[free.length - 1];
@@ -6363,17 +6702,17 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         nb.type = "button";
         nb.disabled = !canBuild();
         nb.addEventListener("click", () => newReport(pick));
-        bar.append(nb);
+        bar2.append(nb);
       }
       const sb2 = el("button", "btn", "Report settings");
       sb2.type = "button";
       sb2.disabled = !canBuild();
       sb2.addEventListener("click", settingsDlg);
-      bar.append(sb2);
+      bar2.append(sb2);
     }
     const sb0 = viewer ? null : setupBanner();
     if (sb0) pg.append(sb0);
-    pg.append(bar);
+    pg.append(bar2);
     if (!rep) {
       pg.append(el("p", "empty", viewer ? "No report has been submitted yet." : sprintList().length ? "No report yet. Create one for the latest sprint." : "Create a sprint first (Sprints page), then build the report."));
       return;
@@ -6501,9 +6840,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       cb(it);
     };
     const draw = () => {
-      const s = q.value.trim().toLowerCase();
+      const s = q.value.trim().toLowerCase(), ws = fold(q.value).split(/\s+/).filter(Boolean);
       list.textContent = "";
-      const rows2 = items2.filter((i) => !s || (i.label + " " + (i.sub || "")).toLowerCase().includes(s));
+      const rows2 = items2.filter((i) => {
+        const t = fold(i.label + " " + (i.sub || ""));
+        return ws.every((w) => t.includes(w));
+      });
       const c = o.create && s ? o.create(q.value.trim()) : null;
       if (c && !items2.some((i) => i.label.toLowerCase() === s)) rows2.push(c);
       rows2.forEach((it) => {
@@ -6711,7 +7053,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     }
     const wrap = el("div", "splist");
     l.forEach((sp) => {
-      const t = tree(sp.id), leaf = t.all.filter((i) => !t.kids[i.id]), done2 = leaf.filter((i) => i.st === "done").length, pct = leaf.length ? Math.round(100 * done2 / leaf.length) : 0;
+      const t = tree(sp.id), leaf = t.all.filter((i) => !t.kids[i.id]), done2 = leaf.filter((i) => i.st === "done").length, pct2 = leaf.length ? Math.round(100 * done2 / leaf.length) : 0;
       const secs = Object.keys(sp.secs || {}).concat(rows(sp.id).filter((i) => i.k === "h").map((i) => i.sq), t.tops.map((i) => i.squad)).filter((k, i, a2) => k && a2.indexOf(k) === i);
       const card = el("div", "card spcard"), info = el("div");
       const a = el("a", "splink");
@@ -6729,7 +7071,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       const prog = el("div", "spprog");
       prog.append(el("div", "meta", done2 + " of " + leaf.length + " done"));
       const b0 = el("div", "bar0"), i0 = el("i");
-      i0.style.width = pct + "%";
+      i0.style.width = pct2 + "%";
       b0.append(i0);
       prog.append(b0);
       const more = el("button", "btn sm spmore", "⋯");
@@ -7495,9 +7837,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     if (unsubBar) unsubBar();
     unsubBar = U.subscribe(sync2);
     sync2();
-    const bar = el("div", "row spbar");
-    bar.append(ab, cb, ub, rb);
-    pg.append(dr, bar, ed);
+    const bar2 = el("div", "row spbar");
+    bar2.append(ab, cb, ub, rb);
+    pg.append(dr, bar2, ed);
   }
   function renderSprints() {
     const pg = $("pg-sprints");
@@ -8266,22 +8608,22 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   function pwMeter(input, host2) {
     const w = el("div", "pwmeter");
     w.setAttribute("aria-live", "polite");
-    const bar = el("div", "pwbar");
-    for (let i = 0; i < 4; i++) bar.append(el("i"));
+    const bar2 = el("div", "pwbar");
+    for (let i = 0; i < 4; i++) bar2.append(el("i"));
     const txt = el("span", "pwtxt");
-    w.append(bar, txt);
+    w.append(bar2, txt);
     host2.append(w);
     const upd = () => {
       const v = input.value;
       if (!v) {
         w.dataset.s = "";
         txt.textContent = "";
-        bar.querySelectorAll("i").forEach((i) => i.className = "");
+        bar2.querySelectorAll("i").forEach((i) => i.className = "");
         return;
       }
       const r = pwScore(v), lab = ["Weak", "Weak", "Okay", "Good", "Strong"][r.s];
       w.dataset.s = String(r.s);
-      bar.querySelectorAll("i").forEach((i, n) => {
+      bar2.querySelectorAll("i").forEach((i, n) => {
         i.className = n < Math.max(1, r.s) ? "on" : "";
       });
       txt.textContent = lab + (r.tips.length && r.s < 4 ? " · " + r.tips[0] : "");
@@ -8562,151 +8904,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     else pr = [sq];
     return { sq, pr };
   }
-
-  // src/esm/ui/dropdowns.js
-  var cpop = null;
-  var cpopSel = null;
-  var openedAt = 0;
-  function cpopClose(refocus) {
-    if (!cpop) return;
-    const s = cpopSel;
-    cpop.remove();
-    cpop = null;
-    cpopSel = null;
-    if (s) {
-      s.setAttribute("aria-expanded", "false");
-      if (refocus) s.focus();
-    }
-  }
-  var rowsOf = () => [...cpop.querySelectorAll(".copt:not(.dis):not([hidden])")];
-  function cpopMove(d) {
-    const rows2 = rowsOf();
-    if (!rows2.length) return;
-    let i = rows2.findIndex((r) => r.classList.contains("act"));
-    i = Math.max(0, Math.min(rows2.length - 1, i + d));
-    cpop.querySelectorAll(".act").forEach((r) => r.classList.remove("act"));
-    rows2[i].classList.add("act");
-    rows2[i].scrollIntoView({ block: "nearest" });
-  }
-  function cpopPick(opt) {
-    const s = cpopSel;
-    if (!s || opt.disabled) return;
-    const changed = s.value !== opt.value;
-    s.value = opt.value;
-    cpopClose(true);
-    if (changed) {
-      s.dispatchEvent(new Event("input", { bubbles: true }));
-      s.dispatchEvent(new Event("change", { bubbles: true }));
-    }
-  }
-  function cpopFilter(q) {
-    q = q.trim().toLowerCase();
-    let first = null, any = false;
-    cpop.querySelectorAll(".copt[data-opt]").forEach((r) => {
-      const hit = !q || r.textContent.toLowerCase().includes(q);
-      r.hidden = !hit;
-      r.classList.remove("act");
-      if (hit) {
-        any = true;
-        if (!first && !r.classList.contains("dis")) first = r;
-      }
-    });
-    if (first) first.classList.add("act");
-    cpop.querySelector(".cnone").hidden = any;
-  }
-  function cpopOpen(s) {
-    if (cpop && cpopSel === s) {
-      cpopClose(true);
-      return;
-    }
-    cpopClose();
-    cpopSel = s;
-    s.setAttribute("aria-haspopup", "listbox");
-    s.setAttribute("aria-expanded", "true");
-    const box2 = el("div", "cpop");
-    box2.tabIndex = -1;
-    const q = el("input", "csearch");
-    q.type = "search";
-    q.placeholder = "Search…";
-    q.setAttribute("aria-label", "Search the list");
-    q.autocomplete = "off";
-    q.addEventListener("input", () => cpopFilter(q.value));
-    box2.append(q);
-    const list = el("div", "clist");
-    list.setAttribute("role", "listbox");
-    box2.append(list);
-    [...s.options].forEach((o) => {
-      const r = el("div", "copt" + (o.selected ? " sel act" : "") + (o.disabled ? " dis" : ""));
-      r.dataset.opt = "1";
-      r._opt = o;
-      r.setAttribute("role", "option");
-      r.setAttribute("aria-selected", String(o.selected));
-      r.append(el("span", "", o.textContent));
-      if (o.selected) r.append(el("i", "ck", "✓"));
-      r.addEventListener("pointerdown", (e) => e.preventDefault());
-      r.addEventListener("click", () => cpopPick(o));
-      r.addEventListener("pointermove", () => {
-        box2.querySelectorAll(".act").forEach((x) => x.classList.remove("act"));
-        if (!o.disabled) r.classList.add("act");
-      });
-      list.append(r);
-    });
-    const none = el("div", "copt dis cnone", "No matches");
-    none.hidden = true;
-    list.append(none);
-    document.body.append(box2);
-    cpop = box2;
-    openedAt = Date.now();
-    const b = s.getBoundingClientRect(), h = Math.min(box2.scrollHeight, 320);
-    box2.style.minWidth = Math.max(b.width, 180) + "px";
-    box2.style.maxHeight = "320px";
-    const below = window.innerHeight - b.bottom, top = below >= h + 12 || below >= b.top ? b.bottom + 6 : b.top - h - 6;
-    box2.style.top = Math.max(8, top) + "px";
-    box2.style.left = Math.max(8, Math.min(b.left, window.innerWidth - box2.offsetWidth - 8)) + "px";
-    const cur2 = box2.querySelector(".sel");
-    if (cur2) cur2.scrollIntoView({ block: "nearest" });
-    q.focus({ preventScroll: true });
-  }
-  document.addEventListener("mousedown", (e) => {
-    const s = e.target.closest && e.target.closest("select");
-    if (s && !s.disabled && !s.multiple) {
-      e.preventDefault();
-      s.focus({ preventScroll: true });
-      cpopOpen(s);
-      return;
-    }
-    if (cpop && !cpop.contains(e.target)) cpopClose();
-  }, true);
-  document.addEventListener("keydown", (e) => {
-    const t = e.target;
-    if (cpop) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        cpopClose(true);
-      } else if (e.key === "ArrowDown") {
-        e.preventDefault();
-        cpopMove(1);
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        cpopMove(-1);
-      } else if (e.key === "Enter") {
-        e.preventDefault();
-        const a = cpop.querySelector(".copt.act:not([hidden])");
-        if (a && a._opt) cpopPick(a._opt);
-        else cpopClose(true);
-      } else if (e.key === "Tab") cpopClose();
-      return;
-    }
-    if (t && t.tagName === "SELECT" && !t.multiple && (e.key === "Enter" || e.key === " " || e.key === "ArrowDown" || e.key === "ArrowUp")) {
-      e.preventDefault();
-      cpopOpen(t);
-    }
-  }, true);
-  window.addEventListener("resize", () => cpopClose());
-  window.addEventListener("scroll", (e) => {
-    if (cpop && Date.now() - openedAt > 250 && !cpop.contains(e.target)) cpopClose();
-  }, true);
 
   // src/esm/main.js
   window.__ynmo = {

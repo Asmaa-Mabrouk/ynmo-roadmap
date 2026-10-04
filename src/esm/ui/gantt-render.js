@@ -124,7 +124,7 @@ export function render() {
   afterRender();
 }
 /** Stack bars that overlap in time into lanes. Bars keep their creation order, so a newly added bar goes UNDER the existing ones (the row grows) instead of pushing them down. */
-function pack(its) {
+export function pack(its) {
   const lanes = [], out = [];
   its.slice().sort((a, b) => a.ord - b.ord || a.d0 - b.d0 || (a.id < b.id ? -1 : 1)).forEach(it => {
     const end = it.ms ? it.d1 + 5 : it.d1;
