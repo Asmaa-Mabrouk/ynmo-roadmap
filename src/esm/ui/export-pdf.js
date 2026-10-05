@@ -11,8 +11,9 @@ import { comparePeople, hiddenHere } from '../features/people-rows.js';
 import { pack } from './gantt-render.js';
 import { notify } from './notify.js';
 import { fmtIso } from '../core/shared.js';
+import { DEFAULT_COLOR, leaveRuns, notesHere, packNotes, personNotes, stripNeeded } from '../features/timeline-notes.js';
 
-const H = 30;   // height of one bar lane, px
+const H = 30, NH = 17;   // height of one bar lane / one note lane, px
 const pct = n => (n / NDAYS * 100).toFixed(3) + '%';
 
 function legend(list) {
@@ -22,9 +23,12 @@ function legend(list) {
   [['planned', 'Planned'], ['decide', 'Needs decision'], ['contract', 'Waiting on contract'], ['done', 'Done']].forEach(x => { const s = el('span'); const i = el('i', 'prm-sw prm-st-' + x[0]); i.style.setProperty('--c', '#5a6180'); s.append(i, document.createTextNode(STATUS[x[0]] || x[1])); lg.append(s); });
   return lg;
 }
-function bar(it, laneIdx) {
+function noteEl(n, laneIdx, chip) {
+  const b = el('div', 'prm-note ' + (chip ? 'prm-chip' : 'prm-rib')); b.style.left = pct(n.d0); b.style.width = pct(n.d1 - n.d0 + 1); b.style.top = (laneIdx * NH + 2) + 'px'; b.style.setProperty('--c', /^#[0-9a-f]{6}$/i.test(n.c || '') ? n.c : DEFAULT_COLOR[n.k]); b.append(el('span', 'prm-t', n.t)); return b;
+}
+function bar(it, laneIdx, top0) {
   const l = LANES.find(x => x.k === it.sq) || LANES[0], col = barColorCss(it.c) || l.c, b = el('div', 'prm-bar prm-st-' + it.st + (it.ms ? ' prm-ms' : ''));
-  b.style.left = pct(it.d0); b.style.width = pct(it.d1 - it.d0 + 1); b.style.top = (laneIdx * H + 3) + 'px'; b.style.height = (H - 6) + 'px'; b.style.setProperty('--c', col);
+  b.style.left = pct(it.d0); b.style.width = pct(it.d1 - it.d0 + 1); b.style.top = ((top0 || 0) + laneIdx * H + 3) + 'px'; b.style.height = (H - 6) + 'px'; b.style.setProperty('--c', col);
   const on = onColor(it.c); if (on) b.style.setProperty('--on', on);
   const t = (it.st === 'done' ? '✓ ' : '') + it.t; b.append(el('span', 'prm-t', t));
   return b;
@@ -55,14 +59,22 @@ export function buildPrintView() {
   MGROUPS.forEach(m => { const d = el('div', 'prm-mo'); d.style.left = pct(m.from); d.style.width = pct(m.to - m.from + 1); d.append(el('span', '', m.n)); months.append(d); });
   DAYS.forEach(x => { if (x.dow === 0) { const w = el('div', 'prm-wk', String(x.d.getUTCDate())); w.style.left = pct(x.k); weeks.append(w); } });
   t1.append(months, weeks); r1.append(n1, t1); th.append(r1); tb.append(th);
-  const body = el('tbody');
+  const body = el('tbody'), periods = packNotes(notesHere('period')), bands = periods.out.map(x => x.n);
+  const addBands = cell => bands.forEach(n => { const d = el('i', 'prm-band'); d.style.left = pct(n.d0); d.style.width = pct(n.d1 - n.d0 + 1); d.style.setProperty('--c', /^#[0-9a-f]{6}$/i.test(n.c || '') ? n.c : DEFAULT_COLOR.period); cell.append(d); });
+  if (stripNeeded()) {   // the Notes row: period notes and how many people are on leave each day
+    const tr = el('tr'), td1 = el('td', 'prm-name'), td2 = el('td', 'prm-tl'), cell = el('div', 'prm-cell'); td1.append(el('b', '', 'Notes'), el('small', '', 'periods and leave'));
+    cell.style.height = (Math.max(1, periods.lanes) * NH + 16) + 'px';
+    leaveRuns().forEach(r => { const d = el('i', 'prm-heat'); d.style.left = pct(r.d0); d.style.width = pct(r.d1 - r.d0 + 1); d.style.opacity = String(0.35 + 0.65 * Math.min(1, r.n / 4)); d.title = r.who.join(', '); if (r.d1 > r.d0) d.textContent = String(r.n); cell.append(d); });
+    periods.out.forEach(x => cell.append(noteEl(x.n, x.lane, true))); td2.append(cell); tr.append(td1, td2); body.append(tr);
+  }
   people.forEach(p => {
-    const pk = pack(p.its), tr = el('tr'), td1 = el('td', 'prm-name'), d = dir.get(p.name);
+    const pk = pack(p.its), pn = p.name === '__none' ? { out: [], lanes: 0 } : personNotes(p.name), nh = pn.lanes * NH, tr = el('tr'), td1 = el('td', 'prm-name'), d = dir.get(p.name);
     td1.append(el('b', '', p.name === '__none' ? 'Unassigned' : p.name)); if (d) td1.append(el('small', '', d.domain));
-    const td2 = el('td', 'prm-tl'), cell = el('div', 'prm-cell'); cell.style.height = (pk.n * H + 4) + 'px';
+    const td2 = el('td', 'prm-tl'), cell = el('div', 'prm-cell'); cell.style.height = (nh + pk.n * H + 4) + 'px'; addBands(cell);
     DAYS.forEach(x => { if (x.dow === 0) { const g = el('i', 'prm-grid'); g.style.left = pct(x.k); cell.append(g); } });
     if (todayK >= 0) { const t = el('i', 'prm-today'); t.style.left = pct(todayK); cell.append(t); }
-    pk.out.forEach(x => cell.append(bar(x.it, x.lane)));
+    pn.out.forEach(x => cell.append(noteEl(x.n, x.lane, false)));
+    pk.out.forEach(x => cell.append(bar(x.it, x.lane, nh)));
     td2.append(cell); tr.append(td1, td2); body.append(tr);
   });
   if (!people.length) { const tr = el('tr'), td = el('td'); td.colSpan = 2; td.textContent = 'No features match the current filters.'; tr.append(td); body.append(tr); }

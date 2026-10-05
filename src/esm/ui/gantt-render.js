@@ -14,6 +14,7 @@ import { offAt, offRange } from './people-picker.js';
 import { afterRender } from '../features/dependencies.js';
 import { vacsOf } from '../pages/vacations.js';
 import { fmtIso, kOfIso } from '../core/shared.js';
+import { drawBands, drawNotesRow, hasPersonNotes, noteNode, personNotes, stripNeeded, NOTE_H } from '../features/timeline-notes.js';
 import { comparePeople, decoratePersonRow, hiddenHere, openHiddenDialog, primaryLane } from '../features/people-rows.js';
 
 /* ---------- render ---------- */
@@ -109,7 +110,10 @@ export function render() {
     const c = el('div', 'wk' + (x.we ? ' we' : '') + (x.k === todayK ? ' today' : '') + (off ? ' offd' : '') + (full ? '' : ' sparse') + (lab ? ' lab' : ''), full || lab ? String(x.d.getUTCDate()) : '');
     c.title = dlabel(x.k) + (x.k === todayK ? ' (today)' : '') + (off ? ' · ' + off.n : ''); put(c, 2, (x.k + 2) + '');
   });
-  const end = renderPeople(g, put, list);
+  const strip = stripNeeded(), r0 = strip ? 4 : 3;
+  if (strip) drawNotesRow(put, 3);
+  const end = renderPeople(g, put, list, r0);
+  drawBands(put, r0, end);
   Object.keys(S.daysoff).forEach(id => {
     const x = S.daysoff[id], r = offRange(x); if (!r || r[1] < 0 || r[0] > NDAYS - 1) return;
     const a = Math.max(0, r[0]), b = Math.min(NDAYS - 1, r[1]);
@@ -134,20 +138,20 @@ export function pack(its) {
   });
   return { out: out, n: Math.max(1, lanes.length) };
 }
-function renderPeople(g, put, list) {
+function renderPeople(g, put, list, r0) {
   const dir = directory(), map = new Map(), H = 34;
   const ensure = n => { if (!map.has(n)) map.set(n, { name: n, its: [] }); return map.get(n); };
   dir.forEach((p, n) => ensure(n));
   list.forEach(it => { if (!it.res.length) ensure('__none').its.push(it); else it.res.forEach(n => ensure(n).its.push(eff(it, n))); });
   let people = [...map.values()].filter(p => p.name !== '__none');
   if (state.person !== 'all') people = people.filter(p => p.name === state.person);
-  else if (filtersActive()) people = people.filter(p => p.its.length);
+  else if (filtersActive()) people = people.filter(p => p.its.length || hasPersonNotes(p.name));
   const hid = hiddenHere();   // rows hidden on this roadmap (only ever empty rows; a new feature brings the person back)
   if (state.person === 'all' && hid.length) people = people.filter(p => p.its.length || !hid.includes(p.name));
   people.sort(comparePeople);   // custom drag order, then squad, then A-Z
-  let r = 3;
+  let r = r0;
   const block = (p, title, sub, color) => {
-    const pk = pack(p.its), n = pk.n, minH = (8 + n * H) + 'px';
+    const pk = pack(p.its), n = pk.n, pnotes = p.name === '__none' ? { out: [], lanes: 0 } : personNotes(p.name), nh = pnotes.lanes * NOTE_H, minH = (8 + nh + n * H) + 'px';
     const counts = new Array(NDAYS).fill(0);
     p.its.forEach(it => { for (let k = it.d0; k <= it.d1; k++) counts[k]++; });
     const over = counts.filter(c => c > 1).length;
@@ -171,8 +175,9 @@ function renderPeople(g, put, list) {
       const o = el('div', 'vac'); o.title = tip; put(o, r, (a + 2) + ' / ' + (b2 + 3));
       const fl = el('div', 'vflag', '⚑'); fl.title = tip; put(fl, r, (a + 2) + ' / ' + (a + 3));
     });
+    pnotes.out.forEach(x => put(noteNode(x.n, x.lane, 'ribbon'), r, (x.n.d0 + 2) + ' / ' + (x.n.d1 + 3)));
     pk.out.forEach(x => {
-      const b = buildBar(x.it, p.name); b.classList.add('pb'); b.style.marginTop = (4 + x.lane * H) + 'px';
+      const b = buildBar(x.it, p.name); b.classList.add('pb'); b.style.marginTop = (4 + nh + x.lane * H) + 'px';
       const hit = pv.filter(v => x.it.d1 >= kOfIso(v.a0) && x.it.d0 <= kOfIso(v.a1 || v.a0));
       if (hit.length) { b.classList.add('vconf'); b.append(el('span', 'vbadge', '⚑ leave')); b.dataset.tipSub += ' · overlaps leave: ' + hit.map(v => fmtIso(v.a0)).join(', '); }
       put(b, r, (x.it.d0 + 2) + ' / ' + (x.it.d1 + 3));
@@ -186,7 +191,7 @@ function renderPeople(g, put, list) {
   });
   const none = map.get('__none');
   if (none && none.its.length && state.person === 'all') block(none, 'Unassigned', 'Features nobody owns yet', 'var(--muted)');
-  if (r === 3) { const e = el('div', 'empty', 'No one matches these filters.'); e.style.gridRow = '3'; g.append(e); r = 4; }
+  if (r === r0) { const e = el('div', 'empty', 'No one matches these filters.'); e.style.gridRow = String(r0); g.append(e); r = r0 + 1; }
   if (canEdit()) {
     const ab = el('button', 'addp', '+ Add person'); ab.type = 'button'; ab.id = 'addp';
     const c = el('div', 'c1 addrow'); c.append(ab); put(c, r, 1);

@@ -61,6 +61,7 @@ function deleteRoadmap(id) {
   const r = S.roadmaps[id]; if (!r) return;
   Object.keys(S.over).forEach(k => { if (!base.has(k) && S.over[k].rm === id) { delete S.over[k]; persist(k); } });
   Object.keys(S.ideas).forEach(iid => { const i = S.ideas[iid]; if (i && !i.col && !i.cfg && i.rm === id && i.st === 'scheduled') saveIdea(iid, { st: 'idea', rm: null, itemId: null }, null); });   // ideas scheduled here go back to the backlog
+  Object.keys(S.ideas).forEach(iid => { const i = S.ideas[iid]; if (i && i.tn && i.rm === id) { delete S.ideas[iid]; write('ideas/' + iid, null); } });   // timeline notes of this roadmap
   delete S.roadmaps[id]; write('roadmaps/' + id, null);
   logAct('roadmap', 'deleted roadmap "' + r.n + '"');
   if (state.rm === id) useRoadmap(H2_ID);

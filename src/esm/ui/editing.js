@@ -5,6 +5,7 @@
  * Dependencies are explicit ES imports; shared mutable state lives in `S` (core/state.js).
  */
 import { S } from '../core/state.js';
+import { openNoteDialog } from '../features/timeline-notes.js';
 import { $, COLORS, PALETTE, isHex, LANES, NDAYS, ROLES, STATUS, canEdit, dayFromIso, dlabel, directory, el, iso, items, rangePatch, state } from '../core/model.js';
 import { lockCheck, trackPres } from '../features/presence.js';
 import { render } from './gantt-render.js';
@@ -90,6 +91,7 @@ export function rowMenu(person, x, y, k) {
   const none = person === '__none';
   openCtx(x, y, c => {
     mi(c, 'Insert bar here', () => addAt(person, k));
+    if (!none) mi(c, 'Add note for ' + person + '…', () => openNoteDialog({ k: 'person', p: person, a0: iso(k), a1: iso(Math.min(NDAYS - 1, k + 13)) }));
     mi(c, 'Add person…', b => openAddPerson(b));
     const id = Object.keys(S.extras).find(i => S.extras[i] && S.extras[i].n === person);
     if (!none && id) mi(c, 'Remove ' + person, () => removePerson(id, person), 'danger');

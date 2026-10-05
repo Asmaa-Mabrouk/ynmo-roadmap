@@ -391,3 +391,24 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   #printrm .prm-sw.prm-st-planned { background: var(--c); } #printrm .prm-sw.prm-st-contract { color: var(--c); }
   #printrm .prm-foot { margin-top: 8px; font-size: 9px; color: #6b7390; }
 }
+
+/* ---------- timeline notes: ribbons, chips, bands, leave strip ---------- */
+.tnote { position: relative; align-self: start; height: 17px; z-index: 2; display: flex; align-items: center; color: var(--ink); font-size: 11px; font-weight: 600; cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none; min-width: 0; }
+.tribbon { background: color-mix(in srgb, var(--c) 22%, var(--surface)); border-top: 1.5px solid var(--c); border-bottom: 1.5px solid var(--c); clip-path: polygon(0 50%, 9px 0, calc(100% - 9px) 0, 100% 50%, calc(100% - 9px) 100%, 9px 100%); padding-inline: 14px; margin-inline: 2px; }
+.tchip { background: color-mix(in srgb, var(--c) 24%, var(--surface)); border: 1.5px solid var(--c); border-radius: 9px; padding-inline: 8px; margin-inline: 2px; height: 18px; }
+.tnote .nt { position: sticky; left: calc(var(--c1) + 10px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.tnote .hd { position: absolute; top: 0; bottom: 0; width: 9px; cursor: ew-resize; } .tnote .hd.l { left: 0; } .tnote .hd.r { right: 0; }
+.tnote:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.tband { z-index: 0; pointer-events: none; background: color-mix(in srgb, var(--c) 9%, transparent); border-inline: 1px dashed color-mix(in srgb, var(--c) 55%, transparent); }
+.notesrow { flex-direction: column; align-items: flex-start; justify-content: center; font-weight: 700; font-size: 12px; } .notesrow small { color: var(--muted); font-weight: 500; font-size: 10.5px; }
+.vheat { align-self: end; height: 8px; margin: 0 1px 3px; border-radius: 3px; background: var(--warn); opacity: calc(.3 + .7 * var(--n)); z-index: 1; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 7px; line-height: 1; overflow: hidden; }
+.vheat span { display: none; }
+.swatch.any { display: inline-block; }
+
+@media print {
+  #printrm .prm-band { position: absolute; top: 0; bottom: 0; z-index: 0; background: color-mix(in srgb, var(--c) 10%, transparent); border-inline: 1px dashed color-mix(in srgb, var(--c) 55%, transparent); }
+  #printrm .prm-note { position: absolute; height: 15px; z-index: 3; display: flex; align-items: center; font-size: 8.5px; font-weight: 700; color: #1c2033; padding-inline: 12px; background: color-mix(in srgb, var(--c) 24%, #fff); border-block: 1.5px solid var(--c); clip-path: polygon(0 50%, 7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%); }
+  #printrm .prm-chip { border: 1.5px solid var(--c); border-radius: 8px; clip-path: none; padding-inline: 7px; }
+  #printrm .prm-note .prm-t { -webkit-line-clamp: 1; }
+  #printrm .prm-heat { position: absolute; bottom: 2px; height: 9px; border-radius: 2px; background: #d97706; color: #fff; font-size: 7px; line-height: 9px; text-align: center; overflow: hidden; }
+}

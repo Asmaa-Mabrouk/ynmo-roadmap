@@ -5,7 +5,7 @@
  * Dependencies are explicit ES imports; shared mutable state lives in `S` (core/state.js).
  */
 import { S } from '../core/state.js';
-import { $, LANES, canEdit, el, items, state, todayK } from '../core/model.js';
+import { $, LANES, NDAYS, canEdit, el, items, state, todayK } from '../core/model.js';
 import { logAct, toast } from '../core/shared.js';
 import { ZOOM, laneOf, render } from '../ui/gantt-render.js';
 import { closeDlg, openDlg } from '../features/safety.js';
@@ -20,6 +20,7 @@ import { useRoadmap } from './roadmaps.js';
 import { boot } from '../app/shell.js';
 import { registerUndo } from '../features/undo-router.js';
 import { onLanesChanged } from '../features/squad-names.js';
+import { periodMenu } from '../features/timeline-notes.js';
 
 /* ---------- ideas: editable, colourable, re-orderable product columns (like Trello) ---------- */
 const COL_COLORS = ['#0d8560', '#6d48a8', '#c04a17', '#5a6db5', '#b8860b', '#c2185b', '#00838f', '#55608a'];
@@ -157,6 +158,7 @@ export function init() {
   const gr = $('grid');
   gr.addEventListener('contextmenu', e => {
     if (!canEdit()) return;
+    if (e.target.closest('.hc, .mh, .wk, .notesrow, .tstrip') && !e.target.closest('.tnote')) { e.preventDefault(); periodMenu(e.clientX, e.clientY, Math.max(0, Math.min(NDAYS - 1, dayAt(e.clientX)))); return; }
     const bar = e.target.closest('.bar');
     if (bar) {
       const it = items().find(i => i.id === bar.dataset.id);
