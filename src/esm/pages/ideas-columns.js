@@ -5,7 +5,7 @@
  * Dependencies are explicit ES imports; shared mutable state lives in `S` (core/state.js).
  */
 import { S } from '../core/state.js';
-import { $, LANES, NDAYS, canEdit, el, items, state, todayK } from '../core/model.js';
+import { $, LANES, NDAYS, canEdit, el, iso, items, state, todayK } from '../core/model.js';
 import { logAct, toast } from '../core/shared.js';
 import { ZOOM, laneOf, render } from '../ui/gantt-render.js';
 import { closeDlg, openDlg } from '../features/safety.js';
@@ -20,7 +20,7 @@ import { useRoadmap } from './roadmaps.js';
 import { boot } from '../app/shell.js';
 import { registerUndo } from '../features/undo-router.js';
 import { onLanesChanged } from '../features/squad-names.js';
-import { periodMenu } from '../features/timeline-notes.js';
+import { periodMenu, openNoteDialog } from '../features/timeline-notes.js';
 
 /* ---------- ideas: editable, colourable, re-orderable product columns (like Trello) ---------- */
 const COL_COLORS = ['#0d8560', '#6d48a8', '#c04a17', '#5a6db5', '#b8860b', '#c2185b', '#00838f', '#55608a'];
@@ -192,6 +192,10 @@ export function init() {
     armed = true; rb.textContent = 'Click again to restore'; clearTimeout(t2); t2 = setTimeout(() => { armed = false; rb.textContent = 'Restore roadmap'; }, 3500);
   });
   render();
+  $('addnote').addEventListener('click', () => {
+    const t = Math.max(0, Math.min(NDAYS - 1, todayK));
+    openNoteDialog({ k: 'period', a0: iso(t), a1: iso(Math.min(NDAYS - 1, t + 6)) });
+  });
   $('exportpdf').addEventListener('click', exportPdf);
   initExtras();
   $('toplogo').src = LOGO;

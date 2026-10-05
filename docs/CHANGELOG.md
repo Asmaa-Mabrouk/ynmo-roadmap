@@ -58,3 +58,7 @@ Viewer role + public read-only links, presence + soft lock, dependencies & miles
 
 ## Foundation
 Gantt roadmap, multiple roadmaps, ideas, resources, vacations, log, Supabase auth with admin approval.
+
+## Notes are easier to find
+- "Add note" button in the roadmap toolbar (period note starting today).
+- Bar right-click menu now has "Add note for <person>…" and "Add period note…", with the bar's dates prefilled.

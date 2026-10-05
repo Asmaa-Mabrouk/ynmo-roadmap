@@ -56,5 +56,15 @@ with sync_playwright() as pw:
     row=A.locator('#pg-resources .tbl tbody tr', has=A.locator('b', has_text=who)).first; row.locator('button[aria-label^="Rename"]').click(); ri=A.locator('#pg-resources .tbl tbody input[aria-label^="New name"]'); ri.fill('Renamed Person'); ri.press('Enter'); A.wait_for_timeout(700)
     A.click('#nav button[data-p="roadmap"]'); A.wait_for_timeout(500)
     ok('renaming the person keeps their note', A.locator('.tribbon').count()==1 and A.evaluate("()=>Object.values(__ynmo.S.ideas).find(i=>i.tn).p")=='Renamed Person')
+    # discoverability: toolbar button and bar menu
+    A.click('#addnote'); A.wait_for_timeout(300)
+    ok('toolbar Add note opens the dialog', A.locator('#xdlg input[type=text]').count()==1)
+    A.keyboard.press('Escape'); A.wait_for_timeout(200)
+    if A.locator('#xdlg').count() and A.locator('#xdlg').is_visible():
+        A.click('#xdlg button:text-is("Cancel")'); A.wait_for_timeout(200)
+    A.locator('.pb').first.click(button='right'); A.wait_for_timeout(250)
+    ok('bar menu has Add note items', A.locator('#ctx :text("Add note for")').count()==1 and A.locator('#ctx :text("Add period note")').count()==1)
+    A.click('#ctx :text("Add period note")'); A.wait_for_timeout(300)
+    ok('bar menu note dialog opens', A.locator('#xdlg input[type=text]').count()==1)
     ok('no page errors', errs==[])
 p=sum(1 for _,c in R if c); print(p,'/',len(R)); sys.exit(0 if p==len(R) else 1)

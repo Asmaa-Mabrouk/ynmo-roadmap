@@ -881,6 +881,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     <label class="sr" for="rmsel">Roadmap</label><select id="rmsel"></select>
     <button class="btn primary" id="add" type="button">New feature</button>
     <button class="btn" id="undo" type="button" disabled>Undo</button>
+    <button class="btn" id="addnote" type="button" title="Add a note to the timeline, such as leave or full-stack focus">Add note</button>
     <button class="btn" id="daysoff" type="button">Days off</button>
     <button class="btn" id="ideasbtn" type="button">Ideas</button>
     <label class="sr" for="zoom">Zoom</label>
@@ -3512,6 +3513,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       }, 3500);
     });
     render();
+    $("addnote").addEventListener("click", () => {
+      const t = Math.max(0, Math.min(NDAYS - 1, todayK));
+      openNoteDialog({ k: "period", a0: iso(t), a1: iso(Math.min(NDAYS - 1, t + 6)) });
+    });
     $("exportpdf").addEventListener("click", exportPdf);
     initExtras();
     $("toplogo").src = LOGO;
@@ -4890,6 +4895,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       mi(c, it.ms ? "Make regular bar" : "Make milestone", () => toggleMilestone(it));
       mi(c, "Depends on…" + (depsOf(it).length ? " (" + depsOf(it).length + ")" : ""), () => openDeps(it));
       mi(c, "Duplicate", () => duplicate(it));
+      if (owner && owner !== "__none") mi(c, "Add note for " + owner + "…", () => openNoteDialog({ k: "person", p: owner, a0: iso(it.d0), a1: iso(it.d1) }));
+      mi(c, "Add period note…", () => openNoteDialog({ k: "period", a0: iso(it.d0), a1: iso(it.d1) }));
       mi(c, "Delete", () => removeItem(it.id), "danger");
     });
   }

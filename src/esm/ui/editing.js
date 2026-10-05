@@ -84,6 +84,8 @@ export function barMenu(it, owner, x, y) {
     mi(c, it.ms ? 'Make regular bar' : 'Make milestone', () => toggleMilestone(it));
     mi(c, 'Depends on…' + (depsOf(it).length ? ' (' + depsOf(it).length + ')' : ''), () => openDeps(it));
     mi(c, 'Duplicate', () => duplicate(it));
+    if (owner && owner !== '__none') mi(c, 'Add note for ' + owner + '…', () => openNoteDialog({ k: 'person', p: owner, a0: iso(it.d0), a1: iso(it.d1) }));
+    mi(c, 'Add period note…', () => openNoteDialog({ k: 'period', a0: iso(it.d0), a1: iso(it.d1) }));
     mi(c, 'Delete', () => removeItem(it.id), 'danger');
   });
 }
