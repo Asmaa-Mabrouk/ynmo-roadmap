@@ -3633,7 +3633,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const save2 = el("button", "btn primary sm", "Save");
     save2.type = "button";
     save2.hidden = true;
-    const saved = el("span", "hint", "");
+    const saved2 = el("span", "hint", "");
     const r2 = el("div", "row2");
     r2.append(stat, score);
     const r3 = el("div", "row2");
@@ -3641,12 +3641,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       const rr = allRoadmaps().find((x) => x.id === i.rm);
       r3.append(el("span", "badge ok", "On " + (rr ? rr.n : "a roadmap")));
     }
-    r3.append(save2, saved);
+    r3.append(save2, saved2);
     const dirty = () => t.value.trim() !== i.t || n.value !== (i.n || "") || +im.value !== (i.im || 2) || +ef.value !== (i.ef || 2);
     const mark = () => {
       const dv = dirty();
       save2.hidden = !dv;
-      saved.textContent = "";
+      saved2.textContent = "";
       score.textContent = "Score " + ideaScore({ im: +im.value, ef: +ef.value });
     };
     [t, n].forEach((x) => x.addEventListener("input", mark));
@@ -6285,7 +6285,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       if (b.k !== "s" && b.k !== "u") return;
       if (!t) return;
       const tg = (b.tags || []).map((n) => ({ n, c: (tagColors || {})[n] || "gray" }));
-      const base3 = { id: b.id, sp: b.sp, squad, person, t, h: "", kind: kindFromTags(b.tags), st: b.st || "planned", dn: b.dn || "", ord: b.ord || 0, tg };
+      const base3 = { id: b.id, sp: b.sp, squad, person, t, h: "", jira: b.jk || "", kind: kindFromTags(b.tags), st: b.st || "planned", dn: b.dn || "", ord: b.ord || 0, tg };
       if (b.k === "s" || !scope) {
         scope = b;
         out.push(Object.assign(base3, { par: "" }));
@@ -7102,6 +7102,220 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     pg.append(body);
   }
 
+  // src/esm/features/jira-merge.js
+  var PROJECT_SQUAD = { DYC: "daycare", FAS: "tifli", AU: "ai" };
+  var DEFAULT_PROJECTS = ["DYC", "FAS", "AU"];
+  var fold2 = (s) => String(s || "").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^\p{L}\p{N} ]+/gu, " ").replace(/\s+/g, " ").trim();
+  function statusOf(t) {
+    if (/wait|block|hold/i.test(t.statusName || "")) return "blocked";
+    return t.cat === "done" ? "done" : t.cat === "indeterminate" ? "progress" : "planned";
+  }
+  function matchPerson(assignee, email, names) {
+    const a = fold2(assignee);
+    if (!a) return "";
+    const byFold = names.map((n) => ({ n, f: fold2(n) }));
+    const exact = byFold.filter((x) => x.f === a);
+    if (exact.length === 1) return exact[0].n;
+    const at = a.split(" ");
+    const part = byFold.filter((x) => {
+      const bt = x.f.split(" "), [s, l] = at.length <= bt.length ? [at, bt] : [bt, at];
+      return s.length >= 1 && s.every((w) => l.includes(w));
+    });
+    if (part.length === 1) return part[0].n;
+    const local = fold2(String(email || "").split("@")[0].replace(/[._-]+/g, " "));
+    if (local) {
+      const m = byFold.filter((x) => x.f === local);
+      if (m.length === 1) return m[0].n;
+    }
+    return "";
+  }
+  var groupEnd = (blocks, i) => {
+    const r = RANK[blocks[i].k];
+    let j = i + 1;
+    if (blocks[i].k === "n" || blocks[i].k === "u") return j;
+    while (j < blocks.length && RANK[blocks[j].k] > r) j++;
+    return j;
+  };
+  function mergeJira(blocks, tickets, o) {
+    const out = { updates: [], inserts: [], added: 0, updated: 0, unassigned: 0, unmatched: [] };
+    const known2 = new Map(blocks.filter((b) => b.jk).map((b) => [b.jk, b]));
+    const fresh = [];
+    tickets.forEach((t) => {
+      const ex = known2.get(t.key), st = statusOf(t);
+      if (ex) {
+        const patch = {};
+        if ((ex.st || "planned") !== st) patch.st = st;
+        const dn = st === "done" ? t.done || ex.dn || "" : "";
+        if ((ex.dn || "") !== dn) patch.dn = dn;
+        if (Object.keys(patch).length) {
+          out.updates.push({ id: ex.id, patch });
+          out.updated++;
+        }
+        return;
+      }
+      if (!t.assignee) {
+        out.unassigned++;
+        return;
+      }
+      const person = matchPerson(t.assignee, t.email, o.names) || t.assignee;
+      if (person === t.assignee && !o.names.includes(person) && !out.unmatched.includes(person)) out.unmatched.push(person);
+      fresh.push({ t, person, sq: o.squadOf(t.project, person) });
+    });
+    const work = blocks.map((b) => Object.assign({}, b));
+    const spec = (t, kind) => ({ k: kind, t: t.t + " (" + t.key + ")", jk: t.key, st: statusOf(t), dn: statusOf(t) === "done" ? t.done || "" : "", tags: /bug/i.test(t.type) ? ["fix"] : [] });
+    const place = (afterId, specs) => {
+      out.inserts.push({ after: afterId, specs });
+      const i = afterId ? work.findIndex((b) => b.id === afterId) : work.length - 1;
+      work.splice(i + 1, 0, ...specs.map((s, n) => Object.assign({ id: "__new" + out.inserts.length + "_" + n }, s)));
+    };
+    const keyOrder = [];
+    fresh.forEach((f) => {
+      const k = f.sq + "|" + f.person;
+      if (!keyOrder.includes(k)) keyOrder.push(k);
+    });
+    keyOrder.forEach((k) => {
+      const [sq, person] = [k.slice(0, k.indexOf("|")), k.slice(k.indexOf("|") + 1)], mine = fresh.filter((f) => f.sq === sq && f.person === person).map((f) => f.t);
+      const keys = new Set(mine.map((t) => t.key));
+      const parents = mine.filter((t) => !(t.sub && t.parent && keys.has(t.parent)));
+      const subsOf = (p2) => mine.filter((t) => t.sub && t.parent === p2.key);
+      const lines = [];
+      parents.forEach((p2) => {
+        lines.push(spec(p2, "s"));
+        subsOf(p2).forEach((c) => lines.push(spec(c, "u")));
+      });
+      let h = work.findIndex((b) => b.k === "h" && b.sq === sq);
+      if (h < 0) {
+        place(work.length ? work[work.length - 1].id : "", [{ k: "h", sq, t: o.squadName(sq) }, { k: "p", t: person }].concat(lines));
+        return;
+      }
+      const he = groupEnd(work, h);
+      let p = -1;
+      for (let i = h + 1; i < he; i++) if (work[i].k === "p" && fold2(work[i].t) === fold2(person)) {
+        p = i;
+        break;
+      }
+      if (p < 0) {
+        place(work[he - 1].id, [{ k: "p", t: person }].concat(lines));
+        return;
+      }
+      place(work[groupEnd(work, p) - 1].id, lines);
+    });
+    out.added = fresh.length;
+    return out;
+  }
+
+  // src/esm/features/jira-pull.js
+  var KEY = "ynmo-jira-projects";
+  var saved = () => {
+    try {
+      return localStorage.getItem(KEY) || "";
+    } catch (e) {
+      return "";
+    }
+  };
+  var remember = (v) => {
+    try {
+      localStorage.setItem(KEY, v);
+    } catch (e) {
+    }
+  };
+  async function why(e) {
+    const c = e && e.context, st = c && c.status;
+    let msg = "";
+    try {
+      if (c && c.json) {
+        const j = await c.json();
+        msg = j && (j.error || j.message) || "";
+      }
+    } catch (x) {
+    }
+    if (!st && e && (e.name === "FunctionsFetchError" || /Failed to send a request/i.test(e.message || ""))) return "Could not reach the Jira function. Most likely `jira-sync` is not deployed on Supabase yet.";
+    if (st === 404) return "The Jira function is not deployed yet (jira-sync). Deploy it in Supabase, then try again.";
+    if (st === 401 || st === 403) return msg && !/Editors only/.test(msg) ? msg : "Not allowed: only signed-in editors and admins can pull from Jira.";
+    return msg || "Jira sync failed" + (e && e.message ? ": " + String(e.message).slice(0, 120) : "") + ".";
+  }
+  function openJiraPull(o) {
+    openDlg("Pull from Jira", (box2) => {
+      box2.append(el("p", "sub", "Adds the tickets of each person to this sprint plan. Nothing is changed in Jira. Pulling again never duplicates a ticket: it only adds new ones and updates statuses."));
+      const pr = el("input");
+      pr.type = "text";
+      pr.value = saved() || DEFAULT_PROJECTS.join(", ");
+      pr.setAttribute("aria-label", "Jira project keys");
+      const mode = el("select");
+      mode.setAttribute("aria-label", "Which Jira sprints");
+      [["active", "Active sprints (running now)"], ["future", "Upcoming sprints (planned, not started)"], ["both", "Active and upcoming"], ["name", "A sprint by name…"]].forEach(([v, t]) => {
+        const op = el("option", "", t);
+        op.value = v;
+        mode.append(op);
+      });
+      const nm = el("input");
+      nm.type = "text";
+      nm.placeholder = "Exactly as in Jira, for example Sprint 228";
+      nm.setAttribute("aria-label", "Jira sprint name");
+      const nmf = fld("Sprint name", nm);
+      nmf.hidden = true;
+      mode.addEventListener("change", () => {
+        nmf.hidden = mode.value !== "name";
+      });
+      const go = el("button", "btn primary", "Pull tickets"), no = el("button", "btn", "Cancel");
+      go.type = no.type = "button";
+      const msg = el("p", "sub");
+      msg.setAttribute("aria-live", "polite");
+      no.addEventListener("click", closeDlg);
+      go.addEventListener("click", async () => {
+        const projects = pr.value.split(/[\s,;]+/).map((x) => x.toUpperCase()).filter(Boolean);
+        if (!projects.length) {
+          msg.textContent = "Type at least one project key, like DYC.";
+          return;
+        }
+        if (mode.value === "name" && !nm.value.trim()) {
+          msg.textContent = "Type the sprint name.";
+          return;
+        }
+        go.disabled = true;
+        msg.textContent = "Asking Jira…";
+        remember(projects.join(", "));
+        try {
+          const r = await sb.functions.invoke("jira-sync", { body: { projects, sprints: mode.value, sprintName: nm.value.trim() } });
+          if (r.error) throw r.error;
+          const issues = r.data && r.data.issues || [];
+          if (!issues.length) {
+            msg.textContent = "Jira returned no tickets for " + projects.join(", ") + " in those sprints.";
+            go.disabled = false;
+            return;
+          }
+          const names = [...directory().keys()];
+          const res = mergeJira(o.blocks(), issues, { names, squadOf: (p, who) => PROJECT_SQUAD[p] || primarySq(who), squadName: o.laneName });
+          res.updates.forEach((u) => o.saveItem(u.id, u.patch));
+          const map = {};
+          res.inserts.forEach((ins, i) => {
+            const ids = o.ed.insert(map[ins.after] || ins.after, ins.specs);
+            ids.forEach((id, n) => {
+              map["__new" + (i + 1) + "_" + n] = id;
+              const s = ins.specs[n];
+              const extra = {};
+              if (s.jk) extra.jk = s.jk;
+              if (s.st && s.st !== "planned") extra.st = s.st;
+              if (s.dn) extra.dn = s.dn;
+              if (Object.keys(extra).length) o.saveItem(id, extra);
+            });
+          });
+          closeDlg();
+          o.ed.redraw();
+          logAct("sprint", "pulled " + issues.length + " Jira ticket" + (issues.length === 1 ? "" : "s") + " into " + o.label + " (" + res.added + " new, " + res.updated + " updated)");
+          notify("Jira: " + res.added + " new, " + res.updated + " updated" + (res.unassigned ? " · " + res.unassigned + " without an assignee skipped" : "") + (res.unmatched.length ? " · not in the team list: " + res.unmatched.slice(0, 4).join(", ") + (res.unmatched.length > 4 ? "…" : "") : ""), "ok");
+        } catch (e) {
+          msg.textContent = await why(e);
+          go.disabled = false;
+        }
+      });
+      const row = el("div", "row");
+      row.append(go, no);
+      box2.append(fld("Jira projects (keys, comma separated)", pr), fld("Which sprints", mode), nmf, msg, row);
+      setTimeout(() => pr.focus(), 0);
+    });
+  }
+
   // src/esm/ui/menu.js
   var menu = null;
   var done = null;
@@ -7513,6 +7727,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         ids.push(id);
         const d = { sp: spId, k: s.k, t: s.t || "", st: "planned", dn: "", tags: (s.tags || []).slice(), ord: ords[n] };
         if (s.sq) d.sq = s.sq;
+        if (s.jk) d.jk = s.jk;
+        if (s.st) d.st = s.st;
+        if (s.dn) d.dn = s.dn;
         putItem(id, d);
         s.tags && s.tags.forEach((t) => ensureTag(spId, t));
       });
@@ -8122,6 +8339,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     ab.disabled = cb.disabled = ro;
     ab.addEventListener("click", () => ed.addSection());
     cb.addEventListener("click", () => carryOver(sp, ed));
+    const jb = el("button", "btn", "Pull from Jira");
+    jb.type = "button";
+    jb.disabled = ro;
+    jb.title = "Add each person's Jira tickets to this plan (read-only)";
+    jb.addEventListener("click", () => openJiraPull({ spId: sp.id, blocks: () => blocksOf(sp.id), ed, saveItem, laneName: (k) => lane(k).n, label: "Sprint " + sp.n }));
     const ub = el("button", "btn", "↶ Undo"), rb = el("button", "btn", "↷ Redo");
     ub.type = rb.type = "button";
     ub.addEventListener("click", () => ed.doUndo("undo"));
@@ -8138,7 +8360,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     unsubBar = U.subscribe(sync2);
     sync2();
     const bar2 = el("div", "row spbar");
-    bar2.append(ab, cb, ub, rb);
+    bar2.append(ab, cb, jb, ub, rb);
     pg.append(dr, bar2, ed);
   }
   function renderSprints() {

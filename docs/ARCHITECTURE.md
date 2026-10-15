@@ -86,3 +86,5 @@ every mutation begins with `canWrite()`, every mutation calls `logAct`, UI strin
 
 - `features/sprint-doc.js` `EXTRA_SECTIONS` (`x_deploy`, `x_quality`): non-product sprint sections, stored as a normal `h` block whose `sq` is that key. `pages/reports.js` adds a report section for them when no product covers them.
 - Bars are always drawn in their product (lane) colour; the per-bar `c` field is kept in old data but ignored.
+
+- Jira: `features/jira-merge.js` (pure merge of tickets into the sprint outline), `features/jira-pull.js` (dialog and apply), Edge Function `jira-sync` (read-only Jira Cloud search).

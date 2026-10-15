@@ -73,3 +73,8 @@ Gantt roadmap, multiple roadmaps, ideas, resources, vacations, log, Supabase aut
 - Removed the "Product colours" toolbar button and the bar colour palette / colour picker. A bar is always drawn in its product's colour (also in the PDF).
 - The bar menu's Product row is the only colour choice: it assigns the epic to a product, and the bar takes that product's colour. Product colours are edited on the Resources page (Products card).
 - Older per-bar colours stay in the data but are no longer shown.
+
+## Pull from Jira
+- Sprint page: "Pull from Jira" adds each person's tickets (projects DYC, FAS, AU by default; active, upcoming or a named sprint) as scopes under the right product section and person. Subtasks become sub-sections, bugs get the fix tag, statuses map from Jira (waiting/blocked statuses = Blocked).
+- Pulling again never duplicates (matched by key); the status and done date follow Jira, your edited text is kept. People are matched to Resources by name, otherwise the Jira name is used. Unassigned tickets are skipped.
+- New Edge Function `supabase/functions/jira-sync` (read-only, editors only; secrets JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN). Logic in `features/jira-merge.js` and `features/jira-pull.js`.

@@ -29,6 +29,14 @@ Troubleshooting: the red banner "Database setup needed" means SQL 06 was not run
 
 The function accepts only signed-in editors/admins, sends **only item titles, Jira keys and status** to Gemini (no names, notes or dates) and never stores anything. If it fails, the app keeps the rule-based draft. Use a paid-tier Gemini project if the report content must not be used for model training.
 
+## 2c. Pull from Jira (Edge Function `jira-sync`)
+Read-only: the function only reads tickets, it never changes Jira.
+1. Create an Atlassian API token (https://id.atlassian.com/manage-api-tokens, "Create API token", set an expiry and note the renewal date).
+2. Supabase > Edge Functions > Secrets: `JIRA_BASE_URL` (for example `https://tatralab.atlassian.net`), `JIRA_EMAIL` (the account the token belongs to), `JIRA_API_TOKEN`.
+3. Deploy: `supabase functions deploy jira-sync` (or create a function named `jira-sync` in the dashboard and paste `supabase/functions/jira-sync/index.ts`).
+4. In a sprint, click "Pull from Jira", keep the projects (`DYC, FAS, AU`), choose Active / Upcoming sprints, and Pull. Tickets become scopes under each person; pulling again only adds new tickets and updates statuses.
+Troubleshooting: "not deployed" = the function is missing; "(401)" = wrong email or token; "(403)" = that account cannot see the project; "not in the team list" = the Jira name did not match a Resources member, so the Jira name was used.
+
 ## 3. Vercel
 Import the GitHub repo, framework *Other*. `vercel.json` sets install `npm ci`, build `node build.mjs --dist`, output `dist/` (index.html + vendor) and the security headers.
 Every push to `main` deploys; Vercel rebuilds from `src/`, the committed `index.html` is only for local use and tests.

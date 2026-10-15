@@ -18,6 +18,7 @@ import { SSTATUS, scopeStatus } from '../features/report-model.js';
 import { EXTRA_SECTIONS, RANK, KIND_NAME, TAG_COLORS, derive, deeper, shallower, nextKind, tagKey, migrate, ordBetween, parseOutline } from '../features/sprint-doc.js';
 import { setupBanner } from './reports.js';
 import { notify } from '../ui/notify.js';
+import { openJiraPull } from '../features/jira-pull.js';
 import { openMenu, closeMenu } from '../ui/menu.js';
 import { crumbs } from '../ui/crumbs.js';
 import { createUndo } from '../features/undo-stack.js';
@@ -168,7 +169,7 @@ function docEditor(sp, ro) {
     undoOf(spId).mark(specs.length > 1 ? 'Add ' + specs.length + ' lines' : 'Add line');
     const all = list(), i = afterId ? all.findIndex(b => b.id === afterId) : all.length - 1, a = i >= 0 ? all[i].ord : undefined, b = i >= 0 && all[i + 1] ? all[i + 1].ord : undefined;
     const ords = ordBetween(a, b, specs.length), ids = [];
-    specs.forEach((s, n) => { const id = uid('si'); ids.push(id); const d = { sp: spId, k: s.k, t: s.t || '', st: 'planned', dn: '', tags: (s.tags || []).slice(), ord: ords[n] }; if (s.sq) d.sq = s.sq; putItem(id, d); s.tags && s.tags.forEach(t => ensureTag(spId, t)); });
+    specs.forEach((s, n) => { const id = uid('si'); ids.push(id); const d = { sp: spId, k: s.k, t: s.t || '', st: 'planned', dn: '', tags: (s.tags || []).slice(), ord: ords[n] }; if (s.sq) d.sq = s.sq; if (s.jk) d.jk = s.jk; if (s.st) d.st = s.st; if (s.dn) d.dn = s.dn; putItem(id, d); s.tags && s.tags.forEach(t => ensureTag(spId, t)); });
     return ids;
   };
   const removeGroup = (b) => {
@@ -400,11 +401,13 @@ function detailView(pg, sp, ro) {
   const ed = docEditor(sp, ro); activeEd = ro ? null : ed;
   const ab = el('button', 'btn primary', '+ Product section'), cb = el('button', 'btn', 'Carry over unfinished'); ab.type = cb.type = 'button'; ab.disabled = cb.disabled = ro;
   ab.addEventListener('click', () => ed.addSection()); cb.addEventListener('click', () => carryOver(sp, ed));
+  const jb = el('button', 'btn', 'Pull from Jira'); jb.type = 'button'; jb.disabled = ro; jb.title = 'Add each person\'s Jira tickets to this plan (read-only)';
+  jb.addEventListener('click', () => openJiraPull({ spId: sp.id, blocks: () => blocksOf(sp.id), ed: ed, saveItem: saveItem, laneName: k => lane(k).n, label: 'Sprint ' + sp.n }));
   const ub = el('button', 'btn', '↶ Undo'), rb = el('button', 'btn', '↷ Redo'); ub.type = rb.type = 'button';
   ub.addEventListener('click', () => ed.doUndo('undo')); rb.addEventListener('click', () => ed.doUndo('redo'));
   const U = undoOf(sp.id), sync = () => { ub.disabled = ro || !U.canUndo(); rb.disabled = ro || !U.canRedo(); ub.title = U.canUndo() ? 'Undo: ' + U.nextUndo() + ' (Ctrl+Z)' : 'Nothing to undo'; rb.title = U.canRedo() ? 'Redo: ' + U.nextRedo() + ' (Ctrl+Shift+Z)' : 'Nothing to redo'; ub.setAttribute('aria-label', ub.title); rb.setAttribute('aria-label', rb.title); };
   if (unsubBar) unsubBar(); unsubBar = U.subscribe(sync); sync();
-  const bar = el('div', 'row spbar'); bar.append(ab, cb, ub, rb); pg.append(dr, bar, ed);
+  const bar = el('div', 'row spbar'); bar.append(ab, cb, jb, ub, rb); pg.append(dr, bar, ed);
 }
 
 export function renderSprints() {

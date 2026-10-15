@@ -34,7 +34,7 @@ export function derive(blocks, tagColors) {
     if (b.k !== 's' && b.k !== 'u') return;
     if (!t) return;
     const tg = (b.tags || []).map(n => ({ n: n, c: (tagColors || {})[n] || 'gray' }));
-    const base = { id: b.id, sp: b.sp, squad: squad, person: person, t: t, h: '', kind: kindFromTags(b.tags), st: b.st || 'planned', dn: b.dn || '', ord: b.ord || 0, tg: tg };
+    const base = { id: b.id, sp: b.sp, squad: squad, person: person, t: t, h: '', jira: b.jk || '', kind: kindFromTags(b.tags), st: b.st || 'planned', dn: b.dn || '', ord: b.ord || 0, tg: tg };
     if (b.k === 's' || !scope) { scope = b; out.push(Object.assign(base, { par: '' })); } else out.push(Object.assign(base, { par: scope.id, kind: kindFromTags(scope.tags) }));
   });
   return out;

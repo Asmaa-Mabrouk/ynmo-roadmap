@@ -58,4 +58,4 @@ Publication includes the doc tables; the client subscribes per table. Presence u
 4. Use `db.collection`-style access via `makeDb()` in a new `src/esm` module; log changes with `logAct`.
 
 
-Note (sprint document): `sprint_items` docs are now blocks `{sp,k,sq,t,st,dn,tags[],ord}` (k = h|p|s|u|n). Rows saved by the first version (`squad/person/par`) are converted once when the sprint is opened. `sprints` docs gain `tags:{name:colour}`. No SQL change.
+Note (sprint document): `sprint_items` docs are now blocks `{sp,k,sq,t,st,dn,tags[],ord}` (k = h|p|s|u|n). Pulled Jira tickets carry `jk` (the Jira key, used to avoid duplicates; shown as the report's Jira reference). Rows saved by the first version (`squad/person/par`) are converted once when the sprint is opened. `sprints` docs gain `tags:{name:colour}`. No SQL change.
