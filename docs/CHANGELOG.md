@@ -68,3 +68,8 @@ Gantt roadmap, multiple roadmaps, ideas, resources, vacations, log, Supabase aut
 - Bars use their product colour by default. A "Product colours" toolbar button (remembered per browser) switches to showing a bar's own colour. The PDF follows the same setting.
 - Bar menu: new "Product" row assigns the epic to a product (sets squad, clears its own colour), so it can be done from the person view.
 - Sprints: the section picker now offers "Deployments" and "Quality scope" next to the products. In the weekly report they get their own section automatically (or tick them under Report settings).
+
+## Product colours only
+- Removed the "Product colours" toolbar button and the bar colour palette / colour picker. A bar is always drawn in its product's colour (also in the PDF).
+- The bar menu's Product row is the only colour choice: it assigns the epic to a product, and the bar takes that product's colour. Product colours are edited on the Resources page (Products card).
+- Older per-bar colours stay in the data but are no longer shown.

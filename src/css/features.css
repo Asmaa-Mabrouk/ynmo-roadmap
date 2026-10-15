@@ -417,4 +417,3 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .prodrow { flex-wrap: wrap; gap: 5px; }
 .pchip.pick { border: 2px solid transparent; cursor: pointer; font-family: inherit; }
 .pchip.pick[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 2px var(--surface) inset; }
-#colorbtn[aria-pressed="true"] { background: var(--brand-soft, #e7f0fb); border-color: var(--brand); }

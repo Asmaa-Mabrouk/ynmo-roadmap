@@ -840,7 +840,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .prodrow { flex-wrap: wrap; gap: 5px; }
 .pchip.pick { border: 2px solid transparent; cursor: pointer; font-family: inherit; }
 .pchip.pick[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 2px var(--surface) inset; }
-#colorbtn[aria-pressed="true"] { background: var(--brand-soft, #e7f0fb); border-color: var(--brand); }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -952,8 +951,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     logsOld: [],
     SHARE: false,
     ghostOn: false,
-    prodColors: true,
-    // bars take their product's colour (a bar's own colour is kept but not shown); toggled by the toolbar button
     undoStack: [],
     baselines: {},
     shares: {},
@@ -1023,69 +1020,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   ];
   var STATUS = { planned: "Planned", decide: "Needs decision", contract: "Waiting on contract", done: "Done" };
   var ROLES = { pm: "PM", dev: "Engineer", qa: "Quality", ux: "UX" };
-  var COLORS = ["p1", "p2", "p3", "p4", "p5", "p6"];
-  var PALETTE = [
-    "#b91c1c",
-    "#dc2626",
-    "#ef4444",
-    "#f87171",
-    "#c2410c",
-    "#ea580c",
-    "#f97316",
-    "#fb923c",
-    "#a16207",
-    "#ca8a04",
-    "#eab308",
-    "#facc15",
-    "#4d7c0f",
-    "#65a30d",
-    "#84cc16",
-    "#a3e635",
-    "#15803d",
-    "#16a34a",
-    "#22c55e",
-    "#4ade80",
-    "#0f766e",
-    "#0d9488",
-    "#14b8a6",
-    "#2dd4bf",
-    "#0e7490",
-    "#0891b2",
-    "#06b6d4",
-    "#22d3ee",
-    "#1d4ed8",
-    "#2563eb",
-    "#3b82f6",
-    "#60a5fa",
-    "#4338ca",
-    "#4f46e5",
-    "#6366f1",
-    "#818cf8",
-    "#6d28d9",
-    "#7c3aed",
-    "#8b5cf6",
-    "#a78bfa",
-    "#a21caf",
-    "#c026d3",
-    "#d946ef",
-    "#e879f9",
-    "#be185d",
-    "#db2777",
-    "#ec4899",
-    "#f472b6",
-    "#1f2937",
-    "#374151",
-    "#6b7280",
-    "#9ca3af"
-  ];
   var isHex = (c) => /^#[0-9a-f]{6}$/i.test(String(c || ""));
-  var barColorCss = (c) => isHex(c) ? c : COLORS.includes(c) ? "var(--" + c + ")" : null;
-  var shownColor = (c, byProduct) => byProduct ? null : barColorCss(c);
-  var onColor = (c) => {
-    if (!isHex(c)) return null;
-    const n = parseInt(c.slice(1), 16), r = n >> 16, g = n >> 8 & 255, b = n & 255;
-    return 0.299 * r + 0.587 * g + 0.114 * b > 165 ? "#14161f" : "#ffffff";
-  };
   var TEAMS = {
     tifli: { pm: ["Emad"], dev: ["Aya Fathy", "Hamid Shahin", "Mario"], qa: ["Mona"], ux: ["Mostafa"] },
     plan: { pm: ["Asmaa", "Engy"], dev: ["Soliman", "Amal", "Waradny"], qa: ["Sherif", "Zahran", "Mwrohan"], ux: ["Saad", "Khalid"] },
@@ -2241,14 +2176,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return b;
   }
   function bar(it, laneIdx, top0) {
-    const l = LANES.find((x) => x.k === it.sq) || LANES[0], own = shownColor(it.c, S.prodColors), col = own || l.c, b = el("div", "prm-bar prm-st-" + it.st + (it.ms ? " prm-ms" : ""));
+    const l = LANES.find((x) => x.k === it.sq) || LANES[0], col = l.c, b = el("div", "prm-bar prm-st-" + it.st + (it.ms ? " prm-ms" : ""));
     b.style.left = pct(it.d0);
     b.style.width = pct(it.d1 - it.d0 + 1);
     b.style.top = (top0 || 0) + laneIdx * H + 3 + "px";
     b.style.height = H - 6 + "px";
     b.style.setProperty("--c", col);
-    const on = col === barColorCss(it.c) ? onColor(it.c) : null;
-    if (on) b.style.setProperty("--on", on);
     const t = (it.st === "done" ? "✓ " : "") + it.t;
     b.append(el("span", "prm-t", t));
     return b;
@@ -3051,27 +2984,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         render();
       });
       anchor.before(gb);
-    }
-    if (anchor && !$("colorbtn")) {
-      try {
-        S.prodColors = localStorage.getItem("ynmo-prodcolors") !== "0";
-      } catch (e) {
-      }
-      const cb = el("button", "btn", "Product colours");
-      cb.type = "button";
-      cb.id = "colorbtn";
-      cb.setAttribute("aria-pressed", String(S.prodColors));
-      cb.title = "On: every bar uses its product colour. Off: bars with their own colour show it.";
-      cb.addEventListener("click", () => {
-        S.prodColors = !S.prodColors;
-        cb.setAttribute("aria-pressed", String(S.prodColors));
-        try {
-          localStorage.setItem("ynmo-prodcolors", S.prodColors ? "1" : "0");
-        } catch (e) {
-        }
-        render();
-      });
-      anchor.before(cb);
     }
     netBar();
     netShow();
@@ -4842,7 +4754,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       mi(c, "Rename", () => startEdit(it, owner));
       mlab(c, "Status");
       Object.keys(STATUS).forEach((k) => mi(c, (it.st === k ? "✓ " : "") + STATUS[k], () => commit(it.id, { st: k })));
-      mlab(c, "Product");
+      mlab(c, "Product (sets the bar colour)");
       const prow = el("div", "mrow prodrow");
       LANES.forEach((l) => {
         const b = el("button", "pchip pick", l.n);
@@ -4856,57 +4768,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         prow.append(b);
       });
       c.append(prow);
-      mlab(c, "Bar color");
-      const row = el("div", "mrow");
-      const def = el("button", "swatch def");
-      def.type = "button";
-      def.title = "Product color";
-      def.setAttribute("aria-label", "Product color");
-      def.setAttribute("aria-pressed", String(!it.c));
-      def.addEventListener("click", () => {
-        closeCtx();
-        commit(it.id, { c: null });
-      });
-      row.append(def);
-      COLORS.forEach((k) => {
-        const b = el("button", "swatch");
-        b.type = "button";
-        b.style.setProperty("--c", "var(--" + k + ")");
-        b.setAttribute("aria-label", "Color " + k.slice(1));
-        b.setAttribute("aria-pressed", String(it.c === k));
-        b.addEventListener("click", () => {
-          closeCtx();
-          commit(it.id, { c: k });
-        });
-        row.append(b);
-      });
-      PALETTE.forEach((h) => {
-        const b = el("button", "swatch sm");
-        b.type = "button";
-        b.style.setProperty("--c", h);
-        b.title = h;
-        b.setAttribute("aria-label", "Color " + h);
-        b.setAttribute("aria-pressed", String(String(it.c || "").toLowerCase() === h));
-        b.addEventListener("click", () => {
-          closeCtx();
-          commit(it.id, { c: h });
-        });
-        row.append(b);
-      });
-      const any = el("label", "swatch any");
-      any.title = "Pick any colour";
-      const ci = el("input");
-      ci.type = "color";
-      ci.value = isHex(it.c) ? it.c : "#2f6fb3";
-      ci.setAttribute("aria-label", "Pick any colour");
-      if (isHex(it.c) && !PALETTE.includes(String(it.c).toLowerCase())) any.classList.add("on");
-      ci.addEventListener("change", () => {
-        closeCtx();
-        commit(it.id, { c: ci.value.toLowerCase() });
-      });
-      any.append(ci);
-      row.append(any);
-      c.append(row);
       mlab(c, it.res.length > 1 && owner ? "Dates for " + owner : "Dates");
       const dr = el("div", "mrow");
       const dateIn = (val, on) => {
@@ -5253,10 +5114,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   }
   window.addEventListener("scroll", hideBarTip, true);
   function buildBar(it, owner) {
-    const l = laneOf(it.sq), own = shownColor(it.c, S.prodColors), col = own || l.c;
+    const l = laneOf(it.sq), col = l.c;
     const bar2 = el("div", "bar st-" + it.st + (canEdit() ? "" : " ro") + (it.ms ? " ms" : ""));
     bar2.style.setProperty("--c", col);
-    if (own && onColor(it.c)) bar2.style.setProperty("--on-bar", onColor(it.c));
     bar2.dataset.person = owner || "";
     bar2.dataset.id = it.id;
     bar2.tabIndex = 0;

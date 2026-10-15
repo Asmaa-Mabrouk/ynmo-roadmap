@@ -7,16 +7,9 @@ with sync_playwright() as pw:
     b=pw.chromium.launch(); ctx=mkctx(b); errs=[]
     A=newpage(ctx,errs); signup(A,'Admin','adm@x.com')
     bar=A.locator('.pb').nth(3); id0=bar.get_attribute('data-id'); bar.scroll_into_view_if_needed(); bar.click(button='right',position={'x':100,'y':12}); A.wait_for_timeout(250)
-    ok('menu offers a wide palette', A.locator('#ctx .swatch').count()>=50 and A.locator('#ctx .swatch.any input[type=color]').count()==1)
-    A.keyboard.press('Escape'); A.click('#colorbtn'); A.wait_for_timeout(250)   # own colours are only drawn when "Product colours" is off
-    bar.click(button='right',position={'x':100,'y':12}); A.wait_for_timeout(250)
-    A.locator('#ctx .swatch[aria-label="Color #2563eb"]').click(); A.wait_for_timeout(400)
-    ok('palette colour applied to the bar', A.evaluate("id=>__ynmo.items().find(i=>i.id===id).c",id0)=='#2563eb' and '37, 99, 235' in A.evaluate("id=>getComputedStyle(document.querySelector('.pb[data-id=\"'+id+'\"]')).backgroundColor",id0))
-    A.locator('.pb[data-id="%s"]'%id0).scroll_into_view_if_needed(); A.locator('.pb[data-id="%s"]'%id0).click(button='right',position={'x':100,'y':12}); A.wait_for_timeout(250)
-    A.locator('#ctx .swatch.any input').evaluate("e=>{e.value='#facc15';e.dispatchEvent(new Event('change',{bubbles:true}))}"); A.wait_for_timeout(400)
-    ok('any colour from the picker applied, text stays readable', A.evaluate("id=>__ynmo.items().find(i=>i.id===id).c",id0)=='#facc15' and A.evaluate("id=>getComputedStyle(document.querySelector('.pb[data-id=\"'+id+'\"]')).color",id0)=='rgb(20, 22, 31)')
-    A.reload(); A.wait_for_timeout(1500); ok('colour survives reload', A.evaluate("id=>__ynmo.items().find(i=>i.id===id).c",id0)=='#facc15')
-    A.evaluate("id=>{__ynmo.S.over[id].c='red;x';__ynmo.render()}",id0); ok('invalid stored colour falls back to the product colour', A.locator('.pb[data-id="%s"]'%id0).count()==1)
+    ok('bar menu has only product colours (no palette, no colour picker, no toolbar toggle)', A.locator('#ctx .swatch').count()==0 and A.locator('#ctx .prodrow .pchip.pick').count()>=3 and A.locator('#colorbtn').count()==0)
+    A.evaluate("id=>__ynmo.commit(id,{c:'#dc2626'})",id0); A.wait_for_timeout(300)
+    ok('a stored own colour is ignored: bar shows its product colour', A.evaluate("id=>{const it=__ynmo.items().find(i=>i.id===id);return document.querySelector('.pb[data-id=\"'+id+'\"]').style.getPropertyValue('--c').trim()===__ynmo.LANES.find(l=>l.k===it.sq).c}",id0))
     # ---- remove member
     busy=A.evaluate("[...__ynmo.directory().keys()].find(n=>__ynmo.items().some(i=>i.res.includes(n)))")
     free=A.evaluate("[...__ynmo.directory().keys()].find(n=>!__ynmo.items().some(i=>i.res.includes(n)))")

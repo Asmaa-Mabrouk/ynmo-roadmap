@@ -63,8 +63,6 @@ export const PALETTE = [
 export const isHex = c => /^#[0-9a-f]{6}$/i.test(String(c || ''));
 /** CSS colour of a stored bar colour (null = the product colour). */
 export const barColorCss = c => (isHex(c) ? c : COLORS.includes(c) ? 'var(--' + c + ')' : null);
-/** Colour a bar is drawn with: its product colour while `byProduct` is on, otherwise its own colour when it has one. */
-export const shownColor = (c, byProduct) => (byProduct ? null : barColorCss(c));
 /** Text colour that stays readable on a bar of colour `c`. */
 export const onColor = c => { if (!isHex(c)) return null; const n = parseInt(c.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255; return (0.299 * r + 0.587 * g + 0.114 * b) > 165 ? '#14161f' : '#ffffff'; };
 
