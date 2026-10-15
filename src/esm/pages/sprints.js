@@ -15,7 +15,7 @@ import { fld, fmtIso, logAct, pageHead, todayIso } from '../core/shared.js';
 import { write } from '../core/saving.js';
 import { openDlg, closeDlg, canWrite } from '../features/safety.js';
 import { SSTATUS, scopeStatus } from '../features/report-model.js';
-import { RANK, KIND_NAME, TAG_COLORS, derive, deeper, shallower, nextKind, tagKey, migrate, ordBetween, parseOutline } from '../features/sprint-doc.js';
+import { EXTRA_SECTIONS, RANK, KIND_NAME, TAG_COLORS, derive, deeper, shallower, nextKind, tagKey, migrate, ordBetween, parseOutline } from '../features/sprint-doc.js';
 import { setupBanner } from './reports.js';
 import { notify } from '../ui/notify.js';
 import { openMenu, closeMenu } from '../ui/menu.js';
@@ -27,7 +27,7 @@ import { state } from '../core/model.js';
 const iso = t => new Date(t).toISOString().slice(0, 10);
 const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const routeId = () => { const m = /^#\/sprints\/(\w+)/.exec(location.hash); return m ? m[1] : null; };
-const lane = k => LANES.find(l => l.k === k) || { k: k, n: k, c: 'var(--brand)' };
+const lane = k => LANES.find(l => l.k === k) || EXTRA_SECTIONS.find(l => l.k === k) || { k: k, n: k, c: 'var(--brand)' };
 const base = sp => { const d = Object.assign({}, S.sprints[sp.id] || sp); delete d.id; return d; };
 const DEFAULT_TAGS = { fix: 'red', support: 'blue' };
 
@@ -191,7 +191,7 @@ function docEditor(sp, ro) {
     const ords = ordBetween(rest[at - 1] ? rest[at - 1].ord : undefined, rest[at] ? rest[at].ord : undefined, g.length); g.forEach((x, n) => saveItem(x.id, { ord: ords[n] }));
     redraw(b.id);
   };
-  const freeLanes = () => { const used = new Set(list().filter(b => b.k === 'h').map(b => b.sq)); return LANES.filter(l => !used.has(l.k)); };
+  const freeLanes = () => { const used = new Set(list().filter(b => b.k === 'h').map(b => b.sq)); return LANES.concat(EXTRA_SECTIONS).filter(l => !used.has(l.k)); };
   const peopleItems = squad => [...directory().values()].sort((a, b) => (b.sqs.has(squad) - a.sqs.has(squad)) || a.name.localeCompare(b.name)).map(p => ({ label: p.name, sub: p.domain, value: p.name }));
   const squadAt = b => { let sq = ''; for (const x of list()) { if (x.k === 'h') sq = x.sq; if (x.id === b.id) break; } return sq; };
 
@@ -201,13 +201,13 @@ function docEditor(sp, ro) {
     onPick: it => { saveItem(b.id, { k: 'p', t: it.value, tags: [] }); const ids = after === false ? [] : insert(b.id, [{ k: 's' }]); notify(it.value + ' added'); redraw(ids[0] || b.id); }, onClose: p => { if (!p) focusLater(b.id); }
   });
   const pickLane = (b, at) => {
-    const fl = freeLanes(); if (!fl.length) { notify('Every product section is already in this sprint', 'info'); focusLater(b.id); return; }
+    const fl = freeLanes(); if (!fl.length) { notify('Every section is already in this sprint', 'info'); focusLater(b.id); return; }
     openMenu(at, fl.map(l => ({ label: l.n, dot: l.c, value: l.k })), {
-      label: 'Choose a product section', onPick: it => { saveItem(b.id, { k: 'h', sq: it.value, t: lane(it.value).n, tags: [] }); const ids = insert(b.id, [{ k: 'p' }]); notify(lane(it.value).n + ' section added'); redraw(ids[0]); }, onClose: p => { if (!p) focusLater(b.id); }
+      label: 'Choose a section (a product, Deployments or Quality scope)', onPick: it => { saveItem(b.id, { k: 'h', sq: it.value, t: lane(it.value).n, tags: [] }); const ids = insert(b.id, [{ k: 'p' }]); notify(lane(it.value).n + ' section added'); redraw(ids[0]); }, onClose: p => { if (!p) focusLater(b.id); }
     });
   };
   const kindMenu = (b, at) => openMenu(at, [
-    { label: 'Product section', sub: 'A product of the report', value: 'h' }, { label: 'Person', sub: 'Who works on it (@)', value: 'p' },
+    { label: 'Product section', sub: 'A product, Deployments or Quality scope', value: 'h' }, { label: 'Person', sub: 'Who works on it (@)', value: 'p' },
     { label: 'Scope', sub: 'A piece of work', value: 's' }, { label: 'Sub-section', sub: 'A step inside a scope', value: 'u' }, { label: 'Note', sub: 'Not in the report', value: 'n' }
   ], {
     label: 'Insert', placeholder: 'Type to filter…', onClose: p => { if (!p) focusLater(b.id); },

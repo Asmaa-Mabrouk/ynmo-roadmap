@@ -5,7 +5,8 @@
  * browser's print dialog, where "Save as PDF" makes the file. The whole timeline is scaled to the page width (A3 landscape), so nothing is cut off.
  * Depends on the DOM and the model only; all text goes in as text nodes.
  */
-import { DAYS, LANES, MGROUPS, NDAYS, STATUS, barColorCss, canEdit, directory, dlabel, el, eff, items, onColor, state, todayK, visible } from '../core/model.js';
+import { S } from '../core/state.js';
+import { DAYS, LANES, MGROUPS, NDAYS, STATUS, shownColor, barColorCss, canEdit, directory, dlabel, el, eff, items, onColor, state, todayK, visible } from '../core/model.js';
 import { curRm } from '../pages/roadmaps.js';
 import { comparePeople, hiddenHere } from '../features/people-rows.js';
 import { pack } from './gantt-render.js';
@@ -27,9 +28,9 @@ function noteEl(n, laneIdx, chip) {
   const b = el('div', 'prm-note ' + (chip ? 'prm-chip' : 'prm-rib')); b.style.left = pct(n.d0); b.style.width = pct(n.d1 - n.d0 + 1); b.style.top = (laneIdx * NH + 2) + 'px'; b.style.setProperty('--c', /^#[0-9a-f]{6}$/i.test(n.c || '') ? n.c : DEFAULT_COLOR[n.k]); b.append(el('span', 'prm-t', n.t)); return b;
 }
 function bar(it, laneIdx, top0) {
-  const l = LANES.find(x => x.k === it.sq) || LANES[0], col = barColorCss(it.c) || l.c, b = el('div', 'prm-bar prm-st-' + it.st + (it.ms ? ' prm-ms' : ''));
+  const l = LANES.find(x => x.k === it.sq) || LANES[0], own = shownColor(it.c, S.prodColors), col = own || l.c, b = el('div', 'prm-bar prm-st-' + it.st + (it.ms ? ' prm-ms' : ''));
   b.style.left = pct(it.d0); b.style.width = pct(it.d1 - it.d0 + 1); b.style.top = ((top0 || 0) + laneIdx * H + 3) + 'px'; b.style.height = (H - 6) + 'px'; b.style.setProperty('--c', col);
-  const on = onColor(it.c); if (on) b.style.setProperty('--on', on);
+  const on = col === barColorCss(it.c) ? onColor(it.c) : null; if (on) b.style.setProperty('--on', on);
   const t = (it.st === 'done' ? '✓ ' : '') + it.t; b.append(el('span', 'prm-t', t));
   return b;
 }

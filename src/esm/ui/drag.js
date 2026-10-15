@@ -16,7 +16,8 @@ function laneBoxes(g) {
     const els = g.querySelectorAll('[data-lane="' + l.k + '"]');
     if (!els.length) return;
     let t = 1e9, b = -1e9;
-    els.forEach(x => { const r = x.getBoundingClientRect(); t = Math.min(t, r.top); b = Math.max(b, r.bottom); });
+    els.forEach(x => { if (x.classList.contains('dragging')) return; const r = x.getBoundingClientRect(); t = Math.min(t, r.top); b = Math.max(b, r.bottom); });
+    if (t > b) return;
     o[l.k] = { t: t, b: b };
   });
   return o;
@@ -28,6 +29,7 @@ function setDrop(g, key) {
 function personBoxes(g) {
   const o = {};
   g.querySelectorAll('[data-person]').forEach(x => {
+    if (x.classList.contains('dragging')) return;   // the moving bar must not stretch its own row's drop zone (that broke dragging upwards)
     const k = x.dataset.person, r = x.getBoundingClientRect();
     if (!o[k]) o[k] = { t: 1e9, b: -1e9 };
     o[k].t = Math.min(o[k].t, r.top); o[k].b = Math.max(o[k].b, r.bottom);

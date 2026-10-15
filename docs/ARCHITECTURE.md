@@ -83,3 +83,6 @@ every mutation begins with `canWrite()`, every mutation calls `logAct`, UI strin
 - Bundled IIFE instead of shipping `<script type=module>` files: keeps one-file deploy and `file://` testing; modules still isolate names and dependencies at source level.
 - Free Supabase email limits require Custom SMTP for production sign-ups.
 - Soft locks are advisory. `merge()` is read-modify-write, not atomic: two people changing *different fields of the same bar* within milliseconds can lose one change. A Postgres function using `jsonb ||` would make it atomic if this ever matters.
+
+- `features/sprint-doc.js` `EXTRA_SECTIONS` (`x_deploy`, `x_quality`): non-product sprint sections, stored as a normal `h` block whose `sq` is that key. `pages/reports.js` adds a report section for them when no product covers them.
+- `S.prodColors` (core/state.js, `ynmo-prodcolors` in localStorage): `shownColor(c, byProduct)` in core/model.js decides whether a bar's own colour is drawn.

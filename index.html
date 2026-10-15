@@ -835,6 +835,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   #printrm .prm-note .prm-t { -webkit-line-clamp: 1; }
   #printrm .prm-heat { position: absolute; bottom: 2px; height: 9px; border-radius: 2px; background: #d97706; color: #fff; font-size: 7px; line-height: 9px; text-align: center; overflow: hidden; }
 }
+
+/* product picker in the bar menu */
+.prodrow { flex-wrap: wrap; gap: 5px; }
+.pchip.pick { border: 2px solid transparent; cursor: pointer; font-family: inherit; }
+.pchip.pick[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 2px var(--surface) inset; }
+#colorbtn[aria-pressed="true"] { background: var(--brand-soft, #e7f0fb); border-color: var(--brand); }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -946,6 +952,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     logsOld: [],
     SHARE: false,
     ghostOn: false,
+    prodColors: true,
+    // bars take their product's colour (a bar's own colour is kept but not shown); toggled by the toolbar button
     undoStack: [],
     baselines: {},
     shares: {},
@@ -1072,6 +1080,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   ];
   var isHex = (c) => /^#[0-9a-f]{6}$/i.test(String(c || ""));
   var barColorCss = (c) => isHex(c) ? c : COLORS.includes(c) ? "var(--" + c + ")" : null;
+  var shownColor = (c, byProduct) => byProduct ? null : barColorCss(c);
   var onColor = (c) => {
     if (!isHex(c)) return null;
     const n = parseInt(c.slice(1), 16), r = n >> 16, g = n >> 8 & 255, b = n & 255;
@@ -2232,13 +2241,13 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return b;
   }
   function bar(it, laneIdx, top0) {
-    const l = LANES.find((x) => x.k === it.sq) || LANES[0], col = barColorCss(it.c) || l.c, b = el("div", "prm-bar prm-st-" + it.st + (it.ms ? " prm-ms" : ""));
+    const l = LANES.find((x) => x.k === it.sq) || LANES[0], own = shownColor(it.c, S.prodColors), col = own || l.c, b = el("div", "prm-bar prm-st-" + it.st + (it.ms ? " prm-ms" : ""));
     b.style.left = pct(it.d0);
     b.style.width = pct(it.d1 - it.d0 + 1);
     b.style.top = (top0 || 0) + laneIdx * H + 3 + "px";
     b.style.height = H - 6 + "px";
     b.style.setProperty("--c", col);
-    const on = onColor(it.c);
+    const on = col === barColorCss(it.c) ? onColor(it.c) : null;
     if (on) b.style.setProperty("--on", on);
     const t = (it.st === "done" ? "✓ " : "") + it.t;
     b.append(el("span", "prm-t", t));
@@ -3042,6 +3051,27 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         render();
       });
       anchor.before(gb);
+    }
+    if (anchor && !$("colorbtn")) {
+      try {
+        S.prodColors = localStorage.getItem("ynmo-prodcolors") !== "0";
+      } catch (e) {
+      }
+      const cb = el("button", "btn", "Product colours");
+      cb.type = "button";
+      cb.id = "colorbtn";
+      cb.setAttribute("aria-pressed", String(S.prodColors));
+      cb.title = "On: every bar uses its product colour. Off: bars with their own colour show it.";
+      cb.addEventListener("click", () => {
+        S.prodColors = !S.prodColors;
+        cb.setAttribute("aria-pressed", String(S.prodColors));
+        try {
+          localStorage.setItem("ynmo-prodcolors", S.prodColors ? "1" : "0");
+        } catch (e) {
+        }
+        render();
+      });
+      anchor.before(cb);
     }
     netBar();
     netShow();
@@ -4812,6 +4842,20 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       mi(c, "Rename", () => startEdit(it, owner));
       mlab(c, "Status");
       Object.keys(STATUS).forEach((k) => mi(c, (it.st === k ? "✓ " : "") + STATUS[k], () => commit(it.id, { st: k })));
+      mlab(c, "Product");
+      const prow = el("div", "mrow prodrow");
+      LANES.forEach((l) => {
+        const b = el("button", "pchip pick", l.n);
+        b.type = "button";
+        b.style.setProperty("--c", l.c);
+        b.setAttribute("aria-pressed", String(it.sq === l.k));
+        b.addEventListener("click", () => {
+          closeCtx();
+          if (it.sq !== l.k) commit(it.id, Object.assign(squadPatch(it, l.k), { c: null }));
+        });
+        prow.append(b);
+      });
+      c.append(prow);
       mlab(c, "Bar color");
       const row = el("div", "mrow");
       const def = el("button", "swatch def");
@@ -5001,10 +5045,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       if (!els.length) return;
       let t = 1e9, b = -1e9;
       els.forEach((x) => {
+        if (x.classList.contains("dragging")) return;
         const r = x.getBoundingClientRect();
         t = Math.min(t, r.top);
         b = Math.max(b, r.bottom);
       });
+      if (t > b) return;
       o[l.k] = { t, b };
     });
     return o;
@@ -5016,6 +5062,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   function personBoxes(g) {
     const o = {};
     g.querySelectorAll("[data-person]").forEach((x) => {
+      if (x.classList.contains("dragging")) return;
       const k = x.dataset.person, r = x.getBoundingClientRect();
       if (!o[k]) o[k] = { t: 1e9, b: -1e9 };
       o[k].t = Math.min(o[k].t, r.top);
@@ -5206,10 +5253,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   }
   window.addEventListener("scroll", hideBarTip, true);
   function buildBar(it, owner) {
-    const l = laneOf(it.sq), col = barColorCss(it.c) || l.c;
+    const l = laneOf(it.sq), own = shownColor(it.c, S.prodColors), col = own || l.c;
     const bar2 = el("div", "bar st-" + it.st + (canEdit() ? "" : " ro") + (it.ms ? " ms" : ""));
     bar2.style.setProperty("--c", col);
-    if (onColor(it.c)) bar2.style.setProperty("--on-bar", onColor(it.c));
+    if (own && onColor(it.c)) bar2.style.setProperty("--on-bar", onColor(it.c));
     bar2.dataset.person = owner || "";
     bar2.dataset.id = it.id;
     bar2.tabIndex = 0;
@@ -6344,6 +6391,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   }
 
   // src/esm/features/sprint-doc.js
+  var EXTRA_SECTIONS = [
+    { k: "x_deploy", n: "Deployments", c: "#475569" },
+    { k: "x_quality", n: "Quality scope", c: "#0d9488" }
+  ];
   var RANK = { h: 0, p: 1, s: 2, u: 3, n: 4 };
   var KIND_NAME = { h: "Product section", p: "Person", s: "Scope", u: "Sub-section", n: "Note" };
   var TAG_COLORS = ["blue", "green", "amber", "red", "purple", "teal", "gray"];
@@ -6807,6 +6858,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     rUI.note = "";
     rUI.err = false;
     const pl = productsOf(cfg()), { road, ka, kb } = roadFor(rep.a, rep.b), sitems = itemsOf(rep.sp);
+    EXTRA_SECTIONS.forEach((x) => {
+      if (sitems.some((i) => i.squad === x.k) && !pl.some((q) => q.squads.includes(x.k))) pl.push({ k: x.k, n: x.n, squads: [x.k] });
+    });
     rep.pl = pl;
     rep.prods = buildProds(pl, rep.prods, sitems, road, ka, kb, rep.a, rep.b);
     rep.srcN = { si: sitems.length, rf: road.filter((r) => Number.isFinite(ka) && r.d0 <= kb && r.d1 >= ka).length };
@@ -6861,7 +6915,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
             p.n = n.value;
           });
           r.append(n);
-          LANES.forEach((l) => {
+          LANES.concat(EXTRA_SECTIONS).forEach((l) => {
             const c = el("input");
             c.type = "checkbox";
             c.checked = p.squads.includes(l.k);
@@ -7330,7 +7384,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const m = /^#\/sprints\/(\w+)/.exec(location.hash);
     return m ? m[1] : null;
   };
-  var lane = (k) => LANES.find((l) => l.k === k) || { k, n: k, c: "var(--brand)" };
+  var lane = (k) => LANES.find((l) => l.k === k) || EXTRA_SECTIONS.find((l) => l.k === k) || { k, n: k, c: "var(--brand)" };
   var base2 = (sp) => {
     const d = Object.assign({}, S.sprints[sp.id] || sp);
     delete d.id;
@@ -7640,7 +7694,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     };
     const freeLanes = () => {
       const used = new Set(list().filter((b) => b.k === "h").map((b) => b.sq));
-      return LANES.filter((l) => !used.has(l.k));
+      return LANES.concat(EXTRA_SECTIONS).filter((l) => !used.has(l.k));
     };
     const peopleItems = (squad) => [...directory().values()].sort((a, b) => b.sqs.has(squad) - a.sqs.has(squad) || a.name.localeCompare(b.name)).map((p) => ({ label: p.name, sub: p.domain, value: p.name }));
     const squadAt = (b) => {
@@ -7668,12 +7722,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const pickLane = (b, at) => {
       const fl = freeLanes();
       if (!fl.length) {
-        notify("Every product section is already in this sprint", "info");
+        notify("Every section is already in this sprint", "info");
         focusLater(b.id);
         return;
       }
       openMenu(at, fl.map((l) => ({ label: l.n, dot: l.c, value: l.k })), {
-        label: "Choose a product section",
+        label: "Choose a section (a product, Deployments or Quality scope)",
         onPick: (it) => {
           saveItem(b.id, { k: "h", sq: it.value, t: lane(it.value).n, tags: [] });
           const ids = insert(b.id, [{ k: "p" }]);
@@ -7686,7 +7740,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       });
     };
     const kindMenu = (b, at) => openMenu(at, [
-      { label: "Product section", sub: "A product of the report", value: "h" },
+      { label: "Product section", sub: "A product, Deployments or Quality scope", value: "h" },
       { label: "Person", sub: "Who works on it (@)", value: "p" },
       { label: "Scope", sub: "A piece of work", value: "s" },
       { label: "Sub-section", sub: "A step inside a scope", value: "u" },

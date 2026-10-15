@@ -19,6 +19,7 @@ import { createUndo } from '../features/undo-stack.js';
 import { registerUndo } from '../features/undo-router.js';
 import { autoGrow, richBar, richBox, showRich, submitOnCtrlEnter } from '../features/rich-text.js';
 import { GROUPS, RSTATUS, aiPayload, applyAi, buildProds, jiraUrl, newManualLine, overall, productsOf, reportToText, ruleSummary } from '../features/report-model.js';
+import { EXTRA_SECTIONS } from '../features/sprint-doc.js';
 
 const SPARK = '<svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8L2.5 17.5l1.8-.7z"/></svg>';
 const rUI = { id: null, busy: false, note: '', err: false, wait: false };
@@ -84,6 +85,8 @@ const say = (rep, txt, bad) => { rUI.note = txt; rUI.err = !!bad; toast(txt); no
 async function sync(rep, ai, isNew) {
   if (rUI.busy) return; rUI.busy = true; rUI.note = ''; rUI.err = false;
   const pl = productsOf(cfg()), { road, ka, kb } = roadFor(rep.a, rep.b), sitems = itemsOf(rep.sp);
+  // Deployments / Quality scope sections get their own report section when no product already covers them.
+  EXTRA_SECTIONS.forEach(x => { if (sitems.some(i => i.squad === x.k) && !pl.some(q => q.squads.includes(x.k))) pl.push({ k: x.k, n: x.n, squads: [x.k] }); });
   rep.pl = pl; rep.prods = buildProds(pl, rep.prods, sitems, road, ka, kb, rep.a, rep.b);
   rep.srcN = { si: sitems.length, rf: road.filter(r => Number.isFinite(ka) && r.d0 <= kb && r.d1 >= ka).length };
   const lines = countLines(rep.prods);
@@ -120,7 +123,7 @@ function settingsDlg() {
       list.textContent = '';
       cur0.forEach((p, i) => {
         const r = el('div', 'rsrow'), n = el('input'); n.value = p.n; n.setAttribute('aria-label', 'Product name'); n.addEventListener('input', () => { p.n = n.value; });
-        r.append(n); LANES.forEach(l => { const c = el('input'); c.type = 'checkbox'; c.checked = p.squads.includes(l.k); c.addEventListener('change', () => { p.squads = p.squads.filter(x => x !== l.k); if (c.checked) p.squads.push(l.k); }); const lb = el('label', 'chk'); lb.append(c, document.createTextNode(' ' + l.n)); r.append(lb); });
+        r.append(n); LANES.concat(EXTRA_SECTIONS).forEach(l => { const c = el('input'); c.type = 'checkbox'; c.checked = p.squads.includes(l.k); c.addEventListener('change', () => { p.squads = p.squads.filter(x => x !== l.k); if (c.checked) p.squads.push(l.k); }); const lb = el('label', 'chk'); lb.append(c, document.createTextNode(' ' + l.n)); r.append(lb); });
         const x = el('button', 'btn sm danger', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Remove product'); x.addEventListener('click', () => { cur0.splice(i, 1); draw(); }); r.append(x); list.append(r);
       });
     };

@@ -22,6 +22,13 @@ export function initExtras() {
     gb.addEventListener('click', () => { S.ghostOn = !S.ghostOn; try { localStorage.setItem('ynmo-ghost', S.ghostOn ? '1' : '0'); } catch (e) { /* storage unavailable */ } render(); });
     anchor.before(gb);
   }
+  if (anchor && !$('colorbtn')) {
+    try { S.prodColors = localStorage.getItem('ynmo-prodcolors') !== '0'; } catch (e) { /* storage unavailable */ }
+    const cb = el('button', 'btn', 'Product colours'); cb.type = 'button'; cb.id = 'colorbtn'; cb.setAttribute('aria-pressed', String(S.prodColors));
+    cb.title = 'On: every bar uses its product colour. Off: bars with their own colour show it.';
+    cb.addEventListener('click', () => { S.prodColors = !S.prodColors; cb.setAttribute('aria-pressed', String(S.prodColors)); try { localStorage.setItem('ynmo-prodcolors', S.prodColors ? '1' : '0'); } catch (e) { /* storage unavailable */ } render(); });
+    anchor.before(cb);
+  }
   netBar(); netShow();
 }
 export function startExtras() {

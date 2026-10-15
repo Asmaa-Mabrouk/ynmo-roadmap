@@ -6,6 +6,11 @@
  * `derive` turns the outline into the flat items the weekly report is built from ({squad, person, par, t, st, kind, tg}).
  */
 
+/** Extra report sections that are not products: pick them like a product section. Their key is used as the `sq` of the section. */
+export const EXTRA_SECTIONS = [
+  { k: 'x_deploy', n: 'Deployments', c: '#475569' },
+  { k: 'x_quality', n: 'Quality scope', c: '#0d9488' }
+];
 export const RANK = { h: 0, p: 1, s: 2, u: 3, n: 4 };
 export const KIND_NAME = { h: 'Product section', p: 'Person', s: 'Scope', u: 'Sub-section', n: 'Note' };
 /** Colours of the tags (CSS classes `tg-<key>`). */

@@ -8,6 +8,8 @@ with sync_playwright() as pw:
     A=newpage(ctx,errs); signup(A,'Admin','adm@x.com')
     bar=A.locator('.pb').nth(3); id0=bar.get_attribute('data-id'); bar.scroll_into_view_if_needed(); bar.click(button='right',position={'x':100,'y':12}); A.wait_for_timeout(250)
     ok('menu offers a wide palette', A.locator('#ctx .swatch').count()>=50 and A.locator('#ctx .swatch.any input[type=color]').count()==1)
+    A.keyboard.press('Escape'); A.click('#colorbtn'); A.wait_for_timeout(250)   # own colours are only drawn when "Product colours" is off
+    bar.click(button='right',position={'x':100,'y':12}); A.wait_for_timeout(250)
     A.locator('#ctx .swatch[aria-label="Color #2563eb"]').click(); A.wait_for_timeout(400)
     ok('palette colour applied to the bar', A.evaluate("id=>__ynmo.items().find(i=>i.id===id).c",id0)=='#2563eb' and '37, 99, 235' in A.evaluate("id=>getComputedStyle(document.querySelector('.pb[data-id=\"'+id+'\"]')).backgroundColor",id0))
     A.locator('.pb[data-id="%s"]'%id0).scroll_into_view_if_needed(); A.locator('.pb[data-id="%s"]'%id0).click(button='right',position={'x':100,'y':12}); A.wait_for_timeout(250)

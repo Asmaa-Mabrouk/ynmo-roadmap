@@ -62,3 +62,9 @@ Gantt roadmap, multiple roadmaps, ideas, resources, vacations, log, Supabase aut
 ## Notes are easier to find
 - "Add note" button in the roadmap toolbar (period note starting today).
 - Bar right-click menu now has "Add note for <person>…" and "Add period note…", with the bar's dates prefilled.
+
+## Drag up, product colours, Deployments / Quality sections
+- Fixed: dragging a bar UP to the person above did nothing. The moving bar stretched its own row's drop zone, so the origin row always won when going up. The dragged bar is now ignored when finding the target row (people and squad views).
+- Bars use their product colour by default. A "Product colours" toolbar button (remembered per browser) switches to showing a bar's own colour. The PDF follows the same setting.
+- Bar menu: new "Product" row assigns the epic to a product (sets squad, clears its own colour), so it can be done from the person view.
+- Sprints: the section picker now offers "Deployments" and "Quality scope" next to the products. In the weekly report they get their own section automatically (or tick them under Report settings).

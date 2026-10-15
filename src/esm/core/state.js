@@ -31,6 +31,7 @@ export const S = {
   logsOld: [],
   SHARE: false,
   ghostOn: false,
+  prodColors: true,   // bars take their product's colour (a bar's own colour is kept but not shown); toggled by the toolbar button
   undoStack: [],
   baselines: {},
   shares: {},

@@ -412,3 +412,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   #printrm .prm-note .prm-t { -webkit-line-clamp: 1; }
   #printrm .prm-heat { position: absolute; bottom: 2px; height: 9px; border-radius: 2px; background: #d97706; color: #fff; font-size: 7px; line-height: 9px; text-align: center; overflow: hidden; }
 }
+
+/* product picker in the bar menu */
+.prodrow { flex-wrap: wrap; gap: 5px; }
+.pchip.pick { border: 2px solid transparent; cursor: pointer; font-family: inherit; }
+.pchip.pick[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 2px var(--surface) inset; }
+#colorbtn[aria-pressed="true"] { background: var(--brand-soft, #e7f0fb); border-color: var(--brand); }
