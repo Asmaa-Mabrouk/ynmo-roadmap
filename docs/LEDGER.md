@@ -1,0 +1,165 @@
+# Ynmo Ledger: Ynmo Roadmaps tool
+
+The running memory of this tool: what is set up, what was decided, and what is still open. Newest entries first.
+It uses the same block format as the Living Ledger (Section 11) of the `ynmo-master` skill, so an entry can be pasted there as is.
+Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skill; this file only records what concerns the Roadmaps tool.
+
+**How to keep it current:** every change request ends with a Ledger Update block. Add it under "Ledger updates", move anything that is no longer open out of "Open items", and put anything that is now stable into "Current state". No secrets, tokens or passwords in this file.
+
+## Current state (2026-10-18)
+
+| Area | State |
+|---|---|
+| Live site | https://ynmo-roadmap.vercel.app (Vercel, auto-deploys `main`) |
+| Repo | `Asmaa-Mabrouk/ynmo-roadmap`, branch `main`; last change `e4131fc` (Reports redesign) |
+| Backend | Supabase project **YNMO_PM**; SQL 01 to 06; Edge Functions `notify-approval`, `weekly-draft`, `jira-sync` (code in repo; deployment status per the open items below) |
+| Owner | Asmaa (Senior PM, TrianglZ, Ynmo ecosystem, Riyadh) |
+| Pages | Roadmap, Ideas, Roadmaps, Sprints, Reports, Resources, Vacations, Capacity, Baselines, Log, Approvals |
+| Tests | `tests/run_all.sh`: last full run 88/88 scenarios and all feature scripts green (`sprints_reports.py` 98) |
+| Jira | Site `tatralab.atlassian.net`; default projects DYC (Daycare), FAS (Tifli), AU (AI). Plan, Warif and Sharjah project keys not known yet. Rovo was considered; the API route was chosen |
+| Google Drive export | Google Cloud project **YNMO PM** (trianglz.com, Internal consent), Drive API on, Web client created for `https://ynmo-roadmap.vercel.app`. Client ID to be pasted in the tool by an admin; the client secret is not used |
+
+## Decisions locked
+
+- **Bars use product colours only.** A bar's product is chosen in the bar menu; there is no toolbar toggle and no per-bar colour picker. Old per-bar colours stay in the data but are ignored.
+- **Sprints and Reports share one design:** a list of cards, then a white sheet page per item with a breadcrumb.
+- **Sprint sections** can also be Deployments and Quality scope (not only products); the weekly report gets a section for them when no product covers them.
+- **Jira is read-only** and pulled on demand ("Pull from Jira"), never written back. Credentials live only in Supabase secrets.
+- **Google Drive export uses each person's own Google sign-in** (scope `drive.file`, token in memory). The OAuth Client ID is public and entered once by an admin; no client secret is used anywhere.
+- **Notes** (person and period) are not part of the sprint export or the report.
+- **Meet / screen sharing:** a shared tab can only be scrolled from the tab itself. This is a browser limit, not a tool bug.
+
+## Open items
+
+1. Google: paste the Client ID in the tool (Sprints > a sprint > Export to Google Docs > Save), then run the first real export and press Allow. Confirm the `drive.file` scope is listed under Data Access. If a "Refused to load the script" error appears, adjust the CSP in `vercel.json`.
+2. Google Cloud: multi-factor sign-in becomes mandatory on **2026-10-20**.
+3. Jira go-live: create the API token (id.atlassian.com/manage-api-tokens, with an expiry), add the secrets `JIRA_BASE_URL=https://tatralab.atlassian.net`, `JIRA_EMAIL`, `JIRA_API_TOKEN` in Supabase, deploy `jira-sync`, then try "Pull from Jira" on a real sprint. Provide the Plan, Warif and Sharjah project keys.
+4. Supabase to-dos: run SQL 04, 05 and 06 where not yet applied; redeploy `weekly-draft` with `GEMINI_API_KEY`; deploy `notify-approval` with SMTP; change the password of the test account; run `sprint-228.sql` if that sprint is still to be seeded. The Supabase login email is not known (the project may sit under another account or organisation).
+5. Slack daily-standup feed into the weekly report: parked until Jira is live. Needs a Slack admin to provide a bot token and the channel ID, and to say whether standups are threads or a Workflow form.
+6. Print / PDF from the redesigned report page has not been checked on paper yet.
+7. Possible later: a presentation mode for meetings; undo for timeline notes; notes in read-only share links.
+8. Not yet tested against the real services: Jira, Google sign-in and Drive.
+
+## Ledger updates
+
+🔄 YNMO LEDGER UPDATE — 2026-10-18
+Request: Update the ledger and the project docs in GitHub
+Surface: cross-cutting (Ynmo Roadmaps internal tool)
+Outcome: Added this ledger; refreshed README, ARCHITECTURE, BUSINESS, DATABASE, SECURITY, DEPLOYMENT, TESTING and CHANGELOG to match the code.
+New facts / decisions locked:
+  • The ledger for this tool lives in `docs/LEDGER.md`; the skill's Section 11 stays the home of product-wide facts.
+Corrections to this skill:
+  • none
+Open / flagged:
+  • See "Open items" above.
+Changelog: Ledger and project docs brought fully up to date.
+
+🔄 YNMO LEDGER UPDATE — 2026-10-18
+Request: Sharing the tool from Google Meet: scrolling the shared tab
+Surface: cross-cutting
+Outcome: Explained the browser limit and workarounds (own window, share the window, "Switch to this tab", PDF or share link); offered a presentation mode.
+New facts / decisions locked:
+  • A shared tab is scrolled only from the tab itself; not a tool bug.
+Corrections to this skill:
+  • none
+Open / flagged:
+  • Does she want a presentation mode, or is there a scroll bug on a specific page while sharing?
+Changelog: Meet tab-sharing scroll limit explained; presentation mode offered.
+
+🔄 YNMO LEDGER UPDATE — 2026-10-18
+Request: Redesign the Reports module like Sprints
+Surface: cross-cutting
+Outcome: Reports is a list of week cards plus a `#/reports/<id>` sheet page with breadcrumb, sprint-style toolbar and product-coloured sections (`e4131fc`). 88/88 e2e and all feature scripts pass.
+New facts / decisions locked:
+  • Report data, AI wording, undo, submit/reopen and settings are unchanged.
+  • Viewers can only open submitted reports.
+Corrections to this skill:
+  • The old single-page Reports layout (report dropdown, gradient hero, boxed product cards) no longer exists.
+Open / flagged:
+  • Check Print / PDF from the new layout.
+Changelog: Reports redesigned: list of week cards, sprint-style report sheet.
+
+🔄 YNMO LEDGER UPDATE — 2026-10-18
+Request: Google Drive export setup and errors (Client ID vs secret; "Could not load Google sign-in")
+Surface: cross-cutting
+Outcome: Guided the Google Cloud setup (project YNMO PM, Drive API, Internal consent, Web client with the production origin). Client ID goes into the tool; the secret is unused and stays private. The sign-in script error was `net::ERR_NETWORK_CHANGED` (a transient connection change), not the CSP or a blocker.
+New facts / decisions locked:
+  • The loader clears its cached promise on failure, so a retry works without a page reload.
+Corrections to this skill:
+  • none
+Open / flagged:
+  • Item 1 and 2 of the open items.
+Changelog: Google Cloud client created; Client ID in tool, secret unused; load error was transient.
+
+🔄 YNMO LEDGER UPDATE — 2026-10-18
+Request: Link a Google Doc and export the sprint plan; fix the sprint page scroll jump
+Surface: cross-cutting
+Outcome: Link field and "Copy for Docs" (`045eb04`), then a real Google Drive export through sign-in (`ae2b2ff`); the scroll jump when clicking beside a line or after a redraw is fixed (`7ffbc1b`).
+New facts / decisions locked:
+  • Export creates a native Google Doc in the user's Drive and updates only docs the tool created; otherwise it makes a new one and links it.
+Corrections to this skill:
+  • none
+Open / flagged:
+  • First real export not yet run; the hover-only scroll jump could not be reproduced (ask for browser and what is hovered if it returns).
+Changelog: Google Docs link and Drive export; sprint page scroll fix.
+
+🔄 YNMO LEDGER UPDATE — 2026-10-15
+Request: Jira sync of each resource's tickets while sprint planning
+Surface: cross-cutting
+Outcome: Read-only `jira-sync` Edge Function and a "Pull from Jira" button on the sprint page (`1936856`): tickets become scopes under each person, subtasks become sub-sections, Bug becomes a `#fix` tag, pulling again only adds new tickets and updates statuses.
+New facts / decisions locked:
+  • API token route chosen over Rovo.
+  • Project to squad mapping: DYC to Daycare, FAS to Tifli, AU to AI, otherwise the person's own squad.
+Corrections to this skill:
+  • none
+Open / flagged:
+  • Jira go-live (open item 3).
+Changelog: Pull from Jira (read-only) added to sprints.
+
+🔄 YNMO LEDGER UPDATE — 2026-10-15
+Request: Drag up between people; sections for Deployments and Quality scope; assign an epic to a product and colour bars by product; no colour buttons
+Surface: cross-cutting
+Outcome: Dragging up now works like dragging down (`e25dec6`); sprints can have Deployments and Quality scope sections; bars are coloured by product, chosen in the bar menu; the Product colours button and the per-bar palette were removed (`fdde6c6`).
+New facts / decisions locked:
+  • Product colours only, no toolbar button.
+Corrections to this skill:
+  • The 52-colour bar palette and rainbow picker (2026-10-01) no longer exist.
+Open / flagged:
+  • none
+Changelog: Upward drag fix; Deployments and Quality sections; product-coloured bars.
+
+🔄 YNMO LEDGER UPDATE — 2026-10-05
+Request: Timeline notes (person ribbons, period notes) and making them easy to find
+Surface: cross-cutting
+Outcome: Person ribbons, period notes with bands and an automatic leave strip, also in the PDF (`0f169d2`); "Add note" toolbar button and bar-menu items (`421e924`).
+New facts / decisions locked:
+  • Notes live in `ideas` meta docs (`tn-…`).
+Corrections to this skill:
+  • none
+Open / flagged:
+  • Notes are not covered by roadmap Undo or by read-only share links.
+Changelog: Timeline notes added and made discoverable.
+
+🔄 YNMO LEDGER UPDATE — 2026-10-01 to 2026-10-04
+Request: Roadmap polish: products module, PDF export, per-person dates, rename, add member, drag auto-scroll
+Surface: cross-cutting
+Outcome: Products can be recoloured, renamed and added (Tifli has its own colour); coloured full-timeline PDF export replaced Share/CSV/Today toolbar buttons (sharing is on each Roadmaps card); per-person dates on shared epics; people and squads can be renamed on Resources; add member lets you choose roadmaps; member removal is confirmed and blocked while features are assigned; the chart scrolls while dragging; hover card on bars.
+New facts / decisions locked:
+  • Sharing a read-only link lives on each card of the Roadmaps page.
+Corrections to this skill:
+  • none
+Open / flagged:
+  • none
+Changelog: Products module, PDF export, per-person dates, rename, add member, drag auto-scroll.
+
+🔄 YNMO LEDGER UPDATE — 2026-09-30
+Request: Sprints and the weekly executive report
+Surface: cross-cutting
+Outcome: Sprint list and per-sprint document editor (sections, people, scopes, sub-sections, tags, paste a list, drag to reorder, per-user undo, editable sprint number), weekly report built from the sprint plan and the roadmap with optional Gemini wording (`weekly-draft`, retries then falls back), rich-text editing, report undo, toasts, searchable dropdowns.
+New facts / decisions locked:
+  • One report per week (a sprint lasts two weeks); executives (viewers) see only submitted reports; editors and admins submit.
+Corrections to this skill:
+  • none
+Open / flagged:
+  • Deploy `weekly-draft` with `GEMINI_API_KEY` (open item 4).
+Changelog: Sprints document editor and weekly executive report with AI wording.

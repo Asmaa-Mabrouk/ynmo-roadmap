@@ -7,7 +7,10 @@ Browser (index.html, vanilla JS)
    │                                              ├─ Auth (email+password, confirm email, reset)
    │                                              ├─ Postgres (+ Row Level Security)  ← real authorization
    │                                              ├─ Realtime (postgres changes + presence)
-   │                                              └─ Edge Function notify-approval  ◄─ Database Webhook (profiles insert)
+   │                                              ├─ Edge Function notify-approval  ◄─ Database Webhook (profiles insert)
+   │                                              ├─ Edge Function weekly-draft  ──► Gemini (report wording, editors only)
+   │                                              └─ Edge Function jira-sync     ──► Jira Cloud (read-only, editors only)
+   └─ Google Identity Services + Drive API (from the browser, scope drive.file, token in memory only)
 Vercel: static hosting + security headers (vercel.json)
 ```
 There is **no application server**. The browser is untrusted; every permission is enforced by Postgres RLS
@@ -27,9 +30,10 @@ src/esm/
   main.js                 entry: imports modules in boot order, exposes window.__ynmo (test/debug handles), calls init()
   core/    model · state · shared · saving · supabase          data model, shared state, persistence, client
   auth/    gate · profile                                       login/sign-up screens, profile
-  ui/      gantt-render · editing · drag · people-picker · export · avatars · dropdowns · loading
-  pages/   roadmaps · ideas · ideas-columns · resources · vacations · log
-  features/ safety · presence · dependencies · log-tools · capacity · baselines · sharing
+  ui/      gantt-render · editing · drag · people-picker · export · export-pdf · avatars · dropdowns · loading · menu · notify · crumbs
+  pages/   roadmaps · ideas · ideas-columns · resources · vacations · log · sprints · reports
+  features/ safety · presence · dependencies · log-tools · capacity · baselines · sharing · people-rows · squad-names · timeline-notes
+            sprint-doc · sprint-export · report-model · rich-text · undo-stack · undo-router · jira-merge · jira-pull · google-drive
   app/     shell · extras-wiring                                navigation, boot, extras start-up
 ```
 | Module | Responsibility |
@@ -42,7 +46,7 @@ src/esm/
 | auth/gate, auth/profile | Auth screens & hash routes; profile load/edit |
 | ui/* | Rendering & interaction primitives (Gantt, editing, drag, pickers, dropdown popup, loader) |
 | pages/* | One file per page; `ideas-columns` adds Trello-style column management |
-| features/* | Cross-cutting features: safety (dialogs, offline, idle logout, permissions), presence, dependencies, log tools, capacity, baselines, sharing, people-rows (row reorder + hide per roadmap), squad-names (editable squad labels), timeline-notes (person/period notes and the leave strip) |
+| features/* | Cross-cutting features: safety (dialogs, offline, idle logout, permissions), presence, dependencies, log tools, capacity, baselines, sharing, people-rows (row reorder + hide per roadmap), squad-names (editable squad labels), timeline-notes (person/period notes and the leave strip), sprint-doc / sprint-export / report-model (sprint outline, Google Docs copy, report rules), jira-merge / jira-pull (Pull from Jira), google-drive (Drive export), rich-text (sanitised formatted text), undo-stack / undo-router (per-user undo for sprints and reports) |
 | app/shell | `showPage`, navigation, `start()`, `boot()`; app/extras-wiring: `initExtras/startExtras` |
 
 **Rules of the module graph**
@@ -72,7 +76,8 @@ approved? `start()` : pending screen → `start()` subscribes to collections, hi
 (presence, idle timer, offline probe).
 
 ## 7. Routing
-Hash routes only (`#/login`, `#/signup`, `#/forgot`, `#/pending`, `#/share/<token>`); app pages are in-memory state (`showPage`).
+Hash routes (`#/login`, `#/signup`, `#/forgot`, `#/pending`, `#/share/<token>`); app pages are in-memory state (`showPage`).
+Sprints and Reports each have a list (`#/sprints`, `#/reports`) and a page per item (`#/sprints/<id>`, `#/reports/<id>`), handled inside their page modules; `showPage` keeps such a deep link on first load and the nav button always returns to the list.
 Static hosting therefore needs no rewrites.
 
 ## 8. Conventions that keep this maintainable
@@ -84,9 +89,10 @@ every mutation begins with `canWrite()`, every mutation calls `logAct`, UI strin
 - Free Supabase email limits require Custom SMTP for production sign-ups.
 - Soft locks are advisory. `merge()` is read-modify-write, not atomic: two people changing *different fields of the same bar* within milliseconds can lose one change. A Postgres function using `jsonb ||` would make it atomic if this ever matters.
 
-- `features/sprint-doc.js` `EXTRA_SECTIONS` (`x_deploy`, `x_quality`): non-product sprint sections, stored as a normal `h` block whose `sq` is that key. `pages/reports.js` adds a report section for them when no product covers them.
-- Bars are always drawn in their product (lane) colour; the per-bar `c` field is kept in old data but ignored.
-
-- Jira: `features/jira-merge.js` (pure merge of tickets into the sprint outline), `features/jira-pull.js` (dialog and apply), Edge Function `jira-sync` (read-only Jira Cloud search).
-
-- Google Docs: `features/sprint-export.js` (`sprintDoc` builds the formatted copy, `docUrl` validates a link, `copyRich` writes HTML + text to the clipboard); the sprint page shows the link field and export button.
+## 10. Sprints, Reports, Jira and Google Docs
+- **Pattern shared by Sprints and Reports:** a list of cards (the whole card is one link, a ⋯ menu has the extras), then a white `.sheet` page with a breadcrumb, a toolbar row and the content. `renderSprints` / `renderReports` read the route from the hash; both keep the scroll position on redraws caused by other people's edits.
+- **Sprint document:** an outline of blocks (`h` product section, `p` person, `s` scope, `u` sub-section, `n` note) in `sprint_items`; pure logic (`derive`, `parseOutline`, `migrate`) in `features/sprint-doc.js`; popup menus `ui/menu.js`. `EXTRA_SECTIONS` (`x_deploy`, `x_quality`) are non-product sections stored as a normal `h` block whose `sq` is that key; `pages/reports.js` adds a report section for them when no product covers them.
+- **Weekly report:** `pages/reports.js` + `features/report-model.js`. One report per week (`rp<yyyymmdd>`), rules build the draft from the sprint plan and the roadmap, optional Gemini wording through `weekly-draft`, per-user undo, submit/reopen, print/PDF. Sections are headed in the product colour (`colOf`).
+- **Colours:** roadmap bars are always drawn in their product (lane) colour; the per-bar `c` field is kept in old data but ignored. A bar's product is set in the bar menu (`squadPatch`).
+- **Jira:** `features/jira-merge.js` (pure merge of tickets into the sprint outline, dedupe by `jk`), `features/jira-pull.js` (dialog and apply), Edge Function `jira-sync` (read-only Jira Cloud search; secrets only in Supabase).
+- **Google Docs:** `features/sprint-export.js` (`sprintDoc` builds the formatted copy, `docUrl` validates a link, `copyRich` writes HTML + text to the clipboard) and `features/google-drive.js` (Google Identity Services token client, Drive multipart upload converted to a native Doc, updates only docs the tool created). The OAuth Client ID is stored once by an admin in `ideas/googlecfg`; there is no client secret in this flow.

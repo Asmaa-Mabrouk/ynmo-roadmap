@@ -4,7 +4,7 @@
 Single environment: Supabase project **YNMO_PM** + Vercel project **ynmo-roadmap** (branch `main` → production).
 
 ## 1. Supabase (one-time)
-1. SQL Editor → run `supabase/sql/01` … `05` in order (each is re-runnable). If 05 prints *Skipped realtime policies*, add them in Dashboard → Realtime → Policies (topic `ynmo-presence`, authenticated, approved).
+1. SQL Editor → run `supabase/sql/01` … `06` in order (each is re-runnable). If 05 prints *Skipped realtime policies*, add them in Dashboard → Realtime → Policies (topic `ynmo-presence`, authenticated, approved).
 2. Auth → Providers → Email: **Confirm email ON**. Auth → URL Configuration: Site URL = production URL; add `…/**` to Redirect URLs.
 3. Auth → SMTP: enable **Custom SMTP** (e.g. Gmail: host `smtp.gmail.com`, port `465`, username = mailbox, password = Google *App password*, minimum interval 30–60 s). The default sender is rate-limited to a few emails/hour → "email rate limit exceeded".
 4. Realtime → Settings: disable *Allow public access*.
@@ -37,6 +37,15 @@ Read-only: the function only reads tickets, it never changes Jira.
 4. In a sprint, click "Pull from Jira", keep the projects (`DYC, FAS, AU`), choose Active / Upcoming sprints, and Pull. Tickets become scopes under each person; pulling again only adds new tickets and updates statuses.
 Troubleshooting: "not deployed" = the function is missing; "(401)" = wrong email or token; "(403)" = that account cannot see the project; "not in the team list" = the Jira name did not match a Resources member, so the Jira name was used.
 
+## 2d. Google Drive export (one-time, an admin)
+Setup done for this tool: Google Cloud project **YNMO PM** under the trianglz.com organisation, Google Drive API enabled, OAuth consent screen **Internal** (so every trianglz.com account can sign in with no Google review), one **Web application** client with the authorised JavaScript origin `https://ynmo-roadmap.vercel.app` and no redirect URIs.
+1. console.cloud.google.com > create or choose a project. APIs & Services > Library > enable "Google Drive API".
+2. OAuth consent (Google Auth platform): Internal (Google Workspace) or External (then click Publish app; the `drive.file` scope needs no Google review). Data Access > add scope `https://www.googleapis.com/auth/drive.file`.
+3. Clients > Create client > Web application. Authorised JavaScript origins: `https://ynmo-roadmap.vercel.app` (exactly: no slash, no path, plus any other address the tool is served from). Leave redirect URIs empty.
+4. Copy the **Client ID** (ends `.apps.googleusercontent.com`). Ignore the client secret: this flow does not use it, so keep it out of the tool, Supabase and chat.
+5. In the tool: Sprints > open a sprint > "Export to Google Docs" (as an admin) > paste the Client ID > Save. Then click Export again and press Allow in the Google window. Everyone else just clicks Export and signs in with their own Google account.
+Troubleshooting: "Could not load Google sign-in" with `net::ERR_NETWORK_CHANGED` in the console = the connection changed during the load, click Export again; `ERR_BLOCKED_BY_CLIENT` = an extension or ad blocker; "Refused to load the script" = fix the CSP in `vercel.json`; "popup blocked" = allow pop-ups for the site; "Google Drive API is not enabled" = step 1; "Error 400: origin_mismatch" = the site address is missing or different in step 3; "access blocked / not verified" = the app is External and still in Testing: Publish it or add the user as a test user. Google Cloud will require multi-factor sign-in for console users (deadline noted in the Ledger).
+
 ## 3. Vercel
 Import the GitHub repo, framework *Other*. `vercel.json` sets install `npm ci`, build `node build.mjs --dist`, output `dist/` (index.html + vendor) and the security headers.
 Every push to `main` deploys; Vercel rebuilds from `src/`, the committed `index.html` is only for local use and tests.
@@ -44,7 +53,7 @@ Every push to `main` deploys; Vercel rebuilds from `src/`, the committed `index.
 ## 4. Release procedure
 ```bash
 npm install && node build.mjs && node build.mjs --check && node lint.mjs
-python3 tests/e2e_qa.py
+tests/run_all.sh        # about 6 minutes: build check, lint, feature scripts, CSP check, 88 scenarios
 git add -A && git commit -m "feat: …" && git push origin main
 ```
 Rollback: Vercel → Deployments → *Promote* a previous one, or `git revert` and push.
@@ -65,10 +74,3 @@ Edit `SUPABASE_URL` / `SUPABASE_KEY` in `src/esm/core/supabase.js` (publishable 
 
 ## 7. Backups
 Supabase daily backups (plan dependent). Baselines are extra in-app checkpoints; CSV export exists for the roadmap; log export for audit.
-
-## 2d. Google Drive export (one-time, an admin)
-1. console.cloud.google.com > create a project. APIs & Services > Library > enable "Google Drive API".
-2. OAuth consent screen: Internal (Google Workspace) or External (then click Publish app; the `drive.file` scope needs no Google review). Add scope `https://www.googleapis.com/auth/drive.file`.
-3. Credentials > Create credentials > OAuth client ID > Web application. Authorized JavaScript origins: `https://ynmo-roadmap.vercel.app` (and any other address the tool is served from).
-4. Copy the Client ID. In the tool: Sprints > open a sprint > "Export to Google Docs" (as an admin) > paste the Client ID > Save. Then click Export again and sign in.
-Troubleshooting: "popup blocked" = allow pop-ups for the site; "Google Drive API is not enabled" = step 1; "Error 400: origin_mismatch" = the site address is missing in step 3; "access blocked / not verified" = the app is External and still in Testing: Publish it or add the user as a test user.

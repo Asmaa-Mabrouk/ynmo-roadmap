@@ -7,13 +7,13 @@ Shared, editable, real-time **Gantt roadmap and planning workspace** for the Ynm
 |---|---|
 | Live | https://ynmo-roadmap.vercel.app |
 | Hosting | Vercel (auto-deploys `main`) |
-| Backend | Supabase (Auth + Postgres + Realtime + one Edge Function) |
+| Backend | Supabase (Auth + Postgres + Realtime + three Edge Functions: `notify-approval`, `weekly-draft`, `jira-sync`) |
 | Stack | Vanilla JS (native ES modules, bundled by esbuild) + CSS, no framework, Supabase JS v2 (vendored) |
 
 ## What it does (30 seconds)
 Plan features on a day-level timeline, assign people, track dependencies/milestones, see capacity vs. time-off,
-keep an ideas board (Trello-style), freeze baselines and compare "plan vs now", plan weekly sprints and auto-draft a per-product executive report, share a read-only link with
-stakeholders, and audit every change with undo. Access is by **admin approval** with **Editor / Viewer** roles.
+keep an ideas board (Trello-style), freeze baselines and compare "plan vs now", plan two-week sprints as a document (pull each person's Jira tickets, export to Google Docs), auto-draft a per-product weekly executive report, share a read-only link with
+stakeholders, export the roadmap as a coloured PDF, and audit every change with undo. Access is by **admin approval** with **Editor / Viewer** roles.
 Full product description: [docs/BUSINESS.md](docs/BUSINESS.md).
 
 ## Quick start
@@ -37,19 +37,20 @@ lint.mjs                  module-graph lint (missing imports / undefined names)
 index.html                GENERATED deploy artifact (committed; Vercel serves it as-is)
 vendor/supabase-js.js     pinned, self-hosted client (no CDN => strict CSP, no supply-chain drift)
 supabase/sql/*.sql        numbered migrations, run in order
-supabase/functions/       notify-approval Edge Function (email admins on new sign-up)
+supabase/functions/       Edge Functions: notify-approval (email admins), weekly-draft (Gemini report wording), jira-sync (read-only Jira Cloud search)
 tests/                    Playwright E2E suite + in-browser fake Supabase
 vercel.json               security headers + CSP
-docs/                     BUSINESS, ARCHITECTURE, DATABASE, SECURITY, DEPLOYMENT, TESTING, CONTRIBUTING, CHANGELOG
+docs/                     BUSINESS, ARCHITECTURE, DATABASE, SECURITY, DEPLOYMENT, TESTING, CONTRIBUTING, CHANGELOG, LEDGER
 ```
 
 ## Daily workflow
 1. Edit files in `src/`. **Never edit `index.html` by hand.**
 2. `node build.mjs` and open `index.html`.
-3. `node lint.mjs` and `python3 tests/e2e_qa.py` (see [docs/TESTING.md](docs/TESTING.md)).
+3. `tests/run_all.sh` (build check, lint, every feature script, CSP check, 88 scenarios; about 6 minutes). See [docs/TESTING.md](docs/TESTING.md).
 4. Commit **both** `src/` and `index.html`; `node build.mjs --check` must pass. Push to `main` to deploy.
 
 ## Documentation map
 - [Business & product](docs/BUSINESS.md) · [Architecture](docs/ARCHITECTURE.md) · [Database](docs/DATABASE.md)
 - [Security](docs/SECURITY.md) · [Deployment & operations](docs/DEPLOYMENT.md)
 - [Testing](docs/TESTING.md) · [Contributing / clean-code rules](docs/CONTRIBUTING.md) · [Changelog](docs/CHANGELOG.md)
+- [Ledger](docs/LEDGER.md): the running decision log, current setup state and open items (the Ynmo Ledger for this tool)

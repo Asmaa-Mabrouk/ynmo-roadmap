@@ -24,14 +24,15 @@ replaced by creating new roadmaps with their own date range.
 ## 4. Feature catalogue (what a user can do)
 | Area | Capability | Business value |
 |---|---|---|
-| **Roadmap** | Day-level Gantt grouped by squad or by person; drag to move/resize; inline edit; filters; zoom; CSV export | Fast planning, one view for everyone |
+| **Roadmap** | Day-level Gantt grouped by squad or by person; drag to move/resize and between people or squads; inline edit; filters; zoom; bars take their product's colour (set the product in the bar menu); timeline notes and automatic leave strip; coloured full-timeline PDF export | Fast planning, one view for everyone |
 | Milestones & dependencies | Diamond milestones; "depends on" arrows; warning when a bar starts before its predecessor ends | Surfaces schedule risk early |
 | **Ideas** | Trello-style board; editable/recolourable/reorderable product columns; drag cards between products; impact/effort score; schedule an idea onto the roadmap | Keeps the backlog next to the plan, no lost ideas |
 | **Roadmaps** | Multiple roadmaps with own date ranges (H2, Q1, …) | Reuse the tool across periods |
 | **Resources** | Team directory (roles, domain, avatar). In the by-person roadmap each row has a drag grip to reorder (shared by everyone) and a ⋯ menu: Move up/down and Hide from this roadmap (empty rows only; other roadmaps and the team are untouched; "Show hidden" brings it back) | Assignment source; rows ordered the way the team thinks |
 | **Vacations** | Leave calendar, affected features per person | Realistic delivery dates |
 | **Capacity** | Weekly heat-map of load vs. availability | Spot over-allocation before it hurts |
-| **Sprints & Weekly report** | Weekly sprint plan typed in the tool; a per-product executive report is auto-drafted from it and the roadmap (optionally worded by AI), edited by the team, submitted by an editor/admin and read by executives | Replaces the manual sprint doc and newsletter |
+| **Sprints** | Two-week sprint plan written like a document (product sections incl. Deployments and Quality scope, people, scopes, sub-sections, notes, tags, drag to reorder, per-user undo). Pull each person's tickets from Jira (read-only), carry over unfinished scopes, export the plan to a real Google Doc in your own Drive | Replaces the manual sprint doc and the copy/paste into Docs |
+| **Weekly report** | One report per week, listed as cards like Sprints. Each opens as a sheet: auto-drafted from the sprint plan and the roadmap (optionally worded by AI), edited by the team, submitted by an editor/admin and read by executives (read-only, submitted only) | Replaces the manual weekly newsletter |
 | **Baselines** | Immutable checkpoints + "Plan vs now" diff and ghost bars on the Gantt | Accountability: what moved since we committed |
 | **Log** | Every change with who/when; export; undo | Audit trail and safe experimentation |
 | **Sharing** | Read-only public link per roadmap; Editor/Viewer access | Stakeholder transparency without accounts |
@@ -43,6 +44,7 @@ replaced by creating new roadmaps with their own date range.
 2. **Planning a period:** create roadmap (range) → add features per squad → assign people → set dependencies → save baseline "Committed".
 3. **Weekly review:** open Roadmap + Capacity → adjust → Baselines → compare "Plan vs now" → share link to leadership.
 4. **Idea to plan:** capture on Ideas board → score → "Schedule" pushes it onto the roadmap as a feature.
+5. **Sprint to executive report:** write the sprint plan (pull Jira tickets) → open the week's report → Sync / Generate with AI → edit → Submit; optionally export the sprint plan to Google Docs.
 
 ## 6. Business rules
 - Approval is mandatory; unconfirmed emails never become admin.
@@ -58,7 +60,7 @@ time to approve a new user.
 
 ## 8. Out of scope today / candidates
 Per-bar allocation % in capacity, card layout for Resources on phones, list view instead of Gantt on small screens,
-notifications for date changes, SSO.
+notifications for date changes, SSO, a presentation mode for sharing in meetings (a shared tab can only be scrolled from the tab itself), the Slack daily-standup feed into the weekly report (parked until Jira is live), undo for timeline notes, notes in read-only share links.
 
 ## Glossary
 **Lane/squad** product team row · **Bar** a feature on the timeline · **Baseline** frozen plan snapshot ·

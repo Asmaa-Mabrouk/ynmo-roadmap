@@ -19,12 +19,12 @@ Generic document tables: `id text PK, data jsonb, updated_at timestamptz, update
 | people | Team directory |
 | daysoff | Time off per person |
 | roadmaps | Roadmap definitions (name, range, kind) |
-| ideas | Idea cards **and** meta docs: `col…` custom columns, `cfg_<lane>` built-in overrides, `colorder`, `peopleorder` (row order of the by-person roadmap), `peoplehide` (people hidden per roadmap: `byRm`), `tn-…` = timeline notes (`tn:true, rm, k:'person'|'period', p, a0, a1 (ISO), t, c`), `squadnames` (`names:{key:name}`, `colors:{key:#rrggbb}`, `extra:[{k,n,c}]` = added products; applied to `LANES` by `features/squad-names.js`) |
+| ideas | Idea cards **and** meta docs: `col…` custom columns, `cfg_<lane>` built-in overrides, `colorder`, `peopleorder` (row order of the by-person roadmap), `peoplehide` (people hidden per roadmap: `byRm`), `tn-…` = timeline notes (`tn:true, rm, k:'person'|'period', p, a0, a1 (ISO), t, c`), `squadnames` (`names:{key:name}`, `colors:{key:#rrggbb}`, `extra:[{k,n,c}]` = added products; applied to `LANES` by `features/squad-names.js`), `reportcfg` (`products:[{k,n,squads}]`, `jira` base address for ticket links), `googlecfg` (`cid` = Google OAuth Client ID, public, set by an admin) |
 | vacations | Leave entries |
 | activity | Append-only audit log (`u` = undo payload, `ref` marks undone entries) |
 | baselines | Frozen snapshots (`active` flag is the only mutable field) |
-| sprints | Sprint definitions `sp<n>`: `{n, a, b, note, secs:{squad:{people:[name]}}}` - `secs` = the product sections and resources added to the sprint (editors/admins only) |
-| sprint_items | Sprint scopes and sub-sections `{sp, squad, person, par, t, h, kind, st, dn, ord}` (`par` = parent scope id, empty for a scope; `h` = rich text; `dn` = date it was marked done) (editors/admins only) |
+| sprints | Sprint definitions `sp<n>`: `{n, a, b, note, tags:{name:colour}, gdoc?, gdocId?}` (`gdoc` = linked Google Doc address, `gdocId` = doc created by the tool through Drive). The first version's `secs` is converted once. Editors/admins only |
+| sprint_items | Outline blocks `{sp, k, sq, t, st, dn, tags[], ord, jk?}`: `k` = h (product section; `sq` = squad key or `x_deploy` / `x_quality`), p (person), s (scope), u (sub-section), n (note, never exported); `jk` = Jira key of a pulled ticket; `dn` = date marked done. Rows from the first version (`squad/person/par`) are converted when the sprint is opened. Editors/admins only |
 | reports | Weekly reports `rp<yyyymmdd of week start>`: `{sp, n, a, b, status draft/submitted, pl, prods{key:{sum,sumEdited,items[]}}, ai, subBy, subAt}`. Editors read/write drafts; approved viewers read `submitted` only; editors and admins submit/reopen; deleting a submitted report is admin-only (RLS in sql/06) |
 | share_links | Public share tokens (readable only by approved members) |
 | profiles | `id → auth.users`, email, name, role, avatar, `approved`, `is_admin`, `access` |
