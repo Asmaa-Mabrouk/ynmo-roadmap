@@ -840,6 +840,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .prodrow { flex-wrap: wrap; gap: 5px; }
 .pchip.pick { border: 2px solid transparent; cursor: pointer; font-family: inherit; }
 .pchip.pick[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 2px var(--surface) inset; }
+
+/* Google Doc link on the sprint page */
+.spgdoc { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 10px; }
+.spgdoc input { flex: 1 1 280px; min-width: 200px; max-width: 460px; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -7316,6 +7320,87 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
   }
 
+  // src/esm/features/sprint-export.js
+  var esc2 = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  function docUrl(v) {
+    const m = /^https:\/\/docs\.google\.com\/document\/(?:u\/\d+\/)?d\/([A-Za-z0-9_-]{15,})/.exec(String(v || "").trim());
+    return m ? "https://docs.google.com/document/d/" + m[1] + "/edit" : "";
+  }
+  var ST = (k) => SSTATUS[k] || SSTATUS.planned;
+  function sprintDoc(sp, blocks, o) {
+    const h = [], t = [];
+    h.push("<h1>Sprint " + esc2(sp.n) + "</h1>", "<p>" + esc2(o.fmt(sp.a) + " to " + o.fmt(sp.b)) + "</p>");
+    t.push("Sprint " + sp.n, o.fmt(sp.a) + " to " + o.fmt(sp.b), "");
+    const list = blocks.filter((b) => b.k && b.k !== "n");
+    let open = 0;
+    const closeLists = (to) => {
+      while (open > to) {
+        h.push("</ul>");
+        open--;
+      }
+    };
+    list.forEach((b, i) => {
+      const txt = String(b.t || "").trim();
+      if (b.k === "h") {
+        closeLists(0);
+        const nm = o.laneName(b.sq) || txt;
+        h.push("<h2>" + esc2(nm) + "</h2>");
+        t.push("", nm.toUpperCase());
+        return;
+      }
+      if (b.k === "p") {
+        closeLists(0);
+        if (txt) {
+          h.push("<h3>" + esc2(txt) + "</h3>");
+          t.push("", txt);
+        }
+        return;
+      }
+      if (!txt) return;
+      const lvl = b.k === "u" ? 2 : 1;
+      if (open < lvl) {
+        while (open < lvl) {
+          h.push("<ul>");
+          open++;
+        }
+      } else closeLists(lvl);
+      const jk = b.jk ? o.jiraUrl(b.jk) : "", tags = (b.tags || []).map((x) => "#" + x).join(" ");
+      const status = " <b>[" + esc2(ST(b.st)) + "]</b>", link = jk ? ' <a href="' + esc2(jk) + '">' + esc2(b.jk) + "</a>" : "";
+      const shown = b.jk ? txt.replace(new RegExp("\\s*\\(" + b.jk.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\)\\s*$"), "") : txt;
+      h.push("<li>" + esc2(shown) + status + (b.jk ? jk ? link : " " + esc2(b.jk) : "") + (tags ? " <i>" + esc2(tags) + "</i>" : "") + "</li>");
+      t.push((lvl === 2 ? "    - " : "  - ") + shown + " [" + ST(b.st) + "]" + (b.jk ? " " + b.jk : "") + (tags ? " " + tags : ""));
+    });
+    closeLists(0);
+    return { html: '<meta charset="utf-8">' + h.join(""), text: t.join("\n") };
+  }
+  async function copyRich(html, text) {
+    try {
+      if (navigator.clipboard && window.ClipboardItem) {
+        await navigator.clipboard.write([new window.ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([text], { type: "text/plain" }) })]);
+        return true;
+      }
+    } catch (e) {
+    }
+    try {
+      const box2 = document.createElement("div");
+      box2.contentEditable = "true";
+      box2.style.cssText = "position:fixed;left:-9999px;top:0;white-space:pre-wrap";
+      box2.innerHTML = html.replace(/^<meta[^>]*>/, "");
+      document.body.append(box2);
+      const r = document.createRange();
+      r.selectNodeContents(box2);
+      const s = window.getSelection();
+      s.removeAllRanges();
+      s.addRange(r);
+      const ok = document.execCommand("copy");
+      s.removeAllRanges();
+      box2.remove();
+      return !!ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
   // src/esm/ui/menu.js
   var menu = null;
   var done = null;
@@ -8039,7 +8124,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         x.removeEventListener("pointermove", mv);
         x.removeEventListener("pointerup", up);
         x.removeEventListener("pointercancel", cancel);
-        document.removeEventListener("keydown", esc2, true);
+        document.removeEventListener("keydown", esc3, true);
         document.body.classList.remove("dragging");
         line.remove();
       };
@@ -8077,7 +8162,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         end();
         setPicked(null);
       };
-      const esc2 = (ev) => {
+      const esc3 = (ev) => {
         if (ev.key === "Escape") {
           ev.preventDefault();
           cancel();
@@ -8086,7 +8171,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       x.addEventListener("pointermove", mv);
       x.addEventListener("pointerup", up);
       x.addEventListener("pointercancel", cancel);
-      document.addEventListener("keydown", esc2, true);
+      document.addEventListener("keydown", esc3, true);
     }
     function blockRow(b, c, info) {
       const r = el("div", "blk k-" + b.k);
@@ -8361,7 +8446,46 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     sync2();
     const bar2 = el("div", "row spbar");
     bar2.append(ab, cb, jb, ub, rb);
-    pg.append(dr, bar2, ed);
+    const gd = el("div", "spgdoc"), gi = el("input");
+    gi.type = "url";
+    gi.placeholder = "Paste a Google Doc link (optional)";
+    gi.value = sp.gdoc || "";
+    gi.disabled = ro;
+    gi.setAttribute("aria-label", "Google Doc link");
+    const eb = el("button", "btn", "Export to Google Docs"), ob = el("button", "btn", "Open linked doc");
+    eb.type = ob.type = "button";
+    ob.hidden = !sp.gdoc;
+    eb.title = "Copies the sprint plan as formatted text and opens the doc. Press Ctrl/Cmd+V there.";
+    gi.addEventListener("change", () => {
+      const v = gi.value.trim(), u = v ? docUrl(v) : "";
+      if (v && !u) {
+        notify("That is not a Google Docs link (it should start with https://docs.google.com/document/)", "err");
+        gi.value = sp.gdoc || "";
+        return;
+      }
+      if ((sp.gdoc || "") === u) return;
+      const cur2 = Object.assign({ id: sp.id }, S.sprints[sp.id]);
+      const d = Object.assign(base2(cur2), { gdoc: u });
+      if (!u) delete d.gdoc;
+      saveSprint(sp.id, d);
+      sp.gdoc = u;
+      gi.value = u;
+      ob.hidden = !u;
+      logAct("sprint", (u ? "linked a Google Doc to" : "unlinked the Google Doc from") + " Sprint " + sp.n);
+      notify(u ? "Google Doc linked" : "Google Doc unlinked");
+    });
+    ob.addEventListener("click", () => {
+      if (sp.gdoc) window.open(sp.gdoc, "_blank", "noopener");
+    });
+    eb.addEventListener("click", async () => {
+      const out = sprintDoc(Object.assign({ n: sp.n, a: sp.a, b: sp.b }), blocksOf(sp.id), { laneName: (k) => lane(k).n, jiraUrl: (k) => jiraUrl((S.ideas.reportcfg || {}).jira, k), fmt: fmtIso });
+      window.open(sp.gdoc || "https://docs.new", "_blank", "noopener");
+      const ok = await copyRich(out.html, out.text);
+      notify(ok ? "Sprint " + sp.n + " copied. Click in the Google Doc and press Ctrl/Cmd+V." : "Could not copy. Select the plan on this page and copy it by hand.", ok ? "ok" : "err");
+      if (ok) logAct("sprint", "exported Sprint " + sp.n + " to Google Docs");
+    });
+    gd.append(gi, eb, ob);
+    pg.append(dr, bar2, gd, ed);
   }
   function renderSprints() {
     const pg = $("pg-sprints");

@@ -88,3 +88,5 @@ every mutation begins with `canWrite()`, every mutation calls `logAct`, UI strin
 - Bars are always drawn in their product (lane) colour; the per-bar `c` field is kept in old data but ignored.
 
 - Jira: `features/jira-merge.js` (pure merge of tickets into the sprint outline), `features/jira-pull.js` (dialog and apply), Edge Function `jira-sync` (read-only Jira Cloud search).
+
+- Google Docs: `features/sprint-export.js` (`sprintDoc` builds the formatted copy, `docUrl` validates a link, `copyRich` writes HTML + text to the clipboard); the sprint page shows the link field and export button.

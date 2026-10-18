@@ -78,3 +78,8 @@ Gantt roadmap, multiple roadmaps, ideas, resources, vacations, log, Supabase aut
 - Sprint page: "Pull from Jira" adds each person's tickets (projects DYC, FAS, AU by default; active, upcoming or a named sprint) as scopes under the right product section and person. Subtasks become sub-sections, bugs get the fix tag, statuses map from Jira (waiting/blocked statuses = Blocked).
 - Pulling again never duplicates (matched by key); the status and done date follow Jira, your edited text is kept. People are matched to Resources by name, otherwise the Jira name is used. Unassigned tickets are skipped.
 - New Edge Function `supabase/functions/jira-sync` (read-only, editors only; secrets JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN). Logic in `features/jira-merge.js` and `features/jira-pull.js`.
+
+## Google Docs link and export (sprint page)
+- A "Google Doc link" field on each sprint (saved on the sprint as `gdoc`, only Google Docs links accepted) and an "Open linked doc" button.
+- "Export to Google Docs": copies the sprint plan as formatted text (title, product headings, person headings, scopes and sub-steps as lists, status, tags, Jira keys as links when the report's Jira address is set) and opens the linked doc, or a new Google Doc (docs.new). Paste once with Ctrl/Cmd+V. Free notes are not exported.
+- No Google sign-in is needed. One-click automatic export would need a Google Cloud OAuth client (not set up).

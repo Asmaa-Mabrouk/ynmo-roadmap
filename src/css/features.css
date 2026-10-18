@@ -417,3 +417,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .prodrow { flex-wrap: wrap; gap: 5px; }
 .pchip.pick { border: 2px solid transparent; cursor: pointer; font-family: inherit; }
 .pchip.pick[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 2px var(--surface) inset; }
+
+/* Google Doc link on the sprint page */
+.spgdoc { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 10px; }
+.spgdoc input { flex: 1 1 280px; min-width: 200px; max-width: 460px; }

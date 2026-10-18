@@ -19,6 +19,8 @@ import { EXTRA_SECTIONS, RANK, KIND_NAME, TAG_COLORS, derive, deeper, shallower,
 import { setupBanner } from './reports.js';
 import { notify } from '../ui/notify.js';
 import { openJiraPull } from '../features/jira-pull.js';
+import { copyRich, docUrl, sprintDoc } from '../features/sprint-export.js';
+import { jiraUrl } from '../features/report-model.js';
 import { openMenu, closeMenu } from '../ui/menu.js';
 import { crumbs } from '../ui/crumbs.js';
 import { createUndo } from '../features/undo-stack.js';
@@ -407,7 +409,24 @@ function detailView(pg, sp, ro) {
   ub.addEventListener('click', () => ed.doUndo('undo')); rb.addEventListener('click', () => ed.doUndo('redo'));
   const U = undoOf(sp.id), sync = () => { ub.disabled = ro || !U.canUndo(); rb.disabled = ro || !U.canRedo(); ub.title = U.canUndo() ? 'Undo: ' + U.nextUndo() + ' (Ctrl+Z)' : 'Nothing to undo'; rb.title = U.canRedo() ? 'Redo: ' + U.nextRedo() + ' (Ctrl+Shift+Z)' : 'Nothing to redo'; ub.setAttribute('aria-label', ub.title); rb.setAttribute('aria-label', rb.title); };
   if (unsubBar) unsubBar(); unsubBar = U.subscribe(sync); sync();
-  const bar = el('div', 'row spbar'); bar.append(ab, cb, jb, ub, rb); pg.append(dr, bar, ed);
+  const bar = el('div', 'row spbar'); bar.append(ab, cb, jb, ub, rb);
+  // Google Docs: link a doc to this sprint, and export the plan to it (copy as formatted text, open the doc, paste once)
+  const gd = el('div', 'spgdoc'), gi = el('input'); gi.type = 'url'; gi.placeholder = 'Paste a Google Doc link (optional)'; gi.value = sp.gdoc || ''; gi.disabled = ro; gi.setAttribute('aria-label', 'Google Doc link');
+  const eb = el('button', 'btn', 'Export to Google Docs'), ob = el('button', 'btn', 'Open linked doc'); eb.type = ob.type = 'button'; ob.hidden = !sp.gdoc;
+  eb.title = 'Copies the sprint plan as formatted text and opens the doc. Press Ctrl/Cmd+V there.';
+  gi.addEventListener('change', () => {
+    const v = gi.value.trim(), u = v ? docUrl(v) : ''; if (v && !u) { notify('That is not a Google Docs link (it should start with https://docs.google.com/document/)', 'err'); gi.value = sp.gdoc || ''; return; }
+    if ((sp.gdoc || '') === u) return; const cur = Object.assign({ id: sp.id }, S.sprints[sp.id]); const d = Object.assign(base(cur), { gdoc: u }); if (!u) delete d.gdoc;
+    saveSprint(sp.id, d); sp.gdoc = u; gi.value = u; ob.hidden = !u; logAct('sprint', (u ? 'linked a Google Doc to' : 'unlinked the Google Doc from') + ' Sprint ' + sp.n); notify(u ? 'Google Doc linked' : 'Google Doc unlinked');
+  });
+  ob.addEventListener('click', () => { if (sp.gdoc) window.open(sp.gdoc, '_blank', 'noopener'); });
+  eb.addEventListener('click', async () => {
+    const out = sprintDoc(Object.assign({ n: sp.n, a: sp.a, b: sp.b }), blocksOf(sp.id), { laneName: k => lane(k).n, jiraUrl: k => jiraUrl((S.ideas.reportcfg || {}).jira, k), fmt: fmtIso });
+    window.open(sp.gdoc || 'https://docs.new', '_blank', 'noopener');
+    const ok = await copyRich(out.html, out.text);
+    notify(ok ? 'Sprint ' + sp.n + ' copied. Click in the Google Doc and press Ctrl/Cmd+V.' : 'Could not copy. Select the plan on this page and copy it by hand.', ok ? 'ok' : 'err'); if (ok) logAct('sprint', 'exported Sprint ' + sp.n + ' to Google Docs');
+  });
+  gd.append(gi, eb, ob); pg.append(dr, bar, gd, ed);
 }
 
 export function renderSprints() {
