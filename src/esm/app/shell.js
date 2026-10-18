@@ -39,7 +39,7 @@ export function showPage(p) {
   PAGES.forEach(x => { $('pg-' + x[0]).hidden = x[0] !== p; });
   document.querySelectorAll('#nav button').forEach(b => { if (b.dataset.p === p) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   const pt = $('ptitle'); if (pt) pt.textContent = (PAGES.find(x => x[0] === p) || [0, ''])[1];
-  if (location.hash !== '#/' + p && !(p === 'sprints' && /^#\/sprints\//.test(location.hash))) window.history.replaceState(null, '', '#/' + p);
+  if (location.hash !== '#/' + p && !((p === 'sprints' || p === 'reports') && new RegExp('^#/' + p + '/').test(location.hash))) window.history.replaceState(null, '', '#/' + p);
   renderPage(p);
 }
 const NAV_ICONS = {

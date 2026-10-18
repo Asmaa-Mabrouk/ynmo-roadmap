@@ -567,7 +567,7 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .rsets .rsrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
 .rtitle { font-size: 1.1rem; margin: 4px 0 10px; }
 @media print {
-  body.print-report .rail, body.print-report .topbar, body.print-report .pghead, body.print-report .spbar, body.print-report .rtools, body.print-report .page:not(#pg-reports), body.print-report .umenu, body.print-report #save { display: none !important; }
+  body.print-report .rail, body.print-report .topbar, body.print-report .pghead, body.print-report .spbar, body.print-report .rtools, body.print-report .crumbs, body.print-report .rbar, body.print-report .rnote, body.print-report .page:not(#pg-reports), body.print-report .umenu, body.print-report #save { display: none !important; }
   body.print-report main, body.print-report #pg-reports { display: block !important; margin: 0; padding: 0; }
   body.print-report .rprod { break-inside: avoid; box-shadow: none; }
   body.print-report .rline button, body.print-report .rline .spsel:not(.rst-on):not([class*="rst-"]) { display: none; }
@@ -718,9 +718,9 @@ span.tgchip { cursor: default; margin-inline-start: 6px; }
 .sdoc .stp.sst-done { background: #d5efe2; color: #1d7a52; } .sdoc .stp.sst-blocked { background: #fbe6c4; color: #8a5208; }
 
 /* ---------- sprint page = a white document page (Notion-like) ---------- */
-body:has(#pg-sprints.sheet:not([hidden])) { background: #fff; }
-body:has(#pg-sprints.sheet:not([hidden]))::before { display: none; }
-#pg-sprints.sheet { max-width: 900px; margin-inline: auto; width: 100%; padding-inline: 40px; gap: 10px; background: #fff; }
+body:has(#pg-sprints.sheet:not([hidden])), body:has(#pg-reports.sheet:not([hidden])) { background: #fff; }
+body:has(#pg-sprints.sheet:not([hidden]))::before, body:has(#pg-reports.sheet:not([hidden]))::before { display: none; }
+#pg-sprints.sheet, #pg-reports.sheet { max-width: 900px; margin-inline: auto; width: 100%; padding-inline: 40px; gap: 10px; background: #fff; }
 #pg-sprints.sheet .sdoc { padding: 0 0 120px; margin-top: 18px; }
 .sdoc .blk { padding: 2px 4px; }
 .sdoc .blk:hover { background: transparent; }
@@ -739,7 +739,7 @@ body:has(#pg-sprints.sheet:not([hidden]))::before { display: none; }
 .sdoc .blk:hover .blkh, .sdoc .blkh:focus-visible { opacity: 1; }
 .sdoc .blkh:hover { background: rgba(120, 130, 160, .14); color: #46506e; }
 .sdoc .blk.k-h .blkh { top: 12px; }
-@media (max-width: 720px) { #pg-sprints.sheet { padding-inline: 16px; } .sdoc .blkh { opacity: 1; inset-inline-start: -14px; } }
+@media (max-width: 720px) { #pg-sprints.sheet, #pg-reports.sheet { padding-inline: 16px; } .sdoc .blkh { opacity: 1; inset-inline-start: -14px; } }
 
 /* ---------- picked line + drag to move ---------- */
 .sdoc { position: relative; }
@@ -848,6 +848,54 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .gdexp { display: inline-flex; align-items: center; gap: 7px; }
 .gdi { width: 18px; height: 16px; flex: none; }
 .gsteps { margin: 6px 0 12px 18px; padding: 0; display: grid; gap: 6px; font-size: 13.5px; }
+
+/* ---------- weekly report: same design as Sprints (list of cards, then a white sheet) ---------- */
+.pghead .acts { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.rpcard .rpstat { display: flex; gap: 8px; align-items: center; }
+.chip.rpst.sub { color: #1d7a52; border-color: #2e9d6b; background: #e6f5ee; }
+.chip.rpst.draft { color: #a8630a; border-color: #e5a513; background: #fdf3dc; }
+#pg-reports.sheet .rbody { margin-top: 12px; padding-bottom: 120px; }
+#pg-reports.sheet .rmeta { margin: 2px 0 0; }
+.rhero { background: none; color: inherit; border-radius: 0; padding: 4px 4px 16px; margin-bottom: 18px; border-bottom: 1px solid var(--line); }
+.rhero small { color: var(--brand); opacity: 1; text-transform: uppercase; letter-spacing: .06em; font-size: .75rem; font-weight: 700; }
+.rhero .rtitle { font-size: 2rem; font-weight: 800; letter-spacing: -.015em; margin: 4px 0 8px; color: var(--ink, #1c2033); }
+.rhero .rsp { background: color-mix(in srgb, var(--brand) 10%, #fff); color: var(--brand); }
+.rglance { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-bottom: 8px; }
+.rtile { border: 1px solid var(--line); border-top-width: 1px; border-inline-start: 4px solid var(--c, var(--line)); border-radius: 10px; background: #fff; padding: 10px 14px; }
+.rtile b { color: var(--c, inherit); }
+.rtile.rs-on, .rtile.rs-risk, .rtile.rs-late, .rtile.rs-done { border-top-color: var(--line); }
+.rprod { margin: 34px 0 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; border-inline-start: 0; }
+.rprod.rview { padding: 0; }
+.rprod .rphead { padding: 4px 4px 6px; border-bottom: 1px solid var(--line); align-items: baseline; }
+.rprod .rphead h2, .rprod.rview .rphead h2 { margin: 0; font-size: 1.6rem; font-weight: 800; letter-spacing: -.01em; color: var(--c, var(--brand)); }
+.rprod .rgrp { margin-top: 14px; padding-inline-start: 4px; }
+.rprod .rgrp h3 { margin: 0 0 4px; color: var(--muted); }
+.rprod .rsumv { padding-inline: 4px; margin: 10px 0 4px; }
+.rt.rsum { background: #fafbfd; border-color: var(--line); }
+/* lines look like lines of the sprint plan: quiet until hovered or focused */
+.rline { gap: 8px; padding: 2px 4px; border-radius: 8px; flex-wrap: nowrap; align-items: flex-start; }
+.rline:hover { background: rgba(120, 130, 160, .06); }
+.rline .rt.sptext { flex: 1 1 260px; border-color: transparent; background: transparent; min-height: 32px; padding: 3px 6px; }
+.rline:hover .rt.sptext { border-color: var(--line); background: #fff; }
+.rline .spsel { border-color: transparent; background: transparent; font-size: .8rem; font-weight: 600; padding: 3px 4px; color: var(--muted); max-width: 130px; }
+.rline .spsel:hover, .rline .spsel:focus-visible { border-color: var(--line); background: #fff; }
+.rline select.rst-on { color: #1d7a52; } .rline select.rst-risk { color: #a8630a; } .rline select.rst-late { color: #b3261e; } .rline select.rst-done { color: #4a4fa3; }
+.rline .btn.sm { border-color: transparent; background: transparent; color: var(--muted); box-shadow: none; padding: 3px 8px; }
+.rline .btn.sm:hover { border-color: var(--line); background: #fff; color: var(--ink, #1c2033); }
+.rline .btn.sm.danger:hover { color: #d1483f; background: rgba(209, 72, 63, .1); border-color: transparent; }
+.rline.hid { opacity: .45; }
+.rv { padding: 5px 4px; }
+.rprod .spadd { margin-top: 6px; padding-inline-start: 4px; }
+.rprod .spadd textarea { border-color: transparent; background: transparent; min-height: 36px; }
+.rprod .spadd textarea:hover, .rprod .spadd textarea:focus { border-color: var(--line); background: #fff; }
+.rprod .spadd .btn { border-color: transparent; background: transparent; color: var(--brand); box-shadow: none; }
+.rprod .spadd .btn:hover { background: color-mix(in srgb, var(--brand) 10%, #fff); }
+@media (max-width: 720px) { .rline { flex-wrap: wrap; } .rhero .rtitle { font-size: 1.5rem; } .rprod .rphead h2 { font-size: 1.3rem; } }
+@media print {
+  body.print-report #pg-reports.sheet { max-width: none; padding: 0; background: #fff; }
+  body.print-report .rtile { break-inside: avoid; }
+}
+.rline select[aria-label="Group"] { min-width: 160px; max-width: 190px; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -6380,6 +6428,141 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return Array.from({ length: n }, (_, i) => lo + (hi - lo) * (i + 1) / (n + 1));
   }
 
+  // src/esm/ui/menu.js
+  var menu = null;
+  var done = null;
+  function closeMenu() {
+    if (!menu) return;
+    menu.remove();
+    menu = null;
+    document.removeEventListener("pointerdown", outside, true);
+    const d = done;
+    done = null;
+    if (d) d();
+  }
+  function outside(e) {
+    if (menu && !menu.contains(e.target)) closeMenu();
+  }
+  function openMenu(at, items2, o) {
+    closeMenu();
+    const box2 = el("div", "cpop cmenu");
+    box2.setAttribute("role", "dialog");
+    box2.setAttribute("aria-label", o.label || "Menu");
+    const q = el("input", "csearch");
+    q.type = "search";
+    q.placeholder = o.placeholder || "Search…";
+    q.autocomplete = "off";
+    q.setAttribute("aria-label", o.label || "Search");
+    if (o.search === false) q.classList.add("off");
+    const list = el("div", "clist");
+    list.setAttribute("role", "listbox");
+    box2.append(q, list);
+    let picked = false;
+    const pick = (it) => {
+      if (it.disabled) return;
+      picked = true;
+      const cb = o.onPick;
+      closeMenu();
+      cb(it);
+    };
+    const draw = () => {
+      const s = q.value.trim().toLowerCase(), ws = fold(q.value).split(/\s+/).filter(Boolean);
+      list.textContent = "";
+      const rows2 = items2.filter((i) => {
+        const t = fold(i.label + " " + (i.sub || ""));
+        return ws.every((w) => t.includes(w));
+      });
+      const c = o.create && s ? o.create(q.value.trim()) : null;
+      if (c && !items2.some((i) => i.label.toLowerCase() === s)) rows2.push(c);
+      rows2.forEach((it) => {
+        const r2 = el("div", "copt" + (it.disabled ? " dis" : ""));
+        r2.setAttribute("role", "option");
+        r2._it = it;
+        if (it.dot) {
+          const d = el("i", "tdot");
+          d.style.background = it.dot;
+          r2.append(d);
+        }
+        r2.append(el("span", "", it.label));
+        if (it.sub) r2.append(el("span", "csub", it.sub));
+        r2.addEventListener("pointerdown", (e) => e.preventDefault());
+        r2.addEventListener("click", () => pick(it));
+        r2.addEventListener("pointermove", () => {
+          list.querySelectorAll(".act").forEach((x) => x.classList.remove("act"));
+          if (!it.disabled) r2.classList.add("act");
+        });
+        list.append(r2);
+      });
+      if (!rows2.length) list.append(el("div", "copt dis cnone", "No matches"));
+      const f = [...list.children].find((r2) => r2._it && !r2._it.disabled);
+      if (f) f.classList.add("act");
+    };
+    const move = (d) => {
+      const rows2 = [...list.querySelectorAll(".copt")].filter((r2) => r2._it && !r2._it.disabled);
+      if (!rows2.length) return;
+      let i = rows2.findIndex((r2) => r2.classList.contains("act"));
+      i = Math.max(0, Math.min(rows2.length - 1, i + d));
+      list.querySelectorAll(".act").forEach((x) => x.classList.remove("act"));
+      rows2[i].classList.add("act");
+      rows2[i].scrollIntoView({ block: "nearest" });
+    };
+    q.addEventListener("input", draw);
+    q.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        move(1);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        move(-1);
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        e.stopPropagation();
+        const a = list.querySelector(".copt.act");
+        if (a && a._it) pick(a._it);
+      } else if (e.key === "Escape" || e.key === "Tab") {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        closeMenu();
+      }
+    });
+    draw();
+    document.body.append(box2);
+    menu = box2;
+    done = () => {
+      if (o.onClose) o.onClose(picked);
+    };
+    const r = at.getBoundingClientRect ? at.getBoundingClientRect() : at, h = Math.min(box2.scrollHeight, 320);
+    box2.style.minWidth = Math.max(r.width || 0, 200) + "px";
+    box2.style.maxHeight = "320px";
+    const below = window.innerHeight - r.bottom, top = below >= h + 12 || below >= r.top ? r.bottom + 4 : r.top - h - 4;
+    box2.style.top = Math.max(8, top) + "px";
+    box2.style.left = Math.max(8, Math.min(r.left, window.innerWidth - box2.offsetWidth - 8)) + "px";
+    document.addEventListener("pointerdown", outside, true);
+    q.focus({ preventScroll: true });
+  }
+
+  // src/esm/ui/crumbs.js
+  function crumbs(trail) {
+    const nav = el("nav", "crumbs");
+    nav.setAttribute("aria-label", "Breadcrumb");
+    const ol = el("ol");
+    trail.forEach((c, i) => {
+      const li = el("li"), last = i === trail.length - 1;
+      if (last || !c.href) {
+        const s = el("span", "", c.label);
+        if (last) s.setAttribute("aria-current", "page");
+        li.append(s);
+      } else {
+        const a = el("a", "", c.label);
+        a.href = c.href;
+        li.append(a);
+      }
+      ol.append(li);
+    });
+    nav.append(ol);
+    return nav;
+  }
+
   // src/esm/features/undo-stack.js
   var same2 = (a, b) => JSON.stringify(a === void 0 ? null : a) === JSON.stringify(b === void 0 ? null : b);
   var canon = (d) => d ? Object.keys(d).sort().reduce((o, k) => (o[k] = d[k], o), {}) : null;
@@ -6612,13 +6795,21 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 
   // src/esm/pages/reports.js
   var SPARK = '<svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8L2.5 17.5l1.8-.7z"/></svg>';
-  var rUI = { id: null, busy: false, note: "", err: false, wait: false };
+  var rUI = { busy: false, note: "", noteFor: "", err: false, wait: false, last: "" };
+  var routeId = () => {
+    const m = /^#\/reports\/(\w+)/.exec(location.hash);
+    return m ? m[1] : null;
+  };
+  var colOf = (p) => {
+    const l = LANES.concat(EXTRA_SECTIONS).find((x) => (p.squads || []).includes(x.k));
+    return l ? l.c : "var(--brand)";
+  };
   var cfg = () => S.ideas.reportcfg || {};
   var canBuild = () => !isViewer() && canWrite();
   var reportList = () => Object.keys(S.reports).map((id) => Object.assign({ id }, S.reports[id])).filter((r) => r.a && (!isViewer() || r.status === "submitted")).sort((x, y) => x.a < y.a ? 1 : -1);
   var cur = () => {
-    const l = reportList();
-    return l.find((r) => r.id === rUI.id) || l[0] || null;
+    const id = routeId();
+    return id ? reportList().find((r) => r.id === id) || null : null;
   };
   var undoers = {};
   var baseline = {};
@@ -6687,11 +6878,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   function newReport(wk) {
     const id = wk.id;
     if (S.reports[id]) {
-      rUI.id = id;
-      renderReports();
+      location.hash = "#/reports/" + id;
       return;
     }
     const rep = { id, sp: wk.sp, n: wk.n, w: wk.w, a: wk.a, b: wk.b, status: "draft", pl: productsOf(cfg()), prods: {} };
+    location.hash = "#/reports/" + id;
     sync(rep, false, true);
   }
   async function aiWhy(e) {
@@ -6716,6 +6907,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   var countLines = (prods) => Object.keys(prods).reduce((n, k) => n + prods[k].items.filter((l) => !l.hide).length, 0);
   var say = (rep, txt, bad) => {
     rUI.note = txt;
+    rUI.noteFor = rep.id;
     rUI.err = !!bad;
     toast(txt);
     notify(txt, bad ? "err" : "ok");
@@ -6733,7 +6925,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     rep.prods = buildProds(pl, rep.prods, sitems, road, ka, kb, rep.a, rep.b);
     rep.srcN = { si: sitems.length, rf: road.filter((r) => Number.isFinite(ka) && r.d0 <= kb && r.d1 >= ka).length };
     const lines = countLines(rep.prods);
-    rUI.id = rep.id;
     save(rep, isNew ? "created the weekly report for " + fmtIso(rep.a) : "synced the weekly report for " + fmtIso(rep.a), "Sync from sprint and roadmap");
     if (!lines) {
       say(rep, "No data found for this week: Sprint " + rep.n + " has no items for these products and no roadmap bar overlaps " + fmtIso(rep.a) + ". Add items on the Sprints page (or check Report settings), then sync again.", true);
@@ -6745,6 +6936,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     renderReports();
     if (ai) {
       rUI.note = "Writing with Gemini…";
+      rUI.noteFor = rep.id;
       rUI.wait = true;
       renderReports();
       try {
@@ -6922,14 +7114,14 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   function prodBlock(rep, p, ro) {
     const d = rep.prods[p.k];
     if (!d) return el("div");
-    const sec = el("section", "card rprod");
+    const sec = el("section", "rprod");
     sec.dataset.k = p.k;
+    sec.style.setProperty("--c", colOf(p));
     const hd = el("div", "rphead"), s = overall(d.items);
     hd.append(el("h2", "", p.n), el("span", "chip rs-" + s, RSTATUS[s]));
     sec.append(hd);
     if (ro) {
       sec.classList.add("rview");
-      sec.style.setProperty("--rc", "var(--rc-" + s + ")");
       if (d.sum) {
         const sv2 = el("div", "rsumv");
         showRich(sv2, d.sumH, d.sum);
@@ -6978,57 +7170,97 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
     return sec;
   }
-  function renderReports() {
-    const pg = $("pg-reports");
-    if (!pg) return;
-    pg.textContent = "";
-    const viewer = isViewer(), l = reportList(), rep = cur();
-    if (rep && S.reports[rep.id]) baseline[rep.id] = JSON.stringify(S.reports[rep.id]);
-    pg.append(pageHead("Weekly report", viewer ? "Submitted weekly updates per product." : "Built from the sprint plan and the roadmap. Edit anything, then submit it to the executives."));
-    const bar2 = el("div", "row spbar");
-    if (l.length) {
-      const sel = el("select");
-      sel.setAttribute("aria-label", "Report");
-      l.forEach((r) => {
-        const o = el("option", "", "Week of " + fmtIso(r.a) + " · Sprint " + r.n + (viewer ? "" : r.status === "submitted" ? " · submitted" : " · draft"));
-        o.value = r.id;
-        o.selected = rep && r.id === rep.id;
-        sel.append(o);
-      });
-      sel.addEventListener("change", () => {
-        rUI.id = sel.value;
-        rUI.note = "";
-        rUI.err = false;
-        renderReports();
-      });
-      bar2.append(sel);
-    }
+  var statsOf = (r) => {
+    let all = 0, done2 = 0, prog = 0, risk = 0;
+    Object.keys(r.prods || {}).forEach((k) => ((r.prods[k] || {}).items || []).filter((l) => !l.hide).forEach((l) => {
+      all++;
+      if (l.g === "done") done2++;
+      else if (l.g === "prog") prog++;
+      if (l.st === "risk" || l.st === "late") risk++;
+    }));
+    return { all, done: done2, prog, risk };
+  };
+  var copyReport = (rep) => {
+    const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso);
+    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify("Report text copied to the clipboard"), () => notify("Could not copy. Select the text and copy it manually.", "err"));
+  };
+  var settingsBtn = () => {
+    const b = el("button", "btn", "Report settings");
+    b.type = "button";
+    b.disabled = !canBuild();
+    b.addEventListener("click", settingsDlg);
+    return b;
+  };
+  function listView(pg, viewer, l) {
+    const acts = el("div", "acts");
     if (!viewer) {
       const free = missingWeeks(), t = todayIso(), pick = free.find((w) => w.a <= t) || free[free.length - 1];
       if (pick) {
-        const nb = el("button", "btn primary", "New report for week of " + fmtIso(pick.a));
+        const nb = el("button", "btn primary", "+ New report for week of " + fmtIso(pick.a));
         nb.type = "button";
         nb.disabled = !canBuild();
         nb.addEventListener("click", () => newReport(pick));
-        bar2.append(nb);
+        acts.append(nb);
       }
-      const sb2 = el("button", "btn", "Report settings");
-      sb2.type = "button";
-      sb2.disabled = !canBuild();
-      sb2.addEventListener("click", settingsDlg);
-      bar2.append(sb2);
+      acts.append(settingsBtn());
     }
+    pg.append(pageHead("Weekly report", viewer ? "Submitted weekly updates per product. Open one to read it." : "One report per week, built from the sprint plan and the roadmap. Open one to edit it, then submit it to the executives.", acts.children.length ? acts : null));
     const sb0 = viewer ? null : setupBanner();
     if (sb0) pg.append(sb0);
-    pg.append(bar2);
-    if (!rep) {
-      pg.append(el("p", "empty", viewer ? "No report has been submitted yet." : sprintList().length ? "No report yet. Create one for the latest sprint." : "Create a sprint first (Sprints page), then build the report."));
+    if (!l.length) {
+      pg.append(el("p", "empty", viewer ? "No report has been submitted yet." : sprintList().length ? 'No report yet. Click "+ New report" to create one for the latest sprint.' : "Create a sprint first (Sprints page), then build the report."));
       return;
     }
+    const wrap = el("div", "splist");
+    l.forEach((r) => {
+      const st = statsOf(r), sub = r.status === "submitted", pct2 = st.all ? Math.round(100 * st.done / st.all) : 0;
+      const card = el("div", "card spcard rpcard"), info = el("div");
+      const a = el("a", "splink");
+      a.href = "#/reports/" + r.id;
+      a.append(el("h2", "", "Week of " + fmtIso(r.a) + " – " + fmtIso(r.b)));
+      info.append(a, el("div", "meta", "Sprint " + r.n + " · week " + (r.w || 1) + " of 2 · " + (sub ? "submitted" + (r.subBy ? " by " + r.subBy : "") + (r.subAt ? " on " + fmtIso(r.subAt.slice(0, 10)) : "") : "last edit " + (r.by || "unknown"))));
+      const pr = el("div", "prods");
+      (r.pl || []).filter((p) => r.prods && r.prods[p.k]).forEach((p) => {
+        const c = el("span", "pchip", p.n);
+        c.style.setProperty("--c", colOf(p));
+        pr.append(c);
+      });
+      info.append(pr);
+      const prog = el("div", "spprog"), top = el("div", "rpstat");
+      top.append(el("span", "chip rpst " + (sub ? "sub" : "draft"), sub ? "Submitted" : "Draft"));
+      prog.append(top, el("div", "meta", st.done + " delivered · " + st.prog + " in progress" + (st.risk ? " · " + st.risk + " at risk" : "")));
+      const b0 = el("div", "bar0"), i0 = el("i");
+      i0.style.width = pct2 + "%";
+      b0.append(i0);
+      prog.append(b0);
+      const more = el("button", "btn sm spmore", "⋯");
+      more.type = "button";
+      more.setAttribute("aria-label", "More actions for the week of " + fmtIso(r.a));
+      more.setAttribute("aria-haspopup", "menu");
+      more.addEventListener("click", () => openMenu(more, [{ label: "Open in new tab", value: "tab" }, { label: "Copy text", value: "copy" }], {
+        search: false,
+        label: "Report actions",
+        onPick: (it) => {
+          if (it.value === "tab") window.open(location.pathname + location.search + "#/reports/" + r.id, "_blank", "noopener");
+          else copyReport(r);
+        },
+        onClose: () => more.focus()
+      }));
+      card.append(info, prog, more);
+      wrap.append(card);
+    });
+    pg.append(wrap);
+  }
+  function detailView(pg, viewer, rep) {
+    if (S.reports[rep.id]) baseline[rep.id] = JSON.stringify(S.reports[rep.id]);
     const sub = rep.status === "submitted", ro = viewer || sub || !canBuild();
+    pg.append(crumbs([{ label: "Reports", href: "#/reports" }, { label: "Week of " + fmtIso(rep.a) }]));
+    pg.append(pageHead("Weekly report", "Sprint " + rep.n + " · week " + (rep.w || 1) + " of 2" + (viewer ? "" : ro ? ". Submitted reports are read-only." : ". Edit anything, then submit it to the executives.")));
+    const sb0 = viewer ? null : setupBanner();
+    if (sb0) pg.append(sb0);
     const srcTxt = rep.srcN ? " · built from " + rep.srcN.si + " sprint items + " + rep.srcN.rf + " roadmap bars" : "";
     const meta = el("p", "sub rmeta", sub ? "Submitted" + (rep.subBy ? " by " + rep.subBy : "") + (rep.subAt ? " on " + fmtIso(rep.subAt.slice(0, 10)) : "") : "Draft" + (rep.ai ? " · wording by " + (rep.ai.model || "AI") : "") + " · last edit " + (rep.by || "") + srcTxt);
-    const tools = el("div", "row rtools");
+    const tools = el("div", "row spbar rtools");
     const btn = (t, cls, fn, dis) => {
       const b = el("button", "btn " + (cls || ""), t);
       b.type = "button";
@@ -7057,10 +7289,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       unsubR = U.subscribe(upd);
       upd();
     }
-    btn("Copy text", "", () => {
-      const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso);
-      (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify("Report text copied to the clipboard"), () => notify("Could not copy. Select the text and copy it manually.", "err"));
-    });
+    btn("Copy text", "", () => copyReport(rep));
     btn("Print / PDF", "", () => {
       document.body.classList.add("print-report");
       const off = () => {
@@ -7070,6 +7299,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       window.addEventListener("afterprint", off);
       window.print();
     });
+    if (!viewer && !sub) tools.append(settingsBtn());
     if (!viewer && !sub) btn("Submit to executives", "primary", () => {
       rep.status = "submitted";
       rep.subAt = (/* @__PURE__ */ new Date()).toISOString();
@@ -7086,7 +7316,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       notify("Report reopened as a draft. Executives no longer see it.", "info");
       renderReports();
     }, !canBuild());
-    const body = el("div", "rbody"), pls = rep.pl || productsOf(cfg());
+    const body = el("div", "rbody sdoc"), pls = rep.pl || productsOf(cfg());
     const hero = el("div", "rhero");
     hero.append(el("small", "", "Ynmo · Weekly product update"), el("h2", "rtitle", fmtIso(rep.a) + " – " + fmtIso(rep.b)), el("span", "rsp", "Sprint " + rep.n + " · week " + (rep.w || 1) + " of 2"));
     body.append(hero);
@@ -7094,21 +7324,42 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     pls.forEach((p) => {
       const d = rep.prods[p.k];
       if (!d) return;
-      const v = d.items.filter((l2) => !l2.hide), s = overall(d.items), t = el("div", "rtile rs-" + s);
-      t.append(el("b", "", p.n), el("span", "chip rs-" + s, RSTATUS[s]), el("small", "", v.filter((l2) => l2.g === "done").length + " delivered · " + v.filter((l2) => l2.g === "prog").length + " in progress · " + v.filter((l2) => l2.st === "risk" || l2.st === "late").length + " at risk"));
+      const v = d.items.filter((l) => !l.hide), s = overall(d.items), t = el("div", "rtile rs-" + s);
+      t.style.setProperty("--c", colOf(p));
+      t.append(el("b", "", p.n), el("span", "chip rs-" + s, RSTATUS[s]), el("small", "", v.filter((l) => l.g === "done").length + " delivered · " + v.filter((l) => l.g === "prog").length + " in progress · " + v.filter((l) => l.st === "risk" || l.st === "late").length + " at risk"));
       glance.append(t);
     });
     body.append(glance);
     if (!ro) body.append(richBar());
     pls.forEach((p) => body.append(prodBlock(rep, p, ro)));
     pg.append(meta, tools);
-    if (rUI.note && !viewer && !sub) {
+    if (rUI.note && rUI.noteFor === rep.id && !viewer && !sub) {
       const nt = el("p", "rnote" + (rUI.err ? " bad" : ""), rUI.note);
       nt.setAttribute("role", "status");
       pg.append(nt);
     }
     pg.append(body);
   }
+  function renderReports() {
+    const pg = $("pg-reports");
+    if (!pg) return;
+    closeMenu();
+    const id = routeId(), keepY = id && rUI.last === id ? window.scrollY : 0;
+    rUI.last = id || "";
+    pg.textContent = "";
+    const viewer = isViewer(), l = reportList(), rep = cur();
+    pg.classList.toggle("sheet", !!rep);
+    if (id && !rep) {
+      pg.append(crumbs([{ label: "Reports", href: "#/reports" }, { label: "Not found" }]), pageHead("Report not found", viewer ? "It may not be submitted yet, or it is still loading." : "It may have been removed, or it is still loading."));
+      return;
+    }
+    if (rep) detailView(pg, viewer, rep);
+    else listView(pg, viewer, l);
+    if (keepY && Math.abs(window.scrollY - keepY) > 1) window.scrollTo(0, keepY);
+  }
+  window.addEventListener("hashchange", () => {
+    if (state.page === "reports") renderReports();
+  });
 
   // src/esm/features/jira-merge.js
   var PROJECT_SQUAD = { DYC: "daycare", FAS: "tifli", AU: "ai" };
@@ -7528,145 +7779,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
   }
 
-  // src/esm/ui/menu.js
-  var menu = null;
-  var done = null;
-  function closeMenu() {
-    if (!menu) return;
-    menu.remove();
-    menu = null;
-    document.removeEventListener("pointerdown", outside, true);
-    const d = done;
-    done = null;
-    if (d) d();
-  }
-  function outside(e) {
-    if (menu && !menu.contains(e.target)) closeMenu();
-  }
-  function openMenu(at, items2, o) {
-    closeMenu();
-    const box2 = el("div", "cpop cmenu");
-    box2.setAttribute("role", "dialog");
-    box2.setAttribute("aria-label", o.label || "Menu");
-    const q = el("input", "csearch");
-    q.type = "search";
-    q.placeholder = o.placeholder || "Search…";
-    q.autocomplete = "off";
-    q.setAttribute("aria-label", o.label || "Search");
-    if (o.search === false) q.classList.add("off");
-    const list = el("div", "clist");
-    list.setAttribute("role", "listbox");
-    box2.append(q, list);
-    let picked = false;
-    const pick = (it) => {
-      if (it.disabled) return;
-      picked = true;
-      const cb = o.onPick;
-      closeMenu();
-      cb(it);
-    };
-    const draw = () => {
-      const s = q.value.trim().toLowerCase(), ws = fold(q.value).split(/\s+/).filter(Boolean);
-      list.textContent = "";
-      const rows2 = items2.filter((i) => {
-        const t = fold(i.label + " " + (i.sub || ""));
-        return ws.every((w) => t.includes(w));
-      });
-      const c = o.create && s ? o.create(q.value.trim()) : null;
-      if (c && !items2.some((i) => i.label.toLowerCase() === s)) rows2.push(c);
-      rows2.forEach((it) => {
-        const r2 = el("div", "copt" + (it.disabled ? " dis" : ""));
-        r2.setAttribute("role", "option");
-        r2._it = it;
-        if (it.dot) {
-          const d = el("i", "tdot");
-          d.style.background = it.dot;
-          r2.append(d);
-        }
-        r2.append(el("span", "", it.label));
-        if (it.sub) r2.append(el("span", "csub", it.sub));
-        r2.addEventListener("pointerdown", (e) => e.preventDefault());
-        r2.addEventListener("click", () => pick(it));
-        r2.addEventListener("pointermove", () => {
-          list.querySelectorAll(".act").forEach((x) => x.classList.remove("act"));
-          if (!it.disabled) r2.classList.add("act");
-        });
-        list.append(r2);
-      });
-      if (!rows2.length) list.append(el("div", "copt dis cnone", "No matches"));
-      const f = [...list.children].find((r2) => r2._it && !r2._it.disabled);
-      if (f) f.classList.add("act");
-    };
-    const move = (d) => {
-      const rows2 = [...list.querySelectorAll(".copt")].filter((r2) => r2._it && !r2._it.disabled);
-      if (!rows2.length) return;
-      let i = rows2.findIndex((r2) => r2.classList.contains("act"));
-      i = Math.max(0, Math.min(rows2.length - 1, i + d));
-      list.querySelectorAll(".act").forEach((x) => x.classList.remove("act"));
-      rows2[i].classList.add("act");
-      rows2[i].scrollIntoView({ block: "nearest" });
-    };
-    q.addEventListener("input", draw);
-    q.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        move(1);
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        move(-1);
-      } else if (e.key === "Enter") {
-        e.preventDefault();
-        e.stopPropagation();
-        const a = list.querySelector(".copt.act");
-        if (a && a._it) pick(a._it);
-      } else if (e.key === "Escape" || e.key === "Tab") {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        closeMenu();
-      }
-    });
-    draw();
-    document.body.append(box2);
-    menu = box2;
-    done = () => {
-      if (o.onClose) o.onClose(picked);
-    };
-    const r = at.getBoundingClientRect ? at.getBoundingClientRect() : at, h = Math.min(box2.scrollHeight, 320);
-    box2.style.minWidth = Math.max(r.width || 0, 200) + "px";
-    box2.style.maxHeight = "320px";
-    const below = window.innerHeight - r.bottom, top = below >= h + 12 || below >= r.top ? r.bottom + 4 : r.top - h - 4;
-    box2.style.top = Math.max(8, top) + "px";
-    box2.style.left = Math.max(8, Math.min(r.left, window.innerWidth - box2.offsetWidth - 8)) + "px";
-    document.addEventListener("pointerdown", outside, true);
-    q.focus({ preventScroll: true });
-  }
-
-  // src/esm/ui/crumbs.js
-  function crumbs(trail) {
-    const nav = el("nav", "crumbs");
-    nav.setAttribute("aria-label", "Breadcrumb");
-    const ol = el("ol");
-    trail.forEach((c, i) => {
-      const li = el("li"), last = i === trail.length - 1;
-      if (last || !c.href) {
-        const s = el("span", "", c.label);
-        if (last) s.setAttribute("aria-current", "page");
-        li.append(s);
-      } else {
-        const a = el("a", "", c.label);
-        a.href = c.href;
-        li.append(a);
-      }
-      ol.append(li);
-    });
-    nav.append(ol);
-    return nav;
-  }
-
   // src/esm/pages/sprints.js
   var iso3 = (t) => new Date(t).toISOString().slice(0, 10);
   var uid2 = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  var routeId = () => {
+  var routeId2 = () => {
     const m = /^#\/sprints\/(\w+)/.exec(location.hash);
     return m ? m[1] : null;
   };
@@ -7764,7 +7880,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       renderSprints();
     });
   }
-  function listView(pg, ro) {
+  function listView2(pg, ro) {
     const nb = el("button", "btn primary", "+ New sprint");
     nb.type = "button";
     nb.disabled = ro;
@@ -8534,7 +8650,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   var unsubBar = null;
   var activeEd = null;
   registerUndo("sprints", { inEditable: true, ready: () => !!activeEd, undo: () => activeEd.doUndo("undo"), redo: () => activeEd.doUndo("redo") });
-  function detailView(pg, sp, ro) {
+  function detailView2(pg, sp, ro) {
     ensureMigrated(sp);
     sp = Object.assign({ id: sp.id }, S.sprints[sp.id]);
     pg.append(crumbs([{ label: "Sprints", href: "#/sprints" }, { label: "Sprint " + sp.n }]));
@@ -8672,14 +8788,14 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const keepY = o && o.keep ? window.scrollY : -1;
     pg.textContent = "";
     activeEd = null;
-    const ro = !canEdit() || !canWrite(), id = routeId(), sp = id ? sprintList().find((s) => s.id === id) : null;
+    const ro = !canEdit() || !canWrite(), id = routeId2(), sp = id ? sprintList().find((s) => s.id === id) : null;
     pg.classList.toggle("sheet", !!sp);
     if (id && !sp) {
       pg.append(crumbs([{ label: "Sprints", href: "#/sprints" }, { label: "Not found" }]), pageHead("Sprint not found", "It may have been deleted, or it is still loading."));
       return;
     }
-    if (sp) detailView(pg, sp, ro);
-    else listView(pg, ro);
+    if (sp) detailView2(pg, sp, ro);
+    else listView2(pg, ro);
     if (keepY >= 0 && Math.abs(window.scrollY - keepY) > 1) window.scrollTo(0, keepY);
   }
   window.addEventListener("hashchange", () => {
@@ -8758,7 +8874,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
     const pt = $("ptitle");
     if (pt) pt.textContent = (PAGES.find((x) => x[0] === p) || [0, ""])[1];
-    if (location.hash !== "#/" + p && !(p === "sprints" && /^#\/sprints\//.test(location.hash))) window.history.replaceState(null, "", "#/" + p);
+    if (location.hash !== "#/" + p && !((p === "sprints" || p === "reports") && new RegExp("^#/" + p + "/").test(location.hash))) window.history.replaceState(null, "", "#/" + p);
     renderPage(p);
   }
   var NAV_ICONS = {

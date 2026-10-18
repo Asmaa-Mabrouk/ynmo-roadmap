@@ -4,6 +4,9 @@ from h18 import *
 admin-only submit, viewers see only submitted reports, Sprints page is editor-only."""
 R=[]
 def ok(n,c): R.append((n,bool(c))); print(('PASS ' if c else 'FAIL ')+n)
+def openrep(pg, i=0):
+    """Reports opens on a list of cards (like Sprints); open the i-th report."""
+    pg.locator('#pg-reports .rpcard a.splink').nth(i).click(); pg.wait_for_timeout(500)
 with sync_playwright() as pw:
     b=pw.chromium.launch(); ctx=mkctx(b); errs=[]
     A=newpage(ctx,errs); signup(A,'Admin','adm@x.com')
@@ -158,7 +161,10 @@ with sync_playwright() as pw:
     # new sprint item shows up on plain sync, edits still kept
     A.click('#nav button[data-p="sprints"]'); A.wait_for_timeout(300); A.click('.spcard a.splink'); A.wait_for_timeout(500)
     P.locator('.sdoc .ghost .bt').click(); key('/'); typ('Product'); key('Enter'); typ('AI'); key('Enter'); typ('Lina'); key('Enter'); typ('Sara voice v2'); P.wait_for_timeout(700)
-    A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(300); A.click('button:text-is("Sync from Sprint & Roadmap")'); A.wait_for_timeout(600)
+    A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(300)
+    ok('reports open on a list of cards like Sprints', A.locator('#pg-reports .rpcard').count()==1 and A.locator('#pg-reports .rprod').count()==0 and 'Sprint 228' in A.locator('#pg-reports .rpcard').inner_text() and A.locator('#pg-reports .rpcard .rpst.draft').count()==1)
+    openrep(A); ok('opening a card shows the report sheet with breadcrumb', A.evaluate("location.hash").startswith('#/reports/') and A.locator('#pg-reports nav.crumbs').count()==1 and A.locator('#pg-reports.sheet').count()==1)
+    A.click('button:text-is("Sync from Sprint & Roadmap")'); A.wait_for_timeout(600)
     vals=A.evaluate("[...document.querySelectorAll('#pg-reports .sptext')].map(e=>e.innerText.trim())")
     ok('sync adds new item and keeps edit', any('Sara voice v2' in v for v in vals) and 'Custom wording by PM' in vals)
     ok('report shows the tag chips', A.locator('#pg-reports .tgchip').count()>=1)
@@ -173,7 +179,7 @@ with sync_playwright() as pw:
     ok('Enter picks the first match', A.locator('.cpop').count()==0 and A.locator('#pg-reports .rprod[data-k="tifli"] h3', has_text='Risks').count()>=1)
 
     # --- many items at once + rich text
-    A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(300)
+    A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(300); openrep(A)
     tf=A.locator('#pg-reports .rprod[data-k="tifli"]'); before=tf.locator('.rline').count()
     ta=tf.locator('.rgrp:has(h3:text-is("Next")) .spadd textarea'); ta.fill('- First bulk item\n* Second bulk item\n\n3. Third bulk item'); tf.locator('.rgrp:has(h3:text-is("Next")) .spadd button').click(); A.wait_for_timeout(500)
     ok('bulk add creates one line per row', A.locator('#pg-reports .rprod[data-k="tifli"] .rline').count()==before+3 and 'Second bulk item' in vl(A.locator('#pg-reports .rprod[data-k="tifli"]')))
@@ -182,7 +188,7 @@ with sync_playwright() as pw:
     ok('summary box is large', sm.bounding_box()['height']>=140)
     # scripts and unsafe links never survive
     A.evaluate("""(()=>{const s=Object.keys(JSON.parse(localStorage.getItem('fk3')).reports)[0]; const d=JSON.parse(localStorage.getItem('fk3')); const p=d.reports[s].prods.tifli; p.sumH='<b>ok</b><img src=x onerror="window.__xss=1"><script>window.__xss=1</script><a href="javascript:window.__xss=1">bad</a><a href="https://example.com">good</a>'; p.sumEdited=true; localStorage.setItem('fk3',JSON.stringify(d));})()""")
-    A.reload(); A.wait_for_timeout(1500); A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(500)
+    A.reload(); A.wait_for_timeout(1500); A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(500); openrep(A)
     ok('unsafe html is stripped', not A.evaluate("window.__xss") and A.locator('#pg-reports a[href^="javascript"]').count()==0 and A.locator('#pg-reports .rsum img').count()==0)
     # AI failure falls back
     A.evaluate("window.__aiFail=true"); A.click('button:text-is("Generate with AI")'); A.wait_for_timeout(900)
@@ -210,16 +216,23 @@ with sync_playwright() as pw:
     B.reload(); B.wait_for_timeout(1500); C.reload(); C.wait_for_timeout(1500)
     ok('viewer nav: no Sprints, has Reports', C.locator('#nav button[data-p="sprints"]').count()==0 and C.locator('#nav button[data-p="reports"]').count()==1)
     C.click('#nav button[data-p="reports"]'); C.wait_for_timeout(500)
-    ok('viewer sees only submitted report, read-only', C.locator('#pg-reports select[aria-label="Report"] option').count()==1 and 'Sprint 228' in C.locator('#pg-reports').inner_text() and C.locator('#pg-reports textarea:not([disabled]), #pg-reports .rline input:not([disabled])').count()==0 and C.locator('button:text-is("Submit to executives")').count()==0)
+    ok('viewer sees only submitted report, read-only', C.locator('#pg-reports .rpcard').count()==1 and 'Sprint 228' in C.locator('#pg-reports').inner_text() and C.locator('#pg-reports textarea:not([disabled]), #pg-reports .rline input:not([disabled])').count()==0 and C.locator('button:text-is("Submit to executives")').count()==0)
     C.goto(URL+'#/sprints'); C.wait_for_timeout(800); ok('viewer cannot open Sprints by URL', C.locator('#pg-sprints').is_hidden())
     B.click('#nav button[data-p="reports"]'); B.wait_for_timeout(500)
-    ok('editor sees drafts and can submit', B.locator('#pg-reports select[aria-label="Report"] option').count()==2 and B.locator('button:text-is("Submit to executives")').count()==1)
+    ok('editor sees both reports as cards, one is a draft', B.locator('#pg-reports .rpcard').count()==2 and B.locator('#pg-reports .rpcard .rpst.draft').count()==1 and B.locator('#pg-reports .rpcard .rpst.sub').count()==1)
+    B.locator('#pg-reports .rpcard:has(.rpst.draft) a.splink').click(); B.wait_for_timeout(500)
+    ok('editor can submit the draft', B.locator('button:text-is("Submit to executives")').count()==1)
     B.click('button:text-is("Submit to executives")'); B.wait_for_timeout(600); ok('editor submitted a report', 'Submitted' in B.locator('#pg-reports .rmeta').inner_text())
     ok('report shows week hero and tiles', B.locator('.rhero').count()==1 and B.locator('.rtile').count()==3 and 'week 2 of 2' in B.locator('.rhero').inner_text())
     C.reload(); C.wait_for_timeout(1500); C.click('#nav button[data-p="reports"]'); C.wait_for_timeout(500)
-    ok('viewer now sees both submitted, visual read-only view', C.locator('#pg-reports select[aria-label="Report"] option').count()==2 and C.locator('.rprod.rview').count()==3)
-    C.set_viewport_size({'width':390,'height':800}); C.click('#nav button[data-p="reports"]'); C.wait_for_timeout(400)
-    ok('no overflow on phone', not C.evaluate("document.documentElement.scrollWidth>innerWidth+1"))
+    ok('viewer now sees both submitted, visual read-only view', C.locator('#pg-reports .rpcard').count()==2)
+    openrep(C); ok('viewer sees the visual read-only sheet', C.locator('.rprod.rview').count()==3 and C.locator('#pg-reports .rprod .rline').count()==0)
+    C.set_viewport_size({'width':390,'height':800}); C.wait_for_timeout(300)
+    ok('no overflow on phone (report sheet)', not C.evaluate("document.documentElement.scrollWidth>innerWidth+1"))
+    C.click('#nav button[data-p="reports"]'); C.wait_for_timeout(400)
+    ok('no overflow on phone (report list)', C.locator('#pg-reports .rpcard').count()==2 and not C.evaluate("document.documentElement.scrollWidth>innerWidth+1"))
+    C.locator('#pg-reports .rpcard a.splink').first.click(); C.wait_for_timeout(300)
+    C.go_back(); C.wait_for_timeout(300); ok('browser Back returns to the list', C.locator('#pg-reports .rpcard').count()==2)
 
     # --- empty data: clear error, AI never called
     ctx2=mkctx(b); e2=[]; D=newpage(ctx2,e2); signup(D,'Admin','adm@x.com')

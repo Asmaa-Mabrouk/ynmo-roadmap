@@ -11,10 +11,12 @@ import { write } from '../core/saving.js';
 import { sb } from '../core/supabase.js';
 import { canWrite, isViewer, openDlg, closeDlg } from '../features/safety.js';
 import { allRoadmaps, withRm } from './roadmaps.js';
-import { items } from '../core/model.js';
+import { items, state } from '../core/model.js';
 import { saveIdea } from './ideas.js';
 import { itemsOf, parsePaste, sprintList } from './sprints.js';
 import { notify } from '../ui/notify.js';
+import { openMenu, closeMenu } from '../ui/menu.js';
+import { crumbs } from '../ui/crumbs.js';
 import { createUndo } from '../features/undo-stack.js';
 import { registerUndo } from '../features/undo-router.js';
 import { autoGrow, richBar, richBox, showRich, submitOnCtrlEnter } from '../features/rich-text.js';
@@ -22,12 +24,16 @@ import { GROUPS, RSTATUS, aiPayload, applyAi, buildProds, jiraUrl, newManualLine
 import { EXTRA_SECTIONS } from '../features/sprint-doc.js';
 
 const SPARK = '<svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8L2.5 17.5l1.8-.7z"/></svg>';
-const rUI = { id: null, busy: false, note: '', err: false, wait: false };
+const rUI = { busy: false, note: '', noteFor: '', err: false, wait: false, last: '' };
+const routeId = () => { const m = /^#\/reports\/(\w+)/.exec(location.hash); return m ? m[1] : null; };
+/** The product's colour on the Roadmap and Sprints pages (its first squad), so the report looks like them. */
+const colOf = p => { const l = LANES.concat(EXTRA_SECTIONS).find(x => (p.squads || []).includes(x.k)); return l ? l.c : 'var(--brand)'; };
 const cfg = () => S.ideas.reportcfg || {};
 const uidr = () => 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const canBuild = () => !isViewer() && canWrite();
 export const reportList = () => Object.keys(S.reports).map(id => Object.assign({ id: id }, S.reports[id])).filter(r => r.a && (!isViewer() || r.status === 'submitted')).sort((x, y) => (x.a < y.a ? 1 : -1));
-const cur = () => { const l = reportList(); return l.find(r => r.id === rUI.id) || l[0] || null; };
+/** The report named in the address (#/reports/<id>), or null on the list. Viewers can only open submitted ones. */
+const cur = () => { const id = routeId(); return id ? reportList().find(r => r.id === id) || null : null; };
 
 /* ---- undo: one history per user and report; every save is a step, restoring the whole report (never over someone else's newer change) ---- */
 const undoers = {}, baseline = {};
@@ -62,8 +68,9 @@ export function missingWeeks() {
   return out.sort((x, y) => (x.a < y.a ? 1 : -1));
 }
 function newReport(wk) {
-  const id = wk.id; if (S.reports[id]) { rUI.id = id; renderReports(); return; }
+  const id = wk.id; if (S.reports[id]) { location.hash = '#/reports/' + id; return; }
   const rep = { id: id, sp: wk.sp, n: wk.n, w: wk.w, a: wk.a, b: wk.b, status: 'draft', pl: productsOf(cfg()), prods: {} };
+  location.hash = '#/reports/' + id;
   sync(rep, false, true);
 }
 /** Human explanation of a failed call to the AI function (not deployed, key missing, not allowed, unreachable). */
@@ -80,7 +87,7 @@ async function aiWhy(e) {
   return 'Could not reach the AI function (' + String((e && e.message) || e || 'no answer').slice(0, 100) + ').';
 }
 const countLines = prods => Object.keys(prods).reduce((n, k) => n + prods[k].items.filter(l => !l.hide).length, 0);
-const say = (rep, txt, bad) => { rUI.note = txt; rUI.err = !!bad; toast(txt); notify(txt, bad ? 'err' : 'ok'); };
+const say = (rep, txt, bad) => { rUI.note = txt; rUI.noteFor = rep.id; rUI.err = !!bad; toast(txt); notify(txt, bad ? 'err' : 'ok'); };
 /** Rules-only re-sync (never overwrites edited lines/summaries), then optionally the AI wording. Empty data is reported as an error, never sent to the AI. */
 async function sync(rep, ai, isNew) {
   if (rUI.busy) return; rUI.busy = true; rUI.note = ''; rUI.err = false;
@@ -90,14 +97,14 @@ async function sync(rep, ai, isNew) {
   rep.pl = pl; rep.prods = buildProds(pl, rep.prods, sitems, road, ka, kb, rep.a, rep.b);
   rep.srcN = { si: sitems.length, rf: road.filter(r => Number.isFinite(ka) && r.d0 <= kb && r.d1 >= ka).length };
   const lines = countLines(rep.prods);
-  rUI.id = rep.id; save(rep, isNew ? 'created the weekly report for ' + fmtIso(rep.a) : 'synced the weekly report for ' + fmtIso(rep.a), 'Sync from sprint and roadmap');
+  save(rep, isNew ? 'created the weekly report for ' + fmtIso(rep.a) : 'synced the weekly report for ' + fmtIso(rep.a), 'Sync from sprint and roadmap');
   if (!lines) {
     say(rep, 'No data found for this week: Sprint ' + rep.n + ' has no items for these products and no roadmap bar overlaps ' + fmtIso(rep.a) + '. Add items on the Sprints page (or check Report settings), then sync again.', true);
     rUI.busy = false; renderReports(); return;
   }
   say(rep, isNew ? 'Draft created from ' + rep.srcN.si + ' sprint items and ' + rep.srcN.rf + ' roadmap bars' : 'Synced from Sprint and Roadmap', false); renderReports();
   if (ai) {
-    rUI.note = 'Writing with Gemini…'; rUI.wait = true; renderReports();
+    rUI.note = 'Writing with Gemini…'; rUI.noteFor = rep.id; rUI.wait = true; renderReports();
     try {
       const r = await sb.functions.invoke('weekly-draft', { body: aiPayload(rep.a, pl, rep.prods) });
       if (r.error || !r.data || !r.data.products) throw r.error || new Error('no answer');
@@ -167,9 +174,9 @@ function lineRow(rep, d, l, ro) {
 }
 function prodBlock(rep, p, ro) {
   const d = rep.prods[p.k]; if (!d) return el('div');
-  const sec = el('section', 'card rprod'); sec.dataset.k = p.k;
+  const sec = el('section', 'rprod'); sec.dataset.k = p.k; sec.style.setProperty('--c', colOf(p));
   const hd = el('div', 'rphead'), s = overall(d.items); hd.append(el('h2', '', p.n), el('span', 'chip rs-' + s, RSTATUS[s])); sec.append(hd);
-  if (ro) { sec.classList.add('rview'); sec.style.setProperty('--rc', 'var(--rc-' + s + ')'); if (d.sum) { const sv = el('div', 'rsumv'); showRich(sv, d.sumH, d.sum); sec.append(sv); } }
+  if (ro) { sec.classList.add('rview'); if (d.sum) { const sv = el('div', 'rsumv'); showRich(sv, d.sumH, d.sum); sec.append(sv); } }
   else sec.append(richBox('rsum', d.sumH, d.sum, 'Summary for ' + p.n, (h, pl) => { d.sum = pl || ruleSummary(p.n, d.items); d.sumH = pl ? h : ''; d.sumEdited = !!pl; save(rep); }));
   GROUPS.forEach(g => {
     const ls = d.items.filter(l => l.g === g[0] && (!ro || !l.hide));
@@ -186,25 +193,50 @@ function prodBlock(rep, p, ro) {
   });
   return sec;
 }
-export function renderReports() {
-  const pg = $('pg-reports'); if (!pg) return; pg.textContent = '';
-  const viewer = isViewer(), l = reportList(), rep = cur();
-  if (rep && S.reports[rep.id]) baseline[rep.id] = JSON.stringify(S.reports[rep.id]);
-  pg.append(pageHead('Weekly report', viewer ? 'Submitted weekly updates per product.' : 'Built from the sprint plan and the roadmap. Edit anything, then submit it to the executives.'));
-  const bar = el('div', 'row spbar');
-  if (l.length) { const sel = el('select'); sel.setAttribute('aria-label', 'Report'); l.forEach(r => { const o = el('option', '', 'Week of ' + fmtIso(r.a) + ' · Sprint ' + r.n + (viewer ? '' : r.status === 'submitted' ? ' · submitted' : ' · draft')); o.value = r.id; o.selected = rep && r.id === rep.id; sel.append(o); }); sel.addEventListener('change', () => { rUI.id = sel.value; rUI.note = ''; rUI.err = false; renderReports(); }); bar.append(sel); }
+const statsOf = r => { let all = 0, done = 0, prog = 0, risk = 0; Object.keys(r.prods || {}).forEach(k => ((r.prods[k] || {}).items || []).filter(l => !l.hide).forEach(l => { all++; if (l.g === 'done') done++; else if (l.g === 'prog') prog++; if (l.st === 'risk' || l.st === 'late') risk++; })); return { all: all, done: done, prog: prog, risk: risk }; };
+const copyReport = rep => { const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify('Report text copied to the clipboard'), () => notify('Could not copy. Select the text and copy it manually.', 'err')); };
+const settingsBtn = () => { const b = el('button', 'btn', 'Report settings'); b.type = 'button'; b.disabled = !canBuild(); b.addEventListener('click', settingsDlg); return b; };
+
+/* ---------- the list: one card per week, like the Sprints list ---------- */
+function listView(pg, viewer, l) {
+  const acts = el('div', 'acts');
   if (!viewer) {
     const free = missingWeeks(), t = todayIso(), pick = free.find(w => w.a <= t) || free[free.length - 1];
-    if (pick) { const nb = el('button', 'btn primary', 'New report for week of ' + fmtIso(pick.a)); nb.type = 'button'; nb.disabled = !canBuild(); nb.addEventListener('click', () => newReport(pick)); bar.append(nb); }
-    const sb2 = el('button', 'btn', 'Report settings'); sb2.type = 'button'; sb2.disabled = !canBuild(); sb2.addEventListener('click', settingsDlg); bar.append(sb2);
+    if (pick) { const nb = el('button', 'btn primary', '+ New report for week of ' + fmtIso(pick.a)); nb.type = 'button'; nb.disabled = !canBuild(); nb.addEventListener('click', () => newReport(pick)); acts.append(nb); }
+    acts.append(settingsBtn());
   }
+  pg.append(pageHead('Weekly report', viewer ? 'Submitted weekly updates per product. Open one to read it.' : 'One report per week, built from the sprint plan and the roadmap. Open one to edit it, then submit it to the executives.', acts.children.length ? acts : null));
   const sb0 = viewer ? null : setupBanner(); if (sb0) pg.append(sb0);
-  pg.append(bar);
-  if (!rep) { pg.append(el('p', 'empty', viewer ? 'No report has been submitted yet.' : sprintList().length ? 'No report yet. Create one for the latest sprint.' : 'Create a sprint first (Sprints page), then build the report.')); return; }
+  if (!l.length) { pg.append(el('p', 'empty', viewer ? 'No report has been submitted yet.' : sprintList().length ? 'No report yet. Click "+ New report" to create one for the latest sprint.' : 'Create a sprint first (Sprints page), then build the report.')); return; }
+  const wrap = el('div', 'splist');
+  l.forEach(r => {
+    const st = statsOf(r), sub = r.status === 'submitted', pct = st.all ? Math.round(100 * st.done / st.all) : 0;
+    const card = el('div', 'card spcard rpcard'), info = el('div');
+    const a = el('a', 'splink'); a.href = '#/reports/' + r.id; a.append(el('h2', '', 'Week of ' + fmtIso(r.a) + ' – ' + fmtIso(r.b)));
+    info.append(a, el('div', 'meta', 'Sprint ' + r.n + ' · week ' + (r.w || 1) + ' of 2 · ' + (sub ? 'submitted' + (r.subBy ? ' by ' + r.subBy : '') + (r.subAt ? ' on ' + fmtIso(r.subAt.slice(0, 10)) : '') : 'last edit ' + (r.by || 'unknown'))));
+    const pr = el('div', 'prods'); (r.pl || []).filter(p => r.prods && r.prods[p.k]).forEach(p => { const c = el('span', 'pchip', p.n); c.style.setProperty('--c', colOf(p)); pr.append(c); }); info.append(pr);
+    const prog = el('div', 'spprog'), top = el('div', 'rpstat'); top.append(el('span', 'chip rpst ' + (sub ? 'sub' : 'draft'), sub ? 'Submitted' : 'Draft'));
+    prog.append(top, el('div', 'meta', st.done + ' delivered · ' + st.prog + ' in progress' + (st.risk ? ' · ' + st.risk + ' at risk' : '')));
+    const b0 = el('div', 'bar0'), i0 = el('i'); i0.style.width = pct + '%'; b0.append(i0); prog.append(b0);
+    const more = el('button', 'btn sm spmore', '⋯'); more.type = 'button'; more.setAttribute('aria-label', 'More actions for the week of ' + fmtIso(r.a)); more.setAttribute('aria-haspopup', 'menu');
+    more.addEventListener('click', () => openMenu(more, [{ label: 'Open in new tab', value: 'tab' }, { label: 'Copy text', value: 'copy' }], {
+      search: false, label: 'Report actions', onPick: it => { if (it.value === 'tab') window.open(location.pathname + location.search + '#/reports/' + r.id, '_blank', 'noopener'); else copyReport(r); }, onClose: () => more.focus()
+    }));
+    card.append(info, prog, more); wrap.append(card);
+  });
+  pg.append(wrap);
+}
+
+/* ---------- one report: a sheet like the sprint plan ---------- */
+function detailView(pg, viewer, rep) {
+  if (S.reports[rep.id]) baseline[rep.id] = JSON.stringify(S.reports[rep.id]);
   const sub = rep.status === 'submitted', ro = viewer || sub || !canBuild();
+  pg.append(crumbs([{ label: 'Reports', href: '#/reports' }, { label: 'Week of ' + fmtIso(rep.a) }]));
+  pg.append(pageHead('Weekly report', 'Sprint ' + rep.n + ' · week ' + (rep.w || 1) + ' of 2' + (viewer ? '' : ro ? '. Submitted reports are read-only.' : '. Edit anything, then submit it to the executives.')));
+  const sb0 = viewer ? null : setupBanner(); if (sb0) pg.append(sb0);
   const srcTxt = rep.srcN ? ' · built from ' + rep.srcN.si + ' sprint items + ' + rep.srcN.rf + ' roadmap bars' : '';
   const meta = el('p', 'sub rmeta', sub ? 'Submitted' + (rep.subBy ? ' by ' + rep.subBy : '') + (rep.subAt ? ' on ' + fmtIso(rep.subAt.slice(0, 10)) : '') : 'Draft' + (rep.ai ? ' · wording by ' + (rep.ai.model || 'AI') : '') + ' · last edit ' + (rep.by || '') + srcTxt);
-  const tools = el('div', 'row rtools');
+  const tools = el('div', 'row spbar rtools');
   const btn = (t, cls, fn, dis) => { const b = el('button', 'btn ' + (cls || ''), t); b.type = 'button'; b.disabled = !!dis; b.addEventListener('click', fn); tools.append(b); return b; };
   if (!viewer && !sub) { btn('Sync from Sprint & Roadmap', '', () => sync(rep, false), !canBuild() || rUI.busy); const ab = btn('', 'ai', () => sync(rep, true), !canBuild() || rUI.busy); ab.insertAdjacentHTML('afterbegin', SPARK); ab.append(document.createTextNode(rUI.wait ? 'Writing…' : 'Generate with AI')); ab.title = 'Rewrites unedited lines and summaries in executive wording. Your edits are kept.'; tools.prepend(ab); }
   if (!viewer && !sub) {
@@ -212,15 +244,28 @@ export function renderReports() {
     const upd = () => { ub.disabled = !U.canUndo() || !canBuild(); rb.disabled = !U.canRedo() || !canBuild(); ub.title = ub.ariaLabel = U.canUndo() ? 'Undo: ' + U.nextUndo() + ' (Ctrl/Cmd+Z)' : 'Nothing to undo'; rb.title = rb.ariaLabel = U.canRedo() ? 'Redo: ' + U.nextRedo() + ' (Ctrl/Cmd+Shift+Z)' : 'Nothing to redo'; };
     if (unsubR) unsubR(); unsubR = U.subscribe(upd); upd();
   }
-  btn('Copy text', '', () => { const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify('Report text copied to the clipboard'), () => notify('Could not copy. Select the text and copy it manually.', 'err')); });
+  btn('Copy text', '', () => copyReport(rep));
   btn('Print / PDF', '', () => { document.body.classList.add('print-report'); const off = () => { document.body.classList.remove('print-report'); window.removeEventListener('afterprint', off); }; window.addEventListener('afterprint', off); window.print(); });
+  if (!viewer && !sub) tools.append(settingsBtn());
   if (!viewer && !sub) btn('Submit to executives', 'primary', () => { rep.status = 'submitted'; rep.subAt = new Date().toISOString(); rep.subBy = S.me.name || S.me.email; save(rep, 'submitted the weekly report for ' + fmtIso(rep.a)); notify('Report submitted. Executives can now see it.'); renderReports(); }, !canBuild());
   if (!viewer && sub) btn('Reopen as draft', '', () => { rep.status = 'draft'; delete rep.subAt; delete rep.subBy; save(rep, 'reopened the weekly report for ' + fmtIso(rep.a)); notify('Report reopened as a draft. Executives no longer see it.', 'info'); renderReports(); }, !canBuild());
-  const body = el('div', 'rbody'), pls = rep.pl || productsOf(cfg());
+  const body = el('div', 'rbody sdoc'), pls = rep.pl || productsOf(cfg());
   const hero = el('div', 'rhero'); hero.append(el('small', '', 'Ynmo · Weekly product update'), el('h2', 'rtitle', fmtIso(rep.a) + ' – ' + fmtIso(rep.b)), el('span', 'rsp', 'Sprint ' + rep.n + ' · week ' + (rep.w || 1) + ' of 2')); body.append(hero);
   const glance = el('div', 'rglance');
-  pls.forEach(p => { const d = rep.prods[p.k]; if (!d) return; const v = d.items.filter(l => !l.hide), s = overall(d.items), t = el('div', 'rtile rs-' + s); t.append(el('b', '', p.n), el('span', 'chip rs-' + s, RSTATUS[s]), el('small', '', v.filter(l => l.g === 'done').length + ' delivered · ' + v.filter(l => l.g === 'prog').length + ' in progress · ' + v.filter(l => l.st === 'risk' || l.st === 'late').length + ' at risk')); glance.append(t); });
+  pls.forEach(p => { const d = rep.prods[p.k]; if (!d) return; const v = d.items.filter(l => !l.hide), s = overall(d.items), t = el('div', 'rtile rs-' + s); t.style.setProperty('--c', colOf(p)); t.append(el('b', '', p.n), el('span', 'chip rs-' + s, RSTATUS[s]), el('small', '', v.filter(l => l.g === 'done').length + ' delivered · ' + v.filter(l => l.g === 'prog').length + ' in progress · ' + v.filter(l => l.st === 'risk' || l.st === 'late').length + ' at risk')); glance.append(t); });
   body.append(glance); if (!ro) body.append(richBar());
   pls.forEach(p => body.append(prodBlock(rep, p, ro)));
-  pg.append(meta, tools); if (rUI.note && !viewer && !sub) { const nt = el('p', 'rnote' + (rUI.err ? ' bad' : ''), rUI.note); nt.setAttribute('role', 'status'); pg.append(nt); } pg.append(body);
+  pg.append(meta, tools); if (rUI.note && rUI.noteFor === rep.id && !viewer && !sub) { const nt = el('p', 'rnote' + (rUI.err ? ' bad' : ''), rUI.note); nt.setAttribute('role', 'status'); pg.append(nt); } pg.append(body);
 }
+
+export function renderReports() {
+  const pg = $('pg-reports'); if (!pg) return; closeMenu();
+  const id = routeId(), keepY = id && rUI.last === id ? window.scrollY : 0; rUI.last = id || '';
+  pg.textContent = '';
+  const viewer = isViewer(), l = reportList(), rep = cur();
+  pg.classList.toggle('sheet', !!rep);
+  if (id && !rep) { pg.append(crumbs([{ label: 'Reports', href: '#/reports' }, { label: 'Not found' }]), pageHead('Report not found', viewer ? 'It may not be submitted yet, or it is still loading.' : 'It may have been removed, or it is still loading.')); return; }
+  if (rep) detailView(pg, viewer, rep); else listView(pg, viewer, l);
+  if (keepY && Math.abs(window.scrollY - keepY) > 1) window.scrollTo(0, keepY);
+}
+window.addEventListener('hashchange', () => { if (state.page === 'reports') renderReports(); });
