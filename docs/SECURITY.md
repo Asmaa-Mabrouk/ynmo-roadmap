@@ -37,3 +37,5 @@ only usability. The only key in the client is the *publishable* key. Never commi
 
 ## Reporting
 Send findings privately to the product lead (asmaa.mabrouk.ibrahim@gmail.com). Don't open public issues for vulnerabilities.
+
+- Google Drive export: CSP allows `accounts.google.com/gsi/*` and `www.googleapis.com` only. OAuth scope `drive.file` (own documents only); the access token is kept in memory and never saved. The OAuth Client ID is public by design.

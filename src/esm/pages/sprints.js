@@ -21,6 +21,7 @@ import { notify } from '../ui/notify.js';
 import { openJiraPull } from '../features/jira-pull.js';
 import { copyRich, docUrl, sprintDoc } from '../features/sprint-export.js';
 import { jiraUrl } from '../features/report-model.js';
+import { clientId, docId, exportDoc, getToken, isAdmin, openDriveSetup } from '../features/google-drive.js';
 import { openMenu, closeMenu } from '../ui/menu.js';
 import { crumbs } from '../ui/crumbs.js';
 import { createUndo } from '../features/undo-stack.js';
@@ -412,21 +413,38 @@ function detailView(pg, sp, ro) {
   const bar = el('div', 'row spbar'); bar.append(ab, cb, jb, ub, rb);
   // Google Docs: link a doc to this sprint, and export the plan to it (copy as formatted text, open the doc, paste once)
   const gd = el('div', 'spgdoc'), gi = el('input'); gi.type = 'url'; gi.placeholder = 'Paste a Google Doc link (optional)'; gi.value = sp.gdoc || ''; gi.disabled = ro; gi.setAttribute('aria-label', 'Google Doc link');
-  const eb = el('button', 'btn', 'Export to Google Docs'), ob = el('button', 'btn', 'Open linked doc'); eb.type = ob.type = 'button'; ob.hidden = !sp.gdoc;
-  eb.title = 'Copies the sprint plan as formatted text and opens the doc. Press Ctrl/Cmd+V there.';
+  const eb = el('button', 'btn gdexp'), cp = el('button', 'btn', 'Copy for Docs'), ob = el('button', 'btn', 'Open linked doc'); eb.type = cp.type = ob.type = 'button'; ob.hidden = !sp.gdoc;
+  eb.innerHTML = '<svg class="gdi" viewBox="0 0 87.3 78" aria-hidden="true"><path fill="#0066da" d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z"/><path fill="#00ac47" d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0-1.2 4.5h27.5z"/><path fill="#ea4335" d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z"/><path fill="#00832d" d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z"/><path fill="#2684fc" d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z"/><path fill="#ffba00" d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z"/></svg>';
+  eb.append(document.createTextNode(' Export to Google Docs'));
+  eb.title = 'Creates (or updates) a Google Doc in your Google Drive. The first time you sign in to Google.'; cp.title = 'Copies the plan as formatted text and opens the doc. Press Ctrl/Cmd+V there. Needs no Google sign-in.';
+  const plan = () => sprintDoc({ n: sp.n, a: sp.a, b: sp.b }, blocksOf(sp.id), { laneName: k => lane(k).n, jiraUrl: k => jiraUrl((S.ideas.reportcfg || {}).jira, k), fmt: fmtIso });
+  const setLink = (u, id) => { const cur = Object.assign({ id: sp.id }, S.sprints[sp.id]), d = Object.assign(base(cur), u ? { gdoc: u } : {}); if (id) d.gdocId = id; if (!u) { delete d.gdoc; delete d.gdocId; } saveSprint(sp.id, d); sp.gdoc = u; sp.gdocId = id || ''; gi.value = u; ob.hidden = !u; };
   gi.addEventListener('change', () => {
     const v = gi.value.trim(), u = v ? docUrl(v) : ''; if (v && !u) { notify('That is not a Google Docs link (it should start with https://docs.google.com/document/)', 'err'); gi.value = sp.gdoc || ''; return; }
-    if ((sp.gdoc || '') === u) return; const cur = Object.assign({ id: sp.id }, S.sprints[sp.id]); const d = Object.assign(base(cur), { gdoc: u }); if (!u) delete d.gdoc;
-    saveSprint(sp.id, d); sp.gdoc = u; gi.value = u; ob.hidden = !u; logAct('sprint', (u ? 'linked a Google Doc to' : 'unlinked the Google Doc from') + ' Sprint ' + sp.n); notify(u ? 'Google Doc linked' : 'Google Doc unlinked');
+    if ((sp.gdoc || '') === u) return; setLink(u, ''); logAct('sprint', (u ? 'linked a Google Doc to' : 'unlinked the Google Doc from') + ' Sprint ' + sp.n); notify(u ? 'Google Doc linked' : 'Google Doc unlinked');
   });
   ob.addEventListener('click', () => { if (sp.gdoc) window.open(sp.gdoc, '_blank', 'noopener'); });
-  eb.addEventListener('click', async () => {
-    const out = sprintDoc(Object.assign({ n: sp.n, a: sp.a, b: sp.b }), blocksOf(sp.id), { laneName: k => lane(k).n, jiraUrl: k => jiraUrl((S.ideas.reportcfg || {}).jira, k), fmt: fmtIso });
-    window.open(sp.gdoc || 'https://docs.new', '_blank', 'noopener');
+  cp.addEventListener('click', async () => {
+    const out = plan(); window.open(sp.gdoc || 'https://docs.new', '_blank', 'noopener');
     const ok = await copyRich(out.html, out.text);
-    notify(ok ? 'Sprint ' + sp.n + ' copied. Click in the Google Doc and press Ctrl/Cmd+V.' : 'Could not copy. Select the plan on this page and copy it by hand.', ok ? 'ok' : 'err'); if (ok) logAct('sprint', 'exported Sprint ' + sp.n + ' to Google Docs');
+    notify(ok ? 'Sprint ' + sp.n + ' copied. Click in the Google Doc and press Ctrl/Cmd+V.' : 'Could not copy. Select the plan on this page and copy it by hand.', ok ? 'ok' : 'err'); if (ok) logAct('sprint', 'copied Sprint ' + sp.n + ' for Google Docs');
   });
-  gd.append(gi, eb, ob); pg.append(dr, bar, gd, ed);
+  const run = async () => {
+    eb.disabled = true;
+    try {
+      await getToken();   // first click: Google sign-in popup (must start from this click)
+      notify('Exporting to Google Docs…', 'info');
+      const mine = sp.gdocId || docId(sp.gdoc), out = plan(), r = await exportDoc({ name: 'Sprint ' + sp.n + ' plan', html: out.html, fileId: mine });
+      setLink(r.url, r.id); logAct('sprint', 'exported Sprint ' + sp.n + ' to a Google Doc');
+      notify(r.created ? (mine ? 'Your linked doc could not be edited (Google only lets this tool edit docs it created), so a new Google Doc was made and linked.' : 'Exported to a new Google Doc. Click Open linked doc.') : 'Google Doc updated. Click Open linked doc.', 'ok');
+    } catch (e) { notify(String((e && e.message) || e), 'err'); } finally { eb.disabled = false; }
+  };
+  eb.addEventListener('click', () => {
+    if (clientId()) { run(); return; }
+    if (isAdmin()) openDriveSetup(() => notify('Now click Export to Google Docs again to sign in to Google.', 'info'));
+    else notify('Google Drive is not set up yet. Ask an admin to click Export to Google Docs once to set it up. You can use Copy for Docs meanwhile.', 'info');
+  });
+  gd.append(gi, eb, cp, ob); pg.append(dr, bar, gd, ed);
 }
 
 export function renderSprints() {

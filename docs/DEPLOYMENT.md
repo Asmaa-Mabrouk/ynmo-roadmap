@@ -65,3 +65,10 @@ Edit `SUPABASE_URL` / `SUPABASE_KEY` in `src/esm/core/supabase.js` (publishable 
 
 ## 7. Backups
 Supabase daily backups (plan dependent). Baselines are extra in-app checkpoints; CSV export exists for the roadmap; log export for audit.
+
+## 2d. Google Drive export (one-time, an admin)
+1. console.cloud.google.com > create a project. APIs & Services > Library > enable "Google Drive API".
+2. OAuth consent screen: Internal (Google Workspace) or External (then click Publish app; the `drive.file` scope needs no Google review). Add scope `https://www.googleapis.com/auth/drive.file`.
+3. Credentials > Create credentials > OAuth client ID > Web application. Authorized JavaScript origins: `https://ynmo-roadmap.vercel.app` (and any other address the tool is served from).
+4. Copy the Client ID. In the tool: Sprints > open a sprint > "Export to Google Docs" (as an admin) > paste the Client ID > Save. Then click Export again and sign in.
+Troubleshooting: "popup blocked" = allow pop-ups for the site; "Google Drive API is not enabled" = step 1; "Error 400: origin_mismatch" = the site address is missing in step 3; "access blocked / not verified" = the app is External and still in Testing: Publish it or add the user as a test user.

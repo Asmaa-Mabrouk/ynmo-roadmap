@@ -83,3 +83,10 @@ Gantt roadmap, multiple roadmaps, ideas, resources, vacations, log, Supabase aut
 - A "Google Doc link" field on each sprint (saved on the sprint as `gdoc`, only Google Docs links accepted) and an "Open linked doc" button.
 - "Export to Google Docs": copies the sprint plan as formatted text (title, product headings, person headings, scopes and sub-steps as lists, status, tags, Jira keys as links when the report's Jira address is set) and opens the linked doc, or a new Google Doc (docs.new). Paste once with Ctrl/Cmd+V. Free notes are not exported.
 - No Google sign-in is needed. One-click automatic export would need a Google Cloud OAuth client (not set up).
+
+## Google Drive: one-click export to a real Google Doc
+- Sprint page: "Export to Google Docs" (Drive icon). First click asks Google to sign in (popup); then it creates a real Google Doc in the user's Drive from the plan and links it to the sprint (`gdoc`, `gdocId`). Exporting again updates the same doc. If the linked doc is one the tool cannot edit (made by hand or by someone else), a new doc is created and linked, and the user is told.
+- Scope `drive.file` only: the tool sees just the docs it created. The sign-in token stays in memory (about an hour); nothing is stored.
+- One-time admin setup in the app: paste the Google OAuth Client ID (public; saved in `ideas/googlecfg`). Steps are shown in the dialog. Non-admins are asked to get an admin to do it.
+- The earlier paste flow stays as "Copy for Docs" (no sign-in needed).
+- vercel.json CSP now also allows `https://accounts.google.com/gsi/*` (sign-in script, styles, frame) and `https://www.googleapis.com` (Drive API). Nothing else loosened.
