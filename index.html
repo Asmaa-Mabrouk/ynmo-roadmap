@@ -7890,8 +7890,14 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     r.setEnd(s.anchorNode, s.anchorOffset);
     return r.toString().length;
   }
+  function focusKeep(bt) {
+    bt.focus({ preventScroll: true });
+    const r = bt.getBoundingClientRect(), top = 90, bot = window.innerHeight - 40;
+    if (r.top < top) window.scrollBy(0, r.top - top - 20);
+    else if (r.bottom > bot) window.scrollBy(0, r.bottom - bot + 20);
+  }
   function setCaret(bt, pos) {
-    bt.focus();
+    focusKeep(bt);
     const n = bt.firstChild, r = document.createRange();
     if (!n) r.setStart(bt, 0);
     else {
@@ -8080,7 +8086,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         },
         onClose: () => {
           const s = host2.querySelector('.blk[data-id="' + b.id + '"] .bt');
-          if (s) s.focus();
+          if (s) focusKeep(s);
         }
       });
     };
@@ -8092,7 +8098,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       },
       onClose: () => {
         const s = host2.querySelector('.blk[data-id="' + b.id + '"] .bt');
-        if (s) s.focus();
+        if (s) focusKeep(s);
       }
     });
     const onKey = (e, b, bt) => {
@@ -8409,6 +8415,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       return r;
     }
     function draw() {
+      const keepY = window.scrollY;
       host2.textContent = "";
       const all = list();
       let c = "var(--brand)";
@@ -8429,12 +8436,22 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       if (!ro) host2.append(ghostRow(all));
       applyPicked();
       if (!all.length && ro) host2.append(el("p", "empty", "Nothing written in this sprint yet."));
+      if (Math.abs(window.scrollY - keepY) > 1) window.scrollTo(0, keepY);
     }
     host2.addEventListener("click", (e) => {
-      if (!ro && e.target === host2) {
-        const g = host2.querySelector(".ghost .bt");
-        if (g) g.focus();
-      }
+      if (ro || e.target !== host2) return;
+      const rows2 = [...host2.querySelectorAll(".blk")];
+      if (!rows2.length) return;
+      let best = null, bd = 1e9;
+      rows2.forEach((r) => {
+        const b = r.getBoundingClientRect(), d = e.clientY < b.top ? b.top - e.clientY : e.clientY > b.bottom ? e.clientY - b.bottom : 0;
+        if (d < bd) {
+          bd = d;
+          best = r;
+        }
+      });
+      const bt = best && best.querySelector(".bt");
+      if (bt) setCaret(bt, "end");
     });
     const addSec = () => {
       if (!canWrite()) return;
@@ -8648,10 +8665,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     gd.append(gi, eb, cp, ob);
     pg.append(dr, bar2, gd, ed);
   }
-  function renderSprints() {
+  function renderSprints(o) {
     const pg = $("pg-sprints");
     if (!pg) return;
     closeMenu();
+    const keepY = o && o.keep ? window.scrollY : -1;
     pg.textContent = "";
     activeEd = null;
     const ro = !canEdit() || !canWrite(), id = routeId(), sp = id ? sprintList().find((s) => s.id === id) : null;
@@ -8662,6 +8680,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     }
     if (sp) detailView(pg, sp, ro);
     else listView(pg, ro);
+    if (keepY >= 0 && Math.abs(window.scrollY - keepY) > 1) window.scrollTo(0, keepY);
   }
   window.addEventListener("hashchange", () => {
     if (state.page === "sprints") renderSprints();
@@ -8869,7 +8888,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         const n = snapDocs("sprints", s, S.sprints);
         if (same(n, S.sprints)) return;
         S.sprints = n;
-        if (state.page === "sprints" && !document.activeElement.closest("#pg-sprints")) renderSprints();
+        if (state.page === "sprints" && !document.activeElement.closest("#pg-sprints")) renderSprints({ keep: true });
         if (state.page === "reports") renderReports();
       }, (e) => {
         if (e && e.code === "missing_table") {
@@ -8881,7 +8900,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         const n = snapDocs("sprint_items", s, S.sitems);
         if (same(n, S.sitems)) return;
         S.sitems = n;
-        if (state.page === "sprints" && !document.activeElement.closest("#pg-sprints")) renderSprints();
+        if (state.page === "sprints" && !document.activeElement.closest("#pg-sprints")) renderSprints({ keep: true });
       }, (e) => {
         if (e && e.code === "missing_table") {
           S.setup["sprint_items"] = true;
@@ -9723,6 +9742,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     commit,
     removeItem,
     render,
+    renderSprints,
     scheduleIdea,
     get NDAYS() {
       return NDAYS;

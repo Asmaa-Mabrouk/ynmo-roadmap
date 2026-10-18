@@ -152,8 +152,14 @@ function caretOf(bt) {
   const s = window.getSelection(); if (!s.rangeCount || !bt.contains(s.anchorNode)) return 0;
   const r = s.getRangeAt(0).cloneRange(); r.selectNodeContents(bt); r.setEnd(s.anchorNode, s.anchorOffset); return r.toString().length;
 }
+/** Focus a line without the browser scrolling it to the middle of the page; scroll only when it is really out of view. */
+function focusKeep(bt) {
+  bt.focus({ preventScroll: true });
+  const r = bt.getBoundingClientRect(), top = 90, bot = window.innerHeight - 40;
+  if (r.top < top) window.scrollBy(0, r.top - top - 20); else if (r.bottom > bot) window.scrollBy(0, r.bottom - bot + 20);
+}
 function setCaret(bt, pos) {
-  bt.focus(); const n = bt.firstChild, r = document.createRange();
+  focusKeep(bt); const n = bt.firstChild, r = document.createRange();
   if (!n) r.setStart(bt, 0); else { const len = n.textContent.length; r.setStart(n, Math.min(pos === 'end' ? len : pos === 'start' ? 0 : pos, len)); }
   r.collapse(true); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
 }
@@ -227,11 +233,11 @@ function docEditor(sp, ro) {
   };
   const chipMenu = (b, name, at) => {
     openMenu(at, TAG_COLORS.map(c => ({ label: c[0].toUpperCase() + c.slice(1), dot: 'var(--tg-' + c + ')', value: 'c:' + c })).concat([{ label: 'Remove tag from this line', value: 'rm' }]), {
-      label: '#' + name + ' options', search: true, onPick: it => { if (it.value === 'rm') saveItem(b.id, { tags: (S.sitems[b.id].tags || []).filter(x => x !== name) }); else ensureTag(spId, name, it.value.slice(2)); redraw(); }, onClose: () => { const s = host.querySelector('.blk[data-id="' + b.id + '"] .bt'); if (s) s.focus(); }
+      label: '#' + name + ' options', search: true, onPick: it => { if (it.value === 'rm') saveItem(b.id, { tags: (S.sitems[b.id].tags || []).filter(x => x !== name) }); else ensureTag(spId, name, it.value.slice(2)); redraw(); }, onClose: () => { const s = host.querySelector('.blk[data-id="' + b.id + '"] .bt'); if (s) focusKeep(s); }
     });
   };
   const statusMenu = (b, at) => openMenu(at, Object.keys(SSTATUS).map(k => ({ label: SSTATUS[k], value: k })), {
-    label: 'Status', onPick: it => { saveItem(b.id, { st: it.value, dn: it.value === 'done' ? todayIso() : '' }); redraw(); }, onClose: () => { const s = host.querySelector('.blk[data-id="' + b.id + '"] .bt'); if (s) s.focus(); }
+    label: 'Status', onPick: it => { saveItem(b.id, { st: it.value, dn: it.value === 'done' ? todayIso() : '' }); redraw(); }, onClose: () => { const s = host.querySelector('.blk[data-id="' + b.id + '"] .bt'); if (s) focusKeep(s); }
   });
 
   /* keys inside a line */
@@ -352,6 +358,7 @@ function docEditor(sp, ro) {
     r.append(bt); return r;
   }
   function draw() {
+    const keepY = window.scrollY;
     host.textContent = ''; const all = list(); let c = 'var(--brand)';
     all.forEach((b, i) => {
       if (b.k === 'h') c = lane(b.sq).c;
@@ -363,8 +370,14 @@ function docEditor(sp, ro) {
     if (!ro) host.append(ghostRow(all));
     applyPicked();
     if (!all.length && ro) host.append(el('p', 'empty', 'Nothing written in this sprint yet.'));
+    if (Math.abs(window.scrollY - keepY) > 1) window.scrollTo(0, keepY);
   }
-  host.addEventListener('click', e => { if (!ro && e.target === host) { const g = host.querySelector('.ghost .bt'); if (g) g.focus(); } });
+  host.addEventListener('click', e => {
+    if (ro || e.target !== host) return;
+    const rows = [...host.querySelectorAll('.blk')]; if (!rows.length) return;
+    let best = null, bd = 1e9; rows.forEach(r => { const b = r.getBoundingClientRect(), d = e.clientY < b.top ? b.top - e.clientY : e.clientY > b.bottom ? e.clientY - b.bottom : 0; if (d < bd) { bd = d; best = r; } });
+    const bt = best && best.querySelector('.bt'); if (bt) setCaret(bt, 'end');
+  });
   const addSec = () => { if (!canWrite()) return; if (!freeLanes().length) { notify('Every product section is already in this sprint', 'info'); return; } const ids = insert('', [{ k: 'n' }]); redraw(ids[0]); const bt = host.querySelector('.blk[data-id="' + ids[0] + '"] .bt'); pickLane(Object.assign({ id: ids[0] }, S.sitems[ids[0]]), bt); };
   const doUndo = dir => {
     flushAll(); const r = undoOf(spId).step(dir, id => S.sitems[id], rawSet), word = dir === 'undo' ? 'Undo' : 'Redo';
@@ -447,11 +460,15 @@ function detailView(pg, sp, ro) {
   gd.append(gi, eb, cp, ob); pg.append(dr, bar, gd, ed);
 }
 
-export function renderSprints() {
-  const pg = $('pg-sprints'); if (!pg) return; closeMenu(); pg.textContent = ''; activeEd = null;
+/** `o.keep`: a redraw caused by someone else's change (not by moving to the page): stay where you were scrolled. */
+export function renderSprints(o) {
+  const pg = $('pg-sprints'); if (!pg) return; closeMenu();
+  const keepY = o && o.keep ? window.scrollY : -1;
+  pg.textContent = ''; activeEd = null;
   const ro = !canEdit() || !canWrite(), id = routeId(), sp = id ? sprintList().find(s => s.id === id) : null;
   pg.classList.toggle('sheet', !!sp);
   if (id && !sp) { pg.append(crumbs([{ label: 'Sprints', href: '#/sprints' }, { label: 'Not found' }]), pageHead('Sprint not found', 'It may have been deleted, or it is still loading.')); return; }
   if (sp) detailView(pg, sp, ro); else listView(pg, ro);
+  if (keepY >= 0 && Math.abs(window.scrollY - keepY) > 1) window.scrollTo(0, keepY);
 }
 window.addEventListener('hashchange', () => { if (state.page === 'sprints') renderSprints(); });

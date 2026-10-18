@@ -37,10 +37,11 @@ import './app/extras-wiring.js';
 import './ui/dropdowns.js';
 import './ui/loading.js';
 import { init } from './pages/ideas-columns.js';
+import { renderSprints } from './pages/sprints.js';
 
 /** Handles for automated tests and console debugging (the app itself never reads window.__ynmo). */
 window.__ynmo = {
-  S, LANES: model.LANES, state: model.state, items: model.items, directory: model.directory, allRoadmaps, commit, removeItem, render, scheduleIdea,
+  S, LANES: model.LANES, state: model.state, items: model.items, directory: model.directory, allRoadmaps, commit, removeItem, render, renderSprints, scheduleIdea,
   get NDAYS() { return model.NDAYS; },
   get vacs() { return S.vacs; },
 };

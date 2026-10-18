@@ -90,3 +90,8 @@ Gantt roadmap, multiple roadmaps, ideas, resources, vacations, log, Supabase aut
 - One-time admin setup in the app: paste the Google OAuth Client ID (public; saved in `ideas/googlecfg`). Steps are shown in the dialog. Non-admins are asked to get an admin to do it.
 - The earlier paste flow stays as "Copy for Docs" (no sign-in needed).
 - vercel.json CSP now also allows `https://accounts.google.com/gsi/*` (sign-in script, styles, frame) and `https://www.googleapis.com` (Drive API). Nothing else loosened.
+
+## Sprint page: no more scroll jumps
+- Fixed: clicking next to a line (not exactly on its text) put the caret in the empty line at the very end of the document, so the page jumped to the bottom. It now puts the caret in the nearest line and stays where you are.
+- Focusing a line no longer lets the browser re-centre the page; the page scrolls only when the caret is really out of view.
+- A redraw caused by someone else's change (or your own save arriving back) keeps your scroll position.
