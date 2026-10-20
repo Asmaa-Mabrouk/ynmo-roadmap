@@ -533,3 +533,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .pc-n { --pc: #c9ccd6; --pt: var(--muted); } .pc-y { --pc: #e3b505; --pt: #8a6d00; } .pc-o { --pc: #f08a24; --pt: #b85f00; } .pc-g { --pc: #2e9d6b; --pt: #1d7a52; }
 .mpv.pc-y, .mpv.pc-o, .mpv.pc-g, .rmpct, .rmpp, .mpin { color: var(--pt); }
 .mpin.pc-y, .mpin.pc-o, .mpin.pc-g { border-color: var(--pc); font-weight: 700; }
+
+/* Report and Monthly toolbar: roomier, grouped, with space around it */
+#pg-reports.sheet .rtools, #pg-monthly.sheet .rtools { display: flex; flex-wrap: wrap; gap: 14px 12px; margin: 18px 0 22px; padding: 16px 0; border-block: 1px solid var(--line); align-items: center; }
+#pg-reports.sheet .rtools .btn, #pg-monthly.sheet .rtools .btn { padding: 9px 18px; min-height: 42px; }
+#pg-reports.sheet .rtools .btn.rdel, #pg-monthly.sheet .rtools .btn.rdel { margin-inline-start: auto; }
+#pg-reports.sheet .rmeta, #pg-monthly.sheet .rmeta { margin: 8px 0 4px; line-height: 1.6; }
+#pg-reports.sheet .rnote, #pg-monthly.sheet .rnote { margin: 0 0 22px; padding: 12px 16px; }
+#pg-reports.sheet .rbody, #pg-monthly.sheet .rbody { margin-top: 8px; }
+@media (max-width: 720px) { #pg-reports.sheet .rtools, #pg-monthly.sheet .rtools { gap: 10px 8px; padding: 12px 0; } #pg-reports.sheet .rtools .btn, #pg-monthly.sheet .rtools .btn { padding: 8px 14px; min-height: 40px; } #pg-reports.sheet .rtools .btn.rdel, #pg-monthly.sheet .rtools .btn.rdel { margin-inline-start: 0; } }
