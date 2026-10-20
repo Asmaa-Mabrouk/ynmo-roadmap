@@ -14,7 +14,7 @@ export const DEFAULT_PRODUCTS = [
   { k: 'ai', n: 'AI (Sara)', squads: ['ai'] }
 ];
 export const RSTATUS = { on: 'On Track', risk: 'At Risk', late: 'Delayed', done: 'Done' };
-export const GROUPS = [['done', 'Delivered this week'], ['prog', 'In progress'], ['next', 'Next'], ['risk', 'Risks & decisions'], ['road', 'Roadmap milestones']];
+export const GROUPS = [['done', 'Delivered this week'], ['prog', 'In progress'], ['risk', 'Risks & decisions'], ['road', 'Roadmap milestones']];
 export const SKIND = { feature: 'Feature', fix: 'Fix', support: 'Support' };
 export const SSTATUS = { planned: 'Planned', progress: 'In progress', done: 'Done', blocked: 'Blocked' };
 
@@ -91,7 +91,6 @@ export function ruleSummary(name, lines) {
   const parts = [];
   if (c('done')) parts.push(plural(c('done'), 'item') + ' delivered');
   if (c('prog')) parts.push(plural(c('prog'), 'item') + ' in progress');
-  if (c('next')) parts.push(plural(c('next'), 'item') + ' planned next');
   const bits = parts.length ? parts.join(', ') : 'no sprint activity recorded';
   const risks = v.filter(l => l.st === 'risk' || l.st === 'late').length;
   return name + ': ' + bits + (risks ? '. ' + plural(risks, 'item') + ' at risk or waiting on a decision.' : '.');
@@ -108,7 +107,7 @@ export function overall(lines) {
 export function buildProds(products, prevProds, sitems, road, ka, kb, a, b) {
   const out = {};
   products.forEach(p => {
-    const old = (prevProds && prevProds[p.k]) || {}, lines = mergeLines(old.items, sourceLines(p, sitems, road, ka, kb, a, b));
+    const old = (prevProds && prevProds[p.k]) || {}, lines = mergeLines(old.items, sourceLines(p, sitems, road, ka, kb, a, b)).filter(l => l.g !== 'next');   /* the "Next" list is not part of the report: it was long and hid what matters */
     lines.sort((a, b) => GROUPS.findIndex(g => g[0] === a.g) - GROUPS.findIndex(g => g[0] === b.g));
     out[p.k] = { items: lines, sum: old.sumEdited ? old.sum : ruleSummary(p.n, lines), sumH: old.sumEdited ? (old.sumH || '') : '', sumEdited: !!old.sumEdited };
   });

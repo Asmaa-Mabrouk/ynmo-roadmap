@@ -15,7 +15,7 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 | Backend | Supabase project **YNMO_PM**; SQL 01 to 06; Edge Functions `notify-approval`, `weekly-draft`, `jira-sync` (code in repo; deployment status per the open items below) |
 | Owner | Asmaa (Senior PM, TrianglZ, Ynmo ecosystem, Riyadh) |
 | Pages | Roadmap, Ideas, Roadmaps, Sprints, Reports, Monthly, Resources, Vacations, Capacity, Baselines, Log, Approvals |
-| Tests | `tests/run_all.sh`: last full run 88/88 scenarios and all feature scripts green (`sprints_reports.py` 98, `monthly_page.py` 25) |
+| Tests | `tests/run_all.sh`: last full run 88/88 scenarios and all feature scripts green (`sprints_reports.py` 98, `monthly_page.py` 27) |
 | Jira | Site `tatralab.atlassian.net`; default projects DYC (Daycare), FAS (Tifli), AU (AI). Plan, Warif and Sharjah project keys not known yet. Rovo was considered; the API route was chosen |
 | Google Drive export | Google Cloud project **YNMO PM** (trianglz.com, Internal consent), Drive API on, Web client created for `https://ynmo-roadmap.vercel.app`. Client ID to be pasted in the tool by an admin; the client secret is not used |
 
@@ -41,6 +41,19 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 8. Not yet tested against the real services: Jira, Google sign-in and Drive.
 
 ## Ledger updates
+
+🔄 YNMO LEDGER UPDATE — 2026-10-20
+Request: Where to add the percentage; remove the heavy section from the weekly report; leave Monthly product sections empty to fill by hand; colour each percentage (yellow 1-50, orange above 50, then green)
+Surface: cross-cutting (Ynmo Roadmaps internal tool)
+Outcome: "Next" group removed from the weekly report; percentages on the Monthly page are colour-coded; a new month starts with empty product sections (Sync from Roadmap stays optional).
+New facts / decisions locked:
+  • Weekly report groups: Delivered this week, In progress, Risks & decisions, Roadmap milestones (no "Next").
+  • Percentage colours: 0 grey, 1-50 yellow, 51-99 orange, 100 green.
+Corrections to this skill:
+  • none
+Open / flagged:
+  • Confirm that green should start at 100 (the request said "after that green"); easy to change to e.g. 75+.
+Changelog: Dropped Next list from weekly report; colour-coded monthly percentages.
 
 🔄 YNMO LEDGER UPDATE — 2026-10-20
 Request: Delete a weekly report; make the monthly view easy to show to executives as a Notion-style page like Sprints, with "Sync from Roadmap" per product and an editable assumed percentage

@@ -51,6 +51,6 @@ with sync_playwright() as pw:
     nb=A.locator('#pg-reports button', has_text='New report').first
     if nb.count(): nb.click(); A.wait_for_timeout(900)
     txt=A.locator('#pg-reports').inner_text()
-    ok('weekly report has Deployments and Quality scope sections', 'Deployments' in txt and 'Quality scope' in txt and 'Ship build 1.2' in txt)
+    ok('weekly report has Deployments and Quality scope sections', 'Deployments' in txt and 'Quality scope' in txt)
     ok('no page errors', errs==[])
 p=sum(1 for _,c in R if c); print(p,'/',len(R)); sys.exit(0 if p==len(R) else 1)

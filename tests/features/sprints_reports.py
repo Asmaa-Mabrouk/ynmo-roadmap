@@ -134,9 +134,9 @@ with sync_playwright() as pw:
     ok('draft has 3 product sections', A.locator('#pg-reports .rprod').count()==3)
     pd=A.locator('#pg-reports .rprod[data-k="plan_daycare"]')
     vl=lambda loc: loc.evaluate("e=>[...e.querySelectorAll('.sptext')].map(x=>x.innerText).join('|')")
-    ok('Plan/Daycare shows delivered + risk lines', 'Attendance report' in vl(pd) and 'Parent chat' in vl(pd))
+    ok('Plan/Daycare shows the delivered line; the long Next list is not in the report', 'Parent chat' in vl(pd) and A.locator('#pg-reports .rgrp h3:text-is("Next")').count()==0)
     ok('blocked item makes the product At Risk', 'At Risk' in pd.locator('.chip').inner_text())
-    ok('Tifli in-progress line present', 'Onboarding flow' in vl(A.locator('#pg-reports .rprod[data-k="tifli"]')))
+    ok('planned items are left out of the report', 'Onboarding flow' not in vl(A.locator('#pg-reports .rprod[data-k="tifli"]')))
     # AI
     A.click('button:text-is("Generate with AI")'); A.wait_for_timeout(900)
     ok('AI called once and wording applied', A.evaluate("window.__aiCalls")==1 and 'AI: ' in vl(A.locator('#pg-reports')) and 'AI summary' in A.locator('#pg-reports .rsum').first.inner_text())
@@ -166,7 +166,7 @@ with sync_playwright() as pw:
     openrep(A); ok('opening a card shows the report sheet with breadcrumb', A.evaluate("location.hash").startswith('#/reports/') and A.locator('#pg-reports nav.crumbs').count()==1 and A.locator('#pg-reports.sheet').count()==1)
     A.click('button:text-is("Sync from Sprint & Roadmap")'); A.wait_for_timeout(600)
     vals=A.evaluate("[...document.querySelectorAll('#pg-reports .sptext')].map(e=>e.innerText.trim())")
-    ok('sync adds new item and keeps edit', any('Sara voice v2' in v for v in vals) and 'Custom wording by PM' in vals)
+    ok('sync keeps edits and does not bring planned items back', 'Custom wording by PM' in vals and not any('Sara voice v2' in v for v in vals))
     ok('report shows the tag chips', A.locator('#pg-reports .tgchip').count()>=1)
     # every native dropdown is searchable
     g=A.locator('#pg-reports .rprod[data-k="tifli"] select[aria-label="Group"]').first; g.click(); A.wait_for_timeout(150)
@@ -181,7 +181,7 @@ with sync_playwright() as pw:
     # --- many items at once + rich text
     A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(300); openrep(A)
     tf=A.locator('#pg-reports .rprod[data-k="tifli"]'); before=tf.locator('.rline').count()
-    ta=tf.locator('.rgrp:has(h3:text-is("Next")) .spadd textarea'); ta.fill('- First bulk item\n* Second bulk item\n\n3. Third bulk item'); tf.locator('.rgrp:has(h3:text-is("Next")) .spadd button').click(); A.wait_for_timeout(500)
+    ta=tf.locator('.rgrp:has(h3:text-is("In progress")) .spadd textarea'); ta.fill('- First bulk item\n* Second bulk item\n\n3. Third bulk item'); tf.locator('.rgrp:has(h3:text-is("In progress")) .spadd button').click(); A.wait_for_timeout(500)
     ok('bulk add creates one line per row', A.locator('#pg-reports .rprod[data-k="tifli"] .rline').count()==before+3 and 'Second bulk item' in vl(A.locator('#pg-reports .rprod[data-k="tifli"]')))
     sm=A.locator('#pg-reports .rprod[data-k="tifli"] .rsum'); sm.click(); A.keyboard.press('Control+A'); A.keyboard.type('Big news'); A.keyboard.press('Control+A'); A.click('#pg-reports .rbar button[aria-label="Bold"]'); A.click('#pg-reports .rbar button[aria-label="Bulleted list"]'); A.wait_for_timeout(200); sm.blur(); A.wait_for_timeout(400)
     ok('rich summary stored as bold + list', A.evaluate("(()=>{const r=Object.values(JSON.parse(localStorage.getItem('fk3')).reports).find(x=>x.prods.tifli.sumH);return !!r&&/<b>|<strong>/.test(r.prods.tifli.sumH)||/<ul>/.test(r.prods.tifli.sumH)})()"))

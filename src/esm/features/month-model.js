@@ -11,6 +11,8 @@ export const WEIGHTS = { 1: 'Normal', 2: 'High', 3: 'Critical' };
 export const PCT_STEPS = [0, 25, 50, 75, 100];
 const uid = () => 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 export const clampPct = v => Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
+/** Colour band of a percentage: nothing yet (grey), 1-50 yellow, 51-99 orange, 100 green. */
+export const pctBand = v => { v = clampPct(v); return v >= 100 ? 'g' : v > 50 ? 'o' : v > 0 ? 'y' : 'n'; };
 const dayN = iso => Math.round(Date.parse(iso + 'T00:00:00Z') / 864e5);
 const addD = (iso, n) => new Date(Date.parse(iso + 'T00:00:00Z') + n * 864e5).toISOString().slice(0, 10);
 export const isMonth = m => /^\d{4}-(0[1-9]|1[0-2])$/.test(m || '');

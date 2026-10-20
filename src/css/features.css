@@ -527,3 +527,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .rmsum { display: flex; align-items: center; gap: 10px; padding: 4px 0; border-inline-start: 4px solid var(--c); padding-inline-start: 10px; margin-top: 6px; }
 .rmsum b { flex: 0 0 150px; } .rmsum .mbar { flex: 1; width: auto; } .rmsum .rmpp { width: 44px; text-align: end; font-weight: 700; }
 @media print { body.print-report .rmopen { display: none; } }
+
+/* Percentage colours: 1-50 yellow, 51-99 orange, 100 green (0 grey) */
+.mbar { --pc: #c9ccd6; } .mbar i, .mbar.big i { background: var(--pc) !important; }
+.pc-n { --pc: #c9ccd6; --pt: var(--muted); } .pc-y { --pc: #e3b505; --pt: #8a6d00; } .pc-o { --pc: #f08a24; --pt: #b85f00; } .pc-g { --pc: #2e9d6b; --pt: #1d7a52; }
+.mpv.pc-y, .mpv.pc-o, .mpv.pc-g, .rmpct, .rmpp, .mpin { color: var(--pt); }
+.mpin.pc-y, .mpin.pc-o, .mpin.pc-g { border-color: var(--pc); font-weight: 700; }

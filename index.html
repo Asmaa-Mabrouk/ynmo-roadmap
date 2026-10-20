@@ -950,6 +950,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .rmsum { display: flex; align-items: center; gap: 10px; padding: 4px 0; border-inline-start: 4px solid var(--c); padding-inline-start: 10px; margin-top: 6px; }
 .rmsum b { flex: 0 0 150px; } .rmsum .mbar { flex: 1; width: auto; } .rmsum .rmpp { width: 44px; text-align: end; font-weight: 700; }
 @media print { body.print-report .rmopen { display: none; } }
+
+/* Percentage colours: 1-50 yellow, 51-99 orange, 100 green (0 grey) */
+.mbar { --pc: #c9ccd6; } .mbar i, .mbar.big i { background: var(--pc) !important; }
+.pc-n { --pc: #c9ccd6; --pt: var(--muted); } .pc-y { --pc: #e3b505; --pt: #8a6d00; } .pc-o { --pc: #f08a24; --pt: #b85f00; } .pc-g { --pc: #2e9d6b; --pt: #1d7a52; }
+.mpv.pc-y, .mpv.pc-o, .mpv.pc-g, .rmpct, .rmpp, .mpin { color: var(--pt); }
+.mpin.pc-y, .mpin.pc-o, .mpin.pc-g { border-color: var(--pc); font-weight: 700; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -6228,6 +6234,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   var WEIGHTS = { 1: "Normal", 2: "High", 3: "Critical" };
   var uid = () => "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   var clampPct = (v) => Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
+  var pctBand = (v) => {
+    v = clampPct(v);
+    return v >= 100 ? "g" : v > 50 ? "o" : v > 0 ? "y" : "n";
+  };
   var dayN = (iso4) => Math.round(Date.parse(iso4 + "T00:00:00Z") / 864e5);
   var addD = (iso4, n) => new Date(Date.parse(iso4 + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
   var isMonth = (m) => /^\d{4}-(0[1-9]|1[0-2])$/.test(m || "");
@@ -6329,7 +6339,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     { k: "ai", n: "AI (Sara)", squads: ["ai"] }
   ];
   var RSTATUS = { on: "On Track", risk: "At Risk", late: "Delayed", done: "Done" };
-  var GROUPS = [["done", "Delivered this week"], ["prog", "In progress"], ["next", "Next"], ["risk", "Risks & decisions"], ["road", "Roadmap milestones"]];
+  var GROUPS = [["done", "Delivered this week"], ["prog", "In progress"], ["risk", "Risks & decisions"], ["road", "Roadmap milestones"]];
   var SSTATUS = { planned: "Planned", progress: "In progress", done: "Done", blocked: "Blocked" };
   var ST_OF = { done: ["done", "done"], progress: ["prog", "on"], planned: ["next", "on"], blocked: ["risk", "risk"] };
   function scopeStatus(kids, own) {
@@ -6397,7 +6407,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const parts = [];
     if (c("done")) parts.push(plural(c("done"), "item") + " delivered");
     if (c("prog")) parts.push(plural(c("prog"), "item") + " in progress");
-    if (c("next")) parts.push(plural(c("next"), "item") + " planned next");
     const bits = parts.length ? parts.join(", ") : "no sprint activity recorded";
     const risks = v.filter((l) => l.st === "risk" || l.st === "late").length;
     return name + ": " + bits + (risks ? ". " + plural(risks, "item") + " at risk or waiting on a decision." : ".");
@@ -6411,7 +6420,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   function buildProds(products, prevProds, sitems, road, ka, kb, a, b) {
     const out = {};
     products.forEach((p) => {
-      const old = prevProds && prevProds[p.k] || {}, lines = mergeLines(old.items, sourceLines(p, sitems, road, ka, kb, a, b));
+      const old = prevProds && prevProds[p.k] || {}, lines = mergeLines(old.items, sourceLines(p, sitems, road, ka, kb, a, b)).filter((l) => l.g !== "next");
       lines.sort((a2, b2) => GROUPS.findIndex((g) => g[0] === a2.g) - GROUPS.findIndex((g) => g[0] === b2.g));
       out[p.k] = { items: lines, sum: old.sumEdited ? old.sum : ruleSummary(p.n, lines), sumH: old.sumEdited ? old.sumH || "" : "", sumEdited: !!old.sumEdited };
     });
@@ -6950,7 +6959,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 
   // src/esm/features/month-view.js
   var bar2 = (pct2, big, label) => {
-    const b = el("div", "mbar" + (big ? " big" : "")), f = el("i");
+    const b = el("div", "mbar pc-" + pctBand(pct2) + (big ? " big" : "")), f = el("i");
     f.style.width = pct2 + "%";
     b.append(f);
     b.setAttribute("role", "progressbar");
@@ -6965,7 +6974,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const prog = monthProgress(doc2.lines), ad = adhocStats(doc2.lines);
     if (prog.pct === null) return null;
     const o = el("div", "rmall");
-    o.append(bar2(prog.pct, true, "Month progress"), el("b", "rmpct", prog.pct + "%"), el("span", "rmsub", sub(prog, ad)));
+    o.append(bar2(prog.pct, true, "Month progress"), el("b", "rmpct pc-" + pctBand(prog.pct), prog.pct + "%"), el("span", "rmsub", sub(prog, ad)));
     return o;
   }
   function lineRow(it, ctx) {
@@ -6978,7 +6987,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       r.append(el("span", "mt", it.t));
       if (it.adhoc && (it.by || it.at)) r.append(el("span", "mby", "requested" + (it.by ? " by " + it.by : "") + (it.at ? " on " + fmtIso(it.at) : "")));
       if (it.w === 3) r.append(el("span", "chip mcrit", "Critical"));
-      r.append(bar2(pct2, false, "Completion of " + it.t), el("b", "mpv", pct2 + "%"));
+      r.append(bar2(pct2, false, "Completion of " + it.t), el("b", "mpv pc-" + pctBand(pct2), pct2 + "%"));
       return r;
     }
     const t = el("input", "mt");
@@ -7012,6 +7021,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     pi.step = 5;
     pi.value = pct2;
     pi.setAttribute("aria-label", "Percent complete");
+    pi.classList.add("pc-" + pctBand(pct2));
     pi.addEventListener("change", () => ctx.put(it, { pct: clampPct(pi.value), pe: true }, "Change completion"));
     const full = el("button", "btn sm", pct2 >= 100 ? "✓ Done" : "100%");
     full.type = "button";
@@ -7083,7 +7093,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       blk.style.setProperty("--c", ctx.colOf(p));
       const pp = monthProgress(pl), ph = el("div", "rmph");
       ph.append(el("h3", "", p.n));
-      if (pp.pct !== null) ph.append(el("span", "rmpp", pp.pct + "%"));
+      if (pp.pct !== null) ph.append(el("span", "rmpp pc-" + pctBand(pp.pct), pp.pct + "%"));
       blk.append(ph);
       if (pp.pct !== null) blk.append(bar2(pp.pct, false, p.n + " progress"));
       pl.forEach((i) => blk.append(lineRow(i, ctx)));
@@ -7110,7 +7120,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       if (pp.pct === null) return;
       const r = el("div", "rmsum");
       r.style.setProperty("--c", colOf3(p));
-      r.append(el("b", "", p.n), bar2(pp.pct, false, p.n + " progress"), el("span", "rmpp", pp.pct + "%"));
+      r.append(el("b", "", p.n), bar2(pp.pct, false, p.n + " progress"), el("span", "rmpp pc-" + pctBand(pp.pct), pp.pct + "%"));
       sec.append(r);
     });
     return sec;
