@@ -33,6 +33,7 @@ replaced by creating new roadmaps with their own date range.
 | **Capacity** | Weekly heat-map of load vs. availability | Spot over-allocation before it hurts |
 | **Sprints** | Two-week sprint plan written like a document (product sections incl. Deployments and Quality scope, people, scopes, sub-sections, notes, tags, drag to reorder, per-user undo). Pull each person's tickets from Jira (read-only), carry over unfinished scopes, export the plan to a real Google Doc in your own Drive | Replaces the manual sprint doc and the copy/paste into Docs |
 | **Weekly report** | One report per week, listed as cards like Sprints. Each opens as a sheet: auto-drafted from the sprint plan and the roadmap (optionally worded by AI), edited by the team, submitted by an editor/admin and read by executives (read-only, submitted only) | Replaces the manual weekly newsletter |
+| **Monthly deliverables** (in the weekly report) | The business's list of deliverables for the month per product, each with a percent complete and an importance; the month's progress is weighted; the change since last week is shown. Ad hoc requests added by the business during the month are listed separately with who asked. A new month can start from the unfinished items of the last one | Answers "how far along is what we committed this month, and what did we take on besides" |
 | **Baselines** | Immutable checkpoints + "Plan vs now" diff and ghost bars on the Gantt | Accountability: what moved since we committed |
 | **Log** | Every change with who/when; export; undo | Audit trail and safe experimentation |
 | **Sharing** | Read-only public link per roadmap; Editor/Viewer access | Stakeholder transparency without accounts |
@@ -44,7 +45,8 @@ replaced by creating new roadmaps with their own date range.
 2. **Planning a period:** create roadmap (range) → add features per squad → assign people → set dependencies → save baseline "Committed".
 3. **Weekly review:** open Roadmap + Capacity → adjust → Baselines → compare "Plan vs now" → share link to leadership.
 4. **Idea to plan:** capture on Ideas board → score → "Schedule" pushes it onto the roadmap as a feature.
-5. **Sprint to executive report:** write the sprint plan (pull Jira tickets) → open the week's report → Sync / Generate with AI → edit → Submit; optionally export the sprint plan to Google Docs.
+5. **Monthly deliverables:** at the start of the month list what the business expects per product (or copy last month's unfinished), then each week update the percentages in that week's report, add ad hoc requests as they arrive with who asked, and submit.
+6. **Sprint to executive report:** write the sprint plan (pull Jira tickets) → open the week's report → Sync / Generate with AI → edit → Submit; optionally export the sprint plan to Google Docs.
 
 ## 6. Business rules
 - Approval is mandatory; unconfirmed emails never become admin.

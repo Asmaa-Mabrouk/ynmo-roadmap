@@ -20,13 +20,14 @@ import { crumbs } from '../ui/crumbs.js';
 import { createUndo } from '../features/undo-stack.js';
 import { registerUndo } from '../features/undo-router.js';
 import { autoGrow, richBar, richBox, showRich, submitOnCtrlEnter } from '../features/rich-text.js';
-import { GROUPS, RSTATUS, aiPayload, applyAi, buildProds, jiraUrl, newManualLine, overall, productsOf, reportToText, ruleSummary } from '../features/report-model.js';
+import { GROUPS, RSTATUS, WEIGHTS, adhocStats, aiPayload, applyAi, buildProds, carryFromLastMonth, clampPct, jiraUrl, monthLabel, monthOf, monthProgress, newDeliverable, newManualLine, overall, productsOf, reportToText, ruleSummary, seedMonthly } from '../features/report-model.js';
 import { EXTRA_SECTIONS } from '../features/sprint-doc.js';
 
 const SPARK = '<svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8L2.5 17.5l1.8-.7z"/></svg>';
 const rUI = { busy: false, note: '', noteFor: '', err: false, wait: false, last: '' };
 const routeId = () => { const m = /^#\/reports\/(\w+)/.exec(location.hash); return m ? m[1] : null; };
 /** The product's colour on the Roadmap and Sprints pages (its first squad), so the report looks like them. */
+const allReports = () => Object.keys(S.reports).map(id => Object.assign({ id: id }, S.reports[id]));
 const colOf = p => { const l = LANES.concat(EXTRA_SECTIONS).find(x => (p.squads || []).includes(x.k)); return l ? l.c : 'var(--brand)'; };
 const cfg = () => S.ideas.reportcfg || {};
 const uidr = () => 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -70,6 +71,7 @@ export function missingWeeks() {
 function newReport(wk) {
   const id = wk.id; if (S.reports[id]) { location.hash = '#/reports/' + id; return; }
   const rep = { id: id, sp: wk.sp, n: wk.n, w: wk.w, a: wk.a, b: wk.b, status: 'draft', pl: productsOf(cfg()), prods: {} };
+  rep.monthly = seedMonthly(rep, allReports());
   location.hash = '#/reports/' + id;
   sync(rep, false, true);
 }
@@ -197,6 +199,78 @@ const statsOf = r => { let all = 0, done = 0, prog = 0, risk = 0; Object.keys(r.
 const copyReport = rep => { const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify('Report text copied to the clipboard'), () => notify('Could not copy. Select the text and copy it manually.', 'err')); };
 const settingsBtn = () => { const b = el('button', 'btn', 'Report settings'); b.type = 'button'; b.disabled = !canBuild(); b.addEventListener('click', settingsDlg); return b; };
 
+/* ---------- monthly deliverables and ad hoc requests (kept in the report; see features/report-model.js) ---------- */
+/** Saves a seeded list without a "last edit" stamp or an undo step (the person did not edit anything). */
+function quietSave(rep) { const d = Object.assign({}, S.reports[rep.id], { monthly: rep.monthly }); S.reports[rep.id] = d; write('reports/' + rep.id, d); baseline[rep.id] = JSON.stringify(d); }
+const pctWord = (a, b) => { const d = clampPct(a) - clampPct(b); return d ? (d > 0 ? '+' : '') + d + ' pts this week' : ''; };
+function deliverableRow(rep, it, ro) {
+  const r = el('div', 'mrow' + (it.adhoc ? ' adhoc' : '')); r.dataset.id = it.id;
+  const pct = clampPct(it.pct), dw = pctWord(it.pct, it.p0);
+  const bar = el('div', 'mbar'); bar.setAttribute('role', 'progressbar'); bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', '100'); bar.setAttribute('aria-valuenow', String(pct)); bar.setAttribute('aria-label', 'Completion of ' + it.t);
+  const fill = el('i'); fill.style.width = pct + '%'; bar.append(fill);
+  const delta = dw ? el('span', 'mdelta ' + (pct >= clampPct(it.p0) ? 'up' : 'down'), dw) : null;
+  if (ro) {
+    const t = el('span', 'mt', it.t); r.append(t);
+    if (it.adhoc && (it.by || it.at)) r.append(el('span', 'mby', 'requested' + (it.by ? ' by ' + it.by : '') + (it.at ? ' on ' + fmtIso(it.at) : '')));
+    r.append(bar, el('b', 'mpv', pct + '%')); if (delta) r.append(delta); return r;
+  }
+  const put = (patch, label) => { Object.assign(it, patch); save(rep, '', label); };
+  const t = el('input', 'mt'); t.type = 'text'; t.value = it.t; t.maxLength = 300; t.setAttribute('aria-label', it.adhoc ? 'Ad hoc request' : 'Deliverable');
+  t.addEventListener('change', () => { const v = t.value.replace(/\s+/g, ' ').trim(); if (!v) { t.value = it.t; return; } if (v !== it.t) { put({ t: v }, 'Rename deliverable'); renderReports(); } });
+  r.append(t);
+  if (it.adhoc) { const by = el('input', 'mbyin'); by.type = 'text'; by.value = it.by || ''; by.maxLength = 80; by.placeholder = 'Requested by'; by.setAttribute('aria-label', 'Requested by'); by.addEventListener('change', () => put({ by: by.value.replace(/\s+/g, ' ').trim() }, 'Change requester')); r.append(by); }
+  const pi = el('input', 'mpin'); pi.type = 'number'; pi.min = 0; pi.max = 100; pi.step = 5; pi.value = pct; pi.setAttribute('aria-label', 'Percent complete');
+  pi.addEventListener('change', () => { put({ pct: clampPct(pi.value) }, 'Change completion'); renderReports(); });
+  const full = el('button', 'btn sm', pct >= 100 ? '✓ Done' : '100%'); full.type = 'button'; full.title = 'Mark as complete'; full.disabled = pct >= 100;
+  full.addEventListener('click', () => { put({ pct: 100 }, 'Mark deliverable complete'); renderReports(); });
+  r.append(bar, pi, full); if (delta) r.append(delta);
+  if (!it.adhoc) {
+    const w = el('select', 'spsel'); w.setAttribute('aria-label', 'Importance'); Object.keys(WEIGHTS).forEach(k => { const o = el('option', '', WEIGHTS[k]); o.value = k; o.selected = Number(k) === (it.w || 1); w.append(o); });
+    w.addEventListener('change', () => { put({ w: Number(w.value) }, 'Change importance'); renderReports(); }); r.append(w);
+  }
+  const x = el('button', 'btn sm danger', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Remove'); x.addEventListener('click', () => { rep.monthly.items = rep.monthly.items.filter(z => z.id !== it.id); save(rep, 'removed "' + it.t + '" from the monthly deliverables', 'Remove deliverable'); renderReports(); });
+  r.append(x); return r;
+}
+function monthlyBlock(rep, pls, ro) {
+  const mo = rep.monthly || { m: monthOf(rep.a), items: [] }, ks = new Set(pls.map(p => p.k)), items = mo.items.filter(i => ks.has(i.k));
+  if (ro && !items.length) return null;
+  const sec = el('section', 'rmonth'); sec.dataset.m = mo.m;
+  const prog = monthProgress(items), ad = adhocStats(items), hd = el('div', 'rmhead');
+  hd.append(el('h2', '', 'Monthly deliverables'), el('span', 'rmmonth', monthLabel(mo.m))); sec.append(hd);
+  if (prog.pct !== null) {
+    const o = el('div', 'rmall'), bar = el('div', 'mbar big'), fill = el('i'); fill.style.width = prog.pct + '%'; bar.append(fill); bar.setAttribute('role', 'progressbar'); bar.setAttribute('aria-valuenow', String(prog.pct)); bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', '100'); bar.setAttribute('aria-label', 'Month progress');
+    o.append(bar, el('b', 'rmpct', prog.pct + '%'), el('span', 'rmsub', 'complete · ' + prog.done + ' of ' + prog.n + ' deliverables done' + (ad.n ? ' · ' + ad.n + ' ad hoc request' + (ad.n === 1 ? '' : 's') + ' (' + ad.done + ' done)' : ''))); sec.append(o);
+  }
+  if (!ro && !items.length) {
+    sec.append(el('p', 'rmhint', 'List what the business expects this month, then update the percentage each week. The list stays the same all month and carries into the next weekly reports. Ad hoc requests added by the business go under "Ad hoc requests".'));
+    const cf = carryFromLastMonth(rep, allReports());
+    if (cf) { const b = el('button', 'btn', 'Copy ' + cf.items.length + ' unfinished from ' + monthLabel(cf.from)); b.type = 'button'; b.addEventListener('click', () => { rep.monthly = { m: monthOf(rep.a), items: cf.items }; save(rep, 'copied ' + cf.items.length + ' unfinished deliverables from ' + monthLabel(cf.from), 'Copy deliverables from last month'); renderReports(); }); sec.append(b); }
+  }
+  pls.forEach(p => {
+    const its = mo.items.filter(i => i.k === p.k), pl = its.filter(i => !i.adhoc), adh = its.filter(i => i.adhoc);
+    if (ro && !its.length) return;
+    const blk = el('div', 'rmp'); blk.dataset.k = p.k; blk.style.setProperty('--c', colOf(p));
+    const pp = monthProgress(pl), ph = el('div', 'rmph'); ph.append(el('h3', '', p.n)); if (pp.pct !== null) ph.append(el('span', 'rmpp', pp.pct + '%')); blk.append(ph);
+    pl.forEach(i => blk.append(deliverableRow(rep, i, ro)));
+    if (!ro) {
+      const f = el('form', 'spadd madd'), ti = el('input'), go = el('button', 'btn sm', 'Add deliverable'); ti.type = 'text'; ti.maxLength = 300; ti.placeholder = 'Add a deliverable for ' + p.n + ' this month'; ti.setAttribute('aria-label', 'Add a deliverable for ' + p.n); go.type = 'submit'; f.append(ti, go);
+      f.addEventListener('submit', e => { e.preventDefault(); const v = ti.value.trim(); if (!v) { ti.focus(); return; } rep.monthly = rep.monthly || { m: monthOf(rep.a), items: [] }; rep.monthly.items.push(newDeliverable(p.k, v)); save(rep, 'added a monthly deliverable for ' + p.n, 'Add deliverable'); renderReports(); });
+      blk.append(f);
+    }
+    if (adh.length || !ro) {
+      blk.append(el('h4', 'rmadh', 'Ad hoc requests'));
+      adh.forEach(i => blk.append(deliverableRow(rep, i, ro)));
+      if (!ro) {
+        const f = el('form', 'spadd madd'), ti = el('input'), by = el('input'), go = el('button', 'btn sm', 'Add request'); ti.type = by.type = 'text'; ti.maxLength = 300; by.maxLength = 80; ti.placeholder = 'Add an ad hoc request for ' + p.n; by.placeholder = 'Requested by'; ti.setAttribute('aria-label', 'Add an ad hoc request for ' + p.n); by.setAttribute('aria-label', 'Requested by for the new request'); go.type = 'submit'; f.append(ti, by, go);
+        f.addEventListener('submit', e => { e.preventDefault(); const v = ti.value.trim(); if (!v) { ti.focus(); return; } rep.monthly = rep.monthly || { m: monthOf(rep.a), items: [] }; rep.monthly.items.push(newDeliverable(p.k, v, { adhoc: true, by: by.value, at: todayIso() })); save(rep, 'added an ad hoc request for ' + p.n, 'Add ad hoc request'); renderReports(); });
+        blk.append(f);
+      }
+    }
+    sec.append(blk);
+  });
+  return sec;
+}
+
 /* ---------- the list: one card per week, like the Sprints list ---------- */
 function listView(pg, viewer, l) {
   const acts = el('div', 'acts');
@@ -217,6 +291,7 @@ function listView(pg, viewer, l) {
     const pr = el('div', 'prods'); (r.pl || []).filter(p => r.prods && r.prods[p.k]).forEach(p => { const c = el('span', 'pchip', p.n); c.style.setProperty('--c', colOf(p)); pr.append(c); }); info.append(pr);
     const prog = el('div', 'spprog'), top = el('div', 'rpstat'); top.append(el('span', 'chip rpst ' + (sub ? 'sub' : 'draft'), sub ? 'Submitted' : 'Draft'));
     prog.append(top, el('div', 'meta', st.done + ' delivered · ' + st.prog + ' in progress' + (st.risk ? ' · ' + st.risk + ' at risk' : '')));
+    const mp = monthProgress(((r.monthly || {}).items) || []); if (mp.pct !== null) prog.append(el('div', 'meta mpl', monthLabel(r.monthly.m) + ' deliverables: ' + mp.pct + '% complete'));
     const b0 = el('div', 'bar0'), i0 = el('i'); i0.style.width = pct + '%'; b0.append(i0); prog.append(b0);
     const more = el('button', 'btn sm spmore', '⋯'); more.type = 'button'; more.setAttribute('aria-label', 'More actions for the week of ' + fmtIso(r.a)); more.setAttribute('aria-haspopup', 'menu');
     more.addEventListener('click', () => openMenu(more, [{ label: 'Open in new tab', value: 'tab' }, { label: 'Copy text', value: 'copy' }], {
@@ -231,6 +306,7 @@ function listView(pg, viewer, l) {
 function detailView(pg, viewer, rep) {
   if (S.reports[rep.id]) baseline[rep.id] = JSON.stringify(S.reports[rep.id]);
   const sub = rep.status === 'submitted', ro = viewer || sub || !canBuild();
+  if (!ro && (!rep.monthly || rep.monthly.m !== monthOf(rep.a))) { rep.monthly = seedMonthly(rep, allReports()); if (rep.monthly.items.length) quietSave(rep); }
   pg.append(crumbs([{ label: 'Reports', href: '#/reports' }, { label: 'Week of ' + fmtIso(rep.a) }]));
   pg.append(pageHead('Weekly report', 'Sprint ' + rep.n + ' · week ' + (rep.w || 1) + ' of 2' + (viewer ? '' : ro ? '. Submitted reports are read-only.' : '. Edit anything, then submit it to the executives.')));
   const sb0 = viewer ? null : setupBanner(); if (sb0) pg.append(sb0);
@@ -253,7 +329,7 @@ function detailView(pg, viewer, rep) {
   const hero = el('div', 'rhero'); hero.append(el('small', '', 'Ynmo · Weekly product update'), el('h2', 'rtitle', fmtIso(rep.a) + ' – ' + fmtIso(rep.b)), el('span', 'rsp', 'Sprint ' + rep.n + ' · week ' + (rep.w || 1) + ' of 2')); body.append(hero);
   const glance = el('div', 'rglance');
   pls.forEach(p => { const d = rep.prods[p.k]; if (!d) return; const v = d.items.filter(l => !l.hide), s = overall(d.items), t = el('div', 'rtile rs-' + s); t.style.setProperty('--c', colOf(p)); t.append(el('b', '', p.n), el('span', 'chip rs-' + s, RSTATUS[s]), el('small', '', v.filter(l => l.g === 'done').length + ' delivered · ' + v.filter(l => l.g === 'prog').length + ' in progress · ' + v.filter(l => l.st === 'risk' || l.st === 'late').length + ' at risk')); glance.append(t); });
-  body.append(glance); if (!ro) body.append(richBar());
+  body.append(glance); const mb = monthlyBlock(rep, pls, ro); if (mb) body.append(mb); if (!ro) body.append(richBar());
   pls.forEach(p => body.append(prodBlock(rep, p, ro)));
   pg.append(meta, tools); if (rUI.note && rUI.noteFor === rep.id && !viewer && !sub) { const nt = el('p', 'rnote' + (rUI.err ? ' bad' : ''), rUI.note); nt.setAttribute('role', 'status'); pg.append(nt); } pg.append(body);
 }

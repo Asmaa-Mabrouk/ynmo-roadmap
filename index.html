@@ -896,6 +896,48 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   body.print-report .rtile { break-inside: avoid; }
 }
 .rline select[aria-label="Group"] { min-width: 160px; max-width: 190px; }
+
+/* ---------- weekly report: monthly deliverables and ad hoc requests ---------- */
+.rmonth { margin: 34px 0 0; }
+.rmonth .rmhead { display: flex; gap: 12px; align-items: baseline; justify-content: space-between; padding: 4px 4px 6px; border-bottom: 1px solid var(--line); }
+.rmonth .rmhead h2 { margin: 0; font-size: 1.6rem; font-weight: 800; letter-spacing: -.01em; color: var(--brand); }
+.rmonth .rmmonth { color: var(--muted); font-weight: 700; }
+.rmall { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 4px 4px; }
+.rmall .mbar { flex: 1 1 220px; max-width: 420px; }
+.rmpct { font-size: 1.7rem; letter-spacing: -.01em; }
+.rmsub { color: var(--muted); font-size: .92rem; }
+.rmhint { color: var(--muted); margin: 10px 4px; line-height: 1.5; }
+.rmp { margin-top: 18px; padding-inline-start: 4px; }
+.rmph { display: flex; gap: 10px; align-items: baseline; }
+.rmph h3 { margin: 0; font-size: 1.05rem; color: var(--c, var(--brand)); }
+.rmpp { font-weight: 700; color: var(--muted); font-size: .9rem; }
+.rmadh { margin: 14px 0 2px; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.mrow { display: flex; gap: 8px; align-items: center; padding: 3px 4px; border-radius: 8px; flex-wrap: wrap; }
+.mrow:hover { background: rgba(120, 130, 160, .06); }
+.mrow .mt { flex: 1 1 180px; min-width: 0; font: inherit; line-height: 1.45; }
+.mrow input.mt, .mrow .mbyin { padding: 4px 6px; border: 1px solid transparent; border-radius: 6px; background: transparent; }
+.mrow:hover input.mt, .mrow:hover .mbyin, .mrow input:focus { border-color: var(--line); background: #fff; }
+.mrow .mbyin { width: 130px; font: inherit; font-size: .88rem; }
+.mrow .mby { color: var(--muted); font-size: .85rem; }
+.mbar { flex: none; width: 110px; height: 9px; border-radius: 99px; background: color-mix(in srgb, var(--line) 80%, #fff); overflow: hidden; }
+.mbar i { display: block; height: 100%; border-radius: inherit; background: var(--c, #2e9d6b); transition: width .25s; }
+.mbar.big { height: 12px; }
+.mbar.big i { background: #2e9d6b; }
+.mrow .mpin { width: 66px; font: inherit; padding: 4px 6px; border: 1.5px solid var(--line); border-radius: 8px; text-align: end; }
+.mrow .mpv { width: 44px; text-align: end; }
+.mdelta { font-size: .78rem; font-weight: 700; padding: 1px 8px; border-radius: 99px; white-space: nowrap; }
+.mdelta.up { color: #1d7a52; background: #e6f5ee; } .mdelta.down { color: #b3261e; background: #fdecea; }
+.mrow .btn.sm { border-color: transparent; background: transparent; color: var(--muted); box-shadow: none; padding: 3px 8px; }
+.mrow .btn.sm:hover:not(:disabled) { border-color: var(--line); background: #fff; color: var(--ink, #1c2033); }
+.mrow .btn.sm.danger:hover { color: #d1483f; background: rgba(209, 72, 63, .1); border-color: transparent; }
+.mrow.adhoc .mbar i { background: #d38a12; }
+.madd { margin-top: 4px; gap: 6px; flex-wrap: wrap; }
+.madd input { flex: 1 1 220px; font: inherit; padding: 6px 8px; border: 1px solid transparent; border-radius: 8px; background: transparent; min-width: 0; }
+.madd input:hover, .madd input:focus { border-color: var(--line); background: #fff; }
+.madd input + input { flex: 0 1 160px; }
+.madd .btn { border-color: transparent; background: transparent; color: var(--brand); box-shadow: none; }
+@media (max-width: 720px) { .mbar { width: 100%; order: 5; } .mrow .mbyin { width: 100%; } }
+@media print { body.print-report .mrow, body.print-report .rmp { break-inside: avoid; } body.print-report .mrow button, body.print-report .madd { display: none; } body.print-report .mbar { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -6289,6 +6331,64 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
     return n;
   }
+  var WEIGHTS = { 1: "Normal", 2: "High", 3: "Critical" };
+  var clampPct = (v) => Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
+  var addD = (iso4, n) => new Date(Date.parse(iso4 + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
+  var monthOf = (weekStart) => addD(weekStart, 3).slice(0, 7);
+  var monthLabel = (m) => /^\d{4}-\d{2}$/.test(m || "") ? (/* @__PURE__ */ new Date(m + "-01T00:00:00Z")).toLocaleString("en", { month: "long", year: "numeric", timeZone: "UTC" }) : "";
+  var prevMonth = (m) => {
+    const d = /* @__PURE__ */ new Date(m + "-01T00:00:00Z");
+    d.setUTCMonth(d.getUTCMonth() - 1);
+    return d.toISOString().slice(0, 7);
+  };
+  function newDeliverable(k, t, o) {
+    o = o || {};
+    return { id: uid(), k, t: String(t || "").replace(/\s+/g, " ").trim().slice(0, 300), pct: 0, p0: 0, w: 1, adhoc: !!o.adhoc, by: String(o.by || "").replace(/\s+/g, " ").trim().slice(0, 80), at: o.at || "" };
+  }
+  function monthProgress(items2) {
+    const pl = (items2 || []).filter((i) => !i.adhoc);
+    if (!pl.length) return { pct: null, n: 0, done: 0 };
+    const w = pl.reduce((a, i) => a + (i.w || 1), 0), s = pl.reduce((a, i) => a + (i.w || 1) * clampPct(i.pct), 0);
+    return { pct: Math.round(s / w), n: pl.length, done: pl.filter((i) => clampPct(i.pct) >= 100).length };
+  }
+  function adhocStats(items2) {
+    const a = (items2 || []).filter((i) => i.adhoc);
+    return { n: a.length, done: a.filter((i) => clampPct(i.pct) >= 100).length };
+  }
+  var lastOf = (all, rep, m) => all.filter((r) => r.id !== rep.id && r.a < rep.a && r.monthly && r.monthly.m === m && (r.monthly.items || []).length).sort((x, y) => x.a < y.a ? 1 : -1)[0];
+  function seedMonthly(rep, all) {
+    const m = monthOf(rep.a);
+    if (rep.monthly && rep.monthly.m === m) return rep.monthly;
+    const prev = lastOf(all, rep, m);
+    return { m, items: prev ? prev.monthly.items.map((i) => Object.assign({}, i, { p0: clampPct(i.pct) })) : [] };
+  }
+  function carryFromLastMonth(rep, all) {
+    const pm = prevMonth(monthOf(rep.a)), prev = all.filter((r) => r.id !== rep.id && r.monthly && r.monthly.m === pm && (r.monthly.items || []).length).sort((x, y) => x.a < y.a ? 1 : -1)[0];
+    if (!prev) return null;
+    const items2 = prev.monthly.items.filter((i) => clampPct(i.pct) < 100).map((i) => Object.assign({}, i, { id: uid(), p0: clampPct(i.pct), at: "" }));
+    return items2.length ? { from: pm, items: items2 } : null;
+  }
+  function monthlyText(rep, products, fmt) {
+    const mo = rep.monthly;
+    if (!mo || !(mo.items || []).length) return [];
+    const prog = monthProgress(mo.items), out = ["MONTHLY DELIVERABLES - " + monthLabel(mo.m) + (prog.pct === null ? "" : " - " + prog.pct + "% complete (" + prog.done + " of " + prog.n + " done)"), ""];
+    products.forEach((p) => {
+      const its = mo.items.filter((i) => i.k === p.k);
+      if (!its.length) return;
+      const pl = its.filter((i) => !i.adhoc), ad = its.filter((i) => i.adhoc), pp = monthProgress(pl);
+      out.push(p.n + (pp.pct === null ? "" : " - " + pp.pct + "%"));
+      pl.forEach((i) => {
+        const d = clampPct(i.pct) - clampPct(i.p0);
+        out.push("- " + i.t + ": " + clampPct(i.pct) + "%" + (d ? " (" + (d > 0 ? "+" : "") + d + " this week)" : ""));
+      });
+      if (ad.length) {
+        out.push("Ad hoc requests:");
+        ad.forEach((i) => out.push("- " + i.t + (i.by ? " (requested by " + i.by + (i.at && fmt ? ", " + fmt(i.at) : "") + ")" : "") + ": " + clampPct(i.pct) + "%"));
+      }
+      out.push("");
+    });
+    return out;
+  }
   function reportToText(rep, products, fmt) {
     const out = ["Weekly update - " + (fmt ? fmt(rep.a) : rep.a) + (rep.b ? " to " + (fmt ? fmt(rep.b) : rep.b) : "") + (rep.n ? " (Sprint " + rep.n + ")" : ""), ""];
     products.forEach((p) => {
@@ -6303,6 +6403,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       });
       out.push("");
     });
+    const mt = monthlyText(rep, products, fmt);
+    if (mt.length) out.push("", ...mt);
     return out.join("\n").trim() + "\n";
   }
 
@@ -6800,6 +6902,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const m = /^#\/reports\/(\w+)/.exec(location.hash);
     return m ? m[1] : null;
   };
+  var allReports = () => Object.keys(S.reports).map((id) => Object.assign({ id }, S.reports[id]));
   var colOf = (p) => {
     const l = LANES.concat(EXTRA_SECTIONS).find((x) => (p.squads || []).includes(x.k));
     return l ? l.c : "var(--brand)";
@@ -6882,6 +6985,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       return;
     }
     const rep = { id, sp: wk.sp, n: wk.n, w: wk.w, a: wk.a, b: wk.b, status: "draft", pl: productsOf(cfg()), prods: {} };
+    rep.monthly = seedMonthly(rep, allReports());
     location.hash = "#/reports/" + id;
     sync(rep, false, true);
   }
@@ -7191,6 +7295,216 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     b.addEventListener("click", settingsDlg);
     return b;
   };
+  function quietSave(rep) {
+    const d = Object.assign({}, S.reports[rep.id], { monthly: rep.monthly });
+    S.reports[rep.id] = d;
+    write("reports/" + rep.id, d);
+    baseline[rep.id] = JSON.stringify(d);
+  }
+  var pctWord = (a, b) => {
+    const d = clampPct(a) - clampPct(b);
+    return d ? (d > 0 ? "+" : "") + d + " pts this week" : "";
+  };
+  function deliverableRow(rep, it, ro) {
+    const r = el("div", "mrow" + (it.adhoc ? " adhoc" : ""));
+    r.dataset.id = it.id;
+    const pct2 = clampPct(it.pct), dw = pctWord(it.pct, it.p0);
+    const bar2 = el("div", "mbar");
+    bar2.setAttribute("role", "progressbar");
+    bar2.setAttribute("aria-valuemin", "0");
+    bar2.setAttribute("aria-valuemax", "100");
+    bar2.setAttribute("aria-valuenow", String(pct2));
+    bar2.setAttribute("aria-label", "Completion of " + it.t);
+    const fill = el("i");
+    fill.style.width = pct2 + "%";
+    bar2.append(fill);
+    const delta = dw ? el("span", "mdelta " + (pct2 >= clampPct(it.p0) ? "up" : "down"), dw) : null;
+    if (ro) {
+      const t2 = el("span", "mt", it.t);
+      r.append(t2);
+      if (it.adhoc && (it.by || it.at)) r.append(el("span", "mby", "requested" + (it.by ? " by " + it.by : "") + (it.at ? " on " + fmtIso(it.at) : "")));
+      r.append(bar2, el("b", "mpv", pct2 + "%"));
+      if (delta) r.append(delta);
+      return r;
+    }
+    const put = (patch, label) => {
+      Object.assign(it, patch);
+      save(rep, "", label);
+    };
+    const t = el("input", "mt");
+    t.type = "text";
+    t.value = it.t;
+    t.maxLength = 300;
+    t.setAttribute("aria-label", it.adhoc ? "Ad hoc request" : "Deliverable");
+    t.addEventListener("change", () => {
+      const v = t.value.replace(/\s+/g, " ").trim();
+      if (!v) {
+        t.value = it.t;
+        return;
+      }
+      if (v !== it.t) {
+        put({ t: v }, "Rename deliverable");
+        renderReports();
+      }
+    });
+    r.append(t);
+    if (it.adhoc) {
+      const by = el("input", "mbyin");
+      by.type = "text";
+      by.value = it.by || "";
+      by.maxLength = 80;
+      by.placeholder = "Requested by";
+      by.setAttribute("aria-label", "Requested by");
+      by.addEventListener("change", () => put({ by: by.value.replace(/\s+/g, " ").trim() }, "Change requester"));
+      r.append(by);
+    }
+    const pi = el("input", "mpin");
+    pi.type = "number";
+    pi.min = 0;
+    pi.max = 100;
+    pi.step = 5;
+    pi.value = pct2;
+    pi.setAttribute("aria-label", "Percent complete");
+    pi.addEventListener("change", () => {
+      put({ pct: clampPct(pi.value) }, "Change completion");
+      renderReports();
+    });
+    const full = el("button", "btn sm", pct2 >= 100 ? "✓ Done" : "100%");
+    full.type = "button";
+    full.title = "Mark as complete";
+    full.disabled = pct2 >= 100;
+    full.addEventListener("click", () => {
+      put({ pct: 100 }, "Mark deliverable complete");
+      renderReports();
+    });
+    r.append(bar2, pi, full);
+    if (delta) r.append(delta);
+    if (!it.adhoc) {
+      const w = el("select", "spsel");
+      w.setAttribute("aria-label", "Importance");
+      Object.keys(WEIGHTS).forEach((k) => {
+        const o = el("option", "", WEIGHTS[k]);
+        o.value = k;
+        o.selected = Number(k) === (it.w || 1);
+        w.append(o);
+      });
+      w.addEventListener("change", () => {
+        put({ w: Number(w.value) }, "Change importance");
+        renderReports();
+      });
+      r.append(w);
+    }
+    const x = el("button", "btn sm danger", "✕");
+    x.type = "button";
+    x.setAttribute("aria-label", "Remove");
+    x.addEventListener("click", () => {
+      rep.monthly.items = rep.monthly.items.filter((z) => z.id !== it.id);
+      save(rep, 'removed "' + it.t + '" from the monthly deliverables', "Remove deliverable");
+      renderReports();
+    });
+    r.append(x);
+    return r;
+  }
+  function monthlyBlock(rep, pls, ro) {
+    const mo = rep.monthly || { m: monthOf(rep.a), items: [] }, ks = new Set(pls.map((p) => p.k)), items2 = mo.items.filter((i) => ks.has(i.k));
+    if (ro && !items2.length) return null;
+    const sec = el("section", "rmonth");
+    sec.dataset.m = mo.m;
+    const prog = monthProgress(items2), ad = adhocStats(items2), hd = el("div", "rmhead");
+    hd.append(el("h2", "", "Monthly deliverables"), el("span", "rmmonth", monthLabel(mo.m)));
+    sec.append(hd);
+    if (prog.pct !== null) {
+      const o = el("div", "rmall"), bar2 = el("div", "mbar big"), fill = el("i");
+      fill.style.width = prog.pct + "%";
+      bar2.append(fill);
+      bar2.setAttribute("role", "progressbar");
+      bar2.setAttribute("aria-valuenow", String(prog.pct));
+      bar2.setAttribute("aria-valuemin", "0");
+      bar2.setAttribute("aria-valuemax", "100");
+      bar2.setAttribute("aria-label", "Month progress");
+      o.append(bar2, el("b", "rmpct", prog.pct + "%"), el("span", "rmsub", "complete · " + prog.done + " of " + prog.n + " deliverables done" + (ad.n ? " · " + ad.n + " ad hoc request" + (ad.n === 1 ? "" : "s") + " (" + ad.done + " done)" : "")));
+      sec.append(o);
+    }
+    if (!ro && !items2.length) {
+      sec.append(el("p", "rmhint", 'List what the business expects this month, then update the percentage each week. The list stays the same all month and carries into the next weekly reports. Ad hoc requests added by the business go under "Ad hoc requests".'));
+      const cf = carryFromLastMonth(rep, allReports());
+      if (cf) {
+        const b = el("button", "btn", "Copy " + cf.items.length + " unfinished from " + monthLabel(cf.from));
+        b.type = "button";
+        b.addEventListener("click", () => {
+          rep.monthly = { m: monthOf(rep.a), items: cf.items };
+          save(rep, "copied " + cf.items.length + " unfinished deliverables from " + monthLabel(cf.from), "Copy deliverables from last month");
+          renderReports();
+        });
+        sec.append(b);
+      }
+    }
+    pls.forEach((p) => {
+      const its = mo.items.filter((i) => i.k === p.k), pl = its.filter((i) => !i.adhoc), adh = its.filter((i) => i.adhoc);
+      if (ro && !its.length) return;
+      const blk = el("div", "rmp");
+      blk.dataset.k = p.k;
+      blk.style.setProperty("--c", colOf(p));
+      const pp = monthProgress(pl), ph = el("div", "rmph");
+      ph.append(el("h3", "", p.n));
+      if (pp.pct !== null) ph.append(el("span", "rmpp", pp.pct + "%"));
+      blk.append(ph);
+      pl.forEach((i) => blk.append(deliverableRow(rep, i, ro)));
+      if (!ro) {
+        const f = el("form", "spadd madd"), ti = el("input"), go = el("button", "btn sm", "Add deliverable");
+        ti.type = "text";
+        ti.maxLength = 300;
+        ti.placeholder = "Add a deliverable for " + p.n + " this month";
+        ti.setAttribute("aria-label", "Add a deliverable for " + p.n);
+        go.type = "submit";
+        f.append(ti, go);
+        f.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const v = ti.value.trim();
+          if (!v) {
+            ti.focus();
+            return;
+          }
+          rep.monthly = rep.monthly || { m: monthOf(rep.a), items: [] };
+          rep.monthly.items.push(newDeliverable(p.k, v));
+          save(rep, "added a monthly deliverable for " + p.n, "Add deliverable");
+          renderReports();
+        });
+        blk.append(f);
+      }
+      if (adh.length || !ro) {
+        blk.append(el("h4", "rmadh", "Ad hoc requests"));
+        adh.forEach((i) => blk.append(deliverableRow(rep, i, ro)));
+        if (!ro) {
+          const f = el("form", "spadd madd"), ti = el("input"), by = el("input"), go = el("button", "btn sm", "Add request");
+          ti.type = by.type = "text";
+          ti.maxLength = 300;
+          by.maxLength = 80;
+          ti.placeholder = "Add an ad hoc request for " + p.n;
+          by.placeholder = "Requested by";
+          ti.setAttribute("aria-label", "Add an ad hoc request for " + p.n);
+          by.setAttribute("aria-label", "Requested by for the new request");
+          go.type = "submit";
+          f.append(ti, by, go);
+          f.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const v = ti.value.trim();
+            if (!v) {
+              ti.focus();
+              return;
+            }
+            rep.monthly = rep.monthly || { m: monthOf(rep.a), items: [] };
+            rep.monthly.items.push(newDeliverable(p.k, v, { adhoc: true, by: by.value, at: todayIso() }));
+            save(rep, "added an ad hoc request for " + p.n, "Add ad hoc request");
+            renderReports();
+          });
+          blk.append(f);
+        }
+      }
+      sec.append(blk);
+    });
+    return sec;
+  }
   function listView(pg, viewer, l) {
     const acts = el("div", "acts");
     if (!viewer) {
@@ -7229,6 +7543,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       const prog = el("div", "spprog"), top = el("div", "rpstat");
       top.append(el("span", "chip rpst " + (sub ? "sub" : "draft"), sub ? "Submitted" : "Draft"));
       prog.append(top, el("div", "meta", st.done + " delivered · " + st.prog + " in progress" + (st.risk ? " · " + st.risk + " at risk" : "")));
+      const mp = monthProgress((r.monthly || {}).items || []);
+      if (mp.pct !== null) prog.append(el("div", "meta mpl", monthLabel(r.monthly.m) + " deliverables: " + mp.pct + "% complete"));
       const b0 = el("div", "bar0"), i0 = el("i");
       i0.style.width = pct2 + "%";
       b0.append(i0);
@@ -7254,6 +7570,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   function detailView(pg, viewer, rep) {
     if (S.reports[rep.id]) baseline[rep.id] = JSON.stringify(S.reports[rep.id]);
     const sub = rep.status === "submitted", ro = viewer || sub || !canBuild();
+    if (!ro && (!rep.monthly || rep.monthly.m !== monthOf(rep.a))) {
+      rep.monthly = seedMonthly(rep, allReports());
+      if (rep.monthly.items.length) quietSave(rep);
+    }
     pg.append(crumbs([{ label: "Reports", href: "#/reports" }, { label: "Week of " + fmtIso(rep.a) }]));
     pg.append(pageHead("Weekly report", "Sprint " + rep.n + " · week " + (rep.w || 1) + " of 2" + (viewer ? "" : ro ? ". Submitted reports are read-only." : ". Edit anything, then submit it to the executives.")));
     const sb0 = viewer ? null : setupBanner();
@@ -7330,6 +7650,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       glance.append(t);
     });
     body.append(glance);
+    const mb = monthlyBlock(rep, pls, ro);
+    if (mb) body.append(mb);
     if (!ro) body.append(richBar());
     pls.forEach((p) => body.append(prodBlock(rep, p, ro)));
     pg.append(meta, tools);

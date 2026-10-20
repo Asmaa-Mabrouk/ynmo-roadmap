@@ -130,6 +130,57 @@ export function applyAi(prods, ai) {
 }
 
 /** Copy-paste text of a report. */
+/* ---------- monthly deliverables (the business's list for the month) and ad hoc requests ----------
+ * Stored inside each weekly report: rep.monthly = { m: 'YYYY-MM', items: [{ id, k, t, pct, p0, w, adhoc, by, at }] }
+ *   k = product key, pct = percent complete (0-100), p0 = percent at the previous weekly report (for "+20 this week"),
+ *   w = importance weight 1-3 (the month's progress is the weighted average of the planned deliverables),
+ *   adhoc = a request the business added during the month (kept out of the planned percentage), by = who asked, at = ISO date added.
+ * A new weekly report of the same month starts from the latest earlier one, so the list stays the same all month and only the percentages move. */
+export const WEIGHTS = { 1: 'Normal', 2: 'High', 3: 'Critical' };
+export const clampPct = v => Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
+const addD = (iso, n) => new Date(Date.parse(iso + 'T00:00:00Z') + n * 864e5).toISOString().slice(0, 10);
+/** The month a weekly report belongs to: the month of the middle of its week (a week that straddles two months counts for the larger part). */
+export const monthOf = weekStart => addD(weekStart, 3).slice(0, 7);
+export const monthLabel = m => /^\d{4}-\d{2}$/.test(m || '') ? new Date(m + '-01T00:00:00Z').toLocaleString('en', { month: 'long', year: 'numeric', timeZone: 'UTC' }) : '';
+export const prevMonth = m => { const d = new Date(m + '-01T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 7); };
+export function newDeliverable(k, t, o) {
+  o = o || {};
+  return { id: uid(), k: k, t: String(t || '').replace(/\s+/g, ' ').trim().slice(0, 300), pct: 0, p0: 0, w: 1, adhoc: !!o.adhoc, by: String(o.by || '').replace(/\s+/g, ' ').trim().slice(0, 80), at: o.at || '' };
+}
+/** Weighted percent of the planned (not ad hoc) deliverables: { pct, n, done }. Empty list: pct = null. */
+export function monthProgress(items) {
+  const pl = (items || []).filter(i => !i.adhoc); if (!pl.length) return { pct: null, n: 0, done: 0 };
+  const w = pl.reduce((a, i) => a + (i.w || 1), 0), s = pl.reduce((a, i) => a + (i.w || 1) * clampPct(i.pct), 0);
+  return { pct: Math.round(s / w), n: pl.length, done: pl.filter(i => clampPct(i.pct) >= 100).length };
+}
+export function adhocStats(items) { const a = (items || []).filter(i => i.adhoc); return { n: a.length, done: a.filter(i => clampPct(i.pct) >= 100).length }; }
+const lastOf = (all, rep, m) => all.filter(r => r.id !== rep.id && r.a < rep.a && r.monthly && r.monthly.m === m && (r.monthly.items || []).length).sort((x, y) => (x.a < y.a ? 1 : -1))[0];
+/** The monthly list of `rep`: its own when it is for this month, otherwise a copy of the latest earlier report of the same month (percent at that time becomes `p0`). */
+export function seedMonthly(rep, all) {
+  const m = monthOf(rep.a); if (rep.monthly && rep.monthly.m === m) return rep.monthly;
+  const prev = lastOf(all, rep, m);
+  return { m: m, items: prev ? prev.monthly.items.map(i => Object.assign({}, i, { p0: clampPct(i.pct) })) : [] };
+}
+/** Unfinished deliverables of the latest report of the previous month, to start a new month from. Returns { from: 'YYYY-MM', items } or null. */
+export function carryFromLastMonth(rep, all) {
+  const pm = prevMonth(monthOf(rep.a)), prev = all.filter(r => r.id !== rep.id && r.monthly && r.monthly.m === pm && (r.monthly.items || []).length).sort((x, y) => (x.a < y.a ? 1 : -1))[0];
+  if (!prev) return null;
+  const items = prev.monthly.items.filter(i => clampPct(i.pct) < 100).map(i => Object.assign({}, i, { id: uid(), p0: clampPct(i.pct), at: '' }));
+  return items.length ? { from: pm, items: items } : null;
+}
+function monthlyText(rep, products, fmt) {
+  const mo = rep.monthly; if (!mo || !(mo.items || []).length) return [];
+  const prog = monthProgress(mo.items), out = ['MONTHLY DELIVERABLES - ' + monthLabel(mo.m) + (prog.pct === null ? '' : ' - ' + prog.pct + '% complete (' + prog.done + ' of ' + prog.n + ' done)'), ''];
+  products.forEach(p => {
+    const its = mo.items.filter(i => i.k === p.k); if (!its.length) return;
+    const pl = its.filter(i => !i.adhoc), ad = its.filter(i => i.adhoc), pp = monthProgress(pl);
+    out.push(p.n + (pp.pct === null ? '' : ' - ' + pp.pct + '%'));
+    pl.forEach(i => { const d = clampPct(i.pct) - clampPct(i.p0); out.push('- ' + i.t + ': ' + clampPct(i.pct) + '%' + (d ? ' (' + (d > 0 ? '+' : '') + d + ' this week)' : '')); });
+    if (ad.length) { out.push('Ad hoc requests:'); ad.forEach(i => out.push('- ' + i.t + (i.by ? ' (requested by ' + i.by + (i.at && fmt ? ', ' + fmt(i.at) : '') + ')' : '') + ': ' + clampPct(i.pct) + '%')); }
+    out.push('');
+  });
+  return out;
+}
 export function reportToText(rep, products, fmt) {
   const out = ['Weekly update - ' + (fmt ? fmt(rep.a) : rep.a) + (rep.b ? ' to ' + (fmt ? fmt(rep.b) : rep.b) : '') + (rep.n ? ' (Sprint ' + rep.n + ')' : ''), ''];
   products.forEach(p => {
@@ -141,5 +192,6 @@ export function reportToText(rep, products, fmt) {
     });
     out.push('');
   });
+  const mt = monthlyText(rep, products, fmt); if (mt.length) out.push('', ...mt);
   return out.join('\n').trim() + '\n';
 }

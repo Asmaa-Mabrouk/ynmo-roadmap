@@ -42,6 +42,21 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+🔄 YNMO LEDGER UPDATE — 2026-10-20
+Request: The business wants each month's deliverables in the weekly report with a percentage of completion (a list that stays the same over the month, only the percentages change) and the ad hoc requests they add
+Surface: cross-cutting (Ynmo Roadmaps internal tool)
+Outcome: Monthly deliverables section on the weekly report: per product, percent complete + importance weight, weekly change, carried forward each week; ad hoc requests with requester listed separately; read-only for executives after submit; copy text, list card and undo covered. No SQL change.
+New facts / decisions locked:
+  • The month's progress counts planned deliverables only (weighted by importance); ad hoc requests have their own percentage and count.
+  • Percent complete is entered by the team (research: automatic or equal-weight percentages mislead; milestone-style checkpoints and weights are the common practice). Not derived from Jira.
+  • A week belongs to the month of its middle day.
+Corrections to this skill:
+  • none
+Open / flagged:
+  • Ask the business whether they want a different definition of "complete", different weights, or the percentage tied to Jira epics later.
+  • Check the section with the business on a real week and adjust wording.
+Changelog: Monthly deliverables with percent complete and ad hoc requests in the weekly report.
+
 🔄 YNMO LEDGER UPDATE — 2026-10-18
 Request: Update the ledger and the project docs in GitHub
 Surface: cross-cutting (Ynmo Roadmaps internal tool)
