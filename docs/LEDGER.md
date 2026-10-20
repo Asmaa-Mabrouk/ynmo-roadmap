@@ -15,7 +15,7 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 | Backend | Supabase project **YNMO_PM**; SQL 01 to 06; Edge Functions `notify-approval`, `weekly-draft`, `jira-sync` (code in repo; deployment status per the open items below) |
 | Owner | Asmaa (Senior PM, TrianglZ, Ynmo ecosystem, Riyadh) |
 | Pages | Roadmap, Ideas, Roadmaps, Sprints, Reports, Monthly, Resources, Vacations, Capacity, Baselines, Log, Approvals |
-| Tests | `tests/run_all.sh`: last full run 88/88 scenarios and all feature scripts green (`sprints_reports.py` 98, `monthly_page.py` 27) |
+| Tests | `tests/run_all.sh`: last full run 88/88 scenarios and all feature scripts green (`sprints_reports.py` 100, `monthly_page.py` 31) |
 | Jira | Site `tatralab.atlassian.net`; default projects DYC (Daycare), FAS (Tifli), AU (AI). Plan, Warif and Sharjah project keys not known yet. Rovo was considered; the API route was chosen |
 | Google Drive export | Google Cloud project **YNMO PM** (trianglz.com, Internal consent), Drive API on, Web client created for `https://ynmo-roadmap.vercel.app`. Client ID to be pasted in the tool by an admin; the client secret is not used |
 
@@ -41,6 +41,19 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 8. Not yet tested against the real services: Jira, Google sign-in and Drive.
 
 ## Ledger updates
+
+🔄 YNMO LEDGER UPDATE — 2026-10-20
+Request: Remove all generated items from all products (only I will add items); line dropdown as percentage 10, 20, 30 ... 100; more padding on the report toolbar
+Surface: cross-cutting (Ynmo Roadmaps internal tool)
+Outcome: New weekly reports start with empty product sections; Sync from Sprint & Roadmap is optional; Clear all items button; per-line percentage dropdown (0-100 step 10, coloured); toolbar padding fixed.
+New facts / decisions locked:
+  • Weekly report lines carry `pct`; choosing 100 marks the line done, a lower value un-does done. Old lines without `pct` show 100 if done, else 0.
+  • A new report is empty by design; the AI button only rewrites existing items.
+Corrections to this skill:
+  • none
+Open / flagged:
+  • The per-line status (On Track / At Risk / Delayed) is no longer a dropdown; risks go in the "Risks & decisions" group. Say if you want the status back as a second control.
+Changelog: Empty weekly reports by default; percentage dropdown per line; clear all items.
 
 🔄 YNMO LEDGER UPDATE — 2026-10-20
 Request: Where to add the percentage; remove the heavy section from the weekly report; leave Monthly product sections empty to fill by hand; colour each percentage (yellow 1-50, orange above 50, then green)

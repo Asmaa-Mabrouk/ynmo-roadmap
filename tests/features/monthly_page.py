@@ -13,6 +13,15 @@ with sync_playwright() as pw:
     # ---- delete a weekly report ----
     sprint_with(A,'2026-10-14','2026-10-01')
     A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(300); A.click('button:has-text("New report for week of")'); A.wait_for_timeout(900)
+    ok('a new weekly report has empty product sections', A.locator('.rprod').count()>=2 and A.locator('.rline').count()==0)
+    g=A.locator('.rprod').first.locator('.rgrp:has(h3:text-is("In progress"))')
+    g.locator('textarea').fill('First item\nSecond item'); g.locator('button:text-is("Add items")').click(); A.wait_for_timeout(500)
+    sel=A.locator('.rprod').first.locator('.rline select[aria-label="Percent complete"]').first
+    ok('items I add have a percentage dropdown 0 to 100 in steps of 10', sel.evaluate("e=>[...e.options].map(o=>o.text).join()")=='0%,10%,20%,30%,40%,50%,60%,70%,80%,90%,100%')
+    cl=lambda v:(sel.select_option(v), A.wait_for_timeout(300), A.locator('.rprod').first.locator('.rline select[aria-label="Percent complete"]').first.evaluate("e=>getComputedStyle(e).borderTopColor"))[2]
+    ok('dropdown colour: 30 yellow, 80 orange, 100 green', cl('30')=='rgb(227, 181, 5)' and cl('80')=='rgb(240, 138, 36)' and cl('100')=='rgb(46, 157, 107)')
+    A.click('button:text-is("Clear all items")'); A.click('#xdlg button:text-is("Remove all items")'); A.wait_for_timeout(500)
+    ok('Clear all items empties every product', A.locator('.rline').count()==0 and A.locator('.rprod').count()>=2)
     ok('report page has a Delete report button', A.locator('button:text-is("Delete report")').count()==1)
     A.click('button:text-is("Delete report")'); A.wait_for_timeout(300)
     ok('delete asks first', A.locator('#xdlg').count()==1 and A.locator('#xdlg button:text-is("Delete report")').count()==1)

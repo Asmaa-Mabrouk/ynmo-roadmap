@@ -82,8 +82,10 @@ export function mergeLines(prev, fresh) {
   (prev || []).forEach(p => { if (!seen.has(p.src) && (p.src === 'man' || p.edited)) out.push(p); });
   return out;
 }
-export function newManualLine(g, t) { return { id: uid(), src: 'man', g: g, st: 'on', t: t, t0: t, jira: '', kind: 'manual', hide: false, edited: true }; }
+export function newManualLine(g, t) { return { id: uid(), src: 'man', g: g, st: 'on', pct: 0, t: t, t0: t, jira: '', kind: 'manual', hide: false, edited: true }; }
 
+/** Percent complete of a line: its own number, or 100 when marked done and 0 otherwise (older lines). */
+export const linePct = l => Number.isFinite(l.pct) ? l.pct : l.st === 'done' ? 100 : 0;
 const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
 /** Plain summary used when the AI is unavailable (or before it runs). */
 export function ruleSummary(name, lines) {
@@ -91,7 +93,8 @@ export function ruleSummary(name, lines) {
   const parts = [];
   if (c('done')) parts.push(plural(c('done'), 'item') + ' delivered');
   if (c('prog')) parts.push(plural(c('prog'), 'item') + ' in progress');
-  const bits = parts.length ? parts.join(', ') : 'no sprint activity recorded';
+  if (!parts.length) return '';   /* nothing written yet: the summary stays empty for the PM to write */
+  const bits = parts.join(', ');
   const risks = v.filter(l => l.st === 'risk' || l.st === 'late').length;
   return name + ': ' + bits + (risks ? '. ' + plural(risks, 'item') + ' at risk or waiting on a decision.' : '.');
 }
@@ -138,7 +141,7 @@ export function reportToText(rep, products, fmt, monthDoc) {
     out.push(p.n.toUpperCase() + ' - ' + RSTATUS[overall(d.items)], d.sum || '');
     GROUPS.forEach(g => {
       const ls = d.items.filter(l => !l.hide && l.g === g[0]); if (!ls.length) return;
-      out.push('', g[1] + ':'); ls.forEach(l => out.push('- ' + l.t + (l.jira ? ' [' + l.jira + ']' : '') + (l.st === 'risk' || l.st === 'late' ? ' (' + RSTATUS[l.st] + ')' : '')));
+      out.push('', g[1] + ':'); ls.forEach(l => out.push('- ' + l.t + (l.jira ? ' [' + l.jira + ']' : '') + (linePct(l) ? ' - ' + linePct(l) + '%' : '') + (l.st === 'risk' || l.st === 'late' ? ' (' + RSTATUS[l.st] + ')' : '')));
     });
     out.push('');
   });

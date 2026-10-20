@@ -131,6 +131,8 @@ with sync_playwright() as pw:
     # report
     A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(300)
     A.click('button:has-text("New report for week of")'); A.wait_for_timeout(700)
+    ok('a new report starts with empty product sections', A.locator('#pg-reports .rprod').count()>=3 and A.locator('#pg-reports .rline').count()==0 and 'Add your items' in A.locator('#pg-reports .rnote').inner_text())
+    A.click('button:text-is("Sync from Sprint & Roadmap")'); A.wait_for_timeout(700)
     ok('draft has 3 product sections', A.locator('#pg-reports .rprod').count()==3)
     pd=A.locator('#pg-reports .rprod[data-k="plan_daycare"]')
     vl=lambda loc: loc.evaluate("e=>[...e.querySelectorAll('.sptext')].map(x=>x.innerText).join('|')")
@@ -155,9 +157,9 @@ with sync_playwright() as pw:
     ok('Ctrl+Z undoes it on the Reports page', hid()==h0 and 'Undo: Hide line' in A.locator('#toasts').inner_text())
     A.keyboard.press('Control+Shift+z'); A.wait_for_timeout(400); ok('Ctrl+Shift+Z redoes it', hid()==h0+1)
     A.keyboard.press('Meta+z'); A.wait_for_timeout(400); ok('Cmd+Z works too', hid()==h0)
-    A.locator('#pg-reports .rprod[data-k="tifli"] .rline').first.locator('select[aria-label="Status"]').select_option('risk'); A.wait_for_timeout(500)
+    A.locator('#pg-reports .rprod[data-k="tifli"] .rline').first.locator('select[aria-label="Percent complete"]').select_option('70'); A.wait_for_timeout(500)
     A.locator('#pg-reports h1').click(); A.keyboard.press('Control+z'); A.wait_for_timeout(500)
-    ok('a status change is undone', A.locator('#pg-reports .rprod[data-k="tifli"] .rline').first.locator('select[aria-label="Status"]').input_value()!='risk')
+    ok('a percentage change is undone', A.locator('#pg-reports .rprod[data-k="tifli"] .rline').first.locator('select[aria-label="Percent complete"]').input_value()!='70')
     # new sprint item shows up on plain sync, edits still kept
     A.click('#nav button[data-p="sprints"]'); A.wait_for_timeout(300); A.click('.spcard a.splink'); A.wait_for_timeout(500)
     P.locator('.sdoc .ghost .bt').click(); key('/'); typ('Product'); key('Enter'); typ('AI'); key('Enter'); typ('Lina'); key('Enter'); typ('Sara voice v2'); P.wait_for_timeout(700)
@@ -239,9 +241,11 @@ with sync_playwright() as pw:
     D.click('#nav button[data-p="sprints"]'); D.click('button:text-is("+ New sprint")'); D.wait_for_timeout(400)
     D.locator('input[aria-label="Sprint end date"]').fill('2031-01-14'); D.wait_for_timeout(300); D.locator('input[aria-label="Sprint start date"]').fill('2031-01-01'); D.wait_for_timeout(500)   # far from any roadmap bar, so the date of the test run does not matter
     D.click('#nav button[data-p="reports"]'); D.click('button:has-text("New report for week of")'); D.wait_for_timeout(700)
-    ok('empty week shows a clear error', 'No data found' in D.locator('#pg-reports .rnote.bad').inner_text())
+    ok('a new empty report is not an error', D.locator('#pg-reports .rnote.bad').count()==0 and D.locator('#pg-reports .rline').count()==0)
+    D.click('button:text-is("Sync from Sprint & Roadmap")'); D.wait_for_timeout(600)
+    ok('syncing an empty week shows a clear error', 'No data found' in D.locator('#pg-reports .rnote.bad').inner_text())
     D.click('button:has-text("Generate with AI")'); D.wait_for_timeout(600)
-    ok('AI is not called without data', not D.evaluate("window.__aiCalls") and 'No data found' in D.locator('#pg-reports .rnote.bad').inner_text())
+    ok('AI is not called without items', not D.evaluate("window.__aiCalls") and 'no items to rewrite' in D.locator('#pg-reports .rnote.bad').inner_text())
     ok('AI button is the sparkle button', D.locator('button.ai svg.spark').count()==1)
     # --- missing tables (SQL 06 not run): setup banner instead of an "offline" banner
     ctx3=mkctx(b, init="window.__missing=['reports']"); e3=[]; E=newpage(ctx3,e3); signup(E,'Admin','adm@x.com')

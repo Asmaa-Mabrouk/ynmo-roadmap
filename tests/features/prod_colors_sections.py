@@ -50,6 +50,7 @@ with sync_playwright() as pw:
     A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(400)
     nb=A.locator('#pg-reports button', has_text='New report').first
     if nb.count(): nb.click(); A.wait_for_timeout(900)
+    if A.locator('button:text-is("Sync from Sprint & Roadmap")').count(): A.click('button:text-is("Sync from Sprint & Roadmap")'); A.wait_for_timeout(700)
     txt=A.locator('#pg-reports').inner_text()
     ok('weekly report has Deployments and Quality scope sections', 'Deployments' in txt and 'Quality scope' in txt)
     ok('no page errors', errs==[])

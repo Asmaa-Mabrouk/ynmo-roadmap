@@ -965,6 +965,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 #pg-reports.sheet .rnote, #pg-monthly.sheet .rnote { margin: 0 0 22px; padding: 12px 16px; }
 #pg-reports.sheet .rbody, #pg-monthly.sheet .rbody { margin-top: 8px; }
 @media (max-width: 720px) { #pg-reports.sheet .rtools, #pg-monthly.sheet .rtools { gap: 10px 8px; padding: 12px 0; } #pg-reports.sheet .rtools .btn, #pg-monthly.sheet .rtools .btn { padding: 8px 14px; min-height: 40px; } #pg-reports.sheet .rtools .btn.rdel, #pg-monthly.sheet .rtools .btn.rdel { margin-inline-start: 0; } }
+
+/* Percentage dropdown and chip on weekly report lines */
+.rline select.mpct { min-width: 78px; font-weight: 700; border-width: 1.5px; }
+.rline select.mpct.pc-n { color: var(--muted); border-color: var(--line); } .rline select.mpct.pc-y { color: #8a6d00; border-color: #e3b505; } .rline select.mpct.pc-o { color: #b85f00; border-color: #f08a24; } .rline select.mpct.pc-g { color: #1d7a52; border-color: #2e9d6b; }
+.rvp { flex: none; min-width: 46px; text-align: center; font-size: .8rem; font-weight: 700; padding: 1px 8px; border-radius: 99px; border: 1.5px solid var(--pc); color: var(--pt); }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -6408,15 +6413,17 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return out;
   }
   function newManualLine(g, t) {
-    return { id: uid2(), src: "man", g, st: "on", t, t0: t, jira: "", kind: "manual", hide: false, edited: true };
+    return { id: uid2(), src: "man", g, st: "on", pct: 0, t, t0: t, jira: "", kind: "manual", hide: false, edited: true };
   }
+  var linePct = (l) => Number.isFinite(l.pct) ? l.pct : l.st === "done" ? 100 : 0;
   var plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
   function ruleSummary(name, lines) {
     const v = lines.filter((l) => !l.hide), c = (g) => v.filter((l) => l.g === g).length;
     const parts = [];
     if (c("done")) parts.push(plural(c("done"), "item") + " delivered");
     if (c("prog")) parts.push(plural(c("prog"), "item") + " in progress");
-    const bits = parts.length ? parts.join(", ") : "no sprint activity recorded";
+    if (!parts.length) return "";
+    const bits = parts.join(", ");
     const risks = v.filter((l) => l.st === "risk" || l.st === "late").length;
     return name + ": " + bits + (risks ? ". " + plural(risks, "item") + " at risk or waiting on a decision." : ".");
   }
@@ -6470,7 +6477,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         const ls = d.items.filter((l) => !l.hide && l.g === g[0]);
         if (!ls.length) return;
         out.push("", g[1] + ":");
-        ls.forEach((l) => out.push("- " + l.t + (l.jira ? " [" + l.jira + "]" : "") + (l.st === "risk" || l.st === "late" ? " (" + RSTATUS[l.st] + ")" : "")));
+        ls.forEach((l) => out.push("- " + l.t + (l.jira ? " [" + l.jira + "]" : "") + (linePct(l) ? " - " + linePct(l) + "%" : "") + (l.st === "risk" || l.st === "late" ? " (" + RSTATUS[l.st] + ")" : "")));
       });
       out.push("");
     });
@@ -7398,22 +7405,41 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     rUI.busy = true;
     rUI.note = "";
     rUI.err = false;
-    const pl = productsOf(cfg()), { road, ka, kb } = roadFor(rep.a, rep.b), sitems = itemsOf(rep.sp);
+    const fill = !isNew && !ai, pl = productsOf(cfg()), { road, ka, kb } = fill ? roadFor(rep.a, rep.b) : { road: [], ka: NaN, kb: NaN }, sitems = fill ? itemsOf(rep.sp) : [];
     EXTRA_SECTIONS.forEach((x) => {
       if (sitems.some((i) => i.squad === x.k) && !pl.some((q) => q.squads.includes(x.k))) pl.push({ k: x.k, n: x.n, squads: [x.k] });
     });
     rep.pl = pl;
-    rep.prods = buildProds(pl, rep.prods, sitems, road, ka, kb, rep.a, rep.b);
-    rep.srcN = { si: sitems.length, rf: road.filter((r) => Number.isFinite(ka) && r.d0 <= kb && r.d1 >= ka).length };
+    if (fill) rep.prods = buildProds(pl, rep.prods, sitems, road, ka, kb, rep.a, rep.b);
+    else {
+      const keep = rep.prods || {};
+      rep.prods = {};
+      pl.forEach((p) => {
+        rep.prods[p.k] = keep[p.k] || { items: [], sum: "", sumH: "", sumEdited: false };
+      });
+    }
+    if (fill) rep.srcN = { si: sitems.length, rf: road.filter((r) => Number.isFinite(ka) && r.d0 <= kb && r.d1 >= ka).length };
     const lines = countLines(rep.prods);
     save(rep, isNew ? "created the weekly report for " + fmtIso(rep.a) : "synced the weekly report for " + fmtIso(rep.a), "Sync from sprint and roadmap");
+    if (isNew) {
+      say(rep, "Report created. Add your items under each product.", false);
+      rUI.busy = false;
+      renderReports();
+      return;
+    }
+    if (!lines && !fill) {
+      say(rep, "There are no items to rewrite yet. Add items under a product first.", true);
+      rUI.busy = false;
+      renderReports();
+      return;
+    }
     if (!lines) {
       say(rep, "No data found for this week: Sprint " + rep.n + " has no items for these products and no roadmap bar overlaps " + fmtIso(rep.a) + ". Add items on the Sprints page (or check Report settings), then sync again.", true);
       rUI.busy = false;
       renderReports();
       return;
     }
-    say(rep, isNew ? "Draft created from " + rep.srcN.si + " sprint items and " + rep.srcN.rf + " roadmap bars" : "Synced from Sprint and Roadmap", false);
+    say(rep, fill ? "Synced from Sprint and Roadmap" : "Report updated", false);
     renderReports();
     if (ai) {
       rUI.note = "Writing with Gemini…";
@@ -7508,7 +7534,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   function viewLine(l) {
     const r = el("div", "rv ln-" + l.st), t = el("span", "rvt");
     showRich(t, l.h, l.t);
-    r.append(el("span", "dot rs-" + l.st), t);
+    r.append(el("span", "rvp pc-" + pctBand(linePct(l)), linePct(l) + "%"), t);
     const u = jiraUrl(cfg().jira, l.jira);
     if (l.jira) {
       const a = el(u ? "a" : "span", "jira", l.jira);
@@ -7529,18 +7555,25 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     r.dataset.id = l.id;
     const touch = (patch) => {
       Object.assign(l, patch, { edited: true });
-      save(rep, "", patch.hide !== void 0 ? patch.hide ? "Hide line" : "Show line" : patch.st ? "Change status" : patch.g ? "Move to another group" : "Edit line");
+      save(rep, "", patch.hide !== void 0 ? patch.hide ? "Hide line" : "Show line" : patch.pct !== void 0 ? "Change percentage" : patch.st ? "Change status" : patch.g ? "Move to another group" : "Edit line");
     };
-    const st = el("select", "spsel rst-" + l.st);
-    st.setAttribute("aria-label", "Status");
-    Object.keys(RSTATUS).forEach((k) => {
-      const o = el("option", "", RSTATUS[k]);
-      o.value = k;
-      o.selected = k === l.st;
+    const pc = linePct(l), st = el("select", "spsel mpct pc-" + pctBand(pc));
+    st.setAttribute("aria-label", "Percent complete");
+    const steps = [];
+    for (let v = 0; v <= 100; v += 10) steps.push(v);
+    if (!steps.includes(pc)) {
+      steps.push(pc);
+      steps.sort((a, b) => a - b);
+    }
+    steps.forEach((v) => {
+      const o = el("option", "", v + "%");
+      o.value = String(v);
+      o.selected = v === pc;
       st.append(o);
     });
     st.addEventListener("change", () => {
-      touch({ st: st.value });
+      const v = Number(st.value);
+      touch({ pct: v, st: v >= 100 ? "done" : l.st === "done" ? "on" : l.st });
       renderReports();
     });
     const t = richBox("sptext", l.h, l.t, "Line text", (h2, pl) => {
@@ -7676,6 +7709,19 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     b.addEventListener("click", settingsDlg);
     return b;
   };
+  function clearItems(rep) {
+    confirmDlg("Remove all items from this report?", "Every item under every product is removed so you can add your own. The product sections stay. You can undo this.", "Remove all items", () => {
+      Object.keys(rep.prods || {}).forEach((k) => {
+        rep.prods[k].items = [];
+        rep.prods[k].sum = "";
+        rep.prods[k].sumH = "";
+        rep.prods[k].sumEdited = false;
+      });
+      save(rep, "removed all items from the weekly report for " + fmtIso(rep.a), "Remove all items");
+      notify("All items removed. Add your own under each product.");
+      renderReports();
+    });
+  }
   var canDelete = (r) => canBuild() && (r.status !== "submitted" || isAdmin());
   function deleteReport(rep) {
     confirmDlg("Delete this weekly report?", "The report for the week of " + fmtIso(rep.a) + " is deleted for everyone" + (rep.status === "submitted" ? ", including the executives who can see it" : "") + ". The sprint and the roadmap are not touched.", "Delete report", () => {
@@ -7788,6 +7834,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       unsubR = U.subscribe(upd);
       upd();
     }
+    if (!viewer && !sub2) btn("Clear all items", "", () => clearItems(rep), !canBuild());
     btn("Copy text", "", () => copyReport(rep));
     btn("Print / PDF", "", () => {
       document.body.classList.add("print-report");

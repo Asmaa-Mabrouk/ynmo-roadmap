@@ -20,8 +20,8 @@ import { crumbs } from '../ui/crumbs.js';
 import { createUndo } from '../features/undo-stack.js';
 import { registerUndo } from '../features/undo-router.js';
 import { autoGrow, richBar, richBox, showRich, submitOnCtrlEnter } from '../features/rich-text.js';
-import { GROUPS, RSTATUS, aiPayload, applyAi, buildProds, jiraUrl, newManualLine, overall, productsOf, reportToText, ruleSummary } from '../features/report-model.js';
-import { monthOf } from '../features/month-model.js';
+import { GROUPS, RSTATUS, linePct, aiPayload, applyAi, buildProds, jiraUrl, newManualLine, overall, productsOf, reportToText, ruleSummary } from '../features/report-model.js';
+import { monthOf, pctBand } from '../features/month-model.js';
 import { monthSummary } from '../features/month-view.js';
 import { confirmDlg } from '../ui/confirm.js';
 import { isAdmin } from '../features/google-drive.js';
@@ -75,7 +75,7 @@ function newReport(wk) {
   const id = wk.id; if (S.reports[id]) { location.hash = '#/reports/' + id; return; }
   const rep = { id: id, sp: wk.sp, n: wk.n, w: wk.w, a: wk.a, b: wk.b, status: 'draft', pl: productsOf(cfg()), prods: {} };
   location.hash = '#/reports/' + id;
-  sync(rep, false, true);
+  sync(rep, false, true);   /* a new report starts with empty product sections: the PM adds the items */
 }
 /** Human explanation of a failed call to the AI function (not deployed, key missing, not allowed, unreachable). */
 async function aiWhy(e) {
@@ -95,18 +95,23 @@ const say = (rep, txt, bad) => { rUI.note = txt; rUI.noteFor = rep.id; rUI.err =
 /** Rules-only re-sync (never overwrites edited lines/summaries), then optionally the AI wording. Empty data is reported as an error, never sent to the AI. */
 async function sync(rep, ai, isNew) {
   if (rUI.busy) return; rUI.busy = true; rUI.note = ''; rUI.err = false;
-  const pl = productsOf(cfg()), { road, ka, kb } = roadFor(rep.a, rep.b), sitems = itemsOf(rep.sp);
+  /* Only the "Sync from Sprint & Roadmap" button pulls items in; a new report and the AI button never do. */
+  const fill = !isNew && !ai, pl = productsOf(cfg()), { road, ka, kb } = fill ? roadFor(rep.a, rep.b) : { road: [], ka: NaN, kb: NaN }, sitems = fill ? itemsOf(rep.sp) : [];
   // Deployments / Quality scope sections get their own report section when no product already covers them.
   EXTRA_SECTIONS.forEach(x => { if (sitems.some(i => i.squad === x.k) && !pl.some(q => q.squads.includes(x.k))) pl.push({ k: x.k, n: x.n, squads: [x.k] }); });
-  rep.pl = pl; rep.prods = buildProds(pl, rep.prods, sitems, road, ka, kb, rep.a, rep.b);
-  rep.srcN = { si: sitems.length, rf: road.filter(r => Number.isFinite(ka) && r.d0 <= kb && r.d1 >= ka).length };
+  rep.pl = pl;
+  if (fill) rep.prods = buildProds(pl, rep.prods, sitems, road, ka, kb, rep.a, rep.b);
+  else { const keep = rep.prods || {}; rep.prods = {}; pl.forEach(p => { rep.prods[p.k] = keep[p.k] || { items: [], sum: '', sumH: '', sumEdited: false }; }); }   /* keep every line as it is; only make sure each product has a section */
+  if (fill) rep.srcN = { si: sitems.length, rf: road.filter(r => Number.isFinite(ka) && r.d0 <= kb && r.d1 >= ka).length };
   const lines = countLines(rep.prods);
   save(rep, isNew ? 'created the weekly report for ' + fmtIso(rep.a) : 'synced the weekly report for ' + fmtIso(rep.a), 'Sync from sprint and roadmap');
+  if (isNew) { say(rep, 'Report created. Add your items under each product.', false); rUI.busy = false; renderReports(); return; }
+  if (!lines && !fill) { say(rep, 'There are no items to rewrite yet. Add items under a product first.', true); rUI.busy = false; renderReports(); return; }
   if (!lines) {
     say(rep, 'No data found for this week: Sprint ' + rep.n + ' has no items for these products and no roadmap bar overlaps ' + fmtIso(rep.a) + '. Add items on the Sprints page (or check Report settings), then sync again.', true);
     rUI.busy = false; renderReports(); return;
   }
-  say(rep, isNew ? 'Draft created from ' + rep.srcN.si + ' sprint items and ' + rep.srcN.rf + ' roadmap bars' : 'Synced from Sprint and Roadmap', false); renderReports();
+  say(rep, fill ? 'Synced from Sprint and Roadmap' : 'Report updated', false); renderReports();
   if (ai) {
     rUI.note = 'Writing with Gemini…'; rUI.noteFor = rep.id; rUI.wait = true; renderReports();
     try {
@@ -152,7 +157,7 @@ function settingsDlg() {
 }
 
 function viewLine(l) {
-  const r = el('div', 'rv ln-' + l.st), t = el('span', 'rvt'); showRich(t, l.h, l.t); r.append(el('span', 'dot rs-' + l.st), t);
+  const r = el('div', 'rv ln-' + l.st), t = el('span', 'rvt'); showRich(t, l.h, l.t); r.append(el('span', 'rvp pc-' + pctBand(linePct(l)), linePct(l) + '%'), t);
   const u = jiraUrl(cfg().jira, l.jira); if (l.jira) { const a = el(u ? 'a' : 'span', 'jira', l.jira); if (u) { a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer'; } r.append(a); }
   (l.tg || []).forEach(x => r.append(el('span', 'tgchip tg-' + x.c, '#' + x.n)));
   if (l.st === 'risk' || l.st === 'late') r.append(el('span', 'chip rs-' + l.st, RSTATUS[l.st]));
@@ -161,9 +166,11 @@ function viewLine(l) {
 function lineRow(rep, d, l, ro) {
   if (ro) return viewLine(l);
   const r = el('div', 'rline ln-' + l.st + (l.hide ? ' hid' : '')); r.dataset.id = l.id;
-  const touch = patch => { Object.assign(l, patch, { edited: true }); save(rep, '', patch.hide !== undefined ? (patch.hide ? 'Hide line' : 'Show line') : patch.st ? 'Change status' : patch.g ? 'Move to another group' : 'Edit line'); };
-  const st = el('select', 'spsel rst-' + l.st); st.setAttribute('aria-label', 'Status'); Object.keys(RSTATUS).forEach(k => { const o = el('option', '', RSTATUS[k]); o.value = k; o.selected = k === l.st; st.append(o); });
-  st.addEventListener('change', () => { touch({ st: st.value }); renderReports(); });
+  const touch = patch => { Object.assign(l, patch, { edited: true }); save(rep, '', patch.hide !== undefined ? (patch.hide ? 'Hide line' : 'Show line') : patch.pct !== undefined ? 'Change percentage' : patch.st ? 'Change status' : patch.g ? 'Move to another group' : 'Edit line'); };
+  const pc = linePct(l), st = el('select', 'spsel mpct pc-' + pctBand(pc)); st.setAttribute('aria-label', 'Percent complete');
+  const steps = []; for (let v = 0; v <= 100; v += 10) steps.push(v); if (!steps.includes(pc)) { steps.push(pc); steps.sort((a, b) => a - b); }
+  steps.forEach(v => { const o = el('option', '', v + '%'); o.value = String(v); o.selected = v === pc; st.append(o); });
+  st.addEventListener('change', () => { const v = Number(st.value); touch({ pct: v, st: v >= 100 ? 'done' : l.st === 'done' ? 'on' : l.st }); renderReports(); });
   const t = richBox('sptext', l.h, l.t, 'Line text', (h, pl) => { if (!pl) { showRich(t, l.h, l.t); return; } touch({ t: pl.slice(0, 1200), h: h.slice(0, 4000) }); });
   r.append(st, t);
   const u = jiraUrl(cfg().jira, l.jira);
@@ -202,6 +209,12 @@ const statsOf = r => { let all = 0, done = 0, prog = 0, risk = 0; Object.keys(r.
 const copyReport = rep => { const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso, monthDocFor(rep)); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify('Report text copied to the clipboard'), () => notify('Could not copy. Select the text and copy it manually.', 'err')); };
 const settingsBtn = () => { const b = el('button', 'btn', 'Report settings'); b.type = 'button'; b.disabled = !canBuild(); b.addEventListener('click', settingsDlg); return b; };
 
+function clearItems(rep) {
+  confirmDlg('Remove all items from this report?', 'Every item under every product is removed so you can add your own. The product sections stay. You can undo this.', 'Remove all items', () => {
+    Object.keys(rep.prods || {}).forEach(k => { rep.prods[k].items = []; rep.prods[k].sum = ''; rep.prods[k].sumH = ''; rep.prods[k].sumEdited = false; });
+    save(rep, 'removed all items from the weekly report for ' + fmtIso(rep.a), 'Remove all items'); notify('All items removed. Add your own under each product.'); renderReports();
+  });
+}
 /** Editors delete drafts; only an admin deletes a submitted report (the database enforces the same). */
 const canDelete = r => canBuild() && (r.status !== 'submitted' || isAdmin());
 function deleteReport(rep) {
@@ -258,6 +271,7 @@ function detailView(pg, viewer, rep) {
     const upd = () => { ub.disabled = !U.canUndo() || !canBuild(); rb.disabled = !U.canRedo() || !canBuild(); ub.title = ub.ariaLabel = U.canUndo() ? 'Undo: ' + U.nextUndo() + ' (Ctrl/Cmd+Z)' : 'Nothing to undo'; rb.title = rb.ariaLabel = U.canRedo() ? 'Redo: ' + U.nextRedo() + ' (Ctrl/Cmd+Shift+Z)' : 'Nothing to redo'; };
     if (unsubR) unsubR(); unsubR = U.subscribe(upd); upd();
   }
+  if (!viewer && !sub) btn('Clear all items', '', () => clearItems(rep), !canBuild());
   btn('Copy text', '', () => copyReport(rep));
   btn('Print / PDF', '', () => { document.body.classList.add('print-report'); const off = () => { document.body.classList.remove('print-report'); window.removeEventListener('afterprint', off); }; window.addEventListener('afterprint', off); window.print(); });
   if (!viewer && !sub) tools.append(settingsBtn());
