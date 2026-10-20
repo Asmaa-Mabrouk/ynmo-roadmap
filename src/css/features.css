@@ -547,3 +547,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .rline select.mpct { min-width: 78px; font-weight: 700; border-width: 1.5px; }
 .rline select.mpct.pc-n { color: var(--muted); border-color: var(--line); } .rline select.mpct.pc-y { color: #8a6d00; border-color: #e3b505; } .rline select.mpct.pc-o { color: #b85f00; border-color: #f08a24; } .rline select.mpct.pc-g { color: #1d7a52; border-color: #2e9d6b; }
 .rvp { flex: none; min-width: 46px; text-align: center; font-size: .8rem; font-weight: 700; padding: 1px 8px; border-radius: 99px; border: 1.5px solid var(--pc); color: var(--pt); }
+
+.rhedit { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin-top: 10px; }
+.rhedit label { font-size: .85rem; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.rhedit input { font: inherit; padding: 6px 10px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; }
+.rhedit input[type=text] { flex: 1 1 260px; min-width: 0; }
+.rphead .rvp { margin-inline-start: auto; }
+.rtile .rvp { align-self: flex-start; }

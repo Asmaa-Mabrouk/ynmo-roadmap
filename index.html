@@ -970,6 +970,13 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .rline select.mpct { min-width: 78px; font-weight: 700; border-width: 1.5px; }
 .rline select.mpct.pc-n { color: var(--muted); border-color: var(--line); } .rline select.mpct.pc-y { color: #8a6d00; border-color: #e3b505; } .rline select.mpct.pc-o { color: #b85f00; border-color: #f08a24; } .rline select.mpct.pc-g { color: #1d7a52; border-color: #2e9d6b; }
 .rvp { flex: none; min-width: 46px; text-align: center; font-size: .8rem; font-weight: 700; padding: 1px 8px; border-radius: 99px; border: 1.5px solid var(--pc); color: var(--pt); }
+
+.rhedit { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin-top: 10px; }
+.rhedit label { font-size: .85rem; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.rhedit input { font: inherit; padding: 6px 10px; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; }
+.rhedit input[type=text] { flex: 1 1 260px; min-width: 0; }
+.rphead .rvp { margin-inline-start: auto; }
+.rtile .rvp { align-self: flex-start; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -6416,6 +6423,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return { id: uid2(), src: "man", g, st: "on", pct: 0, t, t0: t, jira: "", kind: "manual", hide: false, edited: true };
   }
   var linePct = (l) => Number.isFinite(l.pct) ? l.pct : l.st === "done" ? 100 : 0;
+  var avgPct = (ls) => {
+    const v = ls.filter((l) => !l.hide);
+    return v.length ? Math.round(v.reduce((a, l) => a + linePct(l), 0) / v.length) : null;
+  };
   var plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
   function ruleSummary(name, lines) {
     const v = lines.filter((l) => !l.hide), c = (g) => v.filter((l) => l.g === g).length;
@@ -6426,12 +6437,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const bits = parts.join(", ");
     const risks = v.filter((l) => l.st === "risk" || l.st === "late").length;
     return name + ": " + bits + (risks ? ". " + plural(risks, "item") + " at risk or waiting on a decision." : ".");
-  }
-  function overall(lines) {
-    const v = lines.filter((l) => !l.hide);
-    if (v.some((l) => l.st === "late")) return "late";
-    if (v.some((l) => l.st === "risk")) return "risk";
-    return v.length && v.every((l) => l.st === "done") ? "done" : "on";
   }
   function buildProds(products, prevProds, sitems, road, ka, kb, a, b) {
     const out = {};
@@ -6472,13 +6477,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     products.forEach((p) => {
       const d = (rep.prods || {})[p.k];
       if (!d) return;
-      out.push(p.n.toUpperCase() + " - " + RSTATUS[overall(d.items)], d.sum || "");
-      GROUPS.forEach((g) => {
-        const ls = d.items.filter((l) => !l.hide && l.g === g[0]);
-        if (!ls.length) return;
-        out.push("", g[1] + ":");
-        ls.forEach((l) => out.push("- " + l.t + (l.jira ? " [" + l.jira + "]" : "") + (linePct(l) ? " - " + linePct(l) + "%" : "") + (l.st === "risk" || l.st === "late" ? " (" + RSTATUS[l.st] + ")" : "")));
-      });
+      const ap = avgPct(d.items);
+      out.push(p.n.toUpperCase() + (ap === null ? "" : " - " + ap + "%"));
+      d.items.filter((l) => !l.hide).forEach((l) => out.push("- " + l.t + (l.jira ? " [" + l.jira + "]" : "") + " - " + linePct(l) + "%"));
       out.push("");
     });
     const mt = monthText(monthDoc, products, fmt);
@@ -7282,7 +7283,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   }
 
   // src/esm/pages/reports.js
-  var SPARK = '<svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8L2.5 17.5l1.8-.7z"/></svg>';
   var rUI = { busy: false, note: "", noteFor: "", err: false, wait: false, last: "" };
   var routeId = () => {
     const m = /^#\/reports\/(\w+)/.exec(location.hash);
@@ -7594,18 +7594,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       }
       r.append(a);
     }
-    const g = el("select", "spsel");
-    g.setAttribute("aria-label", "Group");
-    GROUPS.forEach((x2) => {
-      const o = el("option", "", x2[1]);
-      o.value = x2[0];
-      o.selected = x2[0] === l.g;
-      g.append(o);
-    });
-    g.addEventListener("change", () => {
-      touch({ g: g.value });
-      renderReports();
-    });
     const h = el("button", "btn sm", l.hide ? "Show" : "Hide");
     h.type = "button";
     h.addEventListener("click", () => {
@@ -7622,7 +7610,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       renderReports();
     });
     (l.tg || []).forEach((z) => r.append(el("span", "tgchip tg-" + z.c, "#" + z.n)));
-    r.append(g, h, x);
+    r.append(h, x);
     return r;
   }
   function prodBlock(rep, p, ro) {
@@ -7631,57 +7619,41 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const sec = el("section", "rprod");
     sec.dataset.k = p.k;
     sec.style.setProperty("--c", colOf(p));
-    const hd = el("div", "rphead"), s = overall(d.items);
-    hd.append(el("h2", "", p.n), el("span", "chip rs-" + s, RSTATUS[s]));
+    const hd = el("div", "rphead"), ap = avgPct(d.items);
+    hd.append(el("h2", "", p.n));
+    if (ap !== null) hd.append(el("span", "rvp pc-" + pctBand(ap), ap + "%"));
     sec.append(hd);
-    if (ro) {
-      sec.classList.add("rview");
-      if (d.sum) {
-        const sv2 = el("div", "rsumv");
-        showRich(sv2, d.sumH, d.sum);
-        sec.append(sv2);
-      }
-    } else sec.append(richBox("rsum", d.sumH, d.sum, "Summary for " + p.n, (h, pl) => {
-      d.sum = pl || ruleSummary(p.n, d.items);
-      d.sumH = pl ? h : "";
-      d.sumEdited = !!pl;
-      save(rep);
-    }));
-    GROUPS.forEach((g) => {
-      const ls = d.items.filter((l) => l.g === g[0] && (!ro || !l.hide));
-      if (!ls.length && ro) return;
-      const gh = el("div", "rgrp");
-      gh.append(el("h3", "", g[1]));
-      ls.forEach((l) => gh.append(lineRow2(rep, d, l, ro)));
-      if (!ro) {
-        const f = el("form", "spadd"), ta = el("textarea"), go = el("button", "btn sm", "Add items");
-        go.type = "submit";
-        ta.rows = 2;
-        autoGrow(ta);
-        submitOnCtrlEnter(ta, f);
-        ta.placeholder = 'Add to "' + g[1] + '": type or paste one or many items, one per line (bullets are removed). Ctrl+Enter adds.';
-        ta.setAttribute("aria-label", "Add items to " + g[1]);
-        f.append(ta, go);
-        f.addEventListener("submit", (e) => {
-          e.preventDefault();
-          const rows2 = parsePaste(ta.value);
-          if (!rows2.length) {
-            notify("Type at least one line first", "err");
-            return;
-          }
-          rows2.forEach((r) => {
-            const n = newManualLine(g[0], r.t);
-            n.jira = r.jira;
-            d.items.push(n);
-          });
-          save(rep, "added " + rows2.length + " line" + (rows2.length === 1 ? "" : "s") + " to the weekly report", "Add " + rows2.length + " line" + (rows2.length === 1 ? "" : "s"));
-          notify(rows2.length + " line" + (rows2.length === 1 ? "" : "s") + ' added to "' + g[1] + '"');
-          renderReports();
+    if (ro) sec.classList.add("rview");
+    const ls = d.items.filter((l) => !ro || !l.hide), gh = el("div", "rgrp");
+    ls.forEach((l) => gh.append(lineRow2(rep, d, l, ro)));
+    if (!ro) {
+      const f = el("form", "spadd"), ta = el("textarea"), go = el("button", "btn sm", "Add items");
+      go.type = "submit";
+      ta.rows = 2;
+      autoGrow(ta);
+      submitOnCtrlEnter(ta, f);
+      ta.placeholder = "Add items to " + p.n + ": type or paste one or many, one per line (bullets are removed). Ctrl+Enter adds.";
+      ta.setAttribute("aria-label", "Add items to " + p.n);
+      f.append(ta, go);
+      f.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const rows2 = parsePaste(ta.value);
+        if (!rows2.length) {
+          notify("Type at least one line first", "err");
+          return;
+        }
+        rows2.forEach((r) => {
+          const n = newManualLine("prog", r.t);
+          n.jira = r.jira;
+          d.items.push(n);
         });
-        gh.append(f);
-      }
-      sec.append(gh);
-    });
+        save(rep, "added " + rows2.length + " item" + (rows2.length === 1 ? "" : "s") + " to the weekly report", "Add " + rows2.length + " item" + (rows2.length === 1 ? "" : "s"));
+        notify(rows2.length + " item" + (rows2.length === 1 ? "" : "s") + " added to " + p.n);
+        renderReports();
+      });
+      gh.append(f);
+    }
+    sec.append(gh);
     return sec;
   }
   var monthDocFor = (rep) => {
@@ -7689,14 +7661,14 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return d && (!isViewer() || d.status === "submitted") ? d : null;
   };
   var statsOf = (r) => {
-    let all = 0, done2 = 0, prog = 0, risk = 0;
+    let all = 0, done2 = 0, sum = 0;
     Object.keys(r.prods || {}).forEach((k) => ((r.prods[k] || {}).items || []).filter((l) => !l.hide).forEach((l) => {
       all++;
-      if (l.g === "done") done2++;
-      else if (l.g === "prog") prog++;
-      if (l.st === "risk" || l.st === "late") risk++;
+      const v = linePct(l);
+      sum += v;
+      if (v >= 100) done2++;
     }));
-    return { all, done: done2, prog, risk };
+    return { all, done: done2, avg: all ? Math.round(sum / all) : 0 };
   };
   var copyReport = (rep) => {
     const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso, monthDocFor(rep));
@@ -7757,7 +7729,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     }
     const wrap = el("div", "splist");
     l.forEach((r) => {
-      const st = statsOf(r), sub2 = r.status === "submitted", pct2 = st.all ? Math.round(100 * st.done / st.all) : 0;
+      const st = statsOf(r), sub2 = r.status === "submitted", pct2 = st.avg;
       const card = el("div", "card spcard rpcard"), info = el("div");
       const a = el("a", "splink");
       a.href = "#/reports/" + r.id;
@@ -7772,7 +7744,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       info.append(pr);
       const prog = el("div", "spprog"), top = el("div", "rpstat");
       top.append(el("span", "chip rpst " + (sub2 ? "sub" : "draft"), sub2 ? "Submitted" : "Draft"));
-      prog.append(top, el("div", "meta", st.done + " delivered · " + st.prog + " in progress" + (st.risk ? " · " + st.risk + " at risk" : "")));
+      prog.append(top, el("div", "meta", st.all ? st.all + " item" + (st.all === 1 ? "" : "s") + " · " + st.done + " done · " + st.avg + "% on average" : "No items yet"));
       const b0 = el("div", "bar0"), i0 = el("i");
       i0.style.width = pct2 + "%";
       b0.append(i0);
@@ -7816,11 +7788,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     };
     if (!viewer && !sub2) {
       btn("Sync from Sprint & Roadmap", "", () => sync(rep, false), !canBuild() || rUI.busy);
-      const ab = btn("", "ai", () => sync(rep, true), !canBuild() || rUI.busy);
-      ab.insertAdjacentHTML("afterbegin", SPARK);
-      ab.append(document.createTextNode(rUI.wait ? "Writing…" : "Generate with AI"));
-      ab.title = "Rewrites unedited lines and summaries in executive wording. Your edits are kept.";
-      tools.prepend(ab);
     }
     if (!viewer && !sub2) {
       const U = undoR(rep.id), ub = btn("↶ Undo", "", () => reportUndo("undo"), true), rb = btn("↷ Redo", "", () => reportUndo("redo"), true);
@@ -7867,16 +7834,63 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       renderReports();
     }, !canBuild());
     const body = el("div", "rbody sdoc"), pls = rep.pl || productsOf(cfg());
-    const hero = el("div", "rhero");
-    hero.append(el("small", "", "Ynmo · Weekly product update"), el("h2", "rtitle", fmtIso(rep.a) + " – " + fmtIso(rep.b)), el("span", "rsp", "Sprint " + rep.n + " · week " + (rep.w || 1) + " of 2"));
+    const label = rep.label !== void 0 ? rep.label : "Sprint " + rep.n + " · week " + (rep.w || 1) + " of 2", hero = el("div", "rhero");
+    hero.append(el("small", "", "Ynmo · Weekly product update"));
+    if (ro) hero.append(el("h2", "rtitle", fmtIso(rep.a) + " – " + fmtIso(rep.b)), el("span", "rsp", label));
+    else {
+      hero.append(el("h2", "rtitle", fmtIso(rep.a) + " – " + fmtIso(rep.b)));
+      const ed = el("div", "rhedit"), mk = (lab, val) => {
+        const i = el("input");
+        i.type = "date";
+        i.value = val;
+        i.setAttribute("aria-label", lab);
+        return i;
+      };
+      const fa = mk("Week start", rep.a), fb = mk("Week end", rep.b), lb = el("input");
+      lb.type = "text";
+      lb.value = label;
+      lb.maxLength = 80;
+      lb.placeholder = "Label, e.g. Sprint 229 · week 1 of 2";
+      lb.setAttribute("aria-label", "Report label");
+      const dates = () => {
+        if (fa.value && fb.value && fa.value > fb.value && fa.value !== rep.a && fb.value === rep.b) fb.value = addDays(fa.value, Math.max(0, Math.round((Date.parse(rep.b) - Date.parse(rep.a)) / 864e5)));
+        if (!fa.value || !fb.value || fa.value > fb.value) {
+          notify("The end date must be on or after the start date", "err");
+          fa.value = rep.a;
+          fb.value = rep.b;
+          return;
+        }
+        if (fa.value === rep.a && fb.value === rep.b) return;
+        rep.a = fa.value;
+        rep.b = fb.value;
+        save(rep, "changed the dates of the weekly report to " + fmtIso(rep.a) + " - " + fmtIso(rep.b), "Change dates");
+        renderReports();
+      };
+      fa.addEventListener("change", dates);
+      fb.addEventListener("change", dates);
+      lb.addEventListener("change", () => {
+        const v = lb.value.replace(/\s+/g, " ").trim();
+        if (v === label) return;
+        rep.label = v;
+        save(rep, "", "Change label");
+        renderReports();
+      });
+      const l1 = el("label", "", "From "), l2 = el("label", "", "To ");
+      l1.append(fa);
+      l2.append(fb);
+      ed.append(l1, l2, lb);
+      hero.append(ed);
+    }
     body.append(hero);
     const glance = el("div", "rglance");
     pls.forEach((p) => {
       const d = rep.prods[p.k];
       if (!d) return;
-      const v = d.items.filter((l) => !l.hide), s = overall(d.items), t = el("div", "rtile rs-" + s);
+      const v = d.items.filter((l) => !l.hide), ap = avgPct(v), t = el("div", "rtile");
       t.style.setProperty("--c", colOf(p));
-      t.append(el("b", "", p.n), el("span", "chip rs-" + s, RSTATUS[s]), el("small", "", v.filter((l) => l.g === "done").length + " delivered · " + v.filter((l) => l.g === "prog").length + " in progress · " + v.filter((l) => l.st === "risk" || l.st === "late").length + " at risk"));
+      t.append(el("b", "", p.n));
+      if (ap !== null) t.append(el("span", "rvp pc-" + pctBand(ap), ap + "%"));
+      t.append(el("small", "", v.length ? v.length + " item" + (v.length === 1 ? "" : "s") + " · " + v.filter((l) => linePct(l) >= 100).length + " done" : "no items yet"));
       glance.append(t);
     });
     body.append(glance);

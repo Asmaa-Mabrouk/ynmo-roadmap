@@ -15,7 +15,7 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 | Backend | Supabase project **YNMO_PM**; SQL 01 to 06; Edge Functions `notify-approval`, `weekly-draft`, `jira-sync` (code in repo; deployment status per the open items below) |
 | Owner | Asmaa (Senior PM, TrianglZ, Ynmo ecosystem, Riyadh) |
 | Pages | Roadmap, Ideas, Roadmaps, Sprints, Reports, Monthly, Resources, Vacations, Capacity, Baselines, Log, Approvals |
-| Tests | `tests/run_all.sh`: last full run 88/88 scenarios and all feature scripts green (`sprints_reports.py` 100, `monthly_page.py` 31) |
+| Tests | `tests/run_all.sh`: last full run 88/88 scenarios and all feature scripts green (`sprints_reports.py` 94, `monthly_page.py` 33) |
 | Jira | Site `tatralab.atlassian.net`; default projects DYC (Daycare), FAS (Tifli), AU (AI). Plan, Warif and Sharjah project keys not known yet. Rovo was considered; the API route was chosen |
 | Google Drive export | Google Cloud project **YNMO PM** (trianglz.com, Internal consent), Drive API on, Web client created for `https://ynmo-roadmap.vercel.app`. Client ID to be pasted in the tool by an admin; the client secret is not used |
 
@@ -41,6 +41,19 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 8. Not yet tested against the real services: Jira, Google sign-in and Drive.
 
 ## Ledger updates
+
+🔄 YNMO LEDGER UPDATE — 2026-10-20
+Request: Make the report dates/label editable; per product no big text, only items; each item a coloured percentage dropdown
+Surface: cross-cutting (Ynmo Roadmaps internal tool)
+Outcome: Weekly report = per-product item list with coloured 0-100% dropdown; product header and tiles show the average; dates (From/To) and label editable; AI button and summary box removed.
+New facts / decisions locked:
+  • Weekly report doc gains `label` (free text, default "Sprint n · week w of 2"); `a`/`b` can be edited (the doc id stays `rp<original start>`).
+  • Product summaries, group headings and the AI button are gone from the weekly report; `sum` is no longer shown.
+Corrections to this skill:
+  • none
+Open / flagged:
+  • `weekly-draft` Edge Function and Gemini key are no longer used by the UI; can be left undeployed.
+Changelog: Weekly report is a simple item list with coloured percentages; editable dates and label.
 
 🔄 YNMO LEDGER UPDATE — 2026-10-20
 Request: Remove all generated items from all products (only I will add items); line dropdown as percentage 10, 20, 30 ... 100; more padding on the report toolbar

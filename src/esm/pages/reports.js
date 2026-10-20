@@ -20,7 +20,7 @@ import { crumbs } from '../ui/crumbs.js';
 import { createUndo } from '../features/undo-stack.js';
 import { registerUndo } from '../features/undo-router.js';
 import { autoGrow, richBar, richBox, showRich, submitOnCtrlEnter } from '../features/rich-text.js';
-import { GROUPS, RSTATUS, linePct, aiPayload, applyAi, buildProds, jiraUrl, newManualLine, overall, productsOf, reportToText, ruleSummary } from '../features/report-model.js';
+import { RSTATUS, linePct, avgPct, aiPayload, applyAi, buildProds, jiraUrl, newManualLine, productsOf, reportToText } from '../features/report-model.js';
 import { monthOf, pctBand } from '../features/month-model.js';
 import { monthSummary } from '../features/month-view.js';
 import { confirmDlg } from '../ui/confirm.js';
@@ -175,37 +175,31 @@ function lineRow(rep, d, l, ro) {
   r.append(st, t);
   const u = jiraUrl(cfg().jira, l.jira);
   if (l.jira) { const a = el(u ? 'a' : 'span', 'jira', l.jira); if (u) { a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer'; } r.append(a); }
-  const g = el('select', 'spsel'); g.setAttribute('aria-label', 'Group'); GROUPS.forEach(x => { const o = el('option', '', x[1]); o.value = x[0]; o.selected = x[0] === l.g; g.append(o); });
-  g.addEventListener('change', () => { touch({ g: g.value }); renderReports(); });
   const h = el('button', 'btn sm', l.hide ? 'Show' : 'Hide'); h.type = 'button'; h.addEventListener('click', () => { touch({ hide: !l.hide }); renderReports(); });
   const x = el('button', 'btn sm danger', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Delete line'); x.addEventListener('click', () => { if (l.src === 'man') d.items = d.items.filter(z => z.id !== l.id); else touch({ hide: true }); save(rep); renderReports(); });
   (l.tg || []).forEach(z => r.append(el('span', 'tgchip tg-' + z.c, '#' + z.n)));
-  r.append(g, h, x);
+  r.append(h, x);
   return r;
 }
 function prodBlock(rep, p, ro) {
   const d = rep.prods[p.k]; if (!d) return el('div');
   const sec = el('section', 'rprod'); sec.dataset.k = p.k; sec.style.setProperty('--c', colOf(p));
-  const hd = el('div', 'rphead'), s = overall(d.items); hd.append(el('h2', '', p.n), el('span', 'chip rs-' + s, RSTATUS[s])); sec.append(hd);
-  if (ro) { sec.classList.add('rview'); if (d.sum) { const sv = el('div', 'rsumv'); showRich(sv, d.sumH, d.sum); sec.append(sv); } }
-  else sec.append(richBox('rsum', d.sumH, d.sum, 'Summary for ' + p.n, (h, pl) => { d.sum = pl || ruleSummary(p.n, d.items); d.sumH = pl ? h : ''; d.sumEdited = !!pl; save(rep); }));
-  GROUPS.forEach(g => {
-    const ls = d.items.filter(l => l.g === g[0] && (!ro || !l.hide));
-    if (!ls.length && ro) return;
-    const gh = el('div', 'rgrp'); gh.append(el('h3', '', g[1])); ls.forEach(l => gh.append(lineRow(rep, d, l, ro)));
-    if (!ro) {
-      const f = el('form', 'spadd'), ta = el('textarea'), go = el('button', 'btn sm', 'Add items'); go.type = 'submit';
-      ta.rows = 2; autoGrow(ta); submitOnCtrlEnter(ta, f); ta.placeholder = 'Add to "' + g[1] + '": type or paste one or many items, one per line (bullets are removed). Ctrl+Enter adds.'; ta.setAttribute('aria-label', 'Add items to ' + g[1]);
-      f.append(ta, go);
-      f.addEventListener('submit', e => { e.preventDefault(); const rows = parsePaste(ta.value); if (!rows.length) { notify('Type at least one line first', 'err'); return; } rows.forEach(r => { const n = newManualLine(g[0], r.t); n.jira = r.jira; d.items.push(n); }); save(rep, 'added ' + rows.length + ' line' + (rows.length === 1 ? '' : 's') + ' to the weekly report', 'Add ' + rows.length + ' line' + (rows.length === 1 ? '' : 's')); notify(rows.length + ' line' + (rows.length === 1 ? '' : 's') + ' added to "' + g[1] + '"'); renderReports(); });
-      gh.append(f);
-    }
-    sec.append(gh);
-  });
+  const hd = el('div', 'rphead'), ap = avgPct(d.items); hd.append(el('h2', '', p.n)); if (ap !== null) hd.append(el('span', 'rvp pc-' + pctBand(ap), ap + '%')); sec.append(hd);
+  if (ro) sec.classList.add('rview');
+  const ls = d.items.filter(l => !ro || !l.hide), gh = el('div', 'rgrp');
+  ls.forEach(l => gh.append(lineRow(rep, d, l, ro)));
+  if (!ro) {
+    const f = el('form', 'spadd'), ta = el('textarea'), go = el('button', 'btn sm', 'Add items'); go.type = 'submit';
+    ta.rows = 2; autoGrow(ta); submitOnCtrlEnter(ta, f); ta.placeholder = 'Add items to ' + p.n + ': type or paste one or many, one per line (bullets are removed). Ctrl+Enter adds.'; ta.setAttribute('aria-label', 'Add items to ' + p.n);
+    f.append(ta, go);
+    f.addEventListener('submit', e => { e.preventDefault(); const rows = parsePaste(ta.value); if (!rows.length) { notify('Type at least one line first', 'err'); return; } rows.forEach(r => { const n = newManualLine('prog', r.t); n.jira = r.jira; d.items.push(n); }); save(rep, 'added ' + rows.length + ' item' + (rows.length === 1 ? '' : 's') + ' to the weekly report', 'Add ' + rows.length + ' item' + (rows.length === 1 ? '' : 's')); notify(rows.length + ' item' + (rows.length === 1 ? '' : 's') + ' added to ' + p.n); renderReports(); });
+    gh.append(f);
+  }
+  sec.append(gh);
   return sec;
 }
 const monthDocFor = rep => { const d = S.reports['mo' + monthOf(rep.a).replace('-', '')]; return d && (!isViewer() || d.status === 'submitted') ? d : null; };
-const statsOf = r => { let all = 0, done = 0, prog = 0, risk = 0; Object.keys(r.prods || {}).forEach(k => ((r.prods[k] || {}).items || []).filter(l => !l.hide).forEach(l => { all++; if (l.g === 'done') done++; else if (l.g === 'prog') prog++; if (l.st === 'risk' || l.st === 'late') risk++; })); return { all: all, done: done, prog: prog, risk: risk }; };
+const statsOf = r => { let all = 0, done = 0, sum = 0; Object.keys(r.prods || {}).forEach(k => ((r.prods[k] || {}).items || []).filter(l => !l.hide).forEach(l => { all++; const v = linePct(l); sum += v; if (v >= 100) done++; })); return { all: all, done: done, avg: all ? Math.round(sum / all) : 0 }; };
 const copyReport = rep => { const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso, monthDocFor(rep)); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify('Report text copied to the clipboard'), () => notify('Could not copy. Select the text and copy it manually.', 'err')); };
 const settingsBtn = () => { const b = el('button', 'btn', 'Report settings'); b.type = 'button'; b.disabled = !canBuild(); b.addEventListener('click', settingsDlg); return b; };
 
@@ -237,13 +231,13 @@ function listView(pg, viewer, l) {
   if (!l.length) { pg.append(el('p', 'empty', viewer ? 'No report has been submitted yet.' : sprintList().length ? 'No report yet. Click "+ New report" to create one for the latest sprint.' : 'Create a sprint first (Sprints page), then build the report.')); return; }
   const wrap = el('div', 'splist');
   l.forEach(r => {
-    const st = statsOf(r), sub = r.status === 'submitted', pct = st.all ? Math.round(100 * st.done / st.all) : 0;
+    const st = statsOf(r), sub = r.status === 'submitted', pct = st.avg;
     const card = el('div', 'card spcard rpcard'), info = el('div');
     const a = el('a', 'splink'); a.href = '#/reports/' + r.id; a.append(el('h2', '', 'Week of ' + fmtIso(r.a) + ' – ' + fmtIso(r.b)));
     info.append(a, el('div', 'meta', 'Sprint ' + r.n + ' · week ' + (r.w || 1) + ' of 2 · ' + (sub ? 'submitted' + (r.subBy ? ' by ' + r.subBy : '') + (r.subAt ? ' on ' + fmtIso(r.subAt.slice(0, 10)) : '') : 'last edit ' + (r.by || 'unknown'))));
     const pr = el('div', 'prods'); (r.pl || []).filter(p => r.prods && r.prods[p.k]).forEach(p => { const c = el('span', 'pchip', p.n); c.style.setProperty('--c', colOf(p)); pr.append(c); }); info.append(pr);
     const prog = el('div', 'spprog'), top = el('div', 'rpstat'); top.append(el('span', 'chip rpst ' + (sub ? 'sub' : 'draft'), sub ? 'Submitted' : 'Draft'));
-    prog.append(top, el('div', 'meta', st.done + ' delivered · ' + st.prog + ' in progress' + (st.risk ? ' · ' + st.risk + ' at risk' : '')));
+    prog.append(top, el('div', 'meta', st.all ? st.all + ' item' + (st.all === 1 ? '' : 's') + ' · ' + st.done + ' done · ' + st.avg + '% on average' : 'No items yet'));
     const b0 = el('div', 'bar0'), i0 = el('i'); i0.style.width = pct + '%'; b0.append(i0); prog.append(b0);
     const more = el('button', 'btn sm spmore', '⋯'); more.type = 'button'; more.setAttribute('aria-label', 'More actions for the week of ' + fmtIso(r.a)); more.setAttribute('aria-haspopup', 'menu');
     more.addEventListener('click', () => openMenu(more, [{ label: 'Open in new tab', value: 'tab' }, { label: 'Copy text', value: 'copy' }].concat(canDelete(r) ? [{ label: 'Delete report', value: 'del', danger: true }] : []), {
@@ -265,7 +259,7 @@ function detailView(pg, viewer, rep) {
   const meta = el('p', 'sub rmeta', sub ? 'Submitted' + (rep.subBy ? ' by ' + rep.subBy : '') + (rep.subAt ? ' on ' + fmtIso(rep.subAt.slice(0, 10)) : '') : 'Draft' + (rep.ai ? ' · wording by ' + (rep.ai.model || 'AI') : '') + ' · last edit ' + (rep.by || '') + srcTxt);
   const tools = el('div', 'row spbar rtools');
   const btn = (t, cls, fn, dis) => { const b = el('button', 'btn ' + (cls || ''), t); b.type = 'button'; b.disabled = !!dis; b.addEventListener('click', fn); tools.append(b); return b; };
-  if (!viewer && !sub) { btn('Sync from Sprint & Roadmap', '', () => sync(rep, false), !canBuild() || rUI.busy); const ab = btn('', 'ai', () => sync(rep, true), !canBuild() || rUI.busy); ab.insertAdjacentHTML('afterbegin', SPARK); ab.append(document.createTextNode(rUI.wait ? 'Writing…' : 'Generate with AI')); ab.title = 'Rewrites unedited lines and summaries in executive wording. Your edits are kept.'; tools.prepend(ab); }
+  if (!viewer && !sub) { btn('Sync from Sprint & Roadmap', '', () => sync(rep, false), !canBuild() || rUI.busy); }
   if (!viewer && !sub) {
     const U = undoR(rep.id), ub = btn('↶ Undo', '', () => reportUndo('undo'), true), rb = btn('↷ Redo', '', () => reportUndo('redo'), true);
     const upd = () => { ub.disabled = !U.canUndo() || !canBuild(); rb.disabled = !U.canRedo() || !canBuild(); ub.title = ub.ariaLabel = U.canUndo() ? 'Undo: ' + U.nextUndo() + ' (Ctrl/Cmd+Z)' : 'Nothing to undo'; rb.title = rb.ariaLabel = U.canRedo() ? 'Redo: ' + U.nextRedo() + ' (Ctrl/Cmd+Shift+Z)' : 'Nothing to redo'; };
@@ -279,9 +273,21 @@ function detailView(pg, viewer, rep) {
   if (!viewer && !sub) btn('Submit to executives', 'primary', () => { rep.status = 'submitted'; rep.subAt = new Date().toISOString(); rep.subBy = S.me.name || S.me.email; save(rep, 'submitted the weekly report for ' + fmtIso(rep.a)); notify('Report submitted. Executives can now see it.'); renderReports(); }, !canBuild());
   if (!viewer && sub) btn('Reopen as draft', '', () => { rep.status = 'draft'; delete rep.subAt; delete rep.subBy; save(rep, 'reopened the weekly report for ' + fmtIso(rep.a)); notify('Report reopened as a draft. Executives no longer see it.', 'info'); renderReports(); }, !canBuild());
   const body = el('div', 'rbody sdoc'), pls = rep.pl || productsOf(cfg());
-  const hero = el('div', 'rhero'); hero.append(el('small', '', 'Ynmo · Weekly product update'), el('h2', 'rtitle', fmtIso(rep.a) + ' – ' + fmtIso(rep.b)), el('span', 'rsp', 'Sprint ' + rep.n + ' · week ' + (rep.w || 1) + ' of 2')); body.append(hero);
+  const label = rep.label !== undefined ? rep.label : 'Sprint ' + rep.n + ' · week ' + (rep.w || 1) + ' of 2', hero = el('div', 'rhero'); hero.append(el('small', '', 'Ynmo · Weekly product update'));
+  if (ro) hero.append(el('h2', 'rtitle', fmtIso(rep.a) + ' – ' + fmtIso(rep.b)), el('span', 'rsp', label));
+  else {
+    hero.append(el('h2', 'rtitle', fmtIso(rep.a) + ' – ' + fmtIso(rep.b)));
+    const ed = el('div', 'rhedit'), mk = (lab, val) => { const i = el('input'); i.type = 'date'; i.value = val; i.setAttribute('aria-label', lab); return i; };
+    const fa = mk('Week start', rep.a), fb = mk('Week end', rep.b), lb = el('input'); lb.type = 'text'; lb.value = label; lb.maxLength = 80; lb.placeholder = 'Label, e.g. Sprint 229 · week 1 of 2'; lb.setAttribute('aria-label', 'Report label');
+    const dates = () => { if (fa.value && fb.value && fa.value > fb.value && fa.value !== rep.a && fb.value === rep.b) fb.value = addDays(fa.value, Math.max(0, Math.round((Date.parse(rep.b) - Date.parse(rep.a)) / 864e5)));   /* moving the start past the end moves the end with it */
+    if (!fa.value || !fb.value || fa.value > fb.value) { notify('The end date must be on or after the start date', 'err'); fa.value = rep.a; fb.value = rep.b; return; } if (fa.value === rep.a && fb.value === rep.b) return; rep.a = fa.value; rep.b = fb.value; save(rep, 'changed the dates of the weekly report to ' + fmtIso(rep.a) + ' - ' + fmtIso(rep.b), 'Change dates'); renderReports(); };
+    fa.addEventListener('change', dates); fb.addEventListener('change', dates);
+    lb.addEventListener('change', () => { const v = lb.value.replace(/\s+/g, ' ').trim(); if (v === label) return; rep.label = v; save(rep, '', 'Change label'); renderReports(); });
+    const l1 = el('label', '', 'From '), l2 = el('label', '', 'To '); l1.append(fa); l2.append(fb); ed.append(l1, l2, lb); hero.append(ed);
+  }
+  body.append(hero);
   const glance = el('div', 'rglance');
-  pls.forEach(p => { const d = rep.prods[p.k]; if (!d) return; const v = d.items.filter(l => !l.hide), s = overall(d.items), t = el('div', 'rtile rs-' + s); t.style.setProperty('--c', colOf(p)); t.append(el('b', '', p.n), el('span', 'chip rs-' + s, RSTATUS[s]), el('small', '', v.filter(l => l.g === 'done').length + ' delivered · ' + v.filter(l => l.g === 'prog').length + ' in progress · ' + v.filter(l => l.st === 'risk' || l.st === 'late').length + ' at risk')); glance.append(t); });
+  pls.forEach(p => { const d = rep.prods[p.k]; if (!d) return; const v = d.items.filter(l => !l.hide), ap = avgPct(v), t = el('div', 'rtile'); t.style.setProperty('--c', colOf(p)); t.append(el('b', '', p.n)); if (ap !== null) t.append(el('span', 'rvp pc-' + pctBand(ap), ap + '%')); t.append(el('small', '', v.length ? v.length + ' item' + (v.length === 1 ? '' : 's') + ' · ' + v.filter(l => linePct(l) >= 100).length + ' done' : 'no items yet')); glance.append(t); });
   body.append(glance); const mb = monthSummary(S.reports['mo' + monthOf(rep.a).replace('-', '')], pls, colOf, viewer); if (mb) body.append(mb); if (!ro) body.append(richBar());
   pls.forEach(p => body.append(prodBlock(rep, p, ro)));
   pg.append(meta, tools); if (rUI.note && rUI.noteFor === rep.id && !viewer && !sub) { const nt = el('p', 'rnote' + (rUI.err ? ' bad' : ''), rUI.note); nt.setAttribute('role', 'status'); pg.append(nt); } pg.append(body);

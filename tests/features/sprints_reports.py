@@ -136,18 +136,15 @@ with sync_playwright() as pw:
     ok('draft has 3 product sections', A.locator('#pg-reports .rprod').count()==3)
     pd=A.locator('#pg-reports .rprod[data-k="plan_daycare"]')
     vl=lambda loc: loc.evaluate("e=>[...e.querySelectorAll('.sptext')].map(x=>x.innerText).join('|')")
-    ok('Plan/Daycare shows the delivered line; the long Next list is not in the report', 'Parent chat' in vl(pd) and A.locator('#pg-reports .rgrp h3:text-is("Next")').count()==0)
-    ok('blocked item makes the product At Risk', 'At Risk' in pd.locator('.chip').inner_text())
+    ok('Plan/Daycare shows its items as one list without group headings or a summary box', 'Parent chat' in vl(pd) and A.locator('#pg-reports .rgrp h3').count()==0 and A.locator('#pg-reports .rsum').count()==0)
+    ok('product header shows its average percentage', '%' in pd.locator('.rphead .rvp').inner_text())
     ok('planned items are left out of the report', 'Onboarding flow' not in vl(A.locator('#pg-reports .rprod[data-k="tifli"]')))
-    # AI
-    A.click('button:text-is("Generate with AI")'); A.wait_for_timeout(900)
-    ok('AI called once and wording applied', A.evaluate("window.__aiCalls")==1 and 'AI: ' in vl(A.locator('#pg-reports')) and 'AI summary' in A.locator('#pg-reports .rsum').first.inner_text())
+    A.click('button:text-is("Sync from Sprint & Roadmap")'); A.wait_for_timeout(900)
     # manual edit wins over a re-sync and AI
     ln=A.locator('#pg-reports .rprod[data-k="tifli"] .rline .sptext').first; ln.fill('Custom wording by PM'); ln.press('Tab'); A.wait_for_timeout(300)
-    sm=A.locator('#pg-reports .rprod[data-k="tifli"] .rsum'); sm.fill('My own summary'); sm.press('Tab'); A.wait_for_timeout(300)
-    A.click('button:text-is("Generate with AI")'); A.wait_for_timeout(900)
+    A.click('button:text-is("Sync from Sprint & Roadmap")'); A.wait_for_timeout(900)
     t=A.locator('#pg-reports').inner_text(); vals=A.evaluate("[...document.querySelectorAll('#pg-reports .sptext,#pg-reports .rsum')].map(e=>e.innerText.trim())")
-    ok('edited line and summary survive re-sync + AI', 'Custom wording by PM' in vals and 'My own summary' in vals)
+    ok('an edited line survives a re-sync', 'Custom wording by PM' in vals)
     # ---- undo on the report (per user), Ctrl+Z / Cmd+Z
     hid=lambda: A.locator('#pg-reports .rline.hid').count()
     ok('report has Undo and Redo buttons', A.locator('#pg-reports button:text-is("↶ Undo")').count()==1)
@@ -171,31 +168,24 @@ with sync_playwright() as pw:
     ok('sync keeps edits and does not bring planned items back', 'Custom wording by PM' in vals and not any('Sara voice v2' in v for v in vals))
     ok('report shows the tag chips', A.locator('#pg-reports .tgchip').count()>=1)
     # every native dropdown is searchable
-    g=A.locator('#pg-reports .rprod[data-k="tifli"] select[aria-label="Group"]').first; g.click(); A.wait_for_timeout(150)
+    g=A.locator('#pg-reports .rprod[data-k="tifli"] select[aria-label="Percent complete"]').first; g.click(); A.wait_for_timeout(150)
     ok('dropdown has a search box', A.locator('.cpop .csearch').count()==1)
-    A.keyboard.type('risk'); A.wait_for_timeout(100)
-    ok('search filters the options', A.locator('.cpop .copt[data-opt]:not([hidden])').count()==1 and 'Risks' in A.locator('.cpop .copt[data-opt]:not([hidden])').inner_text())
+    A.keyboard.type('70'); A.wait_for_timeout(100)
+    ok('search filters the options', A.locator('.cpop .copt[data-opt]:not([hidden])').count()==1 and '70%' in A.locator('.cpop .copt[data-opt]:not([hidden])').inner_text())
     A.keyboard.type('zzz'); A.wait_for_timeout(100); ok('no match shows a message', 'No matches' in A.locator('.cpop').inner_text())
     A.keyboard.press('Escape'); A.wait_for_timeout(100); ok('Escape closes the popup', A.locator('.cpop').count()==0)
-    g.click(); A.keyboard.type('risk'); A.keyboard.press('Enter'); A.wait_for_timeout(300)
-    ok('Enter picks the first match', A.locator('.cpop').count()==0 and A.locator('#pg-reports .rprod[data-k="tifli"] h3', has_text='Risks').count()>=1)
+    g.click(); A.keyboard.type('90'); A.keyboard.press('Enter'); A.wait_for_timeout(300)
+    ok('Enter picks the first match', A.locator('.cpop').count()==0 and A.locator('#pg-reports .rprod[data-k="tifli"] select[aria-label="Percent complete"]').first.input_value()=='90')
 
     # --- many items at once + rich text
     A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(300); openrep(A)
     tf=A.locator('#pg-reports .rprod[data-k="tifli"]'); before=tf.locator('.rline').count()
-    ta=tf.locator('.rgrp:has(h3:text-is("In progress")) .spadd textarea'); ta.fill('- First bulk item\n* Second bulk item\n\n3. Third bulk item'); tf.locator('.rgrp:has(h3:text-is("In progress")) .spadd button').click(); A.wait_for_timeout(500)
+    ta=tf.locator('.rgrp .spadd textarea'); ta.fill('- First bulk item\n* Second bulk item\n\n3. Third bulk item'); tf.locator('.rgrp .spadd button').click(); A.wait_for_timeout(500)
     ok('bulk add creates one line per row', A.locator('#pg-reports .rprod[data-k="tifli"] .rline').count()==before+3 and 'Second bulk item' in vl(A.locator('#pg-reports .rprod[data-k="tifli"]')))
-    sm=A.locator('#pg-reports .rprod[data-k="tifli"] .rsum'); sm.click(); A.keyboard.press('Control+A'); A.keyboard.type('Big news'); A.keyboard.press('Control+A'); A.click('#pg-reports .rbar button[aria-label="Bold"]'); A.click('#pg-reports .rbar button[aria-label="Bulleted list"]'); A.wait_for_timeout(200); sm.blur(); A.wait_for_timeout(400)
-    ok('rich summary stored as bold + list', A.evaluate("(()=>{const r=Object.values(JSON.parse(localStorage.getItem('fk3')).reports).find(x=>x.prods.tifli.sumH);return !!r&&/<b>|<strong>/.test(r.prods.tifli.sumH)||/<ul>/.test(r.prods.tifli.sumH)})()"))
-    ok('summary box is large', sm.bounding_box()['height']>=140)
     # scripts and unsafe links never survive
     A.evaluate("""(()=>{const s=Object.keys(JSON.parse(localStorage.getItem('fk3')).reports)[0]; const d=JSON.parse(localStorage.getItem('fk3')); const p=d.reports[s].prods.tifli; p.sumH='<b>ok</b><img src=x onerror="window.__xss=1"><script>window.__xss=1</script><a href="javascript:window.__xss=1">bad</a><a href="https://example.com">good</a>'; p.sumEdited=true; localStorage.setItem('fk3',JSON.stringify(d));})()""")
     A.reload(); A.wait_for_timeout(1500); A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(500); openrep(A)
     ok('unsafe html is stripped', not A.evaluate("window.__xss") and A.locator('#pg-reports a[href^="javascript"]').count()==0 and A.locator('#pg-reports .rsum img').count()==0)
-    # AI failure falls back
-    A.evaluate("window.__aiFail=true"); A.click('button:text-is("Generate with AI")'); A.wait_for_timeout(900)
-    ok('AI failure keeps draft and says so', 'AI unavailable' in A.locator('#pg-reports .rnote').inner_text() and A.locator('#pg-reports .rprod').count()==3)
-    A.evaluate("window.__aiFail=false")
     # copy text / hide line
     ok('Copy button present', A.locator('button:text-is("Copy text")').count()==1)
     # settings
@@ -244,9 +234,6 @@ with sync_playwright() as pw:
     ok('a new empty report is not an error', D.locator('#pg-reports .rnote.bad').count()==0 and D.locator('#pg-reports .rline').count()==0)
     D.click('button:text-is("Sync from Sprint & Roadmap")'); D.wait_for_timeout(600)
     ok('syncing an empty week shows a clear error', 'No data found' in D.locator('#pg-reports .rnote.bad').inner_text())
-    D.click('button:has-text("Generate with AI")'); D.wait_for_timeout(600)
-    ok('AI is not called without items', not D.evaluate("window.__aiCalls") and 'no items to rewrite' in D.locator('#pg-reports .rnote.bad').inner_text())
-    ok('AI button is the sparkle button', D.locator('button.ai svg.spark').count()==1)
     # --- missing tables (SQL 06 not run): setup banner instead of an "offline" banner
     ctx3=mkctx(b, init="window.__missing=['reports']"); e3=[]; E=newpage(ctx3,e3); signup(E,'Admin','adm@x.com')
     E.click('#nav button[data-p="sprints"]'); E.click('button:text-is("+ New sprint")'); E.wait_for_timeout(300)

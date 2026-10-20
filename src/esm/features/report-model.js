@@ -86,6 +86,8 @@ export function newManualLine(g, t) { return { id: uid(), src: 'man', g: g, st: 
 
 /** Percent complete of a line: its own number, or 100 when marked done and 0 otherwise (older lines). */
 export const linePct = l => Number.isFinite(l.pct) ? l.pct : l.st === 'done' ? 100 : 0;
+/** Average percent of the visible lines, or null when there are none. */
+export const avgPct = ls => { const v = ls.filter(l => !l.hide); return v.length ? Math.round(v.reduce((a, l) => a + linePct(l), 0) / v.length) : null; };
 const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
 /** Plain summary used when the AI is unavailable (or before it runs). */
 export function ruleSummary(name, lines) {
@@ -138,11 +140,8 @@ export function reportToText(rep, products, fmt, monthDoc) {
   const out = ['Weekly update - ' + (fmt ? fmt(rep.a) : rep.a) + (rep.b ? ' to ' + (fmt ? fmt(rep.b) : rep.b) : '') + (rep.n ? ' (Sprint ' + rep.n + ')' : ''), ''];
   products.forEach(p => {
     const d = (rep.prods || {})[p.k]; if (!d) return;
-    out.push(p.n.toUpperCase() + ' - ' + RSTATUS[overall(d.items)], d.sum || '');
-    GROUPS.forEach(g => {
-      const ls = d.items.filter(l => !l.hide && l.g === g[0]); if (!ls.length) return;
-      out.push('', g[1] + ':'); ls.forEach(l => out.push('- ' + l.t + (l.jira ? ' [' + l.jira + ']' : '') + (linePct(l) ? ' - ' + linePct(l) + '%' : '') + (l.st === 'risk' || l.st === 'late' ? ' (' + RSTATUS[l.st] + ')' : '')));
-    });
+    const ap = avgPct(d.items); out.push(p.n.toUpperCase() + (ap === null ? '' : ' - ' + ap + '%'));
+    d.items.filter(l => !l.hide).forEach(l => out.push('- ' + l.t + (l.jira ? ' [' + l.jira + ']' : '') + ' - ' + linePct(l) + '%'));
     out.push('');
   });
   const mt = monthText(monthDoc, products, fmt); if (mt.length) out.push('', ...mt);
