@@ -18,6 +18,7 @@ import { SSTATUS, scopeStatus } from '../features/report-model.js';
 import { EXTRA_SECTIONS, RANK, KIND_NAME, TAG_COLORS, derive, deeper, shallower, nextKind, tagKey, migrate, ordBetween, parseOutline } from '../features/sprint-doc.js';
 import { setupBanner } from './reports.js';
 import { notify } from '../ui/notify.js';
+import { confirmDlg } from '../ui/confirm.js';
 import { openJiraPull } from '../features/jira-pull.js';
 import { copyRich, docUrl, sprintDoc } from '../features/sprint-export.js';
 import { jiraUrl } from '../features/report-model.js';
@@ -67,14 +68,6 @@ const pendingBefore = {};   /* text typed but not saved yet: the doc as it was b
 function putItem(id, doc) { const before = pendingBefore[id] || S.sitems[id] || null; delete pendingBefore[id]; const sp = (doc || before || {}).sp; if (sp) undoOf(sp).rec(id, before, doc); rawSet(id, doc); }
 function saveItem(id, patch) { putItem(id, Object.assign({}, S.sitems[id] || {}, patch)); }
 function delItem(id) { putItem(id, null); }
-function confirmDlg(title, msg, yes, onYes) {
-  openDlg(title, box => {
-    const ok = el('button', 'btn danger', yes), no = el('button', 'btn', 'Cancel'); ok.type = no.type = 'button';
-    ok.addEventListener('click', () => { closeDlg(); onYes(); }); no.addEventListener('click', closeDlg);
-    const row = el('div', 'row'); row.append(ok, no); box.append(el('p', '', msg), row);
-  });
-}
-
 /* ---------- sprint list ---------- */
 function newSprint() {
   const l = sprintList(), last = l[0];

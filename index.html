@@ -567,8 +567,8 @@ select:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .rsets .rsrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
 .rtitle { font-size: 1.1rem; margin: 4px 0 10px; }
 @media print {
-  body.print-report .rail, body.print-report .topbar, body.print-report .pghead, body.print-report .spbar, body.print-report .rtools, body.print-report .crumbs, body.print-report .rbar, body.print-report .rnote, body.print-report .page:not(#pg-reports), body.print-report .umenu, body.print-report #save { display: none !important; }
-  body.print-report main, body.print-report #pg-reports { display: block !important; margin: 0; padding: 0; }
+  body.print-report .rail, body.print-report .topbar, body.print-report .pghead, body.print-report .spbar, body.print-report .rtools, body.print-report .crumbs, body.print-report .rbar, body.print-report .rnote, body.print-report .page:not(#pg-reports):not(#pg-monthly), body.print-report .umenu, body.print-report #save { display: none !important; }
+  body.print-report main, body.print-report #pg-reports, body.print-report #pg-monthly { display: block !important; margin: 0; padding: 0; }
   body.print-report .rprod { break-inside: avoid; box-shadow: none; }
   body.print-report .rline button, body.print-report .rline .spsel:not(.rst-on):not([class*="rst-"]) { display: none; }
   body.print-report .rline select { appearance: none; border: 0; background: none; }
@@ -718,9 +718,9 @@ span.tgchip { cursor: default; margin-inline-start: 6px; }
 .sdoc .stp.sst-done { background: #d5efe2; color: #1d7a52; } .sdoc .stp.sst-blocked { background: #fbe6c4; color: #8a5208; }
 
 /* ---------- sprint page = a white document page (Notion-like) ---------- */
-body:has(#pg-sprints.sheet:not([hidden])), body:has(#pg-reports.sheet:not([hidden])) { background: #fff; }
-body:has(#pg-sprints.sheet:not([hidden]))::before, body:has(#pg-reports.sheet:not([hidden]))::before { display: none; }
-#pg-sprints.sheet, #pg-reports.sheet { max-width: 900px; margin-inline: auto; width: 100%; padding-inline: 40px; gap: 10px; background: #fff; }
+body:has(#pg-sprints.sheet:not([hidden])), body:has(#pg-reports.sheet:not([hidden])), body:has(#pg-monthly.sheet:not([hidden])) { background: #fff; }
+body:has(#pg-sprints.sheet:not([hidden]))::before, body:has(#pg-reports.sheet:not([hidden]))::before, body:has(#pg-monthly.sheet:not([hidden]))::before { display: none; }
+#pg-sprints.sheet, #pg-reports.sheet, #pg-monthly.sheet { max-width: 900px; margin-inline: auto; width: 100%; padding-inline: 40px; gap: 10px; background: #fff; }
 #pg-sprints.sheet .sdoc { padding: 0 0 120px; margin-top: 18px; }
 .sdoc .blk { padding: 2px 4px; }
 .sdoc .blk:hover { background: transparent; }
@@ -739,7 +739,7 @@ body:has(#pg-sprints.sheet:not([hidden]))::before, body:has(#pg-reports.sheet:no
 .sdoc .blk:hover .blkh, .sdoc .blkh:focus-visible { opacity: 1; }
 .sdoc .blkh:hover { background: rgba(120, 130, 160, .14); color: #46506e; }
 .sdoc .blk.k-h .blkh { top: 12px; }
-@media (max-width: 720px) { #pg-sprints.sheet, #pg-reports.sheet { padding-inline: 16px; } .sdoc .blkh { opacity: 1; inset-inline-start: -14px; } }
+@media (max-width: 720px) { #pg-sprints.sheet, #pg-reports.sheet, #pg-monthly.sheet { padding-inline: 16px; } .sdoc .blkh { opacity: 1; inset-inline-start: -14px; } }
 
 /* ---------- picked line + drag to move ---------- */
 .sdoc { position: relative; }
@@ -892,7 +892,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .rprod .spadd .btn:hover { background: color-mix(in srgb, var(--brand) 10%, #fff); }
 @media (max-width: 720px) { .rline { flex-wrap: wrap; } .rhero .rtitle { font-size: 1.5rem; } .rprod .rphead h2 { font-size: 1.3rem; } }
 @media print {
-  body.print-report #pg-reports.sheet { max-width: none; padding: 0; background: #fff; }
+  body.print-report #pg-reports.sheet, body.print-report #pg-monthly.sheet { max-width: none; padding: 0; background: #fff; }
   body.print-report .rtile { break-inside: avoid; }
 }
 .rline select[aria-label="Group"] { min-width: 160px; max-width: 190px; }
@@ -938,6 +938,18 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .madd .btn { border-color: transparent; background: transparent; color: var(--brand); box-shadow: none; }
 @media (max-width: 720px) { .mbar { width: 100%; order: 5; } .mrow .mbyin { width: 100%; } }
 @media print { body.print-report .mrow, body.print-report .rmp { break-inside: avoid; } body.print-report .mrow button, body.print-report .madd { display: none; } body.print-report .mbar { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+
+/* Monthly page and the read-only month inside the weekly report */
+#pg-monthly.sheet .rbody { margin-top: 12px; padding-bottom: 120px; }
+#pg-monthly.sheet .rmeta { margin: 2px 0 0; }
+.mhero { margin-bottom: 4px; }
+.rmp > .mbar { width: 100%; margin: 2px 0 8px; }
+.mest { font-size: .74rem; color: var(--muted); border: 1px dashed var(--line); border-radius: 99px; padding: 1px 8px; white-space: nowrap; }
+.mcrit { background: #fdecea; color: #b3261e; }
+.rmopen { margin-inline-start: auto; font-size: .85rem; font-weight: 600; }
+.rmsum { display: flex; align-items: center; gap: 10px; padding: 4px 0; border-inline-start: 4px solid var(--c); padding-inline-start: 10px; margin-top: 6px; }
+.rmsum b { flex: 0 0 150px; } .rmsum .mbar { flex: 1; width: auto; } .rmsum .rmpp { width: 44px; text-align: end; font-weight: 700; }
+@media print { body.print-report .rmopen { display: none; } }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -1006,6 +1018,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 <section class="pg page" id="pg-roadmaps" hidden></section>
 <section class="pg page" id="pg-sprints" hidden></section>
 <section class="pg page" id="pg-reports" hidden></section>
+<section class="pg page" id="pg-monthly" hidden></section>
 <section class="pg page" id="pg-resources" hidden></section>
 <section class="pg page" id="pg-vacations" hidden></section>
 <section class="pg page" id="pg-capacity" hidden></section>
@@ -1417,9 +1430,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
             if (r.error) throw err(r.error);
           },
           async merge(fields, full) {
-            const cur2 = await sb.from(t).select("data").eq("id", id).maybeSingle();
-            if (cur2.error) throw err(cur2.error);
-            const base3 = cur2.data && cur2.data.data || {};
+            const cur3 = await sb.from(t).select("data").eq("id", id).maybeSingle();
+            if (cur3.error) throw err(cur3.error);
+            const base3 = cur3.data && cur3.data.data || {};
             const r = await sb.from(t).upsert({ id, data: Object.assign({}, base3, fields) });
             if (r.error) throw err(r.error);
           },
@@ -1775,8 +1788,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const below = window.innerHeight - b.bottom, top = below >= h + 12 || below >= b.top ? b.bottom + 6 : b.top - h - 6;
     box2.style.top = Math.max(8, top) + "px";
     box2.style.left = Math.max(8, Math.min(b.left, window.innerWidth - box2.offsetWidth - 8)) + "px";
-    const cur2 = box2.querySelector(".sel");
-    if (cur2) cur2.scrollIntoView({ block: "nearest" });
+    const cur3 = box2.querySelector(".sel");
+    if (cur3) cur3.scrollIntoView({ block: "nearest" });
     q.focus({ preventScroll: true });
     if (document.activeElement !== q) setTimeout(() => {
       if (cpop === box2) q.focus({ preventScroll: true });
@@ -1983,20 +1996,20 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     q.placeholder = "Search people";
     const list = el("div", "plist");
     const draw = () => {
-      const cur2 = pickerItem();
-      if (!cur2) return;
+      const cur3 = pickerItem();
+      if (!cur3) return;
       list.textContent = "";
       const ws = fold(q.value).split(/\s+/).filter(Boolean);
       const dir = [...directory().values()].filter((x) => {
         const t = fold(x.name);
         return ws.every((w) => t.includes(w));
       });
-      dir.sort((a, b) => b.sqs.has(cur2.sq) - a.sqs.has(cur2.sq) || a.name.localeCompare(b.name));
+      dir.sort((a, b) => b.sqs.has(cur3.sq) - a.sqs.has(cur3.sq) || a.name.localeCompare(b.name));
       if (!dir.length) list.append(el("div", "sub2", "No one matches. Add them below."));
       dir.forEach((x) => {
         const row = el("label", "prow"), cb = el("input");
         cb.type = "checkbox";
-        cb.checked = cur2.res.includes(x.name);
+        cb.checked = cur3.res.includes(x.name);
         cb.addEventListener("change", () => {
           const now = pickerItem();
           if (!now) return;
@@ -2034,15 +2047,15 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         nn.focus();
         return;
       }
-      const cur2 = pickerItem();
-      if (!cur2) return;
+      const cur3 = pickerItem();
+      if (!cur3) return;
       if (!directory().has(name)) {
         const pid = "p" + Date.now().toString(36);
-        S.extras[pid] = { n: name, role: rs.value, sq: cur2.sq };
+        S.extras[pid] = { n: name, role: rs.value, sq: cur3.sq };
         write("people/" + pid, S.extras[pid]);
         fillPersons();
       }
-      commit(cur2.id, { res: [...new Set(cur2.res.concat([name]))] });
+      commit(cur3.id, { res: [...new Set(cur3.res.concat([name]))] });
       nn.value = "";
       draw();
     };
@@ -2552,7 +2565,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return out;
   }
   function openDeps(it) {
-    const all = items(), block = dependents(it.id, all), cur2 = new Set(depsOf(it));
+    const all = items(), block = dependents(it.id, all), cur3 = new Set(depsOf(it));
     const cands = all.filter((i) => i.id !== it.id && !block.has(i.id)).sort((a, b) => a.d0 - b.d0 || a.t.localeCompare(b.t));
     openDlg("Depends on… " + it.t, (box2) => {
       box2.append(el("p", "hint", "This bar should start after the ones you tick have finished. An arrow is drawn, and it turns red if the dates clash."));
@@ -2567,13 +2580,13 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       const draw = () => {
         list.textContent = "";
         const t = q.value.trim().toLowerCase();
-        cands.filter((i) => !t || i.t.toLowerCase().includes(t) || i.res.join(" ").toLowerCase().includes(t) || cur2.has(i.id)).forEach((i) => {
+        cands.filter((i) => !t || i.t.toLowerCase().includes(t) || i.res.join(" ").toLowerCase().includes(t) || cur3.has(i.id)).forEach((i) => {
           const l = el("label", "deprow"), c = el("input");
           c.type = "checkbox";
-          c.checked = cur2.has(i.id);
+          c.checked = cur3.has(i.id);
           c.addEventListener("change", () => {
-            if (c.checked) cur2.add(i.id);
-            else cur2.delete(i.id);
+            if (c.checked) cur3.add(i.id);
+            else cur3.delete(i.id);
           });
           l.append(c, el("span", "", (i.ms ? "◆ " : "") + i.t), el("small", "", dlabel(i.d0) + (i.ms ? "" : " to " + dlabel(i.d1)) + (i.res.length ? " · " + i.res.join(", ") : "")));
           list.append(l);
@@ -2582,18 +2595,18 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       };
       q.addEventListener("input", draw);
       draw();
-      const save2 = el("button", "btn primary", "Save");
-      save2.type = "button";
+      const save3 = el("button", "btn primary", "Save");
+      save3.type = "button";
       const cancel = el("button", "btn", "Cancel");
       cancel.type = "button";
       cancel.addEventListener("click", closeDlg);
-      save2.addEventListener("click", () => {
+      save3.addEventListener("click", () => {
         closeDlg();
-        const next = [...cur2];
+        const next = [...cur3];
         if (JSON.stringify(next.sort()) !== JSON.stringify(depsOf(it).slice().sort())) commit(it.id, { dep: next });
       });
       const row = el("div", "formrow");
-      row.append(save2, cancel);
+      row.append(save3, cancel);
       box2.append(row);
     });
   }
@@ -2677,10 +2690,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       if (w0) {
         const wr = w0.getBoundingClientRect(), dw = wr.width, L = wr.left - gr.left;
         const bi = new Map((base3.items || []).map((i) => [i.id, i]));
-        first.forEach((bar2, id) => {
+        first.forEach((bar3, id) => {
           const o = bi.get(id), it = all.find((i) => i.id === id);
           if (!o || !it || o.d0 === it.d0 && o.d1 === it.d1) return;
-          const r = bar2.getBoundingClientRect(), y = r.bottom - gr.top - 1;
+          const r = bar3.getBoundingClientRect(), y = r.bottom - gr.top - 1;
           const g1 = sv("rect", { x: L + o.d0 * dw + 1, y, width: Math.max(4, (o.d1 - o.d0 + 1) * dw - 2), height: 5, rx: 2.5, fill: "#e5a513", opacity: ".9", class: "ghost" });
           const t = sv("title");
           const sl = it.d1 - o.d1;
@@ -2825,10 +2838,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   function undoFromLog(l) {
     const u = l.data.u;
     if (!u || !canWrite()) return;
-    const cur2 = S.over[u.id], isSame = (a, b) => JSON.stringify(a === void 0 ? null : a) === JSON.stringify(b === void 0 ? null : b);
+    const cur3 = S.over[u.id], isSame = (a, b) => JSON.stringify(a === void 0 ? null : a) === JSON.stringify(b === void 0 ? null : b);
     let clash = false;
     if (u.after) Object.keys(u.after).forEach((k) => {
-      if (!isSame(cur2 && cur2[k], u.after[k])) clash = true;
+      if (!isSame(cur3 && cur3[k], u.after[k])) clash = true;
     });
     if (u.whole !== void 0 && u.after === void 0) clash = false;
     const run = () => {
@@ -3490,12 +3503,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         periodMenu(e.clientX, e.clientY, Math.max(0, Math.min(NDAYS - 1, dayAt(e.clientX))));
         return;
       }
-      const bar2 = e.target.closest(".bar");
-      if (bar2) {
-        const it = items().find((i) => i.id === bar2.dataset.id);
+      const bar3 = e.target.closest(".bar");
+      if (bar3) {
+        const it = items().find((i) => i.id === bar3.dataset.id);
         if (it) {
           e.preventDefault();
-          barMenu(it, bar2.dataset.person, e.clientX, e.clientY);
+          barMenu(it, bar3.dataset.person, e.clientX, e.clientY);
         }
         return;
       }
@@ -3507,10 +3520,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
     gr.addEventListener("dblclick", (e) => {
       if (!canEdit() || e.target.tagName === "INPUT") return;
-      const bar2 = e.target.closest(".bar");
-      if (bar2) {
-        const it = items().find((i) => i.id === bar2.dataset.id);
-        if (it) startEdit(it, bar2.dataset.person);
+      const bar3 = e.target.closest(".bar");
+      if (bar3) {
+        const it = items().find((i) => i.id === bar3.dataset.id);
+        if (it) startEdit(it, bar3.dataset.person);
         return;
       }
       const row = e.target.closest(".rowbg[data-person]");
@@ -3728,9 +3741,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     r1.append(lab("Impact", im), lab("Effort", ef));
     const score = el("span", "score", "Score " + ideaScore(i));
     const stat = el("span", "badge" + (i.st === "scheduled" ? " ok" : ""), (ISTAT.find((x) => x[0] === (i.st || "idea")) || ISTAT[0])[1]);
-    const save2 = el("button", "btn primary sm", "Save");
-    save2.type = "button";
-    save2.hidden = true;
+    const save3 = el("button", "btn primary sm", "Save");
+    save3.type = "button";
+    save3.hidden = true;
     const saved2 = el("span", "hint", "");
     const r2 = el("div", "row2");
     r2.append(stat, score);
@@ -3739,11 +3752,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       const rr = allRoadmaps().find((x) => x.id === i.rm);
       r3.append(el("span", "badge ok", "On " + (rr ? rr.n : "a roadmap")));
     }
-    r3.append(save2, saved2);
+    r3.append(save3, saved2);
     const dirty = () => t.value.trim() !== i.t || n.value !== (i.n || "") || +im.value !== (i.im || 2) || +ef.value !== (i.ef || 2);
     const mark = () => {
       const dv = dirty();
-      save2.hidden = !dv;
+      save3.hidden = !dv;
       saved2.textContent = "";
       score.textContent = "Score " + ideaScore({ im: +im.value, ef: +ef.value });
     };
@@ -3759,13 +3772,13 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       saveIdea(id, { t: v, n: n.value, im: +im.value, ef: +ef.value }, "idea", 'saved idea "' + v + '"' + (v !== i.t ? ' (was "' + i.t + '")' : ""));
       return true;
     };
-    save2.addEventListener("click", () => {
+    save3.addEventListener("click", () => {
       if (doSave()) renderIdeas(true);
     });
     c.addEventListener("keydown", (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !save2.hidden) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !save3.hidden) {
         e.preventDefault();
-        save2.click();
+        save3.click();
       }
     });
     more.addEventListener("click", (e) => {
@@ -4119,7 +4132,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   // src/esm/core/shared.js
   var ideaUI = { st: "open", q: "" };
   var H2 = { id: H2_ID, n: "H2 2026", a: "2026-10-01", b: "2027-01-31", kind: "H2", builtin: true };
-  var PAGES = [["roadmap", "Roadmap"], ["ideas", "Ideas"], ["roadmaps", "Roadmaps"], ["sprints", "Sprints"], ["reports", "Reports"], ["resources", "Resources"], ["vacations", "Vacations"], ["capacity", "Capacity"], ["baselines", "Baselines"], ["log", "Log"], ["admin", "Approvals"]];
+  var PAGES = [["roadmap", "Roadmap"], ["ideas", "Ideas"], ["roadmaps", "Roadmaps"], ["sprints", "Sprints"], ["reports", "Reports"], ["monthly", "Monthly"], ["resources", "Resources"], ["vacations", "Vacations"], ["capacity", "Capacity"], ["baselines", "Baselines"], ["log", "Log"], ["admin", "Approvals"]];
   var DOMAINS = ["PM", "Mobile", "Backend", "Frontend", "Full-stack", "Engineering", "QA", "UX / Design", "AI / ML", "Other"];
   var VTYPES = ["Annual leave", "Training", "Public holiday", "Other"];
   var slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "x";
@@ -4175,11 +4188,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
     return s;
   }
-  function pageHead(t, sub, extra) {
+  function pageHead(t, sub2, extra) {
     const h = el("div", "pghead");
     const d = el("div");
     d.append(el("h1", "", t));
-    if (sub) d.append(el("p", "sub", sub));
+    if (sub2) d.append(el("p", "sub", sub2));
     h.append(d);
     if (extra) h.append(extra);
     return h;
@@ -4606,8 +4619,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       const msg = el("div", "gerr");
       msg.setAttribute("role", "alert");
       box2.append(msg);
-      const save2 = el("button", "btn primary", "Save"), cancel = el("button", "btn", "Cancel");
-      save2.type = cancel.type = "button";
+      const save3 = el("button", "btn primary", "Save"), cancel = el("button", "btn", "Cancel");
+      save3.type = cancel.type = "button";
       cancel.addEventListener("click", closeDlg);
       const go = () => {
         const t = tx.value.trim().replace(/\s+/g, " ");
@@ -4636,9 +4649,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
           go();
         }
       });
-      save2.addEventListener("click", go);
+      save3.addEventListener("click", go);
       const row = el("div", "formrow");
-      row.append(save2, cancel);
+      row.append(save3, cancel);
       if (editing) {
         const del = el("button", "btn danger", "Delete note");
         del.type = "button";
@@ -5053,14 +5066,14 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     if (before) return before.ord - 1;
     return after.ord + 1;
   }
-  function startDrag(ev, it, bar2, mode) {
+  function startDrag(ev, it, bar3, mode) {
     if (!canEdit() || ev.button != null && ev.button !== 0) return;
     const g = $("grid"), wk = g.querySelector(".wk");
     const mw = wk ? wk.getBoundingClientRect().width : 26;
-    const owner = bar2.dataset.person || "", ch = g.closest(".chartwrap") || document.scrollingElement, sx0 = ch.scrollLeft, sy0 = ch.scrollTop;
+    const owner = bar3.dataset.person || "", ch = g.closest(".chartwrap") || document.scrollingElement, sx0 = ch.scrollLeft, sy0 = ch.scrollTop;
     let lastE = null, raf = 0;
     const st = { x: ev.clientX, y: ev.clientY, lastY: ev.clientY, mode, d0: it.d0, d1: it.d1, sq: it.sq, person: owner, moved: false, cur: { d0: it.d0, d1: it.d1, sq: it.sq, person: owner } };
-    bar2.setPointerCapture(ev.pointerId);
+    bar3.setPointerCapture(ev.pointerId);
     const move = (e) => {
       lastE = e;
       const dx = e.clientX - st.x + (ch.scrollLeft - sx0), dy = e.clientY - st.y + (ch.scrollTop - sy0);
@@ -5069,7 +5082,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       if (!st.moved) {
         st.moved = true;
         S.dragging = true;
-        bar2.classList.add("dragging");
+        bar3.classList.add("dragging");
         raf = requestAnimationFrame(tick);
       }
       const dm = Math.round(dx / mw);
@@ -5091,9 +5104,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         tip2.style.left = e.clientX + 14 + "px";
         tip2.style.top = e.clientY + 16 + "px";
       }
-      bar2.style.gridColumn = a + 2 + " / " + (b + 3);
+      bar3.style.gridColumn = a + 2 + " / " + (b + 3);
       if (mode === "move") {
-        bar2.style.transform = "translate(" + (dx - (a - st.d0) * mw) + "px," + dy + "px)";
+        bar3.style.transform = "translate(" + (dx - (a - st.d0) * mw) + "px," + dy + "px)";
         if (state.view === "person") {
           const boxes = personBoxes(g);
           let hit = st.cur.person;
@@ -5111,7 +5124,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
           st.cur.sq = hit;
           setDrop(g, hit);
         }
-      } else bar2.style.transform = "";
+      } else bar3.style.transform = "";
     };
     const tick = () => {
       if (!S.dragging || !lastE) return;
@@ -5131,9 +5144,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       cancelAnimationFrame(raf);
       const dt = $("dtip");
       if (dt) dt.remove();
-      bar2.removeEventListener("pointermove", move);
-      bar2.removeEventListener("pointerup", up);
-      bar2.removeEventListener("pointercancel", up);
+      bar3.removeEventListener("pointermove", move);
+      bar3.removeEventListener("pointerup", up);
+      bar3.removeEventListener("pointercancel", up);
       setDrop(g, null);
       setDropP(g, null);
       S.dragging = false;
@@ -5163,9 +5176,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       if (Object.keys(patch).length) commit(it.id, patch);
       else render();
     };
-    bar2.addEventListener("pointermove", move);
-    bar2.addEventListener("pointerup", up);
-    bar2.addEventListener("pointercancel", up);
+    bar3.addEventListener("pointermove", move);
+    bar3.addEventListener("pointerup", up);
+    bar3.addEventListener("pointercancel", up);
   }
 
   // src/esm/ui/gantt-render.js
@@ -5194,17 +5207,17 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       tipEl = null;
     }
   }
-  function showBarTip(bar2) {
+  function showBarTip(bar3) {
     hideBarTip();
-    if (S.dragging || !bar2.dataset.tip) return;
+    if (S.dragging || !bar3.dataset.tip) return;
     tipTimer = setTimeout(() => {
-      if (!bar2.isConnected || S.dragging || bar2.classList.contains("editing")) return;
+      if (!bar3.isConnected || S.dragging || bar3.classList.contains("editing")) return;
       const t = el("div", "bartip");
       t.setAttribute("role", "tooltip");
-      t.append(el("b", "", bar2.dataset.tip), el("small", "", bar2.dataset.tipSub || ""));
+      t.append(el("b", "", bar3.dataset.tip), el("small", "", bar3.dataset.tipSub || ""));
       document.body.append(t);
       tipEl = t;
-      const r = bar2.getBoundingClientRect(), w = t.offsetWidth, h = t.offsetHeight;
+      const r = bar3.getBoundingClientRect(), w = t.offsetWidth, h = t.offsetHeight;
       const top = r.top - h - 8 >= 8 ? r.top - h - 8 : r.bottom + 8;
       t.style.top = top + "px";
       t.style.left = Math.max(8, Math.min(Math.max(r.left, 8), window.innerWidth - w - 8)) + "px";
@@ -5213,18 +5226,18 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   window.addEventListener("scroll", hideBarTip, true);
   function buildBar(it, owner) {
     const l = laneOf(it.sq), col = l.c;
-    const bar2 = el("div", "bar st-" + it.st + (canEdit() ? "" : " ro") + (it.ms ? " ms" : ""));
-    bar2.style.setProperty("--c", col);
-    bar2.dataset.person = owner || "";
-    bar2.dataset.id = it.id;
-    bar2.tabIndex = 0;
-    bar2.setAttribute("role", "button");
-    bar2.setAttribute("aria-label", it.t + ", " + dlabel(it.d0) + " to " + dlabel(it.d1) + ", " + STATUS[it.st]);
-    bar2.dataset.tip = it.t;
-    bar2.dataset.tipSub = l.n + " · " + dlabel(it.d0) + " to " + dlabel(it.d1) + " · " + STATUS[it.st];
+    const bar3 = el("div", "bar st-" + it.st + (canEdit() ? "" : " ro") + (it.ms ? " ms" : ""));
+    bar3.style.setProperty("--c", col);
+    bar3.dataset.person = owner || "";
+    bar3.dataset.id = it.id;
+    bar3.tabIndex = 0;
+    bar3.setAttribute("role", "button");
+    bar3.setAttribute("aria-label", it.t + ", " + dlabel(it.d0) + " to " + dlabel(it.d1) + ", " + STATUS[it.st]);
+    bar3.dataset.tip = it.t;
+    bar3.dataset.tipSub = l.n + " · " + dlabel(it.d0) + " to " + dlabel(it.d1) + " · " + STATUS[it.st];
     const editing = state.edit === it.id + "|" + (owner || "");
     if (editing) {
-      bar2.classList.add("editing");
+      bar3.classList.add("editing");
       const inp = el("input", "bi");
       inp.type = "text";
       inp.value = it.t;
@@ -5249,32 +5262,32 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       inp.addEventListener("blur", () => fin(true));
       inp.addEventListener("pointerdown", (e) => e.stopPropagation());
       inp.addEventListener("dblclick", (e) => e.stopPropagation());
-      bar2.append(inp);
-    } else bar2.append(el("span", "nm2", (it.st === "done" ? "✓ " : "") + it.t));
-    if (it.tag) bar2.append(el("span", "tg", it.tag === "High priority" ? "High" : it.tag === "Low priority" ? "Low" : it.tag));
+      bar3.append(inp);
+    } else bar3.append(el("span", "nm2", (it.st === "done" ? "✓ " : "") + it.t));
+    if (it.tag) bar3.append(el("span", "tg", it.tag === "High priority" ? "High" : it.tag === "Low priority" ? "Low" : it.tag));
     const hl = el("span", "hd l"), hr = el("span", "hd r");
-    bar2.append(hl, hr);
-    bar2.addEventListener("pointerdown", (e) => {
+    bar3.append(hl, hr);
+    bar3.addEventListener("pointerdown", (e) => {
       if (e.target.tagName === "INPUT") return;
       const mode = e.target === hl ? "l" : e.target === hr ? "r" : "move";
-      if (canEdit()) startDrag(e, it, bar2, mode);
+      if (canEdit()) startDrag(e, it, bar3, mode);
     });
-    bar2.addEventListener("pointerenter", () => {
+    bar3.addEventListener("pointerenter", () => {
       if (S.dragging) return;
       const g = $("grid");
       g.classList.add("hov");
       g.querySelectorAll(".bar").forEach((b) => b.classList.toggle("same", b.dataset.id === it.id));
     });
-    bar2.addEventListener("pointerleave", () => {
+    bar3.addEventListener("pointerleave", () => {
       $("grid").classList.remove("hov");
     });
-    bar2.addEventListener("pointerenter", () => showBarTip(bar2));
-    bar2.addEventListener("pointerleave", hideBarTip);
-    bar2.addEventListener("pointerdown", hideBarTip);
-    bar2.addEventListener("focus", () => showBarTip(bar2));
-    bar2.addEventListener("blur", hideBarTip);
-    bar2.addEventListener("keydown", (e) => {
-      if (e.target !== bar2) return;
+    bar3.addEventListener("pointerenter", () => showBarTip(bar3));
+    bar3.addEventListener("pointerleave", hideBarTip);
+    bar3.addEventListener("pointerdown", hideBarTip);
+    bar3.addEventListener("focus", () => showBarTip(bar3));
+    bar3.addEventListener("blur", hideBarTip);
+    bar3.addEventListener("keydown", (e) => {
+      if (e.target !== bar3) return;
       if (e.key === "Enter" || e.key === "F2") {
         e.preventDefault();
         startEdit(it, owner);
@@ -5290,7 +5303,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       }
       state.refocusBar = it.id;
     });
-    return bar2;
+    return bar3;
   }
   var ZOOM = { day: 26, week: 12, month: 4 };
   function render() {
@@ -5395,7 +5408,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     if (state.person === "all" && hid.length) people = people.filter((p) => p.its.length || !hid.includes(p.name));
     people.sort(comparePeople);
     let r = r0;
-    const block = (p, title, sub, color) => {
+    const block = (p, title, sub2, color) => {
       const pk = pack(p.its), n = pk.n, pnotes = p.name === "__none" ? { out: [], lanes: 0 } : personNotes(p.name), nh = pnotes.lanes * NOTE_H, minH = 8 + nh + n * H3 + "px";
       const counts = new Array(NDAYS).fill(0);
       p.its.forEach((it) => {
@@ -5409,7 +5422,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       const nm = el("span");
       nm.append(el("i"), document.createTextNode(title));
       c1.append(nm);
-      if (sub) c1.append(el("small", "", sub));
+      if (sub2) c1.append(el("small", "", sub2));
       if (over) {
         const w = el("small", "warnx", "⚠ " + over + (over === 1 ? " day" : " days") + " overlap");
         w.title = "Days where this person has more than one feature at the same time";
@@ -5471,8 +5484,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     };
     people.forEach((p) => {
       const d = dir.get(p.name);
-      const sub = d ? d.domain + " · " + [...d.sqs].map((k) => laneOf(k).n).join(", ") : "";
-      block(p, p.name, sub, LANES[primaryLane(p.name)].c);
+      const sub2 = d ? d.domain + " · " + [...d.sqs].map((k) => laneOf(k).n).join(", ") : "";
+      block(p, p.name, sub2, LANES[primaryLane(p.name)].c);
     });
     const none = map.get("__none");
     if (none && none.its.length && state.person === "all") block(none, "Unassigned", "Features nobody owns yet", "var(--muted)");
@@ -5595,8 +5608,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return true;
   }
   function saveLanes(patch, sum, msg) {
-    const cur2 = { names: Object.assign({}, squadNames()), colors: Object.assign({}, squadColors()), extra: extraSquads().slice() };
-    saveIdea("squadnames", Object.assign({ cfg: true }, cur2, patch), "resource", sum);
+    const cur3 = { names: Object.assign({}, squadNames()), colors: Object.assign({}, squadColors()), extra: extraSquads().slice() };
+    saveIdea("squadnames", Object.assign({ cfg: true }, cur3, patch), "resource", sum);
     applySquadNames();
     fillPersons();
     render();
@@ -6211,6 +6224,104 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     root.append(card);
   }
 
+  // src/esm/features/month-model.js
+  var WEIGHTS = { 1: "Normal", 2: "High", 3: "Critical" };
+  var uid = () => "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  var clampPct = (v) => Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
+  var dayN = (iso4) => Math.round(Date.parse(iso4 + "T00:00:00Z") / 864e5);
+  var addD = (iso4, n) => new Date(Date.parse(iso4 + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
+  var isMonth = (m) => /^\d{4}-(0[1-9]|1[0-2])$/.test(m || "");
+  var monthId = (m) => "mo" + m.replace("-", "");
+  var monthOf = (weekStart) => addD(weekStart, 3).slice(0, 7);
+  var monthLabel = (m) => isMonth(m) ? (/* @__PURE__ */ new Date(m + "-01T00:00:00Z")).toLocaleString("en", { month: "long", year: "numeric", timeZone: "UTC" }) : "";
+  var prevMonth = (m) => {
+    const d = /* @__PURE__ */ new Date(m + "-01T00:00:00Z");
+    d.setUTCMonth(d.getUTCMonth() - 1);
+    return d.toISOString().slice(0, 7);
+  };
+  var nextMonth = (m) => {
+    const d = /* @__PURE__ */ new Date(m + "-01T00:00:00Z");
+    d.setUTCMonth(d.getUTCMonth() + 1);
+    return d.toISOString().slice(0, 7);
+  };
+  function monthRange(m) {
+    const a = m + "-01";
+    return { a, b: addD(nextMonth(m) + "-01", -1) };
+  }
+  function newLine(k, t, o) {
+    o = o || {};
+    return { id: uid(), k, t: String(t || "").replace(/\s+/g, " ").trim().slice(0, 300), pct: 0, w: 1, adhoc: !!o.adhoc, by: String(o.by || "").replace(/\s+/g, " ").trim().slice(0, 80), at: o.at || "", src: o.src || "", pe: false };
+  }
+  var live = (ls) => (ls || []).filter((l) => String(l.t || "").trim());
+  function monthProgress(lines) {
+    const pl = live(lines).filter((l) => !l.adhoc);
+    if (!pl.length) return { pct: null, n: 0, done: 0 };
+    const w = pl.reduce((a, l) => a + (l.w || 1), 0), s = pl.reduce((a, l) => a + (l.w || 1) * clampPct(l.pct), 0);
+    return { pct: Math.round(s / w), n: pl.length, done: pl.filter((l) => clampPct(l.pct) >= 100).length };
+  }
+  function adhocStats(lines) {
+    const a = live(lines).filter((l) => l.adhoc);
+    return { n: a.length, done: a.filter((l) => clampPct(l.pct) >= 100).length };
+  }
+  function assumePct(bar3, today) {
+    if (bar3.st === "done") return 100;
+    if (bar3.ms) return 0;
+    const len = dayN(bar3.b) - dayN(bar3.a) + 1;
+    if (!(len >= 1)) return 0;
+    const passed = Math.min(len, dayN(today) - dayN(bar3.a) + 1);
+    if (passed <= 0) return 0;
+    return Math.min(90, Math.round(100 * passed / len / 5) * 5);
+  }
+  function mergeRoad(lines, road, pl, m, today) {
+    const r = monthRange(m), out = lines.map((l) => Object.assign({}, l)), bySrc = new Map(out.filter((l) => l.src).map((l) => [l.src, l]));
+    let added = 0, updated = 0, skipped = 0;
+    road.filter((b) => b.a <= r.b && b.b >= r.a).sort((x, y) => x.a < y.a ? -1 : x.a > y.a ? 1 : String(x.t).localeCompare(String(y.t))).forEach((b) => {
+      const p = pl.find((q) => (q.squads || []).includes(b.sq));
+      if (!p) {
+        skipped++;
+        return;
+      }
+      const pct2 = assumePct(b, today), ex = bySrc.get(b.id);
+      if (ex) {
+        if (!ex.pe && clampPct(ex.pct) !== pct2) {
+          ex.pct = pct2;
+          updated++;
+        }
+        return;
+      }
+      const n = newLine(p.k, b.t, { src: b.id });
+      n.pct = pct2;
+      out.push(n);
+      bySrc.set(b.id, n);
+      added++;
+    });
+    return { lines: out, added, updated, skipped };
+  }
+  function carryFromLastMonth(doc2, all) {
+    const pm = prevMonth(doc2.mo), prev = all.find((d) => d.mo === pm);
+    if (!prev) return null;
+    const have = new Set(live(doc2.lines).map((l) => l.t.toLowerCase()));
+    const lines = live(prev.lines).filter((l) => clampPct(l.pct) < 100 && !have.has(l.t.toLowerCase())).map((l) => Object.assign({}, l, { id: uid(), at: "" }));
+    return lines.length ? { from: pm, lines } : null;
+  }
+  function monthText(doc2, products, fmt) {
+    if (!doc2 || !live(doc2.lines).length) return [];
+    const prog = monthProgress(doc2.lines), out = ["MONTHLY DELIVERABLES - " + monthLabel(doc2.mo) + (prog.pct === null ? "" : " - " + prog.pct + "% complete (" + prog.done + " of " + prog.n + " done)"), ""];
+    (products || doc2.pl || []).forEach((p) => {
+      const its = live(doc2.lines).filter((l) => l.k === p.k);
+      if (!its.length) return;
+      const pl = its.filter((l) => !l.adhoc), ad = its.filter((l) => l.adhoc), pp = monthProgress(pl);
+      out.push(p.n + (pp.pct === null ? "" : " - " + pp.pct + "%"));
+      pl.forEach((l) => out.push("- " + l.t + ": " + clampPct(l.pct) + "%"));
+      if (ad.length) {
+        out.push("Ad hoc requests:");
+        ad.forEach((l) => out.push("- " + l.t + (l.by ? " (requested by " + l.by + (l.at && fmt ? ", " + fmt(l.at) : "") + ")" : "") + ": " + clampPct(l.pct) + "%"));
+      }
+      out.push("");
+    });
+    return out;
+  }
+
   // src/esm/features/report-model.js
   var DEFAULT_PRODUCTS = [
     { k: "plan_daycare", n: "Plan / Daycare", squads: ["plan", "daycare"] },
@@ -6229,9 +6340,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return "planned";
   }
   var esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  var uid = () => "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-  function productsOf(cfg2) {
-    const p = cfg2 && Array.isArray(cfg2.products) && cfg2.products.length ? cfg2.products : DEFAULT_PRODUCTS;
+  var uid2 = () => "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  function productsOf(cfg3) {
+    const p = cfg3 && Array.isArray(cfg3.products) && cfg3.products.length ? cfg3.products : DEFAULT_PRODUCTS;
     return p.map((x) => ({ k: String(x.k), n: String(x.n || x.k), squads: (x.squads || []).map(String) }));
   }
   function jiraUrl(base3, key) {
@@ -6246,14 +6357,14 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       else tops.push(s);
     });
     tops.forEach((s) => {
-      const sub = kids[s.id] || [], stt = scopeStatus(sub, s.st), dns = (sub.length ? sub : [s]).map((x) => x.dn || "").sort(), dn = dns[dns.length - 1];
+      const sub2 = kids[s.id] || [], stt = scopeStatus(sub2, s.st), dns = (sub2.length ? sub2 : [s]).map((x) => x.dn || "").sort(), dn = dns[dns.length - 1];
       let m = ST_OF[stt] || ST_OF.planned;
       if (stt === "done" && dn && a && b) {
         if (dn < a) return;
         if (dn > b) m = ST_OF.progress;
       }
-      const t = sub.length ? s.t + ": " + sub.map((x) => x.t).join("; ") : s.t;
-      const h = sub.length ? "<b>" + esc(s.t) + "</b><ul>" + sub.map((x) => "<li>" + esc(x.t) + "</li>").join("") + "</ul>" : s.h || "";
+      const t = sub2.length ? s.t + ": " + sub2.map((x) => x.t).join("; ") : s.t;
+      const h = sub2.length ? "<b>" + esc(s.t) + "</b><ul>" + sub2.map((x) => "<li>" + esc(x.t) + "</li>").join("") + "</ul>" : s.h || "";
       out.push({ src: "si:" + s.id, g: m[0], st: m[1], t, h, jira: s.jira || "", kind: s.kind || "feature", tg: s.tg || [], ord: s.ord || 0 });
     });
     if (Number.isFinite(ka) && Number.isFinite(kb)) {
@@ -6268,7 +6379,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     fresh.forEach((f) => {
       seen.add(f.src);
       const p = by.get(f.src);
-      if (!p) out.push({ id: uid(), src: f.src, g: f.g, st: f.st, t: f.t, h: f.h || "", t0: f.t, jira: f.jira, kind: f.kind, tg: f.tg || [], hide: false, edited: false });
+      if (!p) out.push({ id: uid2(), src: f.src, g: f.g, st: f.st, t: f.t, h: f.h || "", t0: f.t, jira: f.jira, kind: f.kind, tg: f.tg || [], hide: false, edited: false });
       else if (p.edited) out.push(p);
       else out.push(Object.assign({}, p, { g: f.g, st: f.st, t: f.t, t0: f.t, jira: f.jira, kind: f.kind, tg: f.tg || [], h: f.h || "" }));
     });
@@ -6278,7 +6389,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return out;
   }
   function newManualLine(g, t) {
-    return { id: uid(), src: "man", g, st: "on", t, t0: t, jira: "", kind: "manual", hide: false, edited: true };
+    return { id: uid2(), src: "man", g, st: "on", t, t0: t, jira: "", kind: "manual", hide: false, edited: true };
   }
   var plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
   function ruleSummary(name, lines) {
@@ -6331,65 +6442,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
     return n;
   }
-  var WEIGHTS = { 1: "Normal", 2: "High", 3: "Critical" };
-  var clampPct = (v) => Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
-  var addD = (iso4, n) => new Date(Date.parse(iso4 + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
-  var monthOf = (weekStart) => addD(weekStart, 3).slice(0, 7);
-  var monthLabel = (m) => /^\d{4}-\d{2}$/.test(m || "") ? (/* @__PURE__ */ new Date(m + "-01T00:00:00Z")).toLocaleString("en", { month: "long", year: "numeric", timeZone: "UTC" }) : "";
-  var prevMonth = (m) => {
-    const d = /* @__PURE__ */ new Date(m + "-01T00:00:00Z");
-    d.setUTCMonth(d.getUTCMonth() - 1);
-    return d.toISOString().slice(0, 7);
-  };
-  function newDeliverable(k, t, o) {
-    o = o || {};
-    return { id: uid(), k, t: String(t || "").replace(/\s+/g, " ").trim().slice(0, 300), pct: 0, p0: 0, w: 1, adhoc: !!o.adhoc, by: String(o.by || "").replace(/\s+/g, " ").trim().slice(0, 80), at: o.at || "" };
-  }
-  function monthProgress(items2) {
-    const pl = (items2 || []).filter((i) => !i.adhoc);
-    if (!pl.length) return { pct: null, n: 0, done: 0 };
-    const w = pl.reduce((a, i) => a + (i.w || 1), 0), s = pl.reduce((a, i) => a + (i.w || 1) * clampPct(i.pct), 0);
-    return { pct: Math.round(s / w), n: pl.length, done: pl.filter((i) => clampPct(i.pct) >= 100).length };
-  }
-  function adhocStats(items2) {
-    const a = (items2 || []).filter((i) => i.adhoc);
-    return { n: a.length, done: a.filter((i) => clampPct(i.pct) >= 100).length };
-  }
-  var lastOf = (all, rep, m) => all.filter((r) => r.id !== rep.id && r.a < rep.a && r.monthly && r.monthly.m === m && (r.monthly.items || []).length).sort((x, y) => x.a < y.a ? 1 : -1)[0];
-  function seedMonthly(rep, all) {
-    const m = monthOf(rep.a);
-    if (rep.monthly && rep.monthly.m === m) return rep.monthly;
-    const prev = lastOf(all, rep, m);
-    return { m, items: prev ? prev.monthly.items.map((i) => Object.assign({}, i, { p0: clampPct(i.pct) })) : [] };
-  }
-  function carryFromLastMonth(rep, all) {
-    const pm = prevMonth(monthOf(rep.a)), prev = all.filter((r) => r.id !== rep.id && r.monthly && r.monthly.m === pm && (r.monthly.items || []).length).sort((x, y) => x.a < y.a ? 1 : -1)[0];
-    if (!prev) return null;
-    const items2 = prev.monthly.items.filter((i) => clampPct(i.pct) < 100).map((i) => Object.assign({}, i, { id: uid(), p0: clampPct(i.pct), at: "" }));
-    return items2.length ? { from: pm, items: items2 } : null;
-  }
-  function monthlyText(rep, products, fmt) {
-    const mo = rep.monthly;
-    if (!mo || !(mo.items || []).length) return [];
-    const prog = monthProgress(mo.items), out = ["MONTHLY DELIVERABLES - " + monthLabel(mo.m) + (prog.pct === null ? "" : " - " + prog.pct + "% complete (" + prog.done + " of " + prog.n + " done)"), ""];
-    products.forEach((p) => {
-      const its = mo.items.filter((i) => i.k === p.k);
-      if (!its.length) return;
-      const pl = its.filter((i) => !i.adhoc), ad = its.filter((i) => i.adhoc), pp = monthProgress(pl);
-      out.push(p.n + (pp.pct === null ? "" : " - " + pp.pct + "%"));
-      pl.forEach((i) => {
-        const d = clampPct(i.pct) - clampPct(i.p0);
-        out.push("- " + i.t + ": " + clampPct(i.pct) + "%" + (d ? " (" + (d > 0 ? "+" : "") + d + " this week)" : ""));
-      });
-      if (ad.length) {
-        out.push("Ad hoc requests:");
-        ad.forEach((i) => out.push("- " + i.t + (i.by ? " (requested by " + i.by + (i.at && fmt ? ", " + fmt(i.at) : "") + ")" : "") + ": " + clampPct(i.pct) + "%"));
-      }
-      out.push("");
-    });
-    return out;
-  }
-  function reportToText(rep, products, fmt) {
+  function reportToText(rep, products, fmt, monthDoc) {
     const out = ["Weekly update - " + (fmt ? fmt(rep.a) : rep.a) + (rep.b ? " to " + (fmt ? fmt(rep.b) : rep.b) : "") + (rep.n ? " (Sprint " + rep.n + ")" : ""), ""];
     products.forEach((p) => {
       const d = (rep.prods || {})[p.k];
@@ -6403,7 +6456,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       });
       out.push("");
     });
-    const mt = monthlyText(rep, products, fmt);
+    const mt = monthText(monthDoc, products, fmt);
     if (mt.length) out.push("", ...mt);
     return out.join("\n").trim() + "\n";
   }
@@ -6834,10 +6887,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
   }
   function richBar() {
-    const bar2 = document.createElement("div");
-    bar2.className = "rbar";
-    bar2.setAttribute("role", "toolbar");
-    bar2.setAttribute("aria-label", "Text formatting");
+    const bar3 = document.createElement("div");
+    bar3.className = "rbar";
+    bar3.setAttribute("role", "toolbar");
+    bar3.setAttribute("aria-label", "Text formatting");
     const b = (label, title, fn) => {
       const x = document.createElement("button");
       x.className = "btn sm";
@@ -6853,7 +6906,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
           if (s) s.textContent = "Click inside a text box first";
         }
       });
-      bar2.append(x);
+      bar3.append(x);
       return x;
     };
     b("B", "Bold", () => document.execCommand("bold")).style.fontWeight = "800";
@@ -6866,7 +6919,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       if (u && /^https:\/\//i.test(u.trim())) document.execCommand("createLink", false, u.trim());
     });
     b("Clear", "Remove formatting", () => document.execCommand("removeFormat"));
-    return bar2;
+    return bar3;
   }
   function richBox(cls, html, plain, label, onSave) {
     const d = document.createElement("div");
@@ -6895,6 +6948,313 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return d;
   }
 
+  // src/esm/features/month-view.js
+  var bar2 = (pct2, big, label) => {
+    const b = el("div", "mbar" + (big ? " big" : "")), f = el("i");
+    f.style.width = pct2 + "%";
+    b.append(f);
+    b.setAttribute("role", "progressbar");
+    b.setAttribute("aria-valuemin", "0");
+    b.setAttribute("aria-valuemax", "100");
+    b.setAttribute("aria-valuenow", String(pct2));
+    b.setAttribute("aria-label", label);
+    return b;
+  };
+  var sub = (prog, ad) => "complete · " + prog.done + " of " + prog.n + " deliverables done" + (ad.n ? " · " + ad.n + " ad hoc request" + (ad.n === 1 ? "" : "s") + " (" + ad.done + " done)" : "");
+  function overallBar(doc2) {
+    const prog = monthProgress(doc2.lines), ad = adhocStats(doc2.lines);
+    if (prog.pct === null) return null;
+    const o = el("div", "rmall");
+    o.append(bar2(prog.pct, true, "Month progress"), el("b", "rmpct", prog.pct + "%"), el("span", "rmsub", sub(prog, ad)));
+    return o;
+  }
+  function lineRow(it, ctx) {
+    const r = el("div", "mrow" + (it.adhoc ? " adhoc" : ""));
+    r.dataset.id = it.id;
+    const pct2 = clampPct(it.pct);
+    const est = it.src && !it.pe ? el("span", "mest", "estimated") : null;
+    if (est) est.title = "Estimated from the roadmap dates. Change the percentage to set your own.";
+    if (ctx.ro) {
+      r.append(el("span", "mt", it.t));
+      if (it.adhoc && (it.by || it.at)) r.append(el("span", "mby", "requested" + (it.by ? " by " + it.by : "") + (it.at ? " on " + fmtIso(it.at) : "")));
+      if (it.w === 3) r.append(el("span", "chip mcrit", "Critical"));
+      r.append(bar2(pct2, false, "Completion of " + it.t), el("b", "mpv", pct2 + "%"));
+      return r;
+    }
+    const t = el("input", "mt");
+    t.type = "text";
+    t.value = it.t;
+    t.maxLength = 300;
+    t.setAttribute("aria-label", it.adhoc ? "Ad hoc request" : "Deliverable");
+    t.addEventListener("change", () => {
+      const v = t.value.replace(/\s+/g, " ").trim();
+      if (!v) {
+        t.value = it.t;
+        return;
+      }
+      if (v !== it.t) ctx.put(it, { t: v }, "Rename deliverable");
+    });
+    r.append(t);
+    if (it.adhoc) {
+      const by = el("input", "mbyin");
+      by.type = "text";
+      by.value = it.by || "";
+      by.maxLength = 80;
+      by.placeholder = "Requested by";
+      by.setAttribute("aria-label", "Requested by");
+      by.addEventListener("change", () => ctx.put(it, { by: by.value.replace(/\s+/g, " ").trim() }, "Change requester", true));
+      r.append(by);
+    }
+    const pi = el("input", "mpin");
+    pi.type = "number";
+    pi.min = 0;
+    pi.max = 100;
+    pi.step = 5;
+    pi.value = pct2;
+    pi.setAttribute("aria-label", "Percent complete");
+    pi.addEventListener("change", () => ctx.put(it, { pct: clampPct(pi.value), pe: true }, "Change completion"));
+    const full = el("button", "btn sm", pct2 >= 100 ? "✓ Done" : "100%");
+    full.type = "button";
+    full.title = "Mark as complete";
+    full.disabled = pct2 >= 100;
+    full.addEventListener("click", () => ctx.put(it, { pct: 100, pe: true }, "Mark deliverable complete"));
+    r.append(bar2(pct2, false, "Completion of " + it.t), pi, full);
+    if (est) r.append(est);
+    if (!it.adhoc) {
+      const w = el("select", "spsel");
+      w.setAttribute("aria-label", "Importance");
+      Object.keys(WEIGHTS).forEach((k) => {
+        const o = el("option", "", WEIGHTS[k]);
+        o.value = k;
+        o.selected = Number(k) === (it.w || 1);
+        w.append(o);
+      });
+      w.addEventListener("change", () => ctx.put(it, { w: Number(w.value) }, "Change importance"));
+      r.append(w);
+    }
+    const x = el("button", "btn sm danger", "✕");
+    x.type = "button";
+    x.setAttribute("aria-label", "Remove");
+    x.addEventListener("click", () => ctx.remove(it));
+    r.append(x);
+    return r;
+  }
+  function addForm(p, ctx, adhoc) {
+    const f = el("form", "spadd madd"), ti = el("input"), go = el("button", "btn sm", adhoc ? "Add request" : "Add deliverable");
+    ti.type = "text";
+    ti.maxLength = 300;
+    go.type = "submit";
+    f.append(ti);
+    ti.placeholder = adhoc ? "Add an ad hoc request for " + p.n : "Add a deliverable for " + p.n;
+    ti.setAttribute("aria-label", ti.placeholder);
+    let by = null;
+    if (adhoc) {
+      by = el("input");
+      by.type = "text";
+      by.maxLength = 80;
+      by.placeholder = "Requested by";
+      by.setAttribute("aria-label", "Requested by for the new request");
+      f.append(by);
+    }
+    f.append(go);
+    f.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const v = ti.value.trim();
+      if (!v) {
+        ti.focus();
+        return;
+      }
+      ctx.add(p.k, v, adhoc ? { adhoc: true, by: by.value, at: todayIso() } : {});
+    });
+    return f;
+  }
+  function monthSheet(doc2, pls, ctx) {
+    const body = el("div", "rbody sdoc mbody"), hero = el("div", "rhero mhero");
+    hero.append(el("small", "", "Ynmo · Monthly deliverables"), el("h2", "rtitle", monthLabel(doc2.mo)));
+    body.append(hero);
+    const ov = overallBar(doc2);
+    if (ov) body.append(ov);
+    else if (ctx.ro) body.append(el("p", "empty", "No deliverables were listed for this month."));
+    pls.forEach((p) => {
+      const its = doc2.lines.filter((i) => i.k === p.k), pl = its.filter((i) => !i.adhoc), adh = its.filter((i) => i.adhoc);
+      if (ctx.ro && !its.length) return;
+      const blk = el("section", "rmp");
+      blk.dataset.k = p.k;
+      blk.style.setProperty("--c", ctx.colOf(p));
+      const pp = monthProgress(pl), ph = el("div", "rmph");
+      ph.append(el("h3", "", p.n));
+      if (pp.pct !== null) ph.append(el("span", "rmpp", pp.pct + "%"));
+      blk.append(ph);
+      if (pp.pct !== null) blk.append(bar2(pp.pct, false, p.n + " progress"));
+      pl.forEach((i) => blk.append(lineRow(i, ctx)));
+      if (!ctx.ro) blk.append(addForm(p, ctx, false));
+      if (adh.length || !ctx.ro) {
+        blk.append(el("h4", "rmadh", "Ad hoc requests"));
+        adh.forEach((i) => blk.append(lineRow(i, ctx)));
+        if (!ctx.ro) blk.append(addForm(p, ctx, true));
+      }
+      body.append(blk);
+    });
+    return body;
+  }
+  function monthSummary(doc2, pls, colOf3, viewer) {
+    if (!doc2 || !(doc2.lines || []).some((l) => String(l.t || "").trim()) || viewer && doc2.status !== "submitted") return null;
+    const sec = el("section", "rmonth"), hd = el("div", "rmhead"), a = el("a", "rmopen", "Open the month");
+    a.href = "#/monthly/" + doc2.mo;
+    hd.append(el("h2", "", "Monthly deliverables"), el("span", "rmmonth", monthLabel(doc2.mo)), a);
+    sec.append(hd);
+    const ov = overallBar(doc2);
+    if (ov) sec.append(ov);
+    pls.forEach((p) => {
+      const pl = doc2.lines.filter((i) => i.k === p.k && !i.adhoc && String(i.t || "").trim()), pp = monthProgress(pl);
+      if (pp.pct === null) return;
+      const r = el("div", "rmsum");
+      r.style.setProperty("--c", colOf3(p));
+      r.append(el("b", "", p.n), bar2(pp.pct, false, p.n + " progress"), el("span", "rmpp", pp.pct + "%"));
+      sec.append(r);
+    });
+    return sec;
+  }
+
+  // src/esm/ui/confirm.js
+  function confirmDlg(title, msg, yes, onYes) {
+    openDlg(title, (box2) => {
+      const ok = el("button", "btn danger", yes), no = el("button", "btn", "Cancel");
+      ok.type = no.type = "button";
+      ok.addEventListener("click", () => {
+        closeDlg();
+        onYes();
+      });
+      no.addEventListener("click", closeDlg);
+      const row = el("div", "row");
+      row.append(ok, no);
+      box2.append(el("p", "", msg), row);
+    });
+  }
+
+  // src/esm/features/google-drive.js
+  var SCOPE = "https://www.googleapis.com/auth/drive.file";
+  var CID_RE = /^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/i;
+  var clientId = () => {
+    const c = ((S.ideas || {}).googlecfg || {}).cid;
+    return CID_RE.test(c || "") ? c : "";
+  };
+  var isAdmin = () => !!(S.me && S.me.is_admin);
+  var docId = (u) => {
+    const m = /\/document\/(?:u\/\d+\/)?d\/([A-Za-z0-9_-]{15,})/.exec(String(u || ""));
+    return m ? m[1] : "";
+  };
+  var gis = null;
+  var tok = null;
+  function loadGis() {
+    if (window.google && window.google.accounts && window.google.accounts.oauth2) return Promise.resolve();
+    if (gis) return gis;
+    gis = new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://accounts.google.com/gsi/client";
+      s.async = true;
+      s.onload = () => res();
+      s.onerror = () => {
+        gis = null;
+        rej(new Error("Could not load Google sign-in. Check your connection or an ad blocker."));
+      };
+      document.head.append(s);
+    });
+    return gis;
+  }
+  async function getToken() {
+    if (tok && tok.exp > Date.now() + 6e4) return tok.t;
+    const cid = clientId();
+    if (!cid) throw new Error("Google Drive is not set up yet.");
+    await loadGis();
+    return new Promise((res, rej) => {
+      const c = window.google.accounts.oauth2.initTokenClient({
+        client_id: cid,
+        scope: SCOPE,
+        include_granted_scopes: true,
+        callback: (r) => {
+          if (r && r.access_token) {
+            tok = { t: r.access_token, exp: Date.now() + (Number(r.expires_in) || 3e3) * 1e3 };
+            res(tok.t);
+          } else rej(new Error(r && (r.error_description || r.error) || "Google did not sign you in."));
+        },
+        error_callback: (e) => rej(new Error(e && e.type === "popup_closed" ? "The Google window was closed before you finished." : e && e.type === "popup_failed_to_open" ? "Your browser blocked the Google window. Allow pop-ups for this site and try again." : "Google sign-in failed."))
+      });
+      c.requestAccessToken({ prompt: tok ? "" : void 0 });
+    });
+  }
+  var API = "https://www.googleapis.com";
+  async function fail(r, what) {
+    let m = "";
+    try {
+      const j = await r.json();
+      m = j.error && (j.error.message || j.error) || "";
+    } catch (e) {
+    }
+    const err = new Error(r.status === 401 ? "Google sign-in expired. Click again to reconnect." : r.status === 403 && /accessNotConfigured|has not been used|disabled/i.test(m) ? "The Google Drive API is not enabled in your Google Cloud project (APIs & Services > Library > Google Drive API > Enable)." : what + " failed (" + r.status + ")" + (m ? ": " + String(m).slice(0, 140) : ""));
+    err.status = r.status;
+    if (r.status === 401) tok = null;
+    throw err;
+  }
+  async function exportDoc(o) {
+    const t = await getToken(), auth = { Authorization: "Bearer " + t };
+    if (o.fileId) {
+      const r2 = await fetch(API + "/upload/drive/v3/files/" + encodeURIComponent(o.fileId) + "?uploadType=media&fields=id", { method: "PATCH", headers: Object.assign({ "Content-Type": "text/html; charset=UTF-8" }, auth), body: o.html });
+      if (r2.ok) return { id: o.fileId, url: "https://docs.google.com/document/d/" + o.fileId + "/edit", created: false };
+      if (r2.status !== 404 && r2.status !== 403) await fail(r2, "Updating the Google Doc");
+    }
+    const b = "ynmo" + Math.random().toString(36).slice(2), meta = JSON.stringify({ name: o.name, mimeType: "application/vnd.google-apps.document" });
+    const body = "--" + b + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" + meta + "\r\n--" + b + "\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n" + o.html + "\r\n--" + b + "--";
+    const r = await fetch(API + "/upload/drive/v3/files?uploadType=multipart&fields=id", { method: "POST", headers: Object.assign({ "Content-Type": "multipart/related; boundary=" + b }, auth), body });
+    if (!r.ok) await fail(r, "Creating the Google Doc");
+    const j = await r.json();
+    if (!j.id) throw new Error("Google did not return the new document.");
+    return { id: j.id, url: "https://docs.google.com/document/d/" + j.id + "/edit", created: true };
+  }
+  function openDriveSetup(then) {
+    openDlg("Connect Google Drive (one-time setup)", (box2) => {
+      box2.append(el("p", "sub", "An admin does this once. Everyone on the team can then export with one click."));
+      const ol = el("ol", "gsteps");
+      [
+        'Open console.cloud.google.com and create a project (any name, for example "Ynmo Roadmaps").',
+        'APIs & Services > Library: search "Google Drive API" and click Enable.',
+        'APIs & Services > OAuth consent screen: choose Internal if your company uses Google Workspace, otherwise External. Fill the app name and your email. Add the scope .../auth/drive.file. For External, click "Publish app" so teammates are not limited to test users (this scope needs no Google review).',
+        "APIs & Services > Credentials > Create credentials > OAuth client ID > Web application. Under Authorized JavaScript origins add " + location.origin + " and create it.",
+        "Copy the Client ID (it ends with .apps.googleusercontent.com) and paste it below. It is not a secret."
+      ].forEach((t) => ol.append(el("li", "", t)));
+      const ci = el("input");
+      ci.type = "text";
+      ci.value = clientId();
+      ci.placeholder = "1234567890-abc123.apps.googleusercontent.com";
+      ci.setAttribute("aria-label", "Google OAuth Client ID");
+      ci.autocomplete = "off";
+      const msg = el("p", "sub");
+      msg.setAttribute("aria-live", "polite");
+      const ok = el("button", "btn primary", "Save"), no = el("button", "btn", "Cancel");
+      ok.type = no.type = "button";
+      no.addEventListener("click", closeDlg);
+      ok.addEventListener("click", () => {
+        const v = ci.value.trim();
+        if (!CID_RE.test(v)) {
+          msg.textContent = "That does not look like a Client ID. It ends with .apps.googleusercontent.com.";
+          return;
+        }
+        S.ideas.googlecfg = Object.assign({}, S.ideas.googlecfg || {}, { cfg: true, cid: v });
+        write("ideas/googlecfg", S.ideas.googlecfg);
+        logAct("sprint", "set up Google Drive export");
+        notify("Google Drive is set up");
+        closeDlg();
+        if (then) then();
+      });
+      const lab = el("label");
+      lab.append(el("span", "", "Client ID"), ci);
+      const row = el("div", "row");
+      row.append(ok, no);
+      box2.append(ol, lab, msg, row);
+      setTimeout(() => ci.focus(), 0);
+    });
+  }
+
   // src/esm/pages/reports.js
   var SPARK = '<svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8L2.5 17.5l1.8-.7z"/></svg>';
   var rUI = { busy: false, note: "", noteFor: "", err: false, wait: false, last: "" };
@@ -6902,7 +7262,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const m = /^#\/reports\/(\w+)/.exec(location.hash);
     return m ? m[1] : null;
   };
-  var allReports = () => Object.keys(S.reports).map((id) => Object.assign({ id }, S.reports[id]));
   var colOf = (p) => {
     const l = LANES.concat(EXTRA_SECTIONS).find((x) => (p.squads || []).includes(x.k));
     return l ? l.c : "var(--brand)";
@@ -6985,7 +7344,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       return;
     }
     const rep = { id, sp: wk.sp, n: wk.n, w: wk.w, a: wk.a, b: wk.b, status: "draft", pl: productsOf(cfg()), prods: {} };
-    rep.monthly = seedMonthly(rep, allReports());
     location.hash = "#/reports/" + id;
     sync(rep, false, true);
   }
@@ -7146,7 +7504,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     if (l.st === "risk" || l.st === "late") r.append(el("span", "chip rs-" + l.st, RSTATUS[l.st]));
     return r;
   }
-  function lineRow(rep, d, l, ro) {
+  function lineRow2(rep, d, l, ro) {
     if (ro) return viewLine(l);
     const r = el("div", "rline ln-" + l.st + (l.hide ? " hid" : ""));
     r.dataset.id = l.id;
@@ -7242,7 +7600,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       if (!ls.length && ro) return;
       const gh = el("div", "rgrp");
       gh.append(el("h3", "", g[1]));
-      ls.forEach((l) => gh.append(lineRow(rep, d, l, ro)));
+      ls.forEach((l) => gh.append(lineRow2(rep, d, l, ro)));
       if (!ro) {
         const f = el("form", "spadd"), ta = el("textarea"), go = el("button", "btn sm", "Add items");
         go.type = "submit";
@@ -7274,6 +7632,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
     return sec;
   }
+  var monthDocFor = (rep) => {
+    const d = S.reports["mo" + monthOf(rep.a).replace("-", "")];
+    return d && (!isViewer() || d.status === "submitted") ? d : null;
+  };
   var statsOf = (r) => {
     let all = 0, done2 = 0, prog = 0, risk = 0;
     Object.keys(r.prods || {}).forEach((k) => ((r.prods[k] || {}).items || []).filter((l) => !l.hide).forEach((l) => {
@@ -7285,7 +7647,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return { all, done: done2, prog, risk };
   };
   var copyReport = (rep) => {
-    const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso);
+    const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso, monthDocFor(rep));
     (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify("Report text copied to the clipboard"), () => notify("Could not copy. Select the text and copy it manually.", "err"));
   };
   var settingsBtn = () => {
@@ -7295,215 +7657,18 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     b.addEventListener("click", settingsDlg);
     return b;
   };
-  function quietSave(rep) {
-    const d = Object.assign({}, S.reports[rep.id], { monthly: rep.monthly });
-    S.reports[rep.id] = d;
-    write("reports/" + rep.id, d);
-    baseline[rep.id] = JSON.stringify(d);
-  }
-  var pctWord = (a, b) => {
-    const d = clampPct(a) - clampPct(b);
-    return d ? (d > 0 ? "+" : "") + d + " pts this week" : "";
-  };
-  function deliverableRow(rep, it, ro) {
-    const r = el("div", "mrow" + (it.adhoc ? " adhoc" : ""));
-    r.dataset.id = it.id;
-    const pct2 = clampPct(it.pct), dw = pctWord(it.pct, it.p0);
-    const bar2 = el("div", "mbar");
-    bar2.setAttribute("role", "progressbar");
-    bar2.setAttribute("aria-valuemin", "0");
-    bar2.setAttribute("aria-valuemax", "100");
-    bar2.setAttribute("aria-valuenow", String(pct2));
-    bar2.setAttribute("aria-label", "Completion of " + it.t);
-    const fill = el("i");
-    fill.style.width = pct2 + "%";
-    bar2.append(fill);
-    const delta = dw ? el("span", "mdelta " + (pct2 >= clampPct(it.p0) ? "up" : "down"), dw) : null;
-    if (ro) {
-      const t2 = el("span", "mt", it.t);
-      r.append(t2);
-      if (it.adhoc && (it.by || it.at)) r.append(el("span", "mby", "requested" + (it.by ? " by " + it.by : "") + (it.at ? " on " + fmtIso(it.at) : "")));
-      r.append(bar2, el("b", "mpv", pct2 + "%"));
-      if (delta) r.append(delta);
-      return r;
-    }
-    const put = (patch, label) => {
-      Object.assign(it, patch);
-      save(rep, "", label);
-    };
-    const t = el("input", "mt");
-    t.type = "text";
-    t.value = it.t;
-    t.maxLength = 300;
-    t.setAttribute("aria-label", it.adhoc ? "Ad hoc request" : "Deliverable");
-    t.addEventListener("change", () => {
-      const v = t.value.replace(/\s+/g, " ").trim();
-      if (!v) {
-        t.value = it.t;
-        return;
-      }
-      if (v !== it.t) {
-        put({ t: v }, "Rename deliverable");
-        renderReports();
-      }
-    });
-    r.append(t);
-    if (it.adhoc) {
-      const by = el("input", "mbyin");
-      by.type = "text";
-      by.value = it.by || "";
-      by.maxLength = 80;
-      by.placeholder = "Requested by";
-      by.setAttribute("aria-label", "Requested by");
-      by.addEventListener("change", () => put({ by: by.value.replace(/\s+/g, " ").trim() }, "Change requester"));
-      r.append(by);
-    }
-    const pi = el("input", "mpin");
-    pi.type = "number";
-    pi.min = 0;
-    pi.max = 100;
-    pi.step = 5;
-    pi.value = pct2;
-    pi.setAttribute("aria-label", "Percent complete");
-    pi.addEventListener("change", () => {
-      put({ pct: clampPct(pi.value) }, "Change completion");
+  var canDelete = (r) => canBuild() && (r.status !== "submitted" || isAdmin());
+  function deleteReport(rep) {
+    confirmDlg("Delete this weekly report?", "The report for the week of " + fmtIso(rep.a) + " is deleted for everyone" + (rep.status === "submitted" ? ", including the executives who can see it" : "") + ". The sprint and the roadmap are not touched.", "Delete report", () => {
+      delete S.reports[rep.id];
+      delete baseline[rep.id];
+      undoR(rep.id).clear();
+      write("reports/" + rep.id, null);
+      logAct("report", "deleted the weekly report for " + fmtIso(rep.a));
+      notify("Report deleted");
+      location.hash = "#/reports";
       renderReports();
     });
-    const full = el("button", "btn sm", pct2 >= 100 ? "✓ Done" : "100%");
-    full.type = "button";
-    full.title = "Mark as complete";
-    full.disabled = pct2 >= 100;
-    full.addEventListener("click", () => {
-      put({ pct: 100 }, "Mark deliverable complete");
-      renderReports();
-    });
-    r.append(bar2, pi, full);
-    if (delta) r.append(delta);
-    if (!it.adhoc) {
-      const w = el("select", "spsel");
-      w.setAttribute("aria-label", "Importance");
-      Object.keys(WEIGHTS).forEach((k) => {
-        const o = el("option", "", WEIGHTS[k]);
-        o.value = k;
-        o.selected = Number(k) === (it.w || 1);
-        w.append(o);
-      });
-      w.addEventListener("change", () => {
-        put({ w: Number(w.value) }, "Change importance");
-        renderReports();
-      });
-      r.append(w);
-    }
-    const x = el("button", "btn sm danger", "✕");
-    x.type = "button";
-    x.setAttribute("aria-label", "Remove");
-    x.addEventListener("click", () => {
-      rep.monthly.items = rep.monthly.items.filter((z) => z.id !== it.id);
-      save(rep, 'removed "' + it.t + '" from the monthly deliverables', "Remove deliverable");
-      renderReports();
-    });
-    r.append(x);
-    return r;
-  }
-  function monthlyBlock(rep, pls, ro) {
-    const mo = rep.monthly || { m: monthOf(rep.a), items: [] }, ks = new Set(pls.map((p) => p.k)), items2 = mo.items.filter((i) => ks.has(i.k));
-    if (ro && !items2.length) return null;
-    const sec = el("section", "rmonth");
-    sec.dataset.m = mo.m;
-    const prog = monthProgress(items2), ad = adhocStats(items2), hd = el("div", "rmhead");
-    hd.append(el("h2", "", "Monthly deliverables"), el("span", "rmmonth", monthLabel(mo.m)));
-    sec.append(hd);
-    if (prog.pct !== null) {
-      const o = el("div", "rmall"), bar2 = el("div", "mbar big"), fill = el("i");
-      fill.style.width = prog.pct + "%";
-      bar2.append(fill);
-      bar2.setAttribute("role", "progressbar");
-      bar2.setAttribute("aria-valuenow", String(prog.pct));
-      bar2.setAttribute("aria-valuemin", "0");
-      bar2.setAttribute("aria-valuemax", "100");
-      bar2.setAttribute("aria-label", "Month progress");
-      o.append(bar2, el("b", "rmpct", prog.pct + "%"), el("span", "rmsub", "complete · " + prog.done + " of " + prog.n + " deliverables done" + (ad.n ? " · " + ad.n + " ad hoc request" + (ad.n === 1 ? "" : "s") + " (" + ad.done + " done)" : "")));
-      sec.append(o);
-    }
-    if (!ro && !items2.length) {
-      sec.append(el("p", "rmhint", 'List what the business expects this month, then update the percentage each week. The list stays the same all month and carries into the next weekly reports. Ad hoc requests added by the business go under "Ad hoc requests".'));
-      const cf = carryFromLastMonth(rep, allReports());
-      if (cf) {
-        const b = el("button", "btn", "Copy " + cf.items.length + " unfinished from " + monthLabel(cf.from));
-        b.type = "button";
-        b.addEventListener("click", () => {
-          rep.monthly = { m: monthOf(rep.a), items: cf.items };
-          save(rep, "copied " + cf.items.length + " unfinished deliverables from " + monthLabel(cf.from), "Copy deliverables from last month");
-          renderReports();
-        });
-        sec.append(b);
-      }
-    }
-    pls.forEach((p) => {
-      const its = mo.items.filter((i) => i.k === p.k), pl = its.filter((i) => !i.adhoc), adh = its.filter((i) => i.adhoc);
-      if (ro && !its.length) return;
-      const blk = el("div", "rmp");
-      blk.dataset.k = p.k;
-      blk.style.setProperty("--c", colOf(p));
-      const pp = monthProgress(pl), ph = el("div", "rmph");
-      ph.append(el("h3", "", p.n));
-      if (pp.pct !== null) ph.append(el("span", "rmpp", pp.pct + "%"));
-      blk.append(ph);
-      pl.forEach((i) => blk.append(deliverableRow(rep, i, ro)));
-      if (!ro) {
-        const f = el("form", "spadd madd"), ti = el("input"), go = el("button", "btn sm", "Add deliverable");
-        ti.type = "text";
-        ti.maxLength = 300;
-        ti.placeholder = "Add a deliverable for " + p.n + " this month";
-        ti.setAttribute("aria-label", "Add a deliverable for " + p.n);
-        go.type = "submit";
-        f.append(ti, go);
-        f.addEventListener("submit", (e) => {
-          e.preventDefault();
-          const v = ti.value.trim();
-          if (!v) {
-            ti.focus();
-            return;
-          }
-          rep.monthly = rep.monthly || { m: monthOf(rep.a), items: [] };
-          rep.monthly.items.push(newDeliverable(p.k, v));
-          save(rep, "added a monthly deliverable for " + p.n, "Add deliverable");
-          renderReports();
-        });
-        blk.append(f);
-      }
-      if (adh.length || !ro) {
-        blk.append(el("h4", "rmadh", "Ad hoc requests"));
-        adh.forEach((i) => blk.append(deliverableRow(rep, i, ro)));
-        if (!ro) {
-          const f = el("form", "spadd madd"), ti = el("input"), by = el("input"), go = el("button", "btn sm", "Add request");
-          ti.type = by.type = "text";
-          ti.maxLength = 300;
-          by.maxLength = 80;
-          ti.placeholder = "Add an ad hoc request for " + p.n;
-          by.placeholder = "Requested by";
-          ti.setAttribute("aria-label", "Add an ad hoc request for " + p.n);
-          by.setAttribute("aria-label", "Requested by for the new request");
-          go.type = "submit";
-          f.append(ti, by, go);
-          f.addEventListener("submit", (e) => {
-            e.preventDefault();
-            const v = ti.value.trim();
-            if (!v) {
-              ti.focus();
-              return;
-            }
-            rep.monthly = rep.monthly || { m: monthOf(rep.a), items: [] };
-            rep.monthly.items.push(newDeliverable(p.k, v, { adhoc: true, by: by.value, at: todayIso() }));
-            save(rep, "added an ad hoc request for " + p.n, "Add ad hoc request");
-            renderReports();
-          });
-          blk.append(f);
-        }
-      }
-      sec.append(blk);
-    });
-    return sec;
   }
   function listView(pg, viewer, l) {
     const acts = el("div", "acts");
@@ -7527,12 +7692,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     }
     const wrap = el("div", "splist");
     l.forEach((r) => {
-      const st = statsOf(r), sub = r.status === "submitted", pct2 = st.all ? Math.round(100 * st.done / st.all) : 0;
+      const st = statsOf(r), sub2 = r.status === "submitted", pct2 = st.all ? Math.round(100 * st.done / st.all) : 0;
       const card = el("div", "card spcard rpcard"), info = el("div");
       const a = el("a", "splink");
       a.href = "#/reports/" + r.id;
       a.append(el("h2", "", "Week of " + fmtIso(r.a) + " – " + fmtIso(r.b)));
-      info.append(a, el("div", "meta", "Sprint " + r.n + " · week " + (r.w || 1) + " of 2 · " + (sub ? "submitted" + (r.subBy ? " by " + r.subBy : "") + (r.subAt ? " on " + fmtIso(r.subAt.slice(0, 10)) : "") : "last edit " + (r.by || "unknown"))));
+      info.append(a, el("div", "meta", "Sprint " + r.n + " · week " + (r.w || 1) + " of 2 · " + (sub2 ? "submitted" + (r.subBy ? " by " + r.subBy : "") + (r.subAt ? " on " + fmtIso(r.subAt.slice(0, 10)) : "") : "last edit " + (r.by || "unknown"))));
       const pr = el("div", "prods");
       (r.pl || []).filter((p) => r.prods && r.prods[p.k]).forEach((p) => {
         const c = el("span", "pchip", p.n);
@@ -7541,10 +7706,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       });
       info.append(pr);
       const prog = el("div", "spprog"), top = el("div", "rpstat");
-      top.append(el("span", "chip rpst " + (sub ? "sub" : "draft"), sub ? "Submitted" : "Draft"));
+      top.append(el("span", "chip rpst " + (sub2 ? "sub" : "draft"), sub2 ? "Submitted" : "Draft"));
       prog.append(top, el("div", "meta", st.done + " delivered · " + st.prog + " in progress" + (st.risk ? " · " + st.risk + " at risk" : "")));
-      const mp = monthProgress((r.monthly || {}).items || []);
-      if (mp.pct !== null) prog.append(el("div", "meta mpl", monthLabel(r.monthly.m) + " deliverables: " + mp.pct + "% complete"));
       const b0 = el("div", "bar0"), i0 = el("i");
       i0.style.width = pct2 + "%";
       b0.append(i0);
@@ -7553,11 +7716,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       more.type = "button";
       more.setAttribute("aria-label", "More actions for the week of " + fmtIso(r.a));
       more.setAttribute("aria-haspopup", "menu");
-      more.addEventListener("click", () => openMenu(more, [{ label: "Open in new tab", value: "tab" }, { label: "Copy text", value: "copy" }], {
+      more.addEventListener("click", () => openMenu(more, [{ label: "Open in new tab", value: "tab" }, { label: "Copy text", value: "copy" }].concat(canDelete(r) ? [{ label: "Delete report", value: "del", danger: true }] : []), {
         search: false,
         label: "Report actions",
         onPick: (it) => {
           if (it.value === "tab") window.open(location.pathname + location.search + "#/reports/" + r.id, "_blank", "noopener");
+          else if (it.value === "del") deleteReport(r);
           else copyReport(r);
         },
         onClose: () => more.focus()
@@ -7569,17 +7733,13 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   }
   function detailView(pg, viewer, rep) {
     if (S.reports[rep.id]) baseline[rep.id] = JSON.stringify(S.reports[rep.id]);
-    const sub = rep.status === "submitted", ro = viewer || sub || !canBuild();
-    if (!ro && (!rep.monthly || rep.monthly.m !== monthOf(rep.a))) {
-      rep.monthly = seedMonthly(rep, allReports());
-      if (rep.monthly.items.length) quietSave(rep);
-    }
+    const sub2 = rep.status === "submitted", ro = viewer || sub2 || !canBuild();
     pg.append(crumbs([{ label: "Reports", href: "#/reports" }, { label: "Week of " + fmtIso(rep.a) }]));
     pg.append(pageHead("Weekly report", "Sprint " + rep.n + " · week " + (rep.w || 1) + " of 2" + (viewer ? "" : ro ? ". Submitted reports are read-only." : ". Edit anything, then submit it to the executives.")));
     const sb0 = viewer ? null : setupBanner();
     if (sb0) pg.append(sb0);
     const srcTxt = rep.srcN ? " · built from " + rep.srcN.si + " sprint items + " + rep.srcN.rf + " roadmap bars" : "";
-    const meta = el("p", "sub rmeta", sub ? "Submitted" + (rep.subBy ? " by " + rep.subBy : "") + (rep.subAt ? " on " + fmtIso(rep.subAt.slice(0, 10)) : "") : "Draft" + (rep.ai ? " · wording by " + (rep.ai.model || "AI") : "") + " · last edit " + (rep.by || "") + srcTxt);
+    const meta = el("p", "sub rmeta", sub2 ? "Submitted" + (rep.subBy ? " by " + rep.subBy : "") + (rep.subAt ? " on " + fmtIso(rep.subAt.slice(0, 10)) : "") : "Draft" + (rep.ai ? " · wording by " + (rep.ai.model || "AI") : "") + " · last edit " + (rep.by || "") + srcTxt);
     const tools = el("div", "row spbar rtools");
     const btn = (t, cls, fn, dis) => {
       const b = el("button", "btn " + (cls || ""), t);
@@ -7589,7 +7749,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       tools.append(b);
       return b;
     };
-    if (!viewer && !sub) {
+    if (!viewer && !sub2) {
       btn("Sync from Sprint & Roadmap", "", () => sync(rep, false), !canBuild() || rUI.busy);
       const ab = btn("", "ai", () => sync(rep, true), !canBuild() || rUI.busy);
       ab.insertAdjacentHTML("afterbegin", SPARK);
@@ -7597,7 +7757,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       ab.title = "Rewrites unedited lines and summaries in executive wording. Your edits are kept.";
       tools.prepend(ab);
     }
-    if (!viewer && !sub) {
+    if (!viewer && !sub2) {
       const U = undoR(rep.id), ub = btn("↶ Undo", "", () => reportUndo("undo"), true), rb = btn("↷ Redo", "", () => reportUndo("redo"), true);
       const upd = () => {
         ub.disabled = !U.canUndo() || !canBuild();
@@ -7619,8 +7779,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       window.addEventListener("afterprint", off);
       window.print();
     });
-    if (!viewer && !sub) tools.append(settingsBtn());
-    if (!viewer && !sub) btn("Submit to executives", "primary", () => {
+    if (!viewer && !sub2) tools.append(settingsBtn());
+    if (canDelete(rep)) {
+      const db = btn("Delete report", "danger", () => deleteReport(rep));
+      db.classList.add("rdel");
+    }
+    if (!viewer && !sub2) btn("Submit to executives", "primary", () => {
       rep.status = "submitted";
       rep.subAt = (/* @__PURE__ */ new Date()).toISOString();
       rep.subBy = S.me.name || S.me.email;
@@ -7628,7 +7792,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       notify("Report submitted. Executives can now see it.");
       renderReports();
     }, !canBuild());
-    if (!viewer && sub) btn("Reopen as draft", "", () => {
+    if (!viewer && sub2) btn("Reopen as draft", "", () => {
       rep.status = "draft";
       delete rep.subAt;
       delete rep.subBy;
@@ -7650,12 +7814,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       glance.append(t);
     });
     body.append(glance);
-    const mb = monthlyBlock(rep, pls, ro);
+    const mb = monthSummary(S.reports["mo" + monthOf(rep.a).replace("-", "")], pls, colOf, viewer);
     if (mb) body.append(mb);
     if (!ro) body.append(richBar());
     pls.forEach((p) => body.append(prodBlock(rep, p, ro)));
     pg.append(meta, tools);
-    if (rUI.note && rUI.noteFor === rep.id && !viewer && !sub) {
+    if (rUI.note && rUI.noteFor === rep.id && !viewer && !sub2) {
       const nt = el("p", "rnote" + (rUI.err ? " bad" : ""), rUI.note);
       nt.setAttribute("role", "status");
       pg.append(nt);
@@ -7978,132 +8142,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     }
   }
 
-  // src/esm/features/google-drive.js
-  var SCOPE = "https://www.googleapis.com/auth/drive.file";
-  var CID_RE = /^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/i;
-  var clientId = () => {
-    const c = ((S.ideas || {}).googlecfg || {}).cid;
-    return CID_RE.test(c || "") ? c : "";
-  };
-  var isAdmin = () => !!(S.me && S.me.is_admin);
-  var docId = (u) => {
-    const m = /\/document\/(?:u\/\d+\/)?d\/([A-Za-z0-9_-]{15,})/.exec(String(u || ""));
-    return m ? m[1] : "";
-  };
-  var gis = null;
-  var tok = null;
-  function loadGis() {
-    if (window.google && window.google.accounts && window.google.accounts.oauth2) return Promise.resolve();
-    if (gis) return gis;
-    gis = new Promise((res, rej) => {
-      const s = document.createElement("script");
-      s.src = "https://accounts.google.com/gsi/client";
-      s.async = true;
-      s.onload = () => res();
-      s.onerror = () => {
-        gis = null;
-        rej(new Error("Could not load Google sign-in. Check your connection or an ad blocker."));
-      };
-      document.head.append(s);
-    });
-    return gis;
-  }
-  async function getToken() {
-    if (tok && tok.exp > Date.now() + 6e4) return tok.t;
-    const cid = clientId();
-    if (!cid) throw new Error("Google Drive is not set up yet.");
-    await loadGis();
-    return new Promise((res, rej) => {
-      const c = window.google.accounts.oauth2.initTokenClient({
-        client_id: cid,
-        scope: SCOPE,
-        include_granted_scopes: true,
-        callback: (r) => {
-          if (r && r.access_token) {
-            tok = { t: r.access_token, exp: Date.now() + (Number(r.expires_in) || 3e3) * 1e3 };
-            res(tok.t);
-          } else rej(new Error(r && (r.error_description || r.error) || "Google did not sign you in."));
-        },
-        error_callback: (e) => rej(new Error(e && e.type === "popup_closed" ? "The Google window was closed before you finished." : e && e.type === "popup_failed_to_open" ? "Your browser blocked the Google window. Allow pop-ups for this site and try again." : "Google sign-in failed."))
-      });
-      c.requestAccessToken({ prompt: tok ? "" : void 0 });
-    });
-  }
-  var API = "https://www.googleapis.com";
-  async function fail(r, what) {
-    let m = "";
-    try {
-      const j = await r.json();
-      m = j.error && (j.error.message || j.error) || "";
-    } catch (e) {
-    }
-    const err = new Error(r.status === 401 ? "Google sign-in expired. Click again to reconnect." : r.status === 403 && /accessNotConfigured|has not been used|disabled/i.test(m) ? "The Google Drive API is not enabled in your Google Cloud project (APIs & Services > Library > Google Drive API > Enable)." : what + " failed (" + r.status + ")" + (m ? ": " + String(m).slice(0, 140) : ""));
-    err.status = r.status;
-    if (r.status === 401) tok = null;
-    throw err;
-  }
-  async function exportDoc(o) {
-    const t = await getToken(), auth = { Authorization: "Bearer " + t };
-    if (o.fileId) {
-      const r2 = await fetch(API + "/upload/drive/v3/files/" + encodeURIComponent(o.fileId) + "?uploadType=media&fields=id", { method: "PATCH", headers: Object.assign({ "Content-Type": "text/html; charset=UTF-8" }, auth), body: o.html });
-      if (r2.ok) return { id: o.fileId, url: "https://docs.google.com/document/d/" + o.fileId + "/edit", created: false };
-      if (r2.status !== 404 && r2.status !== 403) await fail(r2, "Updating the Google Doc");
-    }
-    const b = "ynmo" + Math.random().toString(36).slice(2), meta = JSON.stringify({ name: o.name, mimeType: "application/vnd.google-apps.document" });
-    const body = "--" + b + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" + meta + "\r\n--" + b + "\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n" + o.html + "\r\n--" + b + "--";
-    const r = await fetch(API + "/upload/drive/v3/files?uploadType=multipart&fields=id", { method: "POST", headers: Object.assign({ "Content-Type": "multipart/related; boundary=" + b }, auth), body });
-    if (!r.ok) await fail(r, "Creating the Google Doc");
-    const j = await r.json();
-    if (!j.id) throw new Error("Google did not return the new document.");
-    return { id: j.id, url: "https://docs.google.com/document/d/" + j.id + "/edit", created: true };
-  }
-  function openDriveSetup(then) {
-    openDlg("Connect Google Drive (one-time setup)", (box2) => {
-      box2.append(el("p", "sub", "An admin does this once. Everyone on the team can then export with one click."));
-      const ol = el("ol", "gsteps");
-      [
-        'Open console.cloud.google.com and create a project (any name, for example "Ynmo Roadmaps").',
-        'APIs & Services > Library: search "Google Drive API" and click Enable.',
-        'APIs & Services > OAuth consent screen: choose Internal if your company uses Google Workspace, otherwise External. Fill the app name and your email. Add the scope .../auth/drive.file. For External, click "Publish app" so teammates are not limited to test users (this scope needs no Google review).',
-        "APIs & Services > Credentials > Create credentials > OAuth client ID > Web application. Under Authorized JavaScript origins add " + location.origin + " and create it.",
-        "Copy the Client ID (it ends with .apps.googleusercontent.com) and paste it below. It is not a secret."
-      ].forEach((t) => ol.append(el("li", "", t)));
-      const ci = el("input");
-      ci.type = "text";
-      ci.value = clientId();
-      ci.placeholder = "1234567890-abc123.apps.googleusercontent.com";
-      ci.setAttribute("aria-label", "Google OAuth Client ID");
-      ci.autocomplete = "off";
-      const msg = el("p", "sub");
-      msg.setAttribute("aria-live", "polite");
-      const ok = el("button", "btn primary", "Save"), no = el("button", "btn", "Cancel");
-      ok.type = no.type = "button";
-      no.addEventListener("click", closeDlg);
-      ok.addEventListener("click", () => {
-        const v = ci.value.trim();
-        if (!CID_RE.test(v)) {
-          msg.textContent = "That does not look like a Client ID. It ends with .apps.googleusercontent.com.";
-          return;
-        }
-        S.ideas.googlecfg = Object.assign({}, S.ideas.googlecfg || {}, { cfg: true, cid: v });
-        write("ideas/googlecfg", S.ideas.googlecfg);
-        logAct("sprint", "set up Google Drive export");
-        notify("Google Drive is set up");
-        closeDlg();
-        if (then) then();
-      });
-      const lab = el("label");
-      lab.append(el("span", "", "Client ID"), ci);
-      const row = el("div", "row");
-      row.append(ok, no);
-      box2.append(ol, lab, msg, row);
-      setTimeout(() => ci.focus(), 0);
-    });
-  }
-
   // src/esm/pages/sprints.js
   var iso3 = (t) => new Date(t).toISOString().slice(0, 10);
-  var uid2 = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  var uid3 = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   var routeId2 = () => {
     const m = /^#\/sprints\/(\w+)/.exec(location.hash);
     return m ? m[1] : null;
@@ -8168,24 +8209,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   function delItem(id) {
     putItem(id, null);
   }
-  function confirmDlg(title, msg, yes, onYes) {
-    openDlg(title, (box2) => {
-      const ok = el("button", "btn danger", yes), no = el("button", "btn", "Cancel");
-      ok.type = no.type = "button";
-      ok.addEventListener("click", () => {
-        closeDlg();
-        onYes();
-      });
-      no.addEventListener("click", closeDlg);
-      const row = el("div", "row");
-      row.append(ok, no);
-      box2.append(el("p", "", msg), row);
-    });
-  }
   function newSprint() {
     const l = sprintList(), last = l[0];
     const n = last ? last.n + 1 : 1, a = last ? iso3(parseIso(last.b) + DAY) : iso3(Date.now());
-    const id = S.sprints["sp" + n] ? uid2("sp") : "sp" + n;
+    const id = S.sprints["sp" + n] ? uid3("sp") : "sp" + n;
     saveSprint(id, { n, a, b: iso3(parseIso(a) + 13 * DAY), note: "", tags: {} });
     logAct("sprint", "created Sprint " + n + " (" + fmtIso(a) + ")");
     notify("Sprint " + n + " created. Choose the dates, then press / to add a product section.");
@@ -8296,7 +8323,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     if (!legacy.length && !(Object.keys(sp.secs || {}).length && !all.length)) return;
     const plan = migrate(sp, legacy, (k) => lane(k).n);
     plan.forEach((p) => {
-      const id = p.id || uid2("si");
+      const id = p.id || uid3("si");
       S.sitems[id] = p.doc;
       write("sprint_items/" + id, p.doc);
     });
@@ -8306,9 +8333,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     saveSprint(sp.id, d);
   }
   function ensureTag(spId, name, color) {
-    const cur2 = tagMap(spId);
-    if (cur2[name] && !color) return cur2[name];
-    const c = color || TAG_COLORS[Object.keys(cur2).length % TAG_COLORS.length], d = base2({ id: spId });
+    const cur3 = tagMap(spId);
+    if (cur3[name] && !color) return cur3[name];
+    const c = color || TAG_COLORS[Object.keys(cur3).length % TAG_COLORS.length], d = base2({ id: spId });
     d.tags = Object.assign({}, d.tags || {}, { [name]: c });
     saveSprint(spId, d);
     return c;
@@ -8379,7 +8406,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       const all = list(), i = afterId ? all.findIndex((b2) => b2.id === afterId) : all.length - 1, a = i >= 0 ? all[i].ord : void 0, b = i >= 0 && all[i + 1] ? all[i + 1].ord : void 0;
       const ords = ordBetween(a, b, specs.length), ids = [];
       specs.forEach((s, n) => {
-        const id = uid2("si");
+        const id = uid3("si");
         ids.push(id);
         const d = { sp: spId, k: s.k, t: s.t || "", st: "planned", dn: "", tags: (s.tags || []).slice(), ord: ords[n] };
         if (s.sq) d.sq = s.sq;
@@ -8494,8 +8521,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       }
     });
     const tagMenu = (b, at) => {
-      const cur2 = tagMap(spId), have = new Set(b.tags || []), used = new Set(list().flatMap((x) => x.tags || []));
-      const items2 = Object.keys(cur2).concat([...used].filter((n) => !cur2[n])).filter((n, i, a) => a.indexOf(n) === i && !have.has(n)).map((n) => ({ label: "#" + n, dot: "var(--tg-" + (cur2[n] || "gray") + ")", value: n }));
+      const cur3 = tagMap(spId), have = new Set(b.tags || []), used = new Set(list().flatMap((x) => x.tags || []));
+      const items2 = Object.keys(cur3).concat([...used].filter((n) => !cur3[n])).filter((n, i, a) => a.indexOf(n) === i && !have.has(n)).map((n) => ({ label: "#" + n, dot: "var(--tg-" + (cur3[n] || "gray") + ")", value: n }));
       openMenu(at, items2, {
         label: "Add a tag",
         placeholder: "Find or create a tag",
@@ -8660,15 +8687,15 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       redraw();
     };
     const handleMenu = (b, x) => {
-      const cur2 = S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, into = b.k === "h" ? [] : ["s", "u", "n"].filter((k) => k !== b.k).map((k) => ({ label: "Turn into " + KIND_NAME[k].toLowerCase(), value: "k:" + k }));
+      const cur3 = S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, into = b.k === "h" ? [] : ["s", "u", "n"].filter((k) => k !== b.k).map((k) => ({ label: "Turn into " + KIND_NAME[k].toLowerCase(), value: "k:" + k }));
       const all = list(), g = groupOf(all, all.findIndex((z) => z.id === b.id));
       setPicked(g.map((z) => z.id));
       openMenu(x, [{ label: "Move up", value: "up" }, { label: "Move down", value: "down" }].concat(into, [{ label: "Delete", value: "del" }]), {
         label: "Line options",
         onPick: (it) => {
-          if (it.value === "up") move(cur2, -1);
-          else if (it.value === "down") move(cur2, 1);
-          else if (it.value === "del") removeGroup(cur2);
+          if (it.value === "up") move(cur3, -1);
+          else if (it.value === "down") move(cur3, 1);
+          else if (it.value === "del") removeGroup(cur3);
           else {
             saveItem(b.id, { k: it.value.slice(2) });
             redraw(b.id);
@@ -9026,8 +9053,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     if (unsubBar) unsubBar();
     unsubBar = U.subscribe(sync2);
     sync2();
-    const bar2 = el("div", "row spbar");
-    bar2.append(ab, cb, jb, ub, rb);
+    const bar3 = el("div", "row spbar");
+    bar3.append(ab, cb, jb, ub, rb);
     const gd = el("div", "spgdoc"), gi = el("input");
     gi.type = "url";
     gi.placeholder = "Paste a Google Doc link (optional)";
@@ -9043,7 +9070,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     cp.title = "Copies the plan as formatted text and opens the doc. Press Ctrl/Cmd+V there. Needs no Google sign-in.";
     const plan = () => sprintDoc({ n: sp.n, a: sp.a, b: sp.b }, blocksOf(sp.id), { laneName: (k) => lane(k).n, jiraUrl: (k) => jiraUrl((S.ideas.reportcfg || {}).jira, k), fmt: fmtIso });
     const setLink = (u, id) => {
-      const cur2 = Object.assign({ id: sp.id }, S.sprints[sp.id]), d = Object.assign(base2(cur2), u ? { gdoc: u } : {});
+      const cur3 = Object.assign({ id: sp.id }, S.sprints[sp.id]), d = Object.assign(base2(cur3), u ? { gdoc: u } : {});
       if (id) d.gdocId = id;
       if (!u) {
         delete d.gdoc;
@@ -9101,7 +9128,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       else notify("Google Drive is not set up yet. Ask an admin to click Export to Google Docs once to set it up. You can use Copy for Docs meanwhile.", "info");
     });
     gd.append(gi, eb, cp, ob);
-    pg.append(dr, bar2, gd, ed);
+    pg.append(dr, bar3, gd, ed);
   }
   function renderSprints(o) {
     const pg = $("pg-sprints");
@@ -9122,6 +9149,293 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   }
   window.addEventListener("hashchange", () => {
     if (state.page === "sprints") renderSprints();
+  });
+
+  // src/esm/pages/monthly.js
+  var rUI2 = { last: "" };
+  var routeMo = () => {
+    const m = /^#\/monthly\/(\d{4}-\d{2})/.exec(location.hash);
+    return m ? m[1] : null;
+  };
+  var cfg2 = () => S.ideas.reportcfg || {};
+  var colOf2 = (p) => {
+    const l = LANES.concat(EXTRA_SECTIONS).find((x) => (p.squads || []).includes(x.k));
+    return l ? l.c : "var(--brand)";
+  };
+  var canBuild2 = () => !isViewer() && canWrite();
+  var monthList = () => Object.keys(S.reports).filter((id) => S.reports[id] && S.reports[id].mo).map((id) => Object.assign({ id, lines: [] }, S.reports[id])).filter((d) => !isViewer() || d.status === "submitted").sort((x, y) => x.mo < y.mo ? 1 : -1);
+  var cur2 = () => {
+    const m = routeMo();
+    return m ? monthList().find((d) => d.mo === m) || null : null;
+  };
+  var undoers3 = {};
+  var baseline2 = {};
+  var undoM = (id) => {
+    const k = (S.me && S.me.id || "me") + ":" + id;
+    return undoers3[k] || (undoers3[k] = createUndo(60));
+  };
+  var noStamp2 = (d) => {
+    const c = JSON.parse(JSON.stringify(d));
+    delete c.by;
+    delete c.ts;
+    return JSON.stringify(c);
+  };
+  function save2(doc2, log, label) {
+    const id = doc2.id, d = Object.assign({}, doc2);
+    delete d.id;
+    d.by = S.me && (S.me.name || S.me.email) || "";
+    d.ts = Date.now();
+    S.reports[id] = d;
+    write("reports/" + id, d);
+    const before = baseline2[id] ? JSON.parse(baseline2[id]) : null, after = JSON.parse(JSON.stringify(d));
+    if (before && before.status !== after.status) undoM(id).clear();
+    else if (before && noStamp2(before) !== noStamp2(after)) {
+      const U = undoM(id);
+      U.mark(label || "Edit");
+      U.rec(id, before, after);
+    }
+    baseline2[id] = JSON.stringify(after);
+    if (log) logAct("report", log);
+  }
+  var unsubM = null;
+  function monthUndo(dir) {
+    const doc2 = cur2();
+    if (!doc2 || doc2.status === "submitted" || !canBuild2()) return;
+    const r = undoM(doc2.id).step(dir, (id) => S.reports[id], (id, d) => {
+      if (!d) return;
+      S.reports[id] = d;
+      write("reports/" + id, d);
+      baseline2[id] = JSON.stringify(d);
+    }), word = dir === "undo" ? "Undo" : "Redo";
+    if (!r) {
+      notify("Nothing to " + word.toLowerCase(), "info");
+      return;
+    }
+    notify(r.done ? word + ": " + r.label : "Someone else changed this month after you, so nothing was " + (dir === "undo" ? "undone" : "redone"), r.done ? "ok" : "info");
+    renderMonthly();
+  }
+  registerUndo("monthly", { ready: () => {
+    const d = cur2();
+    return !!d && d.status !== "submitted" && canBuild2();
+  }, undo: () => monthUndo("undo"), redo: () => monthUndo("redo") });
+  var productsFor = (doc2) => {
+    const pl = doc2.pl && doc2.pl.length ? doc2.pl.slice() : productsOf(cfg2());
+    EXTRA_SECTIONS.forEach((x) => {
+      if (doc2.lines.some((l) => l.k === x.k) && !pl.some((q) => q.k === x.k)) pl.push({ k: x.k, n: x.n, squads: [x.k] });
+    });
+    return pl;
+  };
+  var allMonthDocs = () => Object.keys(S.reports).filter((id) => S.reports[id] && S.reports[id].mo).map((id) => Object.assign({ id }, S.reports[id]));
+  function roadFeatures(m) {
+    const r = monthRange(m), out = [];
+    allRoadmaps().filter((x) => x.a <= r.b && x.b >= r.a).forEach((rm) => withRm(rm.id, () => items().forEach((i) => {
+      if (i.d0 === void 0) return;
+      out.push({ id: rm.id + ":" + i.id, t: i.t, sq: i.sq, a: iso(i.d0), b: iso(i.d1), st: i.st, ms: !!i.ms });
+    })));
+    return out;
+  }
+  function newMonth(m) {
+    const id = monthId(m);
+    if (S.reports[id]) {
+      location.hash = "#/monthly/" + m;
+      return;
+    }
+    const doc2 = { id, mo: m, status: "draft", pl: productsOf(cfg2()), lines: [] };
+    location.hash = "#/monthly/" + m;
+    save2(doc2, "created the monthly deliverables for " + monthLabel(m));
+    notify(monthLabel(m) + ` created. Use "Sync from Roadmap" to bring this month's features.`);
+    renderMonthly();
+  }
+  function syncRoad(doc2) {
+    doc2.pl = productsFor(doc2);
+    const r = mergeRoad(doc2.lines, roadFeatures(doc2.mo), doc2.pl, doc2.mo, todayIso());
+    doc2.lines = r.lines;
+    doc2.syncAt = (/* @__PURE__ */ new Date()).toISOString();
+    save2(doc2, "synced the monthly deliverables for " + monthLabel(doc2.mo) + " from the roadmap", "Sync from Roadmap");
+    notify(r.added || r.updated ? "Roadmap sync: " + r.added + " added, " + r.updated + " estimates refreshed" + (r.skipped ? ", " + r.skipped + " not in any product" : "") : r.skipped ? r.skipped + " roadmap feature" + (r.skipped === 1 ? "" : "s") + " not in any product (see Report settings)" : "No roadmap feature falls in " + monthLabel(doc2.mo), r.added || r.updated ? "ok" : "info");
+    renderMonthly();
+  }
+  var canDelete2 = (d) => canBuild2() && (d.status !== "submitted" || isAdmin());
+  function deleteMonth(doc2) {
+    confirmDlg("Delete " + monthLabel(doc2.mo) + "?", "The monthly deliverables of " + monthLabel(doc2.mo) + " are deleted for everyone" + (doc2.status === "submitted" ? ", including the executives who can see them" : "") + ".", "Delete month", () => {
+      delete S.reports[doc2.id];
+      delete baseline2[doc2.id];
+      undoM(doc2.id).clear();
+      write("reports/" + doc2.id, null);
+      logAct("report", "deleted the monthly deliverables for " + monthLabel(doc2.mo));
+      notify("Month deleted");
+      location.hash = "#/monthly";
+      renderMonthly();
+    });
+  }
+  var copyMonth = (doc2) => {
+    const txt = monthText(doc2, productsFor(doc2), fmtIso).join("\n");
+    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify("Month text copied to the clipboard"), () => notify("Could not copy. Select the text and copy it manually.", "err"));
+  };
+  function listView3(pg, viewer, l) {
+    const acts = el("div", "acts");
+    if (!viewer) {
+      const have = new Set(l.map((d) => d.mo));
+      let m = monthOf(todayIso());
+      if (have.has(m)) m = nextMonth(m);
+      const nb = el("button", "btn primary", "+ New month (" + monthLabel(m) + ")");
+      nb.type = "button";
+      nb.disabled = !canBuild2();
+      nb.addEventListener("click", () => newMonth(m));
+      acts.append(nb);
+    }
+    pg.append(pageHead("Monthly deliverables", viewer ? "What each product committed to this month and how far it is. Open one to read it." : "What the business expects each month, per product, with the percentage complete. Bring the features from the Roadmap, adjust the percentages, then submit it to the executives.", acts.children.length ? acts : null));
+    const sb0 = viewer ? null : setupBanner();
+    if (sb0) pg.append(sb0);
+    if (!l.length) {
+      pg.append(el("p", "empty", viewer ? "No month has been submitted yet." : 'No month yet. Click "+ New month", then "Sync from Roadmap".'));
+      return;
+    }
+    const wrap = el("div", "splist");
+    l.forEach((d) => {
+      const prog = monthProgress(d.lines), sub2 = d.status === "submitted", card = el("div", "card spcard rpcard"), info = el("div");
+      const a = el("a", "splink");
+      a.href = "#/monthly/" + d.mo;
+      a.append(el("h2", "", monthLabel(d.mo)));
+      info.append(a, el("div", "meta", sub2 ? "submitted" + (d.subBy ? " by " + d.subBy : "") + (d.subAt ? " on " + fmtIso(d.subAt.slice(0, 10)) : "") : "last edit " + (d.by || "unknown")));
+      const pr = el("div", "prods");
+      (d.pl || []).filter((p) => d.lines.some((x) => x.k === p.k)).forEach((p) => {
+        const c = el("span", "pchip", p.n);
+        c.style.setProperty("--c", colOf2(p));
+        pr.append(c);
+      });
+      info.append(pr);
+      const pg2 = el("div", "spprog"), top = el("div", "rpstat");
+      top.append(el("span", "chip rpst " + (sub2 ? "sub" : "draft"), sub2 ? "Submitted" : "Draft"));
+      pg2.append(top, el("div", "meta", prog.pct === null ? "No deliverables yet" : prog.pct + "% complete · " + prog.done + " of " + prog.n + " done"));
+      const b0 = el("div", "bar0"), i0 = el("i");
+      i0.style.width = (prog.pct || 0) + "%";
+      b0.append(i0);
+      pg2.append(b0);
+      const more = el("button", "btn sm spmore", "⋯");
+      more.type = "button";
+      more.setAttribute("aria-label", "More actions for " + monthLabel(d.mo));
+      more.setAttribute("aria-haspopup", "menu");
+      more.addEventListener("click", () => openMenu(more, [{ label: "Open in new tab", value: "tab" }, { label: "Copy text", value: "copy" }].concat(canDelete2(d) ? [{ label: "Delete month", value: "del" }] : []), {
+        search: false,
+        label: "Month actions",
+        onPick: (it) => {
+          if (it.value === "tab") window.open(location.pathname + location.search + "#/monthly/" + d.mo, "_blank", "noopener");
+          else if (it.value === "del") deleteMonth(d);
+          else copyMonth(d);
+        },
+        onClose: () => more.focus()
+      }));
+      card.append(info, pg2, more);
+      wrap.append(card);
+    });
+    pg.append(wrap);
+  }
+  function detailView3(pg, viewer, doc2) {
+    if (S.reports[doc2.id]) baseline2[doc2.id] = JSON.stringify(S.reports[doc2.id]);
+    const sub2 = doc2.status === "submitted", ro = viewer || sub2 || !canBuild2();
+    pg.append(crumbs([{ label: "Monthly", href: "#/monthly" }, { label: monthLabel(doc2.mo) }]));
+    pg.append(pageHead("Monthly deliverables", monthLabel(doc2.mo) + (viewer ? "" : ro ? ". Submitted months are read-only." : ". Edit anything, then submit it to the executives.")));
+    const sb0 = viewer ? null : setupBanner();
+    if (sb0) pg.append(sb0);
+    pg.append(el("p", "sub rmeta", sub2 ? "Submitted" + (doc2.subBy ? " by " + doc2.subBy : "") + (doc2.subAt ? " on " + fmtIso(doc2.subAt.slice(0, 10)) : "") : "Draft · last edit " + (doc2.by || "") + (doc2.syncAt ? " · roadmap synced " + fmtIso(doc2.syncAt.slice(0, 10)) : "")));
+    const tools = el("div", "row spbar rtools");
+    const btn = (t, cls, fn, dis) => {
+      const b = el("button", "btn " + (cls || ""), t);
+      b.type = "button";
+      b.disabled = !!dis;
+      b.addEventListener("click", fn);
+      tools.append(b);
+      return b;
+    };
+    if (!ro) {
+      btn("Sync from Roadmap", "primary", () => syncRoad(doc2), !canBuild2()).title = "Brings this month's roadmap features into their product with an estimated percentage. Percentages you set are never overwritten.";
+      const U = undoM(doc2.id), ub = btn("↶ Undo", "", () => monthUndo("undo"), true), rb = btn("↷ Redo", "", () => monthUndo("redo"), true);
+      const upd = () => {
+        ub.disabled = !U.canUndo();
+        rb.disabled = !U.canRedo();
+        ub.title = ub.ariaLabel = U.canUndo() ? "Undo: " + U.nextUndo() + " (Ctrl/Cmd+Z)" : "Nothing to undo";
+        rb.title = rb.ariaLabel = U.canRedo() ? "Redo: " + U.nextRedo() + " (Ctrl/Cmd+Shift+Z)" : "Nothing to redo";
+      };
+      if (unsubM) unsubM();
+      unsubM = U.subscribe(upd);
+      upd();
+      if (!doc2.lines.length) {
+        const cf = carryFromLastMonth(doc2, allMonthDocs());
+        if (cf) btn("Copy " + cf.lines.length + " unfinished from " + monthLabel(cf.from), "", () => {
+          doc2.lines = doc2.lines.concat(cf.lines);
+          save2(doc2, "copied " + cf.lines.length + " unfinished deliverables from " + monthLabel(cf.from), "Copy from last month");
+          renderMonthly();
+        });
+      }
+    }
+    btn("Copy text", "", () => copyMonth(doc2));
+    btn("Print / PDF", "", () => {
+      document.body.classList.add("print-report");
+      const off = () => {
+        document.body.classList.remove("print-report");
+        window.removeEventListener("afterprint", off);
+      };
+      window.addEventListener("afterprint", off);
+      window.print();
+    });
+    if (!viewer && !sub2) btn("Submit to executives", "primary", () => {
+      doc2.status = "submitted";
+      doc2.subAt = (/* @__PURE__ */ new Date()).toISOString();
+      doc2.subBy = S.me.name || S.me.email;
+      save2(doc2, "submitted the monthly deliverables for " + monthLabel(doc2.mo));
+      notify("Month submitted. Executives can now see it.");
+      renderMonthly();
+    }, !canBuild2());
+    if (!viewer && sub2) btn("Reopen as draft", "", () => {
+      doc2.status = "draft";
+      delete doc2.subAt;
+      delete doc2.subBy;
+      save2(doc2, "reopened the monthly deliverables for " + monthLabel(doc2.mo));
+      notify("Month reopened as a draft. Executives no longer see it.", "info");
+      renderMonthly();
+    }, !canBuild2());
+    if (canDelete2(doc2)) btn("Delete month", "danger rdel", () => deleteMonth(doc2));
+    const ctx = {
+      ro,
+      colOf: colOf2,
+      put: (l, patch, label) => {
+        Object.assign(l, patch);
+        save2(doc2, "", label);
+        renderMonthly();
+      },
+      remove: (l) => {
+        doc2.lines = doc2.lines.filter((z) => z.id !== l.id);
+        save2(doc2, 'removed "' + l.t + '" from the monthly deliverables', "Remove deliverable");
+        renderMonthly();
+      },
+      add: (k, t, o) => {
+        doc2.lines.push(newLine(k, t, o));
+        save2(doc2, "added " + (o.adhoc ? "an ad hoc request" : "a deliverable") + " to the monthly deliverables", o.adhoc ? "Add ad hoc request" : "Add deliverable");
+        renderMonthly();
+      }
+    };
+    pg.append(tools, monthSheet(doc2, productsFor(doc2), ctx));
+  }
+  function renderMonthly() {
+    const pg = $("pg-monthly");
+    if (!pg) return;
+    closeMenu();
+    const m = routeMo(), keepY = m && rUI2.last === m ? window.scrollY : 0;
+    rUI2.last = m || "";
+    pg.textContent = "";
+    const viewer = isViewer(), l = monthList(), doc2 = cur2();
+    pg.classList.toggle("sheet", !!doc2);
+    if (m && !doc2) {
+      pg.append(crumbs([{ label: "Monthly", href: "#/monthly" }, { label: "Not found" }]), pageHead("Month not found", viewer ? "It may not be submitted yet, or it is still loading." : "It may have been removed, or it is still loading."));
+      return;
+    }
+    if (doc2) detailView3(pg, viewer, doc2);
+    else listView3(pg, viewer, l);
+    if (keepY && Math.abs(window.scrollY - keepY) > 1) window.scrollTo(0, keepY);
+  }
+  window.addEventListener("hashchange", () => {
+    if (state.page === "monthly") renderMonthly();
   });
 
   // src/esm/ui/loading.js
@@ -9179,9 +9493,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     ({ roadmap: render, ideas: () => renderIdeas(true), roadmaps: renderRoadmaps, resources: renderResources, admin: () => {
       loadMembers();
       renderAdmin();
-    }, vacations: () => renderVacations(true), log: renderLog, capacity: renderCapacity, baselines: renderBaselines, sprints: renderSprints, reports: renderReports })[p]();
+    }, vacations: () => renderVacations(true), log: renderLog, capacity: renderCapacity, baselines: renderBaselines, sprints: renderSprints, reports: renderReports, monthly: renderMonthly })[p]();
   }
-  var VIEWER_PAGES = ["roadmap", "capacity", "baselines", "log", "reports"];
+  var VIEWER_PAGES = ["roadmap", "capacity", "baselines", "log", "reports", "monthly"];
   function showPage(p) {
     if (!PAGES.some((x) => x[0] === p) || p === "admin" && !(S.me && S.me.is_admin) || isViewer() && !VIEWER_PAGES.includes(p)) p = "roadmap";
     state.page = p;
@@ -9196,7 +9510,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
     const pt = $("ptitle");
     if (pt) pt.textContent = (PAGES.find((x) => x[0] === p) || [0, ""])[1];
-    if (location.hash !== "#/" + p && !((p === "sprints" || p === "reports") && new RegExp("^#/" + p + "/").test(location.hash))) window.history.replaceState(null, "", "#/" + p);
+    if (location.hash !== "#/" + p && !((p === "sprints" || p === "reports" || p === "monthly") && new RegExp("^#/" + p + "/").test(location.hash))) window.history.replaceState(null, "", "#/" + p);
     renderPage(p);
   }
   var NAV_ICONS = {
@@ -9209,6 +9523,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     capacity: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>',
     baselines: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4v16M5 6h11l-2 3.5L16 13H5" /></svg>',
     sprints: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 3-6.2M4 4v4h4" /><path d="M12 8v4l2.5 2" /></svg>',
+    monthly: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M8 3v4M16 3v4M3.5 10h17M8 15h3M8 18h6" /></svg>',
     reports: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 13h6M9 17h6M9 9h2" /></svg>',
     log: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>'
   };
@@ -9315,6 +9630,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       if (same(n, S.reports)) return;
       S.reports = n;
       if (state.page === "reports" && !state.edit && !document.activeElement.closest("#pg-reports")) renderReports();
+      if (state.page === "monthly" && !state.edit && !document.activeElement.closest("#pg-monthly")) renderMonthly();
     }, (e) => {
       if (e && e.code === "missing_table") {
         S.setup["reports"] = true;
@@ -9493,7 +9809,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 
   // src/esm/auth/gate.js
   var JOBS = ["Product Manager", "Engineer", "QA", "UX / Design", "CEO", "CTO", "Executive", "Other"];
-  function gateCard(title, sub) {
+  function gateCard(title, sub2) {
     const g = $("gate");
     g.hidden = false;
     g.textContent = "";
@@ -9503,7 +9819,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const h = el("div", "ghead");
     h.append(logoEl(), el("h1", "", title));
     c.append(h);
-    if (sub) c.append(el("div", "meta", sub));
+    if (sub2) c.append(el("div", "meta", sub2));
     g.append(c);
     return c;
   }
@@ -9872,22 +10188,22 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   function pwMeter(input, host2) {
     const w = el("div", "pwmeter");
     w.setAttribute("aria-live", "polite");
-    const bar2 = el("div", "pwbar");
-    for (let i = 0; i < 4; i++) bar2.append(el("i"));
+    const bar3 = el("div", "pwbar");
+    for (let i = 0; i < 4; i++) bar3.append(el("i"));
     const txt = el("span", "pwtxt");
-    w.append(bar2, txt);
+    w.append(bar3, txt);
     host2.append(w);
     const upd = () => {
       const v = input.value;
       if (!v) {
         w.dataset.s = "";
         txt.textContent = "";
-        bar2.querySelectorAll("i").forEach((i) => i.className = "");
+        bar3.querySelectorAll("i").forEach((i) => i.className = "");
         return;
       }
       const r = pwScore(v), lab = ["Weak", "Weak", "Okay", "Good", "Strong"][r.s];
       w.dataset.s = String(r.s);
-      bar2.querySelectorAll("i").forEach((i, n) => {
+      bar3.querySelectorAll("i").forEach((i, n) => {
         i.className = n < Math.max(1, r.s) ? "on" : "";
       });
       txt.textContent = lab + (r.tips.length && r.s < 4 ? " · " + r.tips[0] : "");

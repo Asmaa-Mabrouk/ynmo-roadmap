@@ -11,11 +11,11 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 | Area | State |
 |---|---|
 | Live site | https://ynmo-roadmap.vercel.app (Vercel, auto-deploys `main`) |
-| Repo | `Asmaa-Mabrouk/ynmo-roadmap`, branch `main`; last change `e4131fc` (Reports redesign) |
+| Repo | `Asmaa-Mabrouk/ynmo-roadmap`, branch `main`; last change: Monthly page (see CHANGELOG) |
 | Backend | Supabase project **YNMO_PM**; SQL 01 to 06; Edge Functions `notify-approval`, `weekly-draft`, `jira-sync` (code in repo; deployment status per the open items below) |
 | Owner | Asmaa (Senior PM, TrianglZ, Ynmo ecosystem, Riyadh) |
-| Pages | Roadmap, Ideas, Roadmaps, Sprints, Reports, Resources, Vacations, Capacity, Baselines, Log, Approvals |
-| Tests | `tests/run_all.sh`: last full run 88/88 scenarios and all feature scripts green (`sprints_reports.py` 98) |
+| Pages | Roadmap, Ideas, Roadmaps, Sprints, Reports, Monthly, Resources, Vacations, Capacity, Baselines, Log, Approvals |
+| Tests | `tests/run_all.sh`: last full run 88/88 scenarios and all feature scripts green (`sprints_reports.py` 98, `monthly_page.py` 25) |
 | Jira | Site `tatralab.atlassian.net`; default projects DYC (Daycare), FAS (Tifli), AU (AI). Plan, Warif and Sharjah project keys not known yet. Rovo was considered; the API route was chosen |
 | Google Drive export | Google Cloud project **YNMO PM** (trianglz.com, Internal consent), Drive API on, Web client created for `https://ynmo-roadmap.vercel.app`. Client ID to be pasted in the tool by an admin; the client secret is not used |
 
@@ -41,6 +41,21 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 8. Not yet tested against the real services: Jira, Google sign-in and Drive.
 
 ## Ledger updates
+
+🔄 YNMO LEDGER UPDATE — 2026-10-20
+Request: Delete a weekly report; make the monthly view easy to show to executives as a Notion-style page like Sprints, with "Sync from Roadmap" per product and an editable assumed percentage
+Surface: cross-cutting (Ynmo Roadmaps internal tool)
+Outcome: New Monthly page (list of cards + white sheet, nav item, #/monthly/YYYY-MM) with Sync from Roadmap, estimated editable percentages, weights, ad hoc requests, carry-forward, undo, copy, print, submit/reopen, delete; weekly report shows it read-only; Delete report added (list menu and page). No SQL change.
+New facts / decisions locked:
+  • Monthly lives in its own doc `reports/mo<yyyymm>` (same table and RLS as weekly reports); the editor inside the weekly report was removed.
+  • Assumed percentage: Done = 100; otherwise share of days passed, rounded to 5, at most 90 until Done; milestones 0 until Done. A percentage a person edits is never overwritten by a later sync.
+  • Deleting: editors delete drafts, only admins delete submitted reports/months.
+Corrections to this skill:
+  • none
+Open / flagged:
+  • Confirm with the business that the estimate rule (days passed) is acceptable as a starting point.
+  • Confirm "complete" definition and importance weights.
+Changelog: Monthly page with roadmap sync and editable percentages; delete weekly report.
 
 🔄 YNMO LEDGER UPDATE — 2026-10-20
 Request: The business wants each month's deliverables in the weekly report with a percentage of completion (a list that stays the same over the month, only the percentages change) and the ad hoc requests they add

@@ -17,6 +17,7 @@ import { renderBaselines } from '../features/baselines.js';
 import { renderSprints } from '../pages/sprints.js';
 import { applySquadNames } from '../features/squad-names.js';
 import { renderReports } from '../pages/reports.js';
+import { renderMonthly } from '../pages/monthly.js';
 import { PAGES } from '../core/shared.js';
 import { ACTIVE_LOG_PAGE, isViewer } from '../features/safety.js';
 import { closeCtx } from '../ui/editing.js';
@@ -31,15 +32,15 @@ import { bootShared } from '../features/sharing.js';
 
 /* ---------- shell: navigation and start ---------- */
 export function refreshPage() { renderPage(state.page); }
-function renderPage(p) { ({ roadmap: render, ideas: () => renderIdeas(true), roadmaps: renderRoadmaps, resources: renderResources, admin: () => { loadMembers(); renderAdmin(); }, vacations: () => renderVacations(true), log: renderLog, capacity: renderCapacity, baselines: renderBaselines, sprints: renderSprints, reports: renderReports })[p](); }
-const VIEWER_PAGES = ['roadmap', 'capacity', 'baselines', 'log', 'reports'];
+function renderPage(p) { ({ roadmap: render, ideas: () => renderIdeas(true), roadmaps: renderRoadmaps, resources: renderResources, admin: () => { loadMembers(); renderAdmin(); }, vacations: () => renderVacations(true), log: renderLog, capacity: renderCapacity, baselines: renderBaselines, sprints: renderSprints, reports: renderReports, monthly: renderMonthly })[p](); }
+const VIEWER_PAGES = ['roadmap', 'capacity', 'baselines', 'log', 'reports', 'monthly'];
 export function showPage(p) {
   if (!PAGES.some(x => x[0] === p) || (p === 'admin' && !(S.me && S.me.is_admin)) || (isViewer() && !VIEWER_PAGES.includes(p))) p = 'roadmap';
   state.page = p; closeCtx(); closePicker();
   PAGES.forEach(x => { $('pg-' + x[0]).hidden = x[0] !== p; });
   document.querySelectorAll('#nav button').forEach(b => { if (b.dataset.p === p) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   const pt = $('ptitle'); if (pt) pt.textContent = (PAGES.find(x => x[0] === p) || [0, ''])[1];
-  if (location.hash !== '#/' + p && !((p === 'sprints' || p === 'reports') && new RegExp('^#/' + p + '/').test(location.hash))) window.history.replaceState(null, '', '#/' + p);
+  if (location.hash !== '#/' + p && !((p === 'sprints' || p === 'reports' || p === 'monthly') && new RegExp('^#/' + p + '/').test(location.hash))) window.history.replaceState(null, '', '#/' + p);
   renderPage(p);
 }
 const NAV_ICONS = {
@@ -52,6 +53,7 @@ const NAV_ICONS = {
   capacity: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>',
   baselines: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4v16M5 6h11l-2 3.5L16 13H5" /></svg>',
   sprints: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 3-6.2M4 4v4h4" /><path d="M12 8v4l2.5 2" /></svg>',
+  monthly: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M8 3v4M16 3v4M3.5 10h17M8 15h3M8 18h6" /></svg>',
   reports: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 13h6M9 17h6M9 9h2" /></svg>',
   log: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>'
 };
@@ -79,7 +81,7 @@ export function start() {
     if (state.page === 'roadmaps') renderRoadmaps();
   }, () => {});
   S.db.collection('ideas').onSnapshot(s => { const n = snapDocs('ideas', s, S.ideas); if (same(n, S.ideas)) return; const tn = o => Object.keys(o).filter(k => o[k] && o[k].tn).sort().map(k => o[k]), orderChanged = JSON.stringify([n.peopleorder, n.peoplehide, n.squadnames, tn(n)]) !== JSON.stringify([S.ideas.peopleorder, S.ideas.peoplehide, S.ideas.squadnames, tn(S.ideas)]); S.ideas = n; applySquadNames(); if (orderChanged) softRender(); /* shared row order of the by-person view */ renderDrawer(); if (state.page === 'ideas') renderIdeas(); if (state.page === 'roadmaps') renderRoadmaps(); }, () => {});
-  S.db.collection('reports').onSnapshot(s => { const n = snapDocs('reports', s, S.reports); if (same(n, S.reports)) return; S.reports = n; if (state.page === 'reports' && !state.edit && !document.activeElement.closest('#pg-reports')) renderReports(); }, e => { if (e && e.code === 'missing_table') { S.setup['reports'] = true; if (state.page === 'reports' || state.page === 'sprints') refreshPage(); } });
+  S.db.collection('reports').onSnapshot(s => { const n = snapDocs('reports', s, S.reports); if (same(n, S.reports)) return; S.reports = n; if (state.page === 'reports' && !state.edit && !document.activeElement.closest('#pg-reports')) renderReports(); if (state.page === 'monthly' && !state.edit && !document.activeElement.closest('#pg-monthly')) renderMonthly(); }, e => { if (e && e.code === 'missing_table') { S.setup['reports'] = true; if (state.page === 'reports' || state.page === 'sprints') refreshPage(); } });
   if (!isViewer()) {
     S.db.collection('sprints').onSnapshot(s => { const n = snapDocs('sprints', s, S.sprints); if (same(n, S.sprints)) return; S.sprints = n; if (state.page === 'sprints' && !document.activeElement.closest('#pg-sprints')) renderSprints({ keep: true }); if (state.page === 'reports') renderReports(); }, e => { if (e && e.code === 'missing_table') { S.setup['sprints'] = true; if (state.page === 'reports' || state.page === 'sprints') refreshPage(); } });
     S.db.collection('sprint_items').onSnapshot(s => { const n = snapDocs('sprint_items', s, S.sitems); if (same(n, S.sitems)) return; S.sitems = n; if (state.page === 'sprints' && !document.activeElement.closest('#pg-sprints')) renderSprints({ keep: true }); }, e => { if (e && e.code === 'missing_table') { S.setup['sprint_items'] = true; if (state.page === 'reports' || state.page === 'sprints') refreshPage(); } });
