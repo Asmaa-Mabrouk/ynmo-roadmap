@@ -195,7 +195,7 @@ function lineRow(rep, d, l, ro) {
   r.append(st, t);
   const u = jiraUrl(cfg().jira, l.jira);
   if (l.jira) { const a = el(u ? 'a' : 'span', 'jira', l.jira); if (u) { a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer'; } r.append(a); }
-  const fl = el('button', 'btn sm flagbtn' + (l.fl ? ' on' : ''), l.fl ? '⚑ Out of scope' : '⚑'); fl.type = 'button'; fl.title = l.fl ? 'Out of scope: added to the sprint over the planned roadmap. Click to unflag.' : 'Flag as out of scope (added to the sprint over the planned roadmap)'; fl.setAttribute('aria-label', 'Out of scope'); fl.setAttribute('aria-pressed', l.fl ? 'true' : 'false');
+  const fl = el('button', 'btn sm flagbtn' + (l.fl ? ' on' : ''), l.fl ? '⚑ Out of scope' : '⚐'); fl.type = 'button'; fl.title = l.fl ? 'Out of scope (added over the planned roadmap). Click again to remove the flag.' : 'Click to mark as out of scope (added over the planned roadmap)'; fl.setAttribute('aria-label', 'Out of scope'); fl.setAttribute('aria-pressed', l.fl ? 'true' : 'false');
   fl.addEventListener('click', () => { touch({ fl: !l.fl }); renderReports(); });
   const x = el('button', 'btn sm danger', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Delete item'); x.title = 'Delete this item'; x.addEventListener('click', () => { d.items = d.items.filter(z => z.id !== l.id); save(rep, '', 'Delete item'); renderReports(); });
   (l.tg || []).forEach(z => r.append(el('span', 'tgchip tg-' + z.c, '#' + z.n)));

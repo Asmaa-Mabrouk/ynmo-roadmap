@@ -1057,6 +1057,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 /* Product name input must look like the heading (beats the generic input styles) */
 #pg-reports .rphead input.rname { font-size: 1.5rem; font-weight: 800; color: var(--c); background: transparent; border: 1.5px solid transparent; box-shadow: none; padding: 2px 8px; height: auto; }
 #pg-reports .rphead input.rname:hover, #pg-reports .rphead input.rname:focus { border-color: var(--line); background: #fff; }
+
+/* Out-of-scope flag: off = hollow grey flag, on = solid red; second click removes */
+.rline .btn.sm.flagbtn:not(.on) { color: #9aa0b4; opacity: 1; }
+.rline .btn.sm.flagbtn:hover:not(.on) { color: #d1352b; background: #fdecea; border-color: #f2b8b5; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -7563,9 +7567,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       }
       r.append(a);
     }
-    const fl = el("button", "btn sm flagbtn" + (l.fl ? " on" : ""), l.fl ? "⚑ Out of scope" : "⚑");
+    const fl = el("button", "btn sm flagbtn" + (l.fl ? " on" : ""), l.fl ? "⚑ Out of scope" : "⚐");
     fl.type = "button";
-    fl.title = l.fl ? "Out of scope: added to the sprint over the planned roadmap. Click to unflag." : "Flag as out of scope (added to the sprint over the planned roadmap)";
+    fl.title = l.fl ? "Out of scope (added over the planned roadmap). Click again to remove the flag." : "Click to mark as out of scope (added over the planned roadmap)";
     fl.setAttribute("aria-label", "Out of scope");
     fl.setAttribute("aria-pressed", l.fl ? "true" : "false");
     fl.addEventListener("click", () => {
