@@ -12,7 +12,7 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 |---|---|
 | Live site | https://ynmo-roadmap.vercel.app (Vercel, auto-deploys `main`) |
 | Repo | `Asmaa-Mabrouk/ynmo-roadmap`, branch `main`; last change: Monthly page (see CHANGELOG) |
-| Backend | Supabase project **YNMO_PM**; SQL 01 to 06; Edge Functions `notify-approval`, `weekly-draft`, `jira-sync` (code in repo; deployment status per the open items below) |
+| Backend | Supabase project **YNMO_PM**; SQL 01 to 07; Edge Functions `notify-approval`, `weekly-draft`, `jira-sync` (code in repo; deployment status per the open items below) |
 | Owner | Asmaa (Senior PM, TrianglZ, Ynmo ecosystem, Riyadh) |
 | Pages | Roadmap, Ideas, Roadmaps, Sprints, Reports, Monthly, Resources, Vacations, Capacity, Baselines, Log, Approvals |
 | Tests | `tests/run_all.sh`: last full run 88/88 scenarios and all feature scripts green (`sprints_reports.py` 94, `monthly_page.py` 43) |
@@ -41,6 +41,21 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 8. Not yet tested against the real services: Jira, Google sign-in and Drive.
 
 ## Ledger updates
+
+🔄 YNMO LEDGER UPDATE — 2026-10-21
+Request: Remove hide/delete duplication on items; out-of-scope flag; rename/remove products (Sara); remove rich text; Submit becomes Save; delete only from the list menu for editors; professional PDF
+Surface: cross-cutting (Ynmo Roadmaps internal tool)
+Outcome: Plain-text items with ✕ delete, out-of-scope flag, renamable/removable sections, Save button (shares with executives, stays editable), delete only in the list ⋯ menu for editors, new print/PDF document. New SQL 07.
+New facts / decisions locked:
+  • "Save" = status `submitted` (visible to executives) but the report stays editable; no Reopen. Reports have `hidePl` (removed product keys) and items carry `fl` (out of scope) and `note`.
+  • Any editor may delete a report (SQL 07 replaces the admin-only rule for saved reports). Delete exists only in the list menu.
+  • Print/PDF is a separate document built from data (features/report-print.js), not the editing screen.
+Corrections to this skill:
+  • none
+Open / flagged:
+  • Run supabase/sql/07-reports-editor-delete.sql in the Supabase SQL Editor, otherwise deleting a saved report fails for editors.
+  • The Monthly page still has Submit/Reopen and a Delete button inside the page; say if it should follow the same Save / list-only delete rules.
+Changelog: Plain items, out-of-scope flag, renamable sections, Save, list-only delete, professional PDF.
 
 🔄 YNMO LEDGER UPDATE — 2026-10-21
 Request: The formatting bar is not working; allow resizing and bold, just basics

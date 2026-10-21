@@ -86,3 +86,13 @@ export function richBox(cls, html, plain, label, onSave) {
   d.addEventListener('blur', () => { const h = cleanHtml(d.innerHTML), pl = toPlain(h); if (d.dataset.init === h) return; d.dataset.init = h; onSave(hasFormat(h) ? h : '', pl); });
   return d;
 }
+
+/** A plain-text editable box (no formatting at all): paste is plain, formatting shortcuts are blocked. `onSave(text)` runs on blur when the text changed. */
+export function plainBox(cls, text, label, onSave) {
+  const d = document.createElement('div'); d.className = 'rt ' + cls; d.contentEditable = 'plaintext-only'; if (d.contentEditable !== 'plaintext-only') d.contentEditable = 'true';
+  d.setAttribute('role', 'textbox'); d.setAttribute('aria-multiline', 'true'); d.setAttribute('aria-label', label); d.spellcheck = true; d.textContent = text || ''; d.dataset.init = d.textContent;
+  d.addEventListener('paste', e => { const cd = e.clipboardData; if (!cd) return; e.preventDefault(); document.execCommand('insertText', false, cd.getData('text/plain')); });
+  d.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && /^[biu]$/i.test(e.key)) e.preventDefault(); });
+  d.addEventListener('blur', () => { const v = d.innerText.replace(/\u00a0/g, ' ').trim(); if (v === d.dataset.init) return; d.dataset.init = v; onSave(v); });
+  return d;
+}

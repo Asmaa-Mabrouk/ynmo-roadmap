@@ -19,12 +19,12 @@ import { openMenu, closeMenu } from '../ui/menu.js';
 import { crumbs } from '../ui/crumbs.js';
 import { createUndo } from '../features/undo-stack.js';
 import { registerUndo } from '../features/undo-router.js';
-import { autoGrow, richBox, showRich, submitOnCtrlEnter } from '../features/rich-text.js';
+import { autoGrow, plainBox, submitOnCtrlEnter } from '../features/rich-text.js';
 import { RSTATUS, linePct, avgPct, aiPayload, applyAi, buildProds, jiraUrl, newManualLine, productsOf, reportToText } from '../features/report-model.js';
 import { pctBand } from '../features/month-model.js';
 import { progressBlock } from '../features/month-view.js';
+import { buildPrint } from '../features/report-print.js';
 import { confirmDlg } from '../ui/confirm.js';
-import { isAdmin } from '../features/google-drive.js';
 import { EXTRA_SECTIONS } from '../features/sprint-doc.js';
 
 const SPARK = '<svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8L2.5 17.5l1.8-.7z"/></svg>';
@@ -46,19 +46,19 @@ const noStamp = d => { const c = JSON.parse(JSON.stringify(d)); delete c.by; del
 function save(rep, log, label) {
   const id = rep.id, d = Object.assign({}, rep); delete d.id; d.by = (S.me && (S.me.name || S.me.email)) || ''; d.ts = Date.now(); S.reports[id] = d; write('reports/' + id, d);
   const before = baseline[id] ? JSON.parse(baseline[id]) : null, after = JSON.parse(JSON.stringify(d));
-  if (before && before.status !== after.status) undoR(id).clear();   /* submit / reopen is never undone silently */
+  if (before && before.status !== after.status) undoR(id).clear();   /* Save (sharing with the executives) is never undone silently */
   else if (before && noStamp(before) !== noStamp(after)) { const U = undoR(id); U.mark(label || 'Edit'); U.rec(id, before, after); }
   baseline[id] = JSON.stringify(after);
   if (log) logAct('report', log);
 }
 let unsubR = null;
 function reportUndo(dir) {
-  const rep = cur(); if (!rep || rep.status === 'submitted' || isViewer() || !canBuild()) return;
+  const rep = cur(); if (!rep || isViewer() || !canBuild()) return;
   const r = undoR(rep.id).step(dir, id => S.reports[id], (id, doc) => { if (!doc) return; S.reports[id] = doc; write('reports/' + id, doc); baseline[id] = JSON.stringify(doc); }), word = dir === 'undo' ? 'Undo' : 'Redo';
   if (!r) { notify('Nothing to ' + word.toLowerCase(), 'info'); return; }
   notify(r.done ? word + ': ' + r.label : 'Someone else changed this report after you, so nothing was ' + (dir === 'undo' ? 'undone' : 'redone'), r.done ? 'ok' : 'info'); renderReports();
 }
-registerUndo('reports', { ready: () => { const r = cur(); return !!r && r.status !== 'submitted' && !isViewer() && canBuild(); }, undo: () => reportUndo('undo'), redo: () => reportUndo('redo') });
+registerUndo('reports', { ready: () => { const r = cur(); return !!r && !isViewer() && canBuild(); }, undo: () => reportUndo('undo'), redo: () => reportUndo('redo') });
 /** Roadmap bars for the roadmap that covers the sprint week, as day indexes of that roadmap. */
 function roadFor(a, b) {
   const rm = allRoadmaps().find(r => r.a <= a && r.b >= a); if (!rm) return { road: [], ka: NaN, kb: NaN };
@@ -100,6 +100,8 @@ async function sync(rep, ai, isNew) {
   // Deployments / Quality scope sections get their own report section when no product already covers them.
   EXTRA_SECTIONS.forEach(x => { if (sitems.some(i => i.squad === x.k) && !pl.some(q => q.squads.includes(x.k))) pl.push({ k: x.k, n: x.n, squads: [x.k] }); });
   (rep.pl || []).filter(x => x.custom).forEach(x => { if (!pl.some(q => q.k === x.k)) pl.push(x); });   /* sections added by hand stay */
+  const hidden = new Set(rep.hidePl || []); for (let i = pl.length - 1; i >= 0; i--) if (hidden.has(pl[i].k)) pl.splice(i, 1);   /* sections removed from this report stay removed */
+  pl.forEach(q => { const o = (rep.pl || []).find(x => x.k === q.k); if (o) q.n = o.n; });   /* and renamed ones keep their name */
   rep.pl = pl;
   if (fill) rep.prods = buildProds(pl, rep.prods, sitems, road, ka, kb, rep.a, rep.b);
   else { const keep = rep.prods || {}; rep.prods = {}; pl.forEach(p => { rep.prods[p.k] = keep[p.k] || { items: [], sum: '', sumH: '', sumEdited: false }; }); }   /* keep every line as it is; only make sure each product has a section */
@@ -158,15 +160,14 @@ function settingsDlg() {
 }
 
 function viewLine(l) {
-  const r = el('div', 'rv ln-' + l.st), t = el('span', 'rvt'); showRich(t, l.h, l.t); styleText(t, l); r.append(el('span', 'rvp pc-' + pctBand(linePct(l)), linePct(l) + '%'), t);
+  const r = el('div', 'rv ln-' + l.st), t = el('span', 'rvt', l.t); r.append(el('span', 'rvp pc-' + pctBand(linePct(l)), linePct(l) + '%'), t);
   const u = jiraUrl(cfg().jira, l.jira); if (l.jira) { const a = el(u ? 'a' : 'span', 'jira', l.jira); if (u) { a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer'; } r.append(a); }
   (l.tg || []).forEach(x => r.append(el('span', 'tgchip tg-' + x.c, '#' + x.n)));
+  if (l.fl) r.append(el('span', 'chip scopechip', 'Out of scope'));
   if (l.note) { const n = el('span', 'nbtn has ro'); n.tabIndex = 0; n.innerHTML = NOTE_ICON; n.dataset.tip = l.note; n.setAttribute('role', 'note'); n.setAttribute('aria-label', 'Note: ' + l.note); r.append(n); }
   if (l.st === 'risk' || l.st === 'late') r.append(el('span', 'chip rs-' + l.st, RSTATUS[l.st]));
   return r;
 }
-/** Basic per-item formatting: bold and size (-1 smaller ... +3 larger). Applied to the whole item, so it works with or without a selection. */
-const styleText = (t, l) => { t.style.fontWeight = l.fb ? '700' : ''; t.style.fontSize = l.fs ? (1 + 0.15 * l.fs).toFixed(2) + 'em' : ''; };
 const NOTE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8l-4.5 4v-4H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 8.5h8M8 12h5"/></svg>';
 /** Note icon of an item: hover (or focus) shows the note as a tooltip; in edit mode a click edits it. */
 function noteBtn(rep, l) {
@@ -185,40 +186,36 @@ function noteBtn(rep, l) {
 function lineRow(rep, d, l, ro) {
   if (ro) return viewLine(l);
   const r = el('div', 'rline ln-' + l.st + (l.hide ? ' hid' : '')); r.dataset.id = l.id;
-  const touch = patch => { Object.assign(l, patch, { edited: true }); save(rep, '', patch.hide !== undefined ? (patch.hide ? 'Hide line' : 'Show line') : patch.pct !== undefined ? 'Change percentage' : patch.st ? 'Change status' : patch.g ? 'Move to another group' : 'Edit line'); };
+  const touch = patch => { Object.assign(l, patch, { edited: true }); save(rep, '', patch.fl !== undefined ? 'Flag out of scope' : patch.pct !== undefined ? 'Change percentage' : patch.st ? 'Change status' : patch.g ? 'Move to another group' : 'Edit line'); };
   const pc = linePct(l), st = el('select', 'spsel mpct pc-' + pctBand(pc)); st.setAttribute('aria-label', 'Percent complete');
   const steps = []; for (let v = 0; v <= 100; v += 10) steps.push(v); if (!steps.includes(pc)) { steps.push(pc); steps.sort((a, b) => a - b); }
   steps.forEach(v => { const o = el('option', '', v + '%'); o.value = String(v); o.selected = v === pc; st.append(o); });
   st.addEventListener('change', () => { const v = Number(st.value); touch({ pct: v, st: v >= 100 ? 'done' : l.st === 'done' ? 'on' : l.st }); renderReports(); });
-  const t = richBox('sptext', l.h, l.t, 'Line text', (h, pl) => { if (!pl) { showRich(t, l.h, l.t); return; } touch({ t: pl.slice(0, 1200), h: h.slice(0, 4000) }); });
-  styleText(t, l); r.append(st, t);
+  const t = plainBox('sptext', l.t, 'Item text', v => { if (!v) { t.textContent = l.t; return; } touch({ t: v.slice(0, 1200), h: '' }); });
+  r.append(st, t);
   const u = jiraUrl(cfg().jira, l.jira);
   if (l.jira) { const a = el(u ? 'a' : 'span', 'jira', l.jira); if (u) { a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer'; } r.append(a); }
-  const h = el('button', 'btn sm', l.hide ? 'Show' : 'Hide'); h.type = 'button'; h.addEventListener('click', () => { touch({ hide: !l.hide }); renderReports(); });
-  const x = el('button', 'btn sm danger', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Delete line'); x.addEventListener('click', () => { if (l.src === 'man') d.items = d.items.filter(z => z.id !== l.id); else touch({ hide: true }); save(rep); renderReports(); });
+  const fl = el('button', 'btn sm flagbtn' + (l.fl ? ' on' : ''), l.fl ? '⚑ Out of scope' : '⚑'); fl.type = 'button'; fl.title = l.fl ? 'Out of scope: added to the sprint over the planned roadmap. Click to unflag.' : 'Flag as out of scope (added to the sprint over the planned roadmap)'; fl.setAttribute('aria-label', 'Out of scope'); fl.setAttribute('aria-pressed', l.fl ? 'true' : 'false');
+  fl.addEventListener('click', () => { touch({ fl: !l.fl }); renderReports(); });
+  const x = el('button', 'btn sm danger', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Delete item'); x.title = 'Delete this item'; x.addEventListener('click', () => { d.items = d.items.filter(z => z.id !== l.id); save(rep, '', 'Delete item'); renderReports(); });
   (l.tg || []).forEach(z => r.append(el('span', 'tgchip tg-' + z.c, '#' + z.n)));
-  r.append(noteBtn(rep, l), h, x);
+  r.append(fl, noteBtn(rep, l), x);
   return r;
-}
-/** Formatting bar of a product: bold and text size for the item you last clicked. */
-function fmtBar(rep, d, sec) {
-  const bar = el('div', 'rbar'); bar.setAttribute('role', 'toolbar'); bar.setAttribute('aria-label', 'Text formatting'); let last = null;
-  const mk = (txt, title, fn) => { const b = el('button', 'btn sm', txt); b.type = 'button'; b.title = title; b.setAttribute('aria-label', title); b.addEventListener('mousedown', e => e.preventDefault()); b.addEventListener('click', () => { const l = last && d.items.find(x => x.id === last); if (!l) { notify('Click an item first, then choose Bold or the size', 'info'); return; } fn(l); l.edited = true; save(rep, '', 'Format item'); const t = sec.querySelector('.rline[data-id="' + l.id + '"] .sptext'); if (t) styleText(t, l); mark(l); }); bar.append(b); return b; };
-  const bb = mk('B', 'Bold', l => { l.fb = !l.fb; }); bb.style.fontWeight = '800';
-  mk('A−', 'Smaller text', l => { l.fs = Math.max(-1, (l.fs || 0) - 1); }); mk('A+', 'Larger text', l => { l.fs = Math.min(3, (l.fs || 0) + 1); });
-  mk('Normal', 'Back to normal text', l => { l.fb = false; l.fs = 0; });
-  const mark = l => { bb.setAttribute('aria-pressed', l && l.fb ? 'true' : 'false'); bb.classList.toggle('on', !!(l && l.fb)); };
-  sec.addEventListener('focusin', e => { const r = e.target.closest && e.target.closest('.rline'); if (r) { last = r.dataset.id; mark(d.items.find(x => x.id === last)); } });
-  sec.addEventListener('pointerdown', e => { const r = e.target.closest && e.target.closest('.rline'); if (r) { last = r.dataset.id; mark(d.items.find(x => x.id === last)); } });
-  return bar;
 }
 function prodBlock(rep, p, ro) {
   const d = rep.prods[p.k]; if (!d) return el('div');
   const sec = el('section', 'rprod'); sec.dataset.k = p.k; sec.style.setProperty('--c', colOf(p));
-  const hd = el('div', 'rphead'), ap = avgPct(d.items); hd.append(el('h2', '', p.n)); if (ap !== null) hd.append(el('span', 'rvp pc-' + pctBand(ap), ap + '%')); sec.append(hd);
-  if (ro) sec.classList.add('rview'); else sec.append(fmtBar(rep, d, sec));
-  if (!ro && p.custom) { const rm = el('button', 'btn sm danger rmsec', 'Remove section'); rm.type = 'button'; rm.addEventListener('click', () => confirmDlg('Remove ' + p.n + '?', 'The section and its ' + d.items.length + ' item' + (d.items.length === 1 ? '' : 's') + ' are removed from this report.', 'Remove section', () => { rep.pl = (rep.pl || []).filter(x => x.k !== p.k); delete rep.prods[p.k]; save(rep, 'removed the section ' + p.n + ' from the weekly report', 'Remove section'); renderReports(); })); hd.append(rm); }
-  const ls = d.items.filter(l => !ro || !l.hide), gh = el('div', 'rgrp');
+  const hd = el('div', 'rphead'), ap = avgPct(d.items.filter(l => !l.hide));
+  if (ro) hd.append(el('h2', '', p.n));
+  else {
+    const ni = el('input', 'rname'); ni.type = 'text'; ni.value = p.n; ni.maxLength = 60; ni.setAttribute('aria-label', 'Product name'); ni.style.setProperty('--c', colOf(p));
+    ni.addEventListener('change', () => { const v = ni.value.replace(/\s+/g, ' ').trim(); if (!v) { ni.value = p.n; return; } if (v === p.n) return; rep.pl = (rep.pl || productsOf(cfg())).map(x => x.k === p.k ? Object.assign({}, x, { n: v }) : x); save(rep, 'renamed ' + p.n + ' to ' + v + ' in the weekly report', 'Rename section'); renderReports(); });
+    hd.append(ni);
+  }
+  if (ap !== null) hd.append(el('span', 'rvp pc-' + pctBand(ap), ap + '%')); sec.append(hd);
+  if (ro) sec.classList.add('rview');
+  if (!ro) { const rm = el('button', 'btn sm danger rmsec', 'Remove section'); rm.type = 'button'; rm.addEventListener('click', () => confirmDlg('Remove ' + p.n + '?', 'The section and its ' + d.items.length + ' item' + (d.items.length === 1 ? '' : 's') + ' are removed from this report only.', 'Remove section', () => { rep.pl = (rep.pl || productsOf(cfg())).filter(x => x.k !== p.k); rep.hidePl = (rep.hidePl || []).concat(p.k); delete rep.prods[p.k]; save(rep, 'removed the section ' + p.n + ' from the weekly report', 'Remove section'); renderReports(); })); hd.append(rm); }
+  const ls = d.items.filter(l => !l.hide), gh = el('div', 'rgrp');
   ls.forEach(l => gh.append(lineRow(rep, d, l, ro)));
   if (!ro) {
     const f = el('form', 'spadd'), ta = el('textarea'), go = el('button', 'btn sm', 'Add items'); go.type = 'submit';
@@ -232,6 +229,12 @@ function prodBlock(rep, p, ro) {
 }
 const statsOf = r => { let all = 0, done = 0, sum = 0; Object.keys(r.prods || {}).forEach(k => ((r.prods[k] || {}).items || []).filter(l => !l.hide).forEach(l => { all++; const v = linePct(l); sum += v; if (v >= 100) done++; })); return { all: all, done: done, avg: all ? Math.round(sum / all) : 0 }; };
 const copyReport = rep => { const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify('Report text copied to the clipboard'), () => notify('Could not copy. Select the text and copy it manually.', 'err')); };
+/** Prints a clean, read-only version built from the report data (features/report-print.js), never the editing screen. */
+function printReport(rep) {
+  const doc = buildPrint(rep, rep.pl || productsOf(cfg()), { colOf: colOf, fmt: fmtIso, today: fmtIso(todayIso()) });
+  document.querySelectorAll('.rprint').forEach(x => x.remove()); document.body.append(doc); document.body.classList.add('print-pro');
+  const off = () => { document.body.classList.remove('print-pro'); doc.remove(); window.removeEventListener('afterprint', off); }; window.addEventListener('afterprint', off); window.print();
+}
 const settingsBtn = () => { const b = el('button', 'btn', 'Report settings'); b.type = 'button'; b.disabled = !canBuild(); b.addEventListener('click', settingsDlg); return b; };
 
 const SEC_COLORS = ['#0f8b8d', '#7b61ff', '#c2410c', '#2563eb', '#be185d', '#65a30d', '#b45309'];
@@ -256,8 +259,8 @@ function clearItems(rep) {
     save(rep, 'removed all items from the weekly report for ' + fmtIso(rep.a), 'Remove all items'); notify('All items removed. Add your own under each product.'); renderReports();
   });
 }
-/** Editors delete drafts; only an admin deletes a submitted report (the database enforces the same). */
-const canDelete = r => canBuild() && (r.status !== 'submitted' || isAdmin());
+/** Anyone with edit access can delete a report, from the ⋯ menu of the list only (SQL 07 lets the database allow it). */
+const canDelete = () => canBuild();
 function deleteReport(rep) {
   confirmDlg('Delete this weekly report?', 'The report for the week of ' + fmtIso(rep.a) + ' is deleted for everyone' + (rep.status === 'submitted' ? ', including the executives who can see it' : '') + '. The sprint and the roadmap are not touched.', 'Delete report', () => {
     delete S.reports[rep.id]; delete baseline[rep.id]; undoR(rep.id).clear(); write('reports/' + rep.id, null);
@@ -281,13 +284,13 @@ function listView(pg, viewer, l) {
     const st = statsOf(r), sub = r.status === 'submitted', pct = st.avg;
     const card = el('div', 'card spcard rpcard'), info = el('div');
     const a = el('a', 'splink'); a.href = '#/reports/' + r.id; a.append(el('h2', '', 'Week of ' + fmtIso(r.a) + ' – ' + fmtIso(r.b)));
-    info.append(a, el('div', 'meta', 'Sprint ' + r.n + ' · week ' + (r.w || 1) + ' of 2 · ' + (sub ? 'submitted' + (r.subBy ? ' by ' + r.subBy : '') + (r.subAt ? ' on ' + fmtIso(r.subAt.slice(0, 10)) : '') : 'last edit ' + (r.by || 'unknown'))));
+    info.append(a, el('div', 'meta', 'Sprint ' + r.n + ' · week ' + (r.w || 1) + ' of 2 · ' + (sub ? 'saved' + (r.subBy ? ' by ' + r.subBy : '') + (r.subAt ? ' on ' + fmtIso(r.subAt.slice(0, 10)) : '') : 'last edit ' + (r.by || 'unknown'))));
     const pr = el('div', 'prods'); (r.pl || []).filter(p => r.prods && r.prods[p.k]).forEach(p => { const c = el('span', 'pchip', p.n); c.style.setProperty('--c', colOf(p)); pr.append(c); }); info.append(pr);
-    const prog = el('div', 'spprog'), top = el('div', 'rpstat'); top.append(el('span', 'chip rpst ' + (sub ? 'sub' : 'draft'), sub ? 'Submitted' : 'Draft'));
+    const prog = el('div', 'spprog'), top = el('div', 'rpstat'); top.append(el('span', 'chip rpst ' + (sub ? 'sub' : 'draft'), sub ? 'Saved' : 'Not saved yet'));
     prog.append(top, el('div', 'meta', st.all ? st.all + ' item' + (st.all === 1 ? '' : 's') + ' · ' + st.done + ' done · ' + st.avg + '% on average' : 'No items yet'));
     const b0 = el('div', 'bar0'), i0 = el('i'); i0.style.width = pct + '%'; b0.append(i0); prog.append(b0);
     const more = el('button', 'btn sm spmore', '⋯'); more.type = 'button'; more.setAttribute('aria-label', 'More actions for the week of ' + fmtIso(r.a)); more.setAttribute('aria-haspopup', 'menu');
-    more.addEventListener('click', () => openMenu(more, [{ label: 'Open in new tab', value: 'tab' }, { label: 'Copy text', value: 'copy' }].concat(canDelete(r) ? [{ label: 'Delete report', value: 'del', danger: true }] : []), {
+    more.addEventListener('click', () => openMenu(more, [{ label: 'Open in new tab', value: 'tab' }, { label: 'Copy text', value: 'copy' }].concat(canDelete() ? [{ label: 'Delete report', value: 'del' }] : []), {
       search: false, label: 'Report actions', onPick: it => { if (it.value === 'tab') window.open(location.pathname + location.search + '#/reports/' + r.id, '_blank', 'noopener'); else if (it.value === 'del') deleteReport(r); else copyReport(r); }, onClose: () => more.focus()
     }));
     card.append(info, prog, more); wrap.append(card);
@@ -298,28 +301,26 @@ function listView(pg, viewer, l) {
 /* ---------- one report: a sheet like the sprint plan ---------- */
 function detailView(pg, viewer, rep) {
   if (S.reports[rep.id]) baseline[rep.id] = JSON.stringify(S.reports[rep.id]);
-  const sub = rep.status === 'submitted', ro = viewer || sub || !canBuild();
+  const sub = rep.status === 'submitted', ro = viewer || !canBuild();
   pg.append(crumbs([{ label: 'Reports', href: '#/reports' }, { label: 'Week of ' + fmtIso(rep.a) }]));
-  pg.append(pageHead('Weekly report', 'Sprint ' + rep.n + ' · week ' + (rep.w || 1) + ' of 2' + (viewer ? '' : ro ? '. Submitted reports are read-only.' : '. Edit anything, then submit it to the executives.')));
+  pg.append(pageHead('Weekly report', 'Sprint ' + rep.n + ' · week ' + (rep.w || 1) + ' of 2' + (viewer ? '' : ro ? '. You can read this report.' : '. Edit anything, then press Save to show it to the executives.')));
   const sb0 = viewer ? null : setupBanner(); if (sb0) pg.append(sb0);
   const srcTxt = rep.srcN ? ' · built from ' + rep.srcN.si + ' sprint items + ' + rep.srcN.rf + ' roadmap bars' : '';
-  const meta = el('p', 'sub rmeta', sub ? 'Submitted' + (rep.subBy ? ' by ' + rep.subBy : '') + (rep.subAt ? ' on ' + fmtIso(rep.subAt.slice(0, 10)) : '') : 'Draft' + (rep.ai ? ' · wording by ' + (rep.ai.model || 'AI') : '') + ' · last edit ' + (rep.by || '') + srcTxt);
+  const meta = el('p', 'sub rmeta', (sub ? 'Saved' + (rep.subBy ? ' by ' + rep.subBy : '') + (rep.subAt ? ' on ' + fmtIso(rep.subAt.slice(0, 10)) : '') + ' · visible to the executives' : 'Not saved yet · the executives cannot see it') + (viewer ? '' : ' · last edit ' + (rep.by || '') + srcTxt));
   const tools = el('div', 'row spbar rtools');
   const btn = (t, cls, fn, dis) => { const b = el('button', 'btn ' + (cls || ''), t); b.type = 'button'; b.disabled = !!dis; b.addEventListener('click', fn); tools.append(b); return b; };
-  if (!viewer && !sub) { btn('Sync from Sprint & Roadmap', '', () => sync(rep, false), !canBuild() || rUI.busy); }
-  if (!viewer && !sub) {
+  if (!viewer) { btn('Sync from Sprint & Roadmap', '', () => sync(rep, false), !canBuild() || rUI.busy); }
+  if (!viewer) {
     const U = undoR(rep.id), ub = btn('↶ Undo', '', () => reportUndo('undo'), true), rb = btn('↷ Redo', '', () => reportUndo('redo'), true);
     const upd = () => { ub.disabled = !U.canUndo() || !canBuild(); rb.disabled = !U.canRedo() || !canBuild(); ub.title = ub.ariaLabel = U.canUndo() ? 'Undo: ' + U.nextUndo() + ' (Ctrl/Cmd+Z)' : 'Nothing to undo'; rb.title = rb.ariaLabel = U.canRedo() ? 'Redo: ' + U.nextRedo() + ' (Ctrl/Cmd+Shift+Z)' : 'Nothing to redo'; };
     if (unsubR) unsubR(); unsubR = U.subscribe(upd); upd();
   }
-  if (!viewer && !sub) btn('+ Product section', '', () => addSection(rep), !canBuild());
-  if (!viewer && !sub) btn('Clear all items', '', () => clearItems(rep), !canBuild());
+  if (!viewer) btn('+ Product section', '', () => addSection(rep), !canBuild());
+  if (!viewer) btn('Clear all items', '', () => clearItems(rep), !canBuild());
   btn('Copy text', '', () => copyReport(rep));
-  btn('Print / PDF', '', () => { document.body.classList.add('print-report'); const off = () => { document.body.classList.remove('print-report'); window.removeEventListener('afterprint', off); }; window.addEventListener('afterprint', off); window.print(); });
-  if (!viewer && !sub) tools.append(settingsBtn());
-  if (canDelete(rep)) { const db = btn('Delete report', 'danger', () => deleteReport(rep)); db.classList.add('rdel'); }
-  if (!viewer && !sub) btn('Submit to executives', 'primary', () => { rep.status = 'submitted'; rep.subAt = new Date().toISOString(); rep.subBy = S.me.name || S.me.email; save(rep, 'submitted the weekly report for ' + fmtIso(rep.a)); notify('Report submitted. Executives can now see it.'); renderReports(); }, !canBuild());
-  if (!viewer && sub) btn('Reopen as draft', '', () => { rep.status = 'draft'; delete rep.subAt; delete rep.subBy; save(rep, 'reopened the weekly report for ' + fmtIso(rep.a)); notify('Report reopened as a draft. Executives no longer see it.', 'info'); renderReports(); }, !canBuild());
+  btn('Print / PDF', '', () => printReport(rep));
+  if (!viewer) tools.append(settingsBtn());
+  if (!viewer) btn('Save', 'primary', () => { const first = rep.status !== 'submitted'; if (first) { rep.status = 'submitted'; rep.subAt = new Date().toISOString(); rep.subBy = S.me.name || S.me.email; } save(rep, first ? 'saved the weekly report for ' + fmtIso(rep.a) + ' for the executives' : '', first ? 'Save' : 'Save'); notify(first ? 'Saved. The executives can see this report now. Later changes are saved automatically.' : 'Saved. Changes are saved automatically and the executives see them.'); renderReports(); }, !canBuild());
   const body = el('div', 'rbody sdoc'), pls = rep.pl || productsOf(cfg());
   const label = rep.label !== undefined ? rep.label : 'Sprint ' + rep.n + ' · week ' + (rep.w || 1) + ' of 2', hero = el('div', 'rhero'); hero.append(el('small', '', 'Ynmo · Weekly product update'));
   if (ro) hero.append(el('h2', 'rtitle', fmtIso(rep.a) + ' – ' + fmtIso(rep.b)), el('span', 'rsp', label));

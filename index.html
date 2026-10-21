@@ -992,6 +992,56 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 
 .rbar .btn.on { background: var(--brand); color: #fff; border-color: var(--brand); }
 .rline .sptext { line-height: 1.35; }
+
+/* Plain items, out-of-scope flag, renamable product header */
+.rline .sptext { white-space: pre-wrap; }
+.rvt { white-space: pre-wrap; }
+.flagbtn { color: var(--muted); border-color: transparent; background: transparent; box-shadow: none; opacity: .65; white-space: nowrap; }
+.flagbtn:hover { opacity: 1; }
+.flagbtn.on { opacity: 1; color: #b3261e; background: #fdecea; border-color: #f2b8b5; font-weight: 700; }
+.scopechip { color: #b3261e; border-color: #f2b8b5; background: #fdecea; font-size: .75rem; font-weight: 700; padding: 1px 9px; border-radius: 99px; white-space: nowrap; }
+.rname { font: inherit; font-size: 1.5rem; font-weight: 800; color: var(--c); border: 1.5px solid transparent; background: transparent; border-radius: 10px; padding: 2px 8px; margin-inline-start: -8px; min-width: 0; flex: 1 1 200px; max-width: 420px; letter-spacing: -.01em; }
+.rname:hover, .rname:focus { border-color: var(--line); background: #fff; outline: none; }
+.rphead { gap: 8px; }
+
+/* Printed / PDF report (features/report-print.js) */
+.rprint { display: none; }
+@page rpt { size: A4; margin: 16mm 14mm 18mm; @bottom-left { content: "Ynmo · Weekly product update"; font: 8pt sans-serif; color: #7b8099; } @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 8pt sans-serif; color: #7b8099; } }
+@media print {
+  body.print-pro > *:not(.rprint) { display: none !important; }
+  body.print-pro { background: #fff !important; }
+  body.print-pro::before { display: none !important; }
+  body.print-pro .rprint { display: block; page: rpt; color: #1c2033; font-size: 10.5pt; line-height: 1.45; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .rprint * { box-sizing: border-box; }
+  .pr-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; padding-bottom: 12px; border-bottom: 3px solid var(--brand); margin-bottom: 16px; }
+  .pr-brand { font-weight: 900; letter-spacing: .22em; font-size: 11pt; color: var(--brand); }
+  .pr-kind { text-transform: uppercase; letter-spacing: .08em; font-size: 8.5pt; color: #7b8099; font-weight: 700; margin-top: 2px; }
+  .rprint h1 { font-size: 18pt; line-height: 1.15; margin: 6px 0 2px; letter-spacing: -.01em; }
+  .pr-label { font-size: 11pt; color: #4a5070; }
+  .pr-meta { text-align: end; font-size: 8.5pt; color: #7b8099; line-height: 1.6; }
+  .pr-sum { display: grid; grid-template-columns: 190px 1fr; gap: 16px; margin-bottom: 18px; break-inside: avoid; }
+  .pr-big { border: 1.5px solid #e1e4ee; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; background: #fafbfe; }
+  .pr-big b { font-size: 30pt; line-height: 1; color: var(--pt); }
+  .pr-big span { text-transform: uppercase; letter-spacing: .06em; font-size: 8pt; color: #7b8099; font-weight: 700; }
+  .pr-big small, .pr-card small { color: #7b8099; font-size: 8.5pt; }
+  .pr-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; align-content: start; }
+  .pr-card { border: 1.5px solid #e1e4ee; border-top: 4px solid var(--c); border-radius: 10px; padding: 8px 10px; display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; align-items: center; }
+  .pr-card b { font-size: 9.5pt; } .pr-card .pr-pct { font-weight: 800; color: var(--pt); font-size: 11pt; }
+  .pr-card .pr-bar, .pr-card small { grid-column: 1 / -1; }
+  .pr-bar { display: block; height: 7px; border-radius: 99px; background: #e6e8f1; overflow: hidden; }
+  .pr-bar i { display: block; height: 100%; background: var(--pc); border-radius: inherit; }
+  .pr-prod { margin-bottom: 16px; }
+  .pr-ph { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 2px solid var(--c); padding-bottom: 5px; margin-bottom: 4px; break-after: avoid; }
+  .pr-ph h2 { font-size: 14pt; margin: 0; color: var(--c); }
+  .pr-chip { font-weight: 800; font-size: 9.5pt; color: var(--pt); border: 1.5px solid var(--pc); border-radius: 99px; padding: 1px 10px; }
+  .pr-item { display: grid; grid-template-columns: 1fr 160px; gap: 14px; align-items: start; padding: 7px 0; border-bottom: 1px solid #eceef5; break-inside: avoid; }
+  .pr-text { white-space: pre-wrap; font-size: 10.5pt; }
+  .pr-note { margin-top: 3px; padding: 4px 8px; border-inline-start: 3px solid #c9ccd6; background: #f5f6fa; color: #4a5070; font-size: 9pt; white-space: pre-wrap; border-radius: 0 6px 6px 0; }
+  .pr-flag { display: inline-block; margin-inline-start: 8px; font-size: 7.5pt; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #b3261e; border: 1px solid #f2b8b5; background: #fdecea; border-radius: 99px; padding: 0 7px; vertical-align: 1px; }
+  .pr-jira { margin-inline-start: 8px; font-size: 8pt; color: #7b8099; }
+  .pr-prog { display: flex; align-items: center; gap: 8px; padding-top: 4px; } .pr-prog .pr-bar { flex: 1; } .pr-prog b { width: 40px; text-align: end; color: var(--pt); font-size: 9.5pt; }
+  .pr-empty { color: #7b8099; font-style: italic; }
+}
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -2587,13 +2637,13 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return Array.isArray(it.dep) ? it.dep : [];
   }
   function dependents(id, all) {
-    const out = /* @__PURE__ */ new Set(), walk2 = (x) => all.forEach((i) => {
+    const out = /* @__PURE__ */ new Set(), walk = (x) => all.forEach((i) => {
       if (depsOf(i).includes(x) && !out.has(i.id)) {
         out.add(i.id);
-        walk2(i.id);
+        walk(i.id);
       }
     });
-    walk2(id);
+    walk(id);
     return out;
   }
   function depIssues(all) {
@@ -2732,10 +2782,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       if (w0) {
         const wr = w0.getBoundingClientRect(), dw = wr.width, L = wr.left - gr.left;
         const bi = new Map((base3.items || []).map((i) => [i.id, i]));
-        first.forEach((bar3, id) => {
+        first.forEach((bar4, id) => {
           const o = bi.get(id), it = all.find((i) => i.id === id);
           if (!o || !it || o.d0 === it.d0 && o.d1 === it.d1) return;
-          const r = bar3.getBoundingClientRect(), y = r.bottom - gr.top - 1;
+          const r = bar4.getBoundingClientRect(), y = r.bottom - gr.top - 1;
           const g1 = sv("rect", { x: L + o.d0 * dw + 1, y, width: Math.max(4, (o.d1 - o.d0 + 1) * dw - 2), height: 5, rx: 2.5, fill: "#e5a513", opacity: ".9", class: "ghost" });
           const t = sv("title");
           const sl = it.d1 - o.d1;
@@ -3545,12 +3595,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         periodMenu(e.clientX, e.clientY, Math.max(0, Math.min(NDAYS - 1, dayAt(e.clientX))));
         return;
       }
-      const bar3 = e.target.closest(".bar");
-      if (bar3) {
-        const it = items().find((i) => i.id === bar3.dataset.id);
+      const bar4 = e.target.closest(".bar");
+      if (bar4) {
+        const it = items().find((i) => i.id === bar4.dataset.id);
         if (it) {
           e.preventDefault();
-          barMenu(it, bar3.dataset.person, e.clientX, e.clientY);
+          barMenu(it, bar4.dataset.person, e.clientX, e.clientY);
         }
         return;
       }
@@ -3562,10 +3612,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
     gr.addEventListener("dblclick", (e) => {
       if (!canEdit() || e.target.tagName === "INPUT") return;
-      const bar3 = e.target.closest(".bar");
-      if (bar3) {
-        const it = items().find((i) => i.id === bar3.dataset.id);
-        if (it) startEdit(it, bar3.dataset.person);
+      const bar4 = e.target.closest(".bar");
+      if (bar4) {
+        const it = items().find((i) => i.id === bar4.dataset.id);
+        if (it) startEdit(it, bar4.dataset.person);
         return;
       }
       const row = e.target.closest(".rowbg[data-person]");
@@ -5108,14 +5158,14 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     if (before) return before.ord - 1;
     return after.ord + 1;
   }
-  function startDrag(ev, it, bar3, mode) {
+  function startDrag(ev, it, bar4, mode) {
     if (!canEdit() || ev.button != null && ev.button !== 0) return;
     const g = $("grid"), wk = g.querySelector(".wk");
     const mw = wk ? wk.getBoundingClientRect().width : 26;
-    const owner = bar3.dataset.person || "", ch = g.closest(".chartwrap") || document.scrollingElement, sx0 = ch.scrollLeft, sy0 = ch.scrollTop;
+    const owner = bar4.dataset.person || "", ch = g.closest(".chartwrap") || document.scrollingElement, sx0 = ch.scrollLeft, sy0 = ch.scrollTop;
     let lastE = null, raf = 0;
     const st = { x: ev.clientX, y: ev.clientY, lastY: ev.clientY, mode, d0: it.d0, d1: it.d1, sq: it.sq, person: owner, moved: false, cur: { d0: it.d0, d1: it.d1, sq: it.sq, person: owner } };
-    bar3.setPointerCapture(ev.pointerId);
+    bar4.setPointerCapture(ev.pointerId);
     const move = (e) => {
       lastE = e;
       const dx = e.clientX - st.x + (ch.scrollLeft - sx0), dy = e.clientY - st.y + (ch.scrollTop - sy0);
@@ -5124,7 +5174,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       if (!st.moved) {
         st.moved = true;
         S.dragging = true;
-        bar3.classList.add("dragging");
+        bar4.classList.add("dragging");
         raf = requestAnimationFrame(tick);
       }
       const dm = Math.round(dx / mw);
@@ -5146,9 +5196,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         tip2.style.left = e.clientX + 14 + "px";
         tip2.style.top = e.clientY + 16 + "px";
       }
-      bar3.style.gridColumn = a + 2 + " / " + (b + 3);
+      bar4.style.gridColumn = a + 2 + " / " + (b + 3);
       if (mode === "move") {
-        bar3.style.transform = "translate(" + (dx - (a - st.d0) * mw) + "px," + dy + "px)";
+        bar4.style.transform = "translate(" + (dx - (a - st.d0) * mw) + "px," + dy + "px)";
         if (state.view === "person") {
           const boxes = personBoxes(g);
           let hit = st.cur.person;
@@ -5166,7 +5216,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
           st.cur.sq = hit;
           setDrop(g, hit);
         }
-      } else bar3.style.transform = "";
+      } else bar4.style.transform = "";
     };
     const tick = () => {
       if (!S.dragging || !lastE) return;
@@ -5186,9 +5236,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       cancelAnimationFrame(raf);
       const dt = $("dtip");
       if (dt) dt.remove();
-      bar3.removeEventListener("pointermove", move);
-      bar3.removeEventListener("pointerup", up);
-      bar3.removeEventListener("pointercancel", up);
+      bar4.removeEventListener("pointermove", move);
+      bar4.removeEventListener("pointerup", up);
+      bar4.removeEventListener("pointercancel", up);
       setDrop(g, null);
       setDropP(g, null);
       S.dragging = false;
@@ -5218,9 +5268,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       if (Object.keys(patch).length) commit(it.id, patch);
       else render();
     };
-    bar3.addEventListener("pointermove", move);
-    bar3.addEventListener("pointerup", up);
-    bar3.addEventListener("pointercancel", up);
+    bar4.addEventListener("pointermove", move);
+    bar4.addEventListener("pointerup", up);
+    bar4.addEventListener("pointercancel", up);
   }
 
   // src/esm/ui/gantt-render.js
@@ -5249,17 +5299,17 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       tipEl = null;
     }
   }
-  function showBarTip(bar3) {
+  function showBarTip(bar4) {
     hideBarTip();
-    if (S.dragging || !bar3.dataset.tip) return;
+    if (S.dragging || !bar4.dataset.tip) return;
     tipTimer = setTimeout(() => {
-      if (!bar3.isConnected || S.dragging || bar3.classList.contains("editing")) return;
+      if (!bar4.isConnected || S.dragging || bar4.classList.contains("editing")) return;
       const t = el("div", "bartip");
       t.setAttribute("role", "tooltip");
-      t.append(el("b", "", bar3.dataset.tip), el("small", "", bar3.dataset.tipSub || ""));
+      t.append(el("b", "", bar4.dataset.tip), el("small", "", bar4.dataset.tipSub || ""));
       document.body.append(t);
       tipEl = t;
-      const r = bar3.getBoundingClientRect(), w = t.offsetWidth, h = t.offsetHeight;
+      const r = bar4.getBoundingClientRect(), w = t.offsetWidth, h = t.offsetHeight;
       const top = r.top - h - 8 >= 8 ? r.top - h - 8 : r.bottom + 8;
       t.style.top = top + "px";
       t.style.left = Math.max(8, Math.min(Math.max(r.left, 8), window.innerWidth - w - 8)) + "px";
@@ -5268,18 +5318,18 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   window.addEventListener("scroll", hideBarTip, true);
   function buildBar(it, owner) {
     const l = laneOf(it.sq), col = l.c;
-    const bar3 = el("div", "bar st-" + it.st + (canEdit() ? "" : " ro") + (it.ms ? " ms" : ""));
-    bar3.style.setProperty("--c", col);
-    bar3.dataset.person = owner || "";
-    bar3.dataset.id = it.id;
-    bar3.tabIndex = 0;
-    bar3.setAttribute("role", "button");
-    bar3.setAttribute("aria-label", it.t + ", " + dlabel(it.d0) + " to " + dlabel(it.d1) + ", " + STATUS[it.st]);
-    bar3.dataset.tip = it.t;
-    bar3.dataset.tipSub = l.n + " · " + dlabel(it.d0) + " to " + dlabel(it.d1) + " · " + STATUS[it.st];
+    const bar4 = el("div", "bar st-" + it.st + (canEdit() ? "" : " ro") + (it.ms ? " ms" : ""));
+    bar4.style.setProperty("--c", col);
+    bar4.dataset.person = owner || "";
+    bar4.dataset.id = it.id;
+    bar4.tabIndex = 0;
+    bar4.setAttribute("role", "button");
+    bar4.setAttribute("aria-label", it.t + ", " + dlabel(it.d0) + " to " + dlabel(it.d1) + ", " + STATUS[it.st]);
+    bar4.dataset.tip = it.t;
+    bar4.dataset.tipSub = l.n + " · " + dlabel(it.d0) + " to " + dlabel(it.d1) + " · " + STATUS[it.st];
     const editing = state.edit === it.id + "|" + (owner || "");
     if (editing) {
-      bar3.classList.add("editing");
+      bar4.classList.add("editing");
       const inp = el("input", "bi");
       inp.type = "text";
       inp.value = it.t;
@@ -5304,32 +5354,32 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       inp.addEventListener("blur", () => fin(true));
       inp.addEventListener("pointerdown", (e) => e.stopPropagation());
       inp.addEventListener("dblclick", (e) => e.stopPropagation());
-      bar3.append(inp);
-    } else bar3.append(el("span", "nm2", (it.st === "done" ? "✓ " : "") + it.t));
-    if (it.tag) bar3.append(el("span", "tg", it.tag === "High priority" ? "High" : it.tag === "Low priority" ? "Low" : it.tag));
+      bar4.append(inp);
+    } else bar4.append(el("span", "nm2", (it.st === "done" ? "✓ " : "") + it.t));
+    if (it.tag) bar4.append(el("span", "tg", it.tag === "High priority" ? "High" : it.tag === "Low priority" ? "Low" : it.tag));
     const hl = el("span", "hd l"), hr = el("span", "hd r");
-    bar3.append(hl, hr);
-    bar3.addEventListener("pointerdown", (e) => {
+    bar4.append(hl, hr);
+    bar4.addEventListener("pointerdown", (e) => {
       if (e.target.tagName === "INPUT") return;
       const mode = e.target === hl ? "l" : e.target === hr ? "r" : "move";
-      if (canEdit()) startDrag(e, it, bar3, mode);
+      if (canEdit()) startDrag(e, it, bar4, mode);
     });
-    bar3.addEventListener("pointerenter", () => {
+    bar4.addEventListener("pointerenter", () => {
       if (S.dragging) return;
       const g = $("grid");
       g.classList.add("hov");
       g.querySelectorAll(".bar").forEach((b) => b.classList.toggle("same", b.dataset.id === it.id));
     });
-    bar3.addEventListener("pointerleave", () => {
+    bar4.addEventListener("pointerleave", () => {
       $("grid").classList.remove("hov");
     });
-    bar3.addEventListener("pointerenter", () => showBarTip(bar3));
-    bar3.addEventListener("pointerleave", hideBarTip);
-    bar3.addEventListener("pointerdown", hideBarTip);
-    bar3.addEventListener("focus", () => showBarTip(bar3));
-    bar3.addEventListener("blur", hideBarTip);
-    bar3.addEventListener("keydown", (e) => {
-      if (e.target !== bar3) return;
+    bar4.addEventListener("pointerenter", () => showBarTip(bar4));
+    bar4.addEventListener("pointerleave", hideBarTip);
+    bar4.addEventListener("pointerdown", hideBarTip);
+    bar4.addEventListener("focus", () => showBarTip(bar4));
+    bar4.addEventListener("blur", hideBarTip);
+    bar4.addEventListener("keydown", (e) => {
+      if (e.target !== bar4) return;
       if (e.key === "Enter" || e.key === "F2") {
         e.preventDefault();
         startEdit(it, owner);
@@ -5345,7 +5395,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       }
       state.refocusBar = it.id;
     });
-    return bar3;
+    return bar4;
   }
   var ZOOM = { day: 26, week: 12, month: 4 };
   function render() {
@@ -6309,12 +6359,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const a = live(lines).filter((l) => l.adhoc);
     return { n: a.length, done: a.filter((l) => clampPct(l.pct) >= 100).length };
   }
-  function assumePct(bar3, today) {
-    if (bar3.st === "done") return 100;
-    if (bar3.ms) return 0;
-    const len = dayN(bar3.b) - dayN(bar3.a) + 1;
+  function assumePct(bar4, today) {
+    if (bar4.st === "done") return 100;
+    if (bar4.ms) return 0;
+    const len = dayN(bar4.b) - dayN(bar4.a) + 1;
     if (!(len >= 1)) return 0;
-    const passed = Math.min(len, dayN(today) - dayN(bar3.a) + 1);
+    const passed = Math.min(len, dayN(today) - dayN(bar4.a) + 1);
     if (passed <= 0) return 0;
     return Math.min(90, Math.round(100 * passed / len / 5) * 5);
   }
@@ -6849,69 +6899,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   }
 
   // src/esm/features/rich-text.js
-  var KEEP = { B: "b", STRONG: "b", I: "i", EM: "i", U: "u", UL: "ul", OL: "ol", LI: "li", BR: "br", P: "p", DIV: "p" };
-  var DROP = /* @__PURE__ */ new Set(["SCRIPT", "STYLE", "IFRAME", "OBJECT", "EMBED", "NOSCRIPT", "TEMPLATE", "SVG", "MATH"]);
-  function walk(src, out) {
-    src.childNodes.forEach((n) => {
-      if (n.nodeType === 3) {
-        out.appendChild(document.createTextNode(n.nodeValue));
-        return;
-      }
-      if (n.nodeType !== 1 || DROP.has(n.tagName)) return;
-      const tag = KEEP[n.tagName];
-      if (n.tagName === "A") {
-        const href = n.getAttribute("href") || "";
-        if (/^https:\/\//i.test(href) || /^mailto:/i.test(href)) {
-          const a = document.createElement("a");
-          a.href = href;
-          a.target = "_blank";
-          a.rel = "noopener noreferrer";
-          walk(n, a);
-          out.appendChild(a);
-        } else walk(n, out);
-      } else if (tag === "br") out.appendChild(document.createElement("br"));
-      else if (tag) {
-        const e = document.createElement(tag);
-        walk(n, e);
-        out.appendChild(e);
-      } else walk(n, out);
-    });
-  }
-  function cleanFragment(html) {
-    const doc2 = new DOMParser().parseFromString("<body>" + String(html || "") + "</body>", "text/html"), frag = document.createDocumentFragment();
-    walk(doc2.body, frag);
-    return frag;
-  }
-  function cleanHtml(html) {
-    const box2 = document.createElement("div");
-    box2.appendChild(cleanFragment(html));
-    return box2.innerHTML;
-  }
-  function toPlain(html) {
-    const out = [];
-    const go = (n, pre) => n.childNodes.forEach((c) => {
-      if (c.nodeType === 3) out.push(c.nodeValue);
-      else if (c.tagName === "BR") out.push("\n");
-      else if (c.tagName === "LI") {
-        out.push("\n- ");
-        go(c, pre);
-      } else if (c.tagName === "P") {
-        out.push("\n");
-        go(c, pre);
-        out.push("\n");
-      } else go(c, pre);
-    });
-    const box2 = document.createElement("div");
-    box2.appendChild(cleanFragment(html));
-    go(box2, "");
-    return out.join("").replace(/\n{3,}/g, "\n\n").trim();
-  }
-  var hasFormat = (html) => /<(b|i|u|ul|ol|li|a|p|br)[\s>]/i.test(cleanHtml(html));
-  function showRich(target, html, plain) {
-    target.textContent = "";
-    if (html) target.appendChild(cleanFragment(html));
-    else target.textContent = plain || "";
-  }
   function autoGrow(ta) {
     const fit = () => {
       ta.style.height = "auto";
@@ -6930,29 +6917,31 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       }
     });
   }
-  function richBox(cls, html, plain, label, onSave) {
+  function plainBox(cls, text, label, onSave) {
     const d = document.createElement("div");
     d.className = "rt " + cls;
-    d.contentEditable = "true";
+    d.contentEditable = "plaintext-only";
+    if (d.contentEditable !== "plaintext-only") d.contentEditable = "true";
     d.setAttribute("role", "textbox");
     d.setAttribute("aria-multiline", "true");
     d.setAttribute("aria-label", label);
     d.spellcheck = true;
-    showRich(d, html, plain);
-    d.dataset.init = d.innerHTML;
+    d.textContent = text || "";
+    d.dataset.init = d.textContent;
     d.addEventListener("paste", (e) => {
       const cd = e.clipboardData;
       if (!cd) return;
       e.preventDefault();
-      const h = cd.getData("text/html");
-      if (h) document.execCommand("insertHTML", false, cleanHtml(h));
-      else document.execCommand("insertText", false, cd.getData("text/plain"));
+      document.execCommand("insertText", false, cd.getData("text/plain"));
+    });
+    d.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey || e.metaKey) && /^[biu]$/i.test(e.key)) e.preventDefault();
     });
     d.addEventListener("blur", () => {
-      const h = cleanHtml(d.innerHTML), pl = toPlain(h);
-      if (d.dataset.init === h) return;
-      d.dataset.init = h;
-      onSave(hasFormat(h) ? h : "", pl);
+      const v = d.innerText.replace(/\u00a0/g, " ").trim();
+      if (v === d.dataset.init) return;
+      d.dataset.init = v;
+      onSave(v);
     });
     return d;
   }
@@ -7127,6 +7116,57 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return sec;
   }
 
+  // src/esm/features/report-print.js
+  var bar3 = (pct2) => {
+    const b = el("span", "pr-bar pc-" + pctBand(pct2)), f = el("i");
+    f.style.width = pct2 + "%";
+    b.append(f);
+    return b;
+  };
+  function buildPrint(rep, pls, o) {
+    const root = el("div", "rprint"), range = o.fmt(rep.a) + " – " + o.fmt(rep.b);
+    const items2 = (p) => ((rep.prods || {})[p.k] || { items: [] }).items.filter((l) => !l.hide && String(l.t || "").trim());
+    const all = pls.reduce((a, p) => a.concat(items2(p)), []), ov = avgPct(all) || 0, done2 = all.filter((l) => linePct(l) >= 100).length, scope = all.filter((l) => l.fl).length;
+    const head = el("header", "pr-head"), left = el("div"), right = el("div", "pr-meta");
+    left.append(el("div", "pr-brand", "YNMO"), el("div", "pr-kind", "Weekly product update"), el("h1", "", range), el("div", "pr-label", rep.label !== void 0 ? rep.label : "Sprint " + rep.n + " · week " + (rep.w || 1) + " of 2"));
+    right.append(el("div", "", "Prepared by " + (rep.by || "—")), el("div", "", "Printed " + o.today));
+    head.append(left, right);
+    root.append(head);
+    const sum = el("section", "pr-sum"), big = el("div", "pr-big pc-" + pctBand(ov));
+    big.append(el("b", "", ov + "%"), el("span", "", "overall progress"), bar3(ov), el("small", "", done2 + " of " + all.length + " item" + (all.length === 1 ? "" : "s") + " complete" + (scope ? " · " + scope + " out of scope" : "")));
+    const cards = el("div", "pr-cards");
+    pls.forEach((p) => {
+      const its = items2(p), ap = avgPct(its) || 0, c = el("div", "pr-card pc-" + pctBand(ap));
+      c.style.setProperty("--c", o.colOf(p));
+      c.append(el("b", "", p.n), el("span", "pr-pct", ap + "%"), bar3(ap), el("small", "", its.length + " item" + (its.length === 1 ? "" : "s")));
+      cards.append(c);
+    });
+    sum.append(big, cards);
+    root.append(sum);
+    pls.forEach((p) => {
+      const its = items2(p);
+      if (!its.length) return;
+      const sec = el("section", "pr-prod"), ap = avgPct(its) || 0, h = el("div", "pr-ph");
+      sec.style.setProperty("--c", o.colOf(p));
+      h.append(el("h2", "", p.n), el("span", "pr-chip pc-" + pctBand(ap), ap + "%"));
+      sec.append(h);
+      its.forEach((l) => {
+        const v = linePct(l), r = el("div", "pr-item"), body = el("div", "pr-body"), t = el("div", "pr-text", l.t);
+        if (l.fl) t.append(el("span", "pr-flag", "Out of scope"));
+        if (l.jira) t.append(el("span", "pr-jira", l.jira));
+        body.append(t);
+        if (l.note) body.append(el("div", "pr-note", l.note));
+        const pc = el("div", "pr-prog pc-" + pctBand(v));
+        pc.append(bar3(v), el("b", "", v + "%"));
+        r.append(body, pc);
+        sec.append(r);
+      });
+      root.append(sec);
+    });
+    if (!all.length) root.append(el("p", "pr-empty", "No items in this report yet."));
+    return root;
+  }
+
   // src/esm/ui/confirm.js
   function confirmDlg(title, msg, yes, onYes) {
     openDlg(title, (box2) => {
@@ -7140,129 +7180,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       const row = el("div", "row");
       row.append(ok, no);
       box2.append(el("p", "", msg), row);
-    });
-  }
-
-  // src/esm/features/google-drive.js
-  var SCOPE = "https://www.googleapis.com/auth/drive.file";
-  var CID_RE = /^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/i;
-  var clientId = () => {
-    const c = ((S.ideas || {}).googlecfg || {}).cid;
-    return CID_RE.test(c || "") ? c : "";
-  };
-  var isAdmin = () => !!(S.me && S.me.is_admin);
-  var docId = (u) => {
-    const m = /\/document\/(?:u\/\d+\/)?d\/([A-Za-z0-9_-]{15,})/.exec(String(u || ""));
-    return m ? m[1] : "";
-  };
-  var gis = null;
-  var tok = null;
-  function loadGis() {
-    if (window.google && window.google.accounts && window.google.accounts.oauth2) return Promise.resolve();
-    if (gis) return gis;
-    gis = new Promise((res, rej) => {
-      const s = document.createElement("script");
-      s.src = "https://accounts.google.com/gsi/client";
-      s.async = true;
-      s.onload = () => res();
-      s.onerror = () => {
-        gis = null;
-        rej(new Error("Could not load Google sign-in. Check your connection or an ad blocker."));
-      };
-      document.head.append(s);
-    });
-    return gis;
-  }
-  async function getToken() {
-    if (tok && tok.exp > Date.now() + 6e4) return tok.t;
-    const cid = clientId();
-    if (!cid) throw new Error("Google Drive is not set up yet.");
-    await loadGis();
-    return new Promise((res, rej) => {
-      const c = window.google.accounts.oauth2.initTokenClient({
-        client_id: cid,
-        scope: SCOPE,
-        include_granted_scopes: true,
-        callback: (r) => {
-          if (r && r.access_token) {
-            tok = { t: r.access_token, exp: Date.now() + (Number(r.expires_in) || 3e3) * 1e3 };
-            res(tok.t);
-          } else rej(new Error(r && (r.error_description || r.error) || "Google did not sign you in."));
-        },
-        error_callback: (e) => rej(new Error(e && e.type === "popup_closed" ? "The Google window was closed before you finished." : e && e.type === "popup_failed_to_open" ? "Your browser blocked the Google window. Allow pop-ups for this site and try again." : "Google sign-in failed."))
-      });
-      c.requestAccessToken({ prompt: tok ? "" : void 0 });
-    });
-  }
-  var API = "https://www.googleapis.com";
-  async function fail(r, what) {
-    let m = "";
-    try {
-      const j = await r.json();
-      m = j.error && (j.error.message || j.error) || "";
-    } catch (e) {
-    }
-    const err = new Error(r.status === 401 ? "Google sign-in expired. Click again to reconnect." : r.status === 403 && /accessNotConfigured|has not been used|disabled/i.test(m) ? "The Google Drive API is not enabled in your Google Cloud project (APIs & Services > Library > Google Drive API > Enable)." : what + " failed (" + r.status + ")" + (m ? ": " + String(m).slice(0, 140) : ""));
-    err.status = r.status;
-    if (r.status === 401) tok = null;
-    throw err;
-  }
-  async function exportDoc(o) {
-    const t = await getToken(), auth = { Authorization: "Bearer " + t };
-    if (o.fileId) {
-      const r2 = await fetch(API + "/upload/drive/v3/files/" + encodeURIComponent(o.fileId) + "?uploadType=media&fields=id", { method: "PATCH", headers: Object.assign({ "Content-Type": "text/html; charset=UTF-8" }, auth), body: o.html });
-      if (r2.ok) return { id: o.fileId, url: "https://docs.google.com/document/d/" + o.fileId + "/edit", created: false };
-      if (r2.status !== 404 && r2.status !== 403) await fail(r2, "Updating the Google Doc");
-    }
-    const b = "ynmo" + Math.random().toString(36).slice(2), meta = JSON.stringify({ name: o.name, mimeType: "application/vnd.google-apps.document" });
-    const body = "--" + b + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" + meta + "\r\n--" + b + "\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n" + o.html + "\r\n--" + b + "--";
-    const r = await fetch(API + "/upload/drive/v3/files?uploadType=multipart&fields=id", { method: "POST", headers: Object.assign({ "Content-Type": "multipart/related; boundary=" + b }, auth), body });
-    if (!r.ok) await fail(r, "Creating the Google Doc");
-    const j = await r.json();
-    if (!j.id) throw new Error("Google did not return the new document.");
-    return { id: j.id, url: "https://docs.google.com/document/d/" + j.id + "/edit", created: true };
-  }
-  function openDriveSetup(then) {
-    openDlg("Connect Google Drive (one-time setup)", (box2) => {
-      box2.append(el("p", "sub", "An admin does this once. Everyone on the team can then export with one click."));
-      const ol = el("ol", "gsteps");
-      [
-        'Open console.cloud.google.com and create a project (any name, for example "Ynmo Roadmaps").',
-        'APIs & Services > Library: search "Google Drive API" and click Enable.',
-        'APIs & Services > OAuth consent screen: choose Internal if your company uses Google Workspace, otherwise External. Fill the app name and your email. Add the scope .../auth/drive.file. For External, click "Publish app" so teammates are not limited to test users (this scope needs no Google review).',
-        "APIs & Services > Credentials > Create credentials > OAuth client ID > Web application. Under Authorized JavaScript origins add " + location.origin + " and create it.",
-        "Copy the Client ID (it ends with .apps.googleusercontent.com) and paste it below. It is not a secret."
-      ].forEach((t) => ol.append(el("li", "", t)));
-      const ci = el("input");
-      ci.type = "text";
-      ci.value = clientId();
-      ci.placeholder = "1234567890-abc123.apps.googleusercontent.com";
-      ci.setAttribute("aria-label", "Google OAuth Client ID");
-      ci.autocomplete = "off";
-      const msg = el("p", "sub");
-      msg.setAttribute("aria-live", "polite");
-      const ok = el("button", "btn primary", "Save"), no = el("button", "btn", "Cancel");
-      ok.type = no.type = "button";
-      no.addEventListener("click", closeDlg);
-      ok.addEventListener("click", () => {
-        const v = ci.value.trim();
-        if (!CID_RE.test(v)) {
-          msg.textContent = "That does not look like a Client ID. It ends with .apps.googleusercontent.com.";
-          return;
-        }
-        S.ideas.googlecfg = Object.assign({}, S.ideas.googlecfg || {}, { cfg: true, cid: v });
-        write("ideas/googlecfg", S.ideas.googlecfg);
-        logAct("sprint", "set up Google Drive export");
-        notify("Google Drive is set up");
-        closeDlg();
-        if (then) then();
-      });
-      const lab = el("label");
-      lab.append(el("span", "", "Client ID"), ci);
-      const row = el("div", "row");
-      row.append(ok, no);
-      box2.append(ol, lab, msg, row);
-      setTimeout(() => ci.focus(), 0);
     });
   }
 
@@ -7316,7 +7233,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   var unsubR = null;
   function reportUndo(dir) {
     const rep = cur();
-    if (!rep || rep.status === "submitted" || isViewer() || !canBuild()) return;
+    if (!rep || isViewer() || !canBuild()) return;
     const r = undoR(rep.id).step(dir, (id) => S.reports[id], (id, doc2) => {
       if (!doc2) return;
       S.reports[id] = doc2;
@@ -7332,7 +7249,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   }
   registerUndo("reports", { ready: () => {
     const r = cur();
-    return !!r && r.status !== "submitted" && !isViewer() && canBuild();
+    return !!r && !isViewer() && canBuild();
   }, undo: () => reportUndo("undo"), redo: () => reportUndo("redo") });
   function roadFor(a, b) {
     const rm = allRoadmaps().find((r) => r.a <= a && r.b >= a);
@@ -7396,6 +7313,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
     (rep.pl || []).filter((x) => x.custom).forEach((x) => {
       if (!pl.some((q) => q.k === x.k)) pl.push(x);
+    });
+    const hidden = new Set(rep.hidePl || []);
+    for (let i = pl.length - 1; i >= 0; i--) if (hidden.has(pl[i].k)) pl.splice(i, 1);
+    pl.forEach((q) => {
+      const o = (rep.pl || []).find((x) => x.k === q.k);
+      if (o) q.n = o.n;
     });
     rep.pl = pl;
     if (fill) rep.prods = buildProds(pl, rep.prods, sitems, road, ka, kb, rep.a, rep.b);
@@ -7520,9 +7443,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
   }
   function viewLine(l) {
-    const r = el("div", "rv ln-" + l.st), t = el("span", "rvt");
-    showRich(t, l.h, l.t);
-    styleText(t, l);
+    const r = el("div", "rv ln-" + l.st), t = el("span", "rvt", l.t);
     r.append(el("span", "rvp pc-" + pctBand(linePct(l)), linePct(l) + "%"), t);
     const u = jiraUrl(cfg().jira, l.jira);
     if (l.jira) {
@@ -7535,6 +7456,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       r.append(a);
     }
     (l.tg || []).forEach((x) => r.append(el("span", "tgchip tg-" + x.c, "#" + x.n)));
+    if (l.fl) r.append(el("span", "chip scopechip", "Out of scope"));
     if (l.note) {
       const n = el("span", "nbtn has ro");
       n.tabIndex = 0;
@@ -7547,10 +7469,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     if (l.st === "risk" || l.st === "late") r.append(el("span", "chip rs-" + l.st, RSTATUS[l.st]));
     return r;
   }
-  var styleText = (t, l) => {
-    t.style.fontWeight = l.fb ? "700" : "";
-    t.style.fontSize = l.fs ? (1 + 0.15 * l.fs).toFixed(2) + "em" : "";
-  };
   var NOTE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8l-4.5 4v-4H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 8.5h8M8 12h5"/></svg>';
   function noteBtn(rep, l) {
     const b = el("button", "nbtn" + (l.note ? " has" : ""));
@@ -7591,7 +7509,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     r.dataset.id = l.id;
     const touch = (patch) => {
       Object.assign(l, patch, { edited: true });
-      save(rep, "", patch.hide !== void 0 ? patch.hide ? "Hide line" : "Show line" : patch.pct !== void 0 ? "Change percentage" : patch.st ? "Change status" : patch.g ? "Move to another group" : "Edit line");
+      save(rep, "", patch.fl !== void 0 ? "Flag out of scope" : patch.pct !== void 0 ? "Change percentage" : patch.st ? "Change status" : patch.g ? "Move to another group" : "Edit line");
     };
     const pc = linePct(l), st = el("select", "spsel mpct pc-" + pctBand(pc));
     st.setAttribute("aria-label", "Percent complete");
@@ -7612,14 +7530,13 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       touch({ pct: v, st: v >= 100 ? "done" : l.st === "done" ? "on" : l.st });
       renderReports();
     });
-    const t = richBox("sptext", l.h, l.t, "Line text", (h2, pl) => {
-      if (!pl) {
-        showRich(t, l.h, l.t);
+    const t = plainBox("sptext", l.t, "Item text", (v) => {
+      if (!v) {
+        t.textContent = l.t;
         return;
       }
-      touch({ t: pl.slice(0, 1200), h: h2.slice(0, 4e3) });
+      touch({ t: v.slice(0, 1200), h: "" });
     });
-    styleText(t, l);
     r.append(st, t);
     const u = jiraUrl(cfg().jira, l.jira);
     if (l.jira) {
@@ -7631,85 +7548,27 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       }
       r.append(a);
     }
-    const h = el("button", "btn sm", l.hide ? "Show" : "Hide");
-    h.type = "button";
-    h.addEventListener("click", () => {
-      touch({ hide: !l.hide });
+    const fl = el("button", "btn sm flagbtn" + (l.fl ? " on" : ""), l.fl ? "⚑ Out of scope" : "⚑");
+    fl.type = "button";
+    fl.title = l.fl ? "Out of scope: added to the sprint over the planned roadmap. Click to unflag." : "Flag as out of scope (added to the sprint over the planned roadmap)";
+    fl.setAttribute("aria-label", "Out of scope");
+    fl.setAttribute("aria-pressed", l.fl ? "true" : "false");
+    fl.addEventListener("click", () => {
+      touch({ fl: !l.fl });
       renderReports();
     });
     const x = el("button", "btn sm danger", "✕");
     x.type = "button";
-    x.setAttribute("aria-label", "Delete line");
+    x.setAttribute("aria-label", "Delete item");
+    x.title = "Delete this item";
     x.addEventListener("click", () => {
-      if (l.src === "man") d.items = d.items.filter((z) => z.id !== l.id);
-      else touch({ hide: true });
-      save(rep);
+      d.items = d.items.filter((z) => z.id !== l.id);
+      save(rep, "", "Delete item");
       renderReports();
     });
     (l.tg || []).forEach((z) => r.append(el("span", "tgchip tg-" + z.c, "#" + z.n)));
-    r.append(noteBtn(rep, l), h, x);
+    r.append(fl, noteBtn(rep, l), x);
     return r;
-  }
-  function fmtBar(rep, d, sec) {
-    const bar3 = el("div", "rbar");
-    bar3.setAttribute("role", "toolbar");
-    bar3.setAttribute("aria-label", "Text formatting");
-    let last = null;
-    const mk = (txt, title, fn) => {
-      const b = el("button", "btn sm", txt);
-      b.type = "button";
-      b.title = title;
-      b.setAttribute("aria-label", title);
-      b.addEventListener("mousedown", (e) => e.preventDefault());
-      b.addEventListener("click", () => {
-        const l = last && d.items.find((x) => x.id === last);
-        if (!l) {
-          notify("Click an item first, then choose Bold or the size", "info");
-          return;
-        }
-        fn(l);
-        l.edited = true;
-        save(rep, "", "Format item");
-        const t = sec.querySelector('.rline[data-id="' + l.id + '"] .sptext');
-        if (t) styleText(t, l);
-        mark(l);
-      });
-      bar3.append(b);
-      return b;
-    };
-    const bb = mk("B", "Bold", (l) => {
-      l.fb = !l.fb;
-    });
-    bb.style.fontWeight = "800";
-    mk("A−", "Smaller text", (l) => {
-      l.fs = Math.max(-1, (l.fs || 0) - 1);
-    });
-    mk("A+", "Larger text", (l) => {
-      l.fs = Math.min(3, (l.fs || 0) + 1);
-    });
-    mk("Normal", "Back to normal text", (l) => {
-      l.fb = false;
-      l.fs = 0;
-    });
-    const mark = (l) => {
-      bb.setAttribute("aria-pressed", l && l.fb ? "true" : "false");
-      bb.classList.toggle("on", !!(l && l.fb));
-    };
-    sec.addEventListener("focusin", (e) => {
-      const r = e.target.closest && e.target.closest(".rline");
-      if (r) {
-        last = r.dataset.id;
-        mark(d.items.find((x) => x.id === last));
-      }
-    });
-    sec.addEventListener("pointerdown", (e) => {
-      const r = e.target.closest && e.target.closest(".rline");
-      if (r) {
-        last = r.dataset.id;
-        mark(d.items.find((x) => x.id === last));
-      }
-    });
-    return bar3;
   }
   function prodBlock(rep, p, ro) {
     const d = rep.prods[p.k];
@@ -7717,24 +7576,44 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const sec = el("section", "rprod");
     sec.dataset.k = p.k;
     sec.style.setProperty("--c", colOf(p));
-    const hd = el("div", "rphead"), ap = avgPct(d.items);
-    hd.append(el("h2", "", p.n));
+    const hd = el("div", "rphead"), ap = avgPct(d.items.filter((l) => !l.hide));
+    if (ro) hd.append(el("h2", "", p.n));
+    else {
+      const ni = el("input", "rname");
+      ni.type = "text";
+      ni.value = p.n;
+      ni.maxLength = 60;
+      ni.setAttribute("aria-label", "Product name");
+      ni.style.setProperty("--c", colOf(p));
+      ni.addEventListener("change", () => {
+        const v = ni.value.replace(/\s+/g, " ").trim();
+        if (!v) {
+          ni.value = p.n;
+          return;
+        }
+        if (v === p.n) return;
+        rep.pl = (rep.pl || productsOf(cfg())).map((x) => x.k === p.k ? Object.assign({}, x, { n: v }) : x);
+        save(rep, "renamed " + p.n + " to " + v + " in the weekly report", "Rename section");
+        renderReports();
+      });
+      hd.append(ni);
+    }
     if (ap !== null) hd.append(el("span", "rvp pc-" + pctBand(ap), ap + "%"));
     sec.append(hd);
     if (ro) sec.classList.add("rview");
-    else sec.append(fmtBar(rep, d, sec));
-    if (!ro && p.custom) {
+    if (!ro) {
       const rm = el("button", "btn sm danger rmsec", "Remove section");
       rm.type = "button";
-      rm.addEventListener("click", () => confirmDlg("Remove " + p.n + "?", "The section and its " + d.items.length + " item" + (d.items.length === 1 ? "" : "s") + " are removed from this report.", "Remove section", () => {
-        rep.pl = (rep.pl || []).filter((x) => x.k !== p.k);
+      rm.addEventListener("click", () => confirmDlg("Remove " + p.n + "?", "The section and its " + d.items.length + " item" + (d.items.length === 1 ? "" : "s") + " are removed from this report only.", "Remove section", () => {
+        rep.pl = (rep.pl || productsOf(cfg())).filter((x) => x.k !== p.k);
+        rep.hidePl = (rep.hidePl || []).concat(p.k);
         delete rep.prods[p.k];
         save(rep, "removed the section " + p.n + " from the weekly report", "Remove section");
         renderReports();
       }));
       hd.append(rm);
     }
-    const ls = d.items.filter((l) => !ro || !l.hide), gh = el("div", "rgrp");
+    const ls = d.items.filter((l) => !l.hide), gh = el("div", "rgrp");
     ls.forEach((l) => gh.append(lineRow2(rep, d, l, ro)));
     if (!ro) {
       const f = el("form", "spadd"), ta = el("textarea"), go = el("button", "btn sm", "Add items");
@@ -7780,6 +7659,19 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso);
     (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify("Report text copied to the clipboard"), () => notify("Could not copy. Select the text and copy it manually.", "err"));
   };
+  function printReport(rep) {
+    const doc2 = buildPrint(rep, rep.pl || productsOf(cfg()), { colOf, fmt: fmtIso, today: fmtIso(todayIso()) });
+    document.querySelectorAll(".rprint").forEach((x) => x.remove());
+    document.body.append(doc2);
+    document.body.classList.add("print-pro");
+    const off = () => {
+      document.body.classList.remove("print-pro");
+      doc2.remove();
+      window.removeEventListener("afterprint", off);
+    };
+    window.addEventListener("afterprint", off);
+    window.print();
+  }
   var settingsBtn = () => {
     const b = el("button", "btn", "Report settings");
     b.type = "button";
@@ -7839,7 +7731,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       renderReports();
     });
   }
-  var canDelete = (r) => canBuild() && (r.status !== "submitted" || isAdmin());
+  var canDelete = () => canBuild();
   function deleteReport(rep) {
     confirmDlg("Delete this weekly report?", "The report for the week of " + fmtIso(rep.a) + " is deleted for everyone" + (rep.status === "submitted" ? ", including the executives who can see it" : "") + ". The sprint and the roadmap are not touched.", "Delete report", () => {
       delete S.reports[rep.id];
@@ -7879,7 +7771,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       const a = el("a", "splink");
       a.href = "#/reports/" + r.id;
       a.append(el("h2", "", "Week of " + fmtIso(r.a) + " – " + fmtIso(r.b)));
-      info.append(a, el("div", "meta", "Sprint " + r.n + " · week " + (r.w || 1) + " of 2 · " + (sub2 ? "submitted" + (r.subBy ? " by " + r.subBy : "") + (r.subAt ? " on " + fmtIso(r.subAt.slice(0, 10)) : "") : "last edit " + (r.by || "unknown"))));
+      info.append(a, el("div", "meta", "Sprint " + r.n + " · week " + (r.w || 1) + " of 2 · " + (sub2 ? "saved" + (r.subBy ? " by " + r.subBy : "") + (r.subAt ? " on " + fmtIso(r.subAt.slice(0, 10)) : "") : "last edit " + (r.by || "unknown"))));
       const pr = el("div", "prods");
       (r.pl || []).filter((p) => r.prods && r.prods[p.k]).forEach((p) => {
         const c = el("span", "pchip", p.n);
@@ -7888,7 +7780,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       });
       info.append(pr);
       const prog = el("div", "spprog"), top = el("div", "rpstat");
-      top.append(el("span", "chip rpst " + (sub2 ? "sub" : "draft"), sub2 ? "Submitted" : "Draft"));
+      top.append(el("span", "chip rpst " + (sub2 ? "sub" : "draft"), sub2 ? "Saved" : "Not saved yet"));
       prog.append(top, el("div", "meta", st.all ? st.all + " item" + (st.all === 1 ? "" : "s") + " · " + st.done + " done · " + st.avg + "% on average" : "No items yet"));
       const b0 = el("div", "bar0"), i0 = el("i");
       i0.style.width = pct2 + "%";
@@ -7898,7 +7790,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       more.type = "button";
       more.setAttribute("aria-label", "More actions for the week of " + fmtIso(r.a));
       more.setAttribute("aria-haspopup", "menu");
-      more.addEventListener("click", () => openMenu(more, [{ label: "Open in new tab", value: "tab" }, { label: "Copy text", value: "copy" }].concat(canDelete(r) ? [{ label: "Delete report", value: "del", danger: true }] : []), {
+      more.addEventListener("click", () => openMenu(more, [{ label: "Open in new tab", value: "tab" }, { label: "Copy text", value: "copy" }].concat(canDelete() ? [{ label: "Delete report", value: "del" }] : []), {
         search: false,
         label: "Report actions",
         onPick: (it) => {
@@ -7915,13 +7807,13 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   }
   function detailView(pg, viewer, rep) {
     if (S.reports[rep.id]) baseline[rep.id] = JSON.stringify(S.reports[rep.id]);
-    const sub2 = rep.status === "submitted", ro = viewer || sub2 || !canBuild();
+    const sub2 = rep.status === "submitted", ro = viewer || !canBuild();
     pg.append(crumbs([{ label: "Reports", href: "#/reports" }, { label: "Week of " + fmtIso(rep.a) }]));
-    pg.append(pageHead("Weekly report", "Sprint " + rep.n + " · week " + (rep.w || 1) + " of 2" + (viewer ? "" : ro ? ". Submitted reports are read-only." : ". Edit anything, then submit it to the executives.")));
+    pg.append(pageHead("Weekly report", "Sprint " + rep.n + " · week " + (rep.w || 1) + " of 2" + (viewer ? "" : ro ? ". You can read this report." : ". Edit anything, then press Save to show it to the executives.")));
     const sb0 = viewer ? null : setupBanner();
     if (sb0) pg.append(sb0);
     const srcTxt = rep.srcN ? " · built from " + rep.srcN.si + " sprint items + " + rep.srcN.rf + " roadmap bars" : "";
-    const meta = el("p", "sub rmeta", sub2 ? "Submitted" + (rep.subBy ? " by " + rep.subBy : "") + (rep.subAt ? " on " + fmtIso(rep.subAt.slice(0, 10)) : "") : "Draft" + (rep.ai ? " · wording by " + (rep.ai.model || "AI") : "") + " · last edit " + (rep.by || "") + srcTxt);
+    const meta = el("p", "sub rmeta", (sub2 ? "Saved" + (rep.subBy ? " by " + rep.subBy : "") + (rep.subAt ? " on " + fmtIso(rep.subAt.slice(0, 10)) : "") + " · visible to the executives" : "Not saved yet · the executives cannot see it") + (viewer ? "" : " · last edit " + (rep.by || "") + srcTxt));
     const tools = el("div", "row spbar rtools");
     const btn = (t, cls, fn, dis) => {
       const b = el("button", "btn " + (cls || ""), t);
@@ -7931,10 +7823,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       tools.append(b);
       return b;
     };
-    if (!viewer && !sub2) {
+    if (!viewer) {
       btn("Sync from Sprint & Roadmap", "", () => sync(rep, false), !canBuild() || rUI.busy);
     }
-    if (!viewer && !sub2) {
+    if (!viewer) {
       const U = undoR(rep.id), ub = btn("↶ Undo", "", () => reportUndo("undo"), true), rb = btn("↷ Redo", "", () => reportUndo("redo"), true);
       const upd = () => {
         ub.disabled = !U.canUndo() || !canBuild();
@@ -7946,37 +7838,20 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       unsubR = U.subscribe(upd);
       upd();
     }
-    if (!viewer && !sub2) btn("+ Product section", "", () => addSection(rep), !canBuild());
-    if (!viewer && !sub2) btn("Clear all items", "", () => clearItems(rep), !canBuild());
+    if (!viewer) btn("+ Product section", "", () => addSection(rep), !canBuild());
+    if (!viewer) btn("Clear all items", "", () => clearItems(rep), !canBuild());
     btn("Copy text", "", () => copyReport(rep));
-    btn("Print / PDF", "", () => {
-      document.body.classList.add("print-report");
-      const off = () => {
-        document.body.classList.remove("print-report");
-        window.removeEventListener("afterprint", off);
-      };
-      window.addEventListener("afterprint", off);
-      window.print();
-    });
-    if (!viewer && !sub2) tools.append(settingsBtn());
-    if (canDelete(rep)) {
-      const db = btn("Delete report", "danger", () => deleteReport(rep));
-      db.classList.add("rdel");
-    }
-    if (!viewer && !sub2) btn("Submit to executives", "primary", () => {
-      rep.status = "submitted";
-      rep.subAt = (/* @__PURE__ */ new Date()).toISOString();
-      rep.subBy = S.me.name || S.me.email;
-      save(rep, "submitted the weekly report for " + fmtIso(rep.a));
-      notify("Report submitted. Executives can now see it.");
-      renderReports();
-    }, !canBuild());
-    if (!viewer && sub2) btn("Reopen as draft", "", () => {
-      rep.status = "draft";
-      delete rep.subAt;
-      delete rep.subBy;
-      save(rep, "reopened the weekly report for " + fmtIso(rep.a));
-      notify("Report reopened as a draft. Executives no longer see it.", "info");
+    btn("Print / PDF", "", () => printReport(rep));
+    if (!viewer) tools.append(settingsBtn());
+    if (!viewer) btn("Save", "primary", () => {
+      const first = rep.status !== "submitted";
+      if (first) {
+        rep.status = "submitted";
+        rep.subAt = (/* @__PURE__ */ new Date()).toISOString();
+        rep.subBy = S.me.name || S.me.email;
+      }
+      save(rep, first ? "saved the weekly report for " + fmtIso(rep.a) + " for the executives" : "", first ? "Save" : "Save");
+      notify(first ? "Saved. The executives can see this report now. Later changes are saved automatically." : "Saved. Changes are saved automatically and the executives see them.");
       renderReports();
     }, !canBuild());
     const body = el("div", "rbody sdoc"), pls = rep.pl || productsOf(cfg());
@@ -8352,6 +8227,129 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     } catch (e) {
       return false;
     }
+  }
+
+  // src/esm/features/google-drive.js
+  var SCOPE = "https://www.googleapis.com/auth/drive.file";
+  var CID_RE = /^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/i;
+  var clientId = () => {
+    const c = ((S.ideas || {}).googlecfg || {}).cid;
+    return CID_RE.test(c || "") ? c : "";
+  };
+  var isAdmin = () => !!(S.me && S.me.is_admin);
+  var docId = (u) => {
+    const m = /\/document\/(?:u\/\d+\/)?d\/([A-Za-z0-9_-]{15,})/.exec(String(u || ""));
+    return m ? m[1] : "";
+  };
+  var gis = null;
+  var tok = null;
+  function loadGis() {
+    if (window.google && window.google.accounts && window.google.accounts.oauth2) return Promise.resolve();
+    if (gis) return gis;
+    gis = new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://accounts.google.com/gsi/client";
+      s.async = true;
+      s.onload = () => res();
+      s.onerror = () => {
+        gis = null;
+        rej(new Error("Could not load Google sign-in. Check your connection or an ad blocker."));
+      };
+      document.head.append(s);
+    });
+    return gis;
+  }
+  async function getToken() {
+    if (tok && tok.exp > Date.now() + 6e4) return tok.t;
+    const cid = clientId();
+    if (!cid) throw new Error("Google Drive is not set up yet.");
+    await loadGis();
+    return new Promise((res, rej) => {
+      const c = window.google.accounts.oauth2.initTokenClient({
+        client_id: cid,
+        scope: SCOPE,
+        include_granted_scopes: true,
+        callback: (r) => {
+          if (r && r.access_token) {
+            tok = { t: r.access_token, exp: Date.now() + (Number(r.expires_in) || 3e3) * 1e3 };
+            res(tok.t);
+          } else rej(new Error(r && (r.error_description || r.error) || "Google did not sign you in."));
+        },
+        error_callback: (e) => rej(new Error(e && e.type === "popup_closed" ? "The Google window was closed before you finished." : e && e.type === "popup_failed_to_open" ? "Your browser blocked the Google window. Allow pop-ups for this site and try again." : "Google sign-in failed."))
+      });
+      c.requestAccessToken({ prompt: tok ? "" : void 0 });
+    });
+  }
+  var API = "https://www.googleapis.com";
+  async function fail(r, what) {
+    let m = "";
+    try {
+      const j = await r.json();
+      m = j.error && (j.error.message || j.error) || "";
+    } catch (e) {
+    }
+    const err = new Error(r.status === 401 ? "Google sign-in expired. Click again to reconnect." : r.status === 403 && /accessNotConfigured|has not been used|disabled/i.test(m) ? "The Google Drive API is not enabled in your Google Cloud project (APIs & Services > Library > Google Drive API > Enable)." : what + " failed (" + r.status + ")" + (m ? ": " + String(m).slice(0, 140) : ""));
+    err.status = r.status;
+    if (r.status === 401) tok = null;
+    throw err;
+  }
+  async function exportDoc(o) {
+    const t = await getToken(), auth = { Authorization: "Bearer " + t };
+    if (o.fileId) {
+      const r2 = await fetch(API + "/upload/drive/v3/files/" + encodeURIComponent(o.fileId) + "?uploadType=media&fields=id", { method: "PATCH", headers: Object.assign({ "Content-Type": "text/html; charset=UTF-8" }, auth), body: o.html });
+      if (r2.ok) return { id: o.fileId, url: "https://docs.google.com/document/d/" + o.fileId + "/edit", created: false };
+      if (r2.status !== 404 && r2.status !== 403) await fail(r2, "Updating the Google Doc");
+    }
+    const b = "ynmo" + Math.random().toString(36).slice(2), meta = JSON.stringify({ name: o.name, mimeType: "application/vnd.google-apps.document" });
+    const body = "--" + b + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" + meta + "\r\n--" + b + "\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n" + o.html + "\r\n--" + b + "--";
+    const r = await fetch(API + "/upload/drive/v3/files?uploadType=multipart&fields=id", { method: "POST", headers: Object.assign({ "Content-Type": "multipart/related; boundary=" + b }, auth), body });
+    if (!r.ok) await fail(r, "Creating the Google Doc");
+    const j = await r.json();
+    if (!j.id) throw new Error("Google did not return the new document.");
+    return { id: j.id, url: "https://docs.google.com/document/d/" + j.id + "/edit", created: true };
+  }
+  function openDriveSetup(then) {
+    openDlg("Connect Google Drive (one-time setup)", (box2) => {
+      box2.append(el("p", "sub", "An admin does this once. Everyone on the team can then export with one click."));
+      const ol = el("ol", "gsteps");
+      [
+        'Open console.cloud.google.com and create a project (any name, for example "Ynmo Roadmaps").',
+        'APIs & Services > Library: search "Google Drive API" and click Enable.',
+        'APIs & Services > OAuth consent screen: choose Internal if your company uses Google Workspace, otherwise External. Fill the app name and your email. Add the scope .../auth/drive.file. For External, click "Publish app" so teammates are not limited to test users (this scope needs no Google review).',
+        "APIs & Services > Credentials > Create credentials > OAuth client ID > Web application. Under Authorized JavaScript origins add " + location.origin + " and create it.",
+        "Copy the Client ID (it ends with .apps.googleusercontent.com) and paste it below. It is not a secret."
+      ].forEach((t) => ol.append(el("li", "", t)));
+      const ci = el("input");
+      ci.type = "text";
+      ci.value = clientId();
+      ci.placeholder = "1234567890-abc123.apps.googleusercontent.com";
+      ci.setAttribute("aria-label", "Google OAuth Client ID");
+      ci.autocomplete = "off";
+      const msg = el("p", "sub");
+      msg.setAttribute("aria-live", "polite");
+      const ok = el("button", "btn primary", "Save"), no = el("button", "btn", "Cancel");
+      ok.type = no.type = "button";
+      no.addEventListener("click", closeDlg);
+      ok.addEventListener("click", () => {
+        const v = ci.value.trim();
+        if (!CID_RE.test(v)) {
+          msg.textContent = "That does not look like a Client ID. It ends with .apps.googleusercontent.com.";
+          return;
+        }
+        S.ideas.googlecfg = Object.assign({}, S.ideas.googlecfg || {}, { cfg: true, cid: v });
+        write("ideas/googlecfg", S.ideas.googlecfg);
+        logAct("sprint", "set up Google Drive export");
+        notify("Google Drive is set up");
+        closeDlg();
+        if (then) then();
+      });
+      const lab = el("label");
+      lab.append(el("span", "", "Client ID"), ci);
+      const row = el("div", "row");
+      row.append(ok, no);
+      box2.append(ol, lab, msg, row);
+      setTimeout(() => ci.focus(), 0);
+    });
   }
 
   // src/esm/pages/sprints.js
@@ -9265,8 +9263,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     if (unsubBar) unsubBar();
     unsubBar = U.subscribe(sync2);
     sync2();
-    const bar3 = el("div", "row spbar");
-    bar3.append(ab, cb, jb, ub, rb);
+    const bar4 = el("div", "row spbar");
+    bar4.append(ab, cb, jb, ub, rb);
     const gd = el("div", "spgdoc"), gi = el("input");
     gi.type = "url";
     gi.placeholder = "Paste a Google Doc link (optional)";
@@ -9340,7 +9338,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       else notify("Google Drive is not set up yet. Ask an admin to click Export to Google Docs once to set it up. You can use Copy for Docs meanwhile.", "info");
     });
     gd.append(gi, eb, cp, ob);
-    pg.append(dr, bar3, gd, ed);
+    pg.append(dr, bar4, gd, ed);
   }
   function renderSprints(o) {
     const pg = $("pg-sprints");
@@ -10400,22 +10398,22 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   function pwMeter(input, host2) {
     const w = el("div", "pwmeter");
     w.setAttribute("aria-live", "polite");
-    const bar3 = el("div", "pwbar");
-    for (let i = 0; i < 4; i++) bar3.append(el("i"));
+    const bar4 = el("div", "pwbar");
+    for (let i = 0; i < 4; i++) bar4.append(el("i"));
     const txt = el("span", "pwtxt");
-    w.append(bar3, txt);
+    w.append(bar4, txt);
     host2.append(w);
     const upd = () => {
       const v = input.value;
       if (!v) {
         w.dataset.s = "";
         txt.textContent = "";
-        bar3.querySelectorAll("i").forEach((i) => i.className = "");
+        bar4.querySelectorAll("i").forEach((i) => i.className = "");
         return;
       }
       const r = pwScore(v), lab = ["Weak", "Weak", "Okay", "Good", "Strong"][r.s];
       w.dataset.s = String(r.s);
-      bar3.querySelectorAll("i").forEach((i, n) => {
+      bar4.querySelectorAll("i").forEach((i, n) => {
         i.className = n < Math.max(1, r.s) ? "on" : "";
       });
       txt.textContent = lab + (r.tips.length && r.s < 4 ? " · " + r.tips[0] : "");

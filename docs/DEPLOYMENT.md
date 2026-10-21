@@ -19,6 +19,7 @@ supabase secrets set WEBHOOK_SECRET=<long random> SMTP_USER=<mailbox> SMTP_PASS=
 Dashboard → Database → Webhooks → on `profiles` INSERT → HTTP request to the function URL with header `x-webhook-secret: <same value>`.
 
 ## 2b. Weekly report AI (Edge Function `weekly-draft`)
+Run `supabase/sql/07-reports-editor-delete.sql` after 06 (lets any editor delete a weekly report).
 Run `supabase/sql/06-sprints-weekly-reports.sql` once, then:
 ```bash
 supabase functions deploy weekly-draft
