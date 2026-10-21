@@ -554,3 +554,15 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .rhedit input[type=text] { flex: 1 1 260px; min-width: 0; }
 .rphead .rvp { margin-inline-start: auto; }
 .rtile .rvp { align-self: flex-start; }
+
+/* Item notes: an icon that shows the note as a tooltip */
+.nbtn { position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border: 1.5px solid transparent; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; opacity: .55; }
+.nbtn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.nbtn:hover, .nbtn:focus-visible, .nbtn.has { opacity: 1; }
+.nbtn.has { color: var(--brand); } .nbtn.has svg { fill: color-mix(in srgb, var(--brand) 18%, #fff); }
+.nbtn.ro { cursor: help; border-color: transparent; }
+.nbtn[data-tip]:hover::after, .nbtn[data-tip]:focus-visible::after { content: attr(data-tip); position: absolute; inset-inline-end: 0; bottom: calc(100% + 8px); width: max-content; max-width: 300px; padding: 8px 12px; border-radius: 10px; background: #1c2033; color: #fff; font-size: .85rem; font-weight: 500; line-height: 1.45; white-space: pre-wrap; text-align: start; box-shadow: 0 6px 20px rgba(20, 24, 50, .25); z-index: 60; pointer-events: none; }
+.rv .nbtn { order: 2; }
+.rmsec { margin-inline-start: 10px; }
+.rprog .rmsum b { flex: 0 0 170px; }
+@media print { body.print-report .nbtn:not(.ro) { display: none; } body.print-report .rmsec { display: none; } }

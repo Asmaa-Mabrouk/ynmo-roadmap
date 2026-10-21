@@ -4,6 +4,7 @@
  * Stored HTML is never trusted: `cleanFragment` rebuilds it node by node from a whitelist, so nothing else (scripts, handlers, styles,
  * javascript: links) can ever reach the page, whether it came from a paste, the database or a tampered row.
  */
+import { notify } from '../ui/notify.js';
 const KEEP = { B: 'b', STRONG: 'b', I: 'i', EM: 'i', U: 'u', UL: 'ul', OL: 'ol', LI: 'li', BR: 'br', P: 'p', DIV: 'p' };
 const DROP = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'NOSCRIPT', 'TEMPLATE', 'SVG', 'MATH']);
 
@@ -65,7 +66,7 @@ export function richBar() {
   const b = (label, title, fn) => {
     const x = document.createElement('button'); x.className = 'btn sm'; x.textContent = label; x.type = 'button'; x.title = title; x.setAttribute('aria-label', title);
     x.addEventListener('mousedown', e => e.preventDefault());
-    x.addEventListener('click', () => { if (document.activeElement && document.activeElement.classList.contains('rt')) fn(); else { const s = document.getElementById('save'); if (s) s.textContent = 'Click inside a text box first'; } });
+    x.addEventListener('click', () => { if (document.activeElement && document.activeElement.classList.contains('rt')) fn(); else notify('Click inside an item first, then choose the formatting', 'info'); });
     bar.append(x); return x;
   };
   b('B', 'Bold', () => document.execCommand('bold')).style.fontWeight = '800';

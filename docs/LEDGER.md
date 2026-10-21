@@ -15,7 +15,7 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 | Backend | Supabase project **YNMO_PM**; SQL 01 to 06; Edge Functions `notify-approval`, `weekly-draft`, `jira-sync` (code in repo; deployment status per the open items below) |
 | Owner | Asmaa (Senior PM, TrianglZ, Ynmo ecosystem, Riyadh) |
 | Pages | Roadmap, Ideas, Roadmaps, Sprints, Reports, Monthly, Resources, Vacations, Capacity, Baselines, Log, Approvals |
-| Tests | `tests/run_all.sh`: last full run 88/88 scenarios and all feature scripts green (`sprints_reports.py` 94, `monthly_page.py` 33) |
+| Tests | `tests/run_all.sh`: last full run 88/88 scenarios and all feature scripts green (`sprints_reports.py` 94, `monthly_page.py` 41) |
 | Jira | Site `tatralab.atlassian.net`; default projects DYC (Daycare), FAS (Tifli), AU (AI). Plan, Warif and Sharjah project keys not known yet. Rovo was considered; the API route was chosen |
 | Google Drive export | Google Cloud project **YNMO PM** (trianglz.com, Internal consent), Drive API on, Web client created for `https://ynmo-roadmap.vercel.app`. Client ID to be pasted in the tool by an admin; the client secret is not used |
 
@@ -41,6 +41,19 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 8. Not yet tested against the real services: Jira, Google sign-in and Drive.
 
 ## Ledger updates
+
+🔄 YNMO LEDGER UPDATE — 2026-10-21
+Request: Remove "Open the month"; progress calculated from the items written below (0 until items exist); add product sections that show in the bars; formatting per product; per-item note with hover tooltip
+Surface: cross-cutting (Ynmo Roadmaps internal tool)
+Outcome: Weekly report progress block computed from its own items; "+ Product section"; formatting bar inside each product; item notes as icon + tooltip.
+New facts / decisions locked:
+  • Weekly progress = average of the items' percentages (overall: all items; per product: its items); no weighting, 0% when empty. The Monthly page keeps its own weighted figures and is not shown in the weekly report any more.
+  • Report products may be custom (`custom:true`, own `c` colour) and live only in that report; items may carry `note` (plain text, up to 1000 characters).
+Corrections to this skill:
+  • none
+Open / flagged:
+  • The weekly report and the Monthly page now show different percentages by design; say if the weekly report should link or reuse the Monthly figures.
+Changelog: Weekly progress from its own items; product sections; per-product formatting; item notes.
 
 🔄 YNMO LEDGER UPDATE — 2026-10-20
 Request: Make the report dates/label editable; per product no big text, only items; each item a coloured percentage dropdown

@@ -21,8 +21,8 @@ import { createUndo } from '../features/undo-stack.js';
 import { registerUndo } from '../features/undo-router.js';
 import { autoGrow, richBar, richBox, showRich, submitOnCtrlEnter } from '../features/rich-text.js';
 import { RSTATUS, linePct, avgPct, aiPayload, applyAi, buildProds, jiraUrl, newManualLine, productsOf, reportToText } from '../features/report-model.js';
-import { monthOf, pctBand } from '../features/month-model.js';
-import { monthSummary } from '../features/month-view.js';
+import { pctBand } from '../features/month-model.js';
+import { progressBlock } from '../features/month-view.js';
 import { confirmDlg } from '../ui/confirm.js';
 import { isAdmin } from '../features/google-drive.js';
 import { EXTRA_SECTIONS } from '../features/sprint-doc.js';
@@ -31,7 +31,7 @@ const SPARK = '<svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d
 const rUI = { busy: false, note: '', noteFor: '', err: false, wait: false, last: '' };
 const routeId = () => { const m = /^#\/reports\/(\w+)/.exec(location.hash); return m ? m[1] : null; };
 /** The product's colour on the Roadmap and Sprints pages (its first squad), so the report looks like them. */
-const colOf = p => { const l = LANES.concat(EXTRA_SECTIONS).find(x => (p.squads || []).includes(x.k)); return l ? l.c : 'var(--brand)'; };
+const colOf = p => { if (p.c) return p.c; const l = LANES.concat(EXTRA_SECTIONS).find(x => (p.squads || []).includes(x.k)); return l ? l.c : 'var(--brand)'; };
 const cfg = () => S.ideas.reportcfg || {};
 const uidr = () => 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const canBuild = () => !isViewer() && canWrite();
@@ -99,6 +99,7 @@ async function sync(rep, ai, isNew) {
   const fill = !isNew && !ai, pl = productsOf(cfg()), { road, ka, kb } = fill ? roadFor(rep.a, rep.b) : { road: [], ka: NaN, kb: NaN }, sitems = fill ? itemsOf(rep.sp) : [];
   // Deployments / Quality scope sections get their own report section when no product already covers them.
   EXTRA_SECTIONS.forEach(x => { if (sitems.some(i => i.squad === x.k) && !pl.some(q => q.squads.includes(x.k))) pl.push({ k: x.k, n: x.n, squads: [x.k] }); });
+  (rep.pl || []).filter(x => x.custom).forEach(x => { if (!pl.some(q => q.k === x.k)) pl.push(x); });   /* sections added by hand stay */
   rep.pl = pl;
   if (fill) rep.prods = buildProds(pl, rep.prods, sitems, road, ka, kb, rep.a, rep.b);
   else { const keep = rep.prods || {}; rep.prods = {}; pl.forEach(p => { rep.prods[p.k] = keep[p.k] || { items: [], sum: '', sumH: '', sumEdited: false }; }); }   /* keep every line as it is; only make sure each product has a section */
@@ -160,8 +161,24 @@ function viewLine(l) {
   const r = el('div', 'rv ln-' + l.st), t = el('span', 'rvt'); showRich(t, l.h, l.t); r.append(el('span', 'rvp pc-' + pctBand(linePct(l)), linePct(l) + '%'), t);
   const u = jiraUrl(cfg().jira, l.jira); if (l.jira) { const a = el(u ? 'a' : 'span', 'jira', l.jira); if (u) { a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer'; } r.append(a); }
   (l.tg || []).forEach(x => r.append(el('span', 'tgchip tg-' + x.c, '#' + x.n)));
+  if (l.note) { const n = el('span', 'nbtn has ro'); n.tabIndex = 0; n.innerHTML = NOTE_ICON; n.dataset.tip = l.note; n.setAttribute('role', 'note'); n.setAttribute('aria-label', 'Note: ' + l.note); r.append(n); }
   if (l.st === 'risk' || l.st === 'late') r.append(el('span', 'chip rs-' + l.st, RSTATUS[l.st]));
   return r;
+}
+const NOTE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8l-4.5 4v-4H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 8.5h8M8 12h5"/></svg>';
+/** Note icon of an item: hover (or focus) shows the note as a tooltip; in edit mode a click edits it. */
+function noteBtn(rep, l) {
+  const b = el('button', 'nbtn' + (l.note ? ' has' : '')); b.type = 'button'; b.innerHTML = NOTE_ICON;
+  if (l.note) b.dataset.tip = l.note;
+  b.setAttribute('aria-label', l.note ? 'Edit note: ' + l.note : 'Add a note'); if (!l.note) b.title = 'Add a note';
+  b.addEventListener('click', () => openDlg('Note for this item', box => {
+    const ta = el('textarea'); ta.rows = 4; ta.maxLength = 1000; ta.value = l.note || ''; ta.setAttribute('aria-label', 'Note'); ta.placeholder = 'A short note. It appears when someone hovers the note icon.';
+    const ok = el('button', 'btn primary', 'Save'), no = el('button', 'btn', 'Cancel'), rm = el('button', 'btn', 'Remove note'); ok.type = no.type = rm.type = 'button'; rm.hidden = !l.note;
+    const put = v => { l.note = v; l.edited = true; save(rep, '', v ? 'Edit note' : 'Remove note'); closeDlg(); renderReports(); };
+    ok.addEventListener('click', () => put(ta.value.trim())); rm.addEventListener('click', () => put('')); no.addEventListener('click', closeDlg);
+    const row = el('div', 'row'); row.append(ok, rm, no); box.append(ta, row);
+  }));
+  return b;
 }
 function lineRow(rep, d, l, ro) {
   if (ro) return viewLine(l);
@@ -178,14 +195,15 @@ function lineRow(rep, d, l, ro) {
   const h = el('button', 'btn sm', l.hide ? 'Show' : 'Hide'); h.type = 'button'; h.addEventListener('click', () => { touch({ hide: !l.hide }); renderReports(); });
   const x = el('button', 'btn sm danger', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Delete line'); x.addEventListener('click', () => { if (l.src === 'man') d.items = d.items.filter(z => z.id !== l.id); else touch({ hide: true }); save(rep); renderReports(); });
   (l.tg || []).forEach(z => r.append(el('span', 'tgchip tg-' + z.c, '#' + z.n)));
-  r.append(h, x);
+  r.append(noteBtn(rep, l), h, x);
   return r;
 }
 function prodBlock(rep, p, ro) {
   const d = rep.prods[p.k]; if (!d) return el('div');
   const sec = el('section', 'rprod'); sec.dataset.k = p.k; sec.style.setProperty('--c', colOf(p));
   const hd = el('div', 'rphead'), ap = avgPct(d.items); hd.append(el('h2', '', p.n)); if (ap !== null) hd.append(el('span', 'rvp pc-' + pctBand(ap), ap + '%')); sec.append(hd);
-  if (ro) sec.classList.add('rview');
+  if (ro) sec.classList.add('rview'); else sec.append(richBar());
+  if (!ro && p.custom) { const rm = el('button', 'btn sm danger rmsec', 'Remove section'); rm.type = 'button'; rm.addEventListener('click', () => confirmDlg('Remove ' + p.n + '?', 'The section and its ' + d.items.length + ' item' + (d.items.length === 1 ? '' : 's') + ' are removed from this report.', 'Remove section', () => { rep.pl = (rep.pl || []).filter(x => x.k !== p.k); delete rep.prods[p.k]; save(rep, 'removed the section ' + p.n + ' from the weekly report', 'Remove section'); renderReports(); })); hd.append(rm); }
   const ls = d.items.filter(l => !ro || !l.hide), gh = el('div', 'rgrp');
   ls.forEach(l => gh.append(lineRow(rep, d, l, ro)));
   if (!ro) {
@@ -198,11 +216,26 @@ function prodBlock(rep, p, ro) {
   sec.append(gh);
   return sec;
 }
-const monthDocFor = rep => { const d = S.reports['mo' + monthOf(rep.a).replace('-', '')]; return d && (!isViewer() || d.status === 'submitted') ? d : null; };
 const statsOf = r => { let all = 0, done = 0, sum = 0; Object.keys(r.prods || {}).forEach(k => ((r.prods[k] || {}).items || []).filter(l => !l.hide).forEach(l => { all++; const v = linePct(l); sum += v; if (v >= 100) done++; })); return { all: all, done: done, avg: all ? Math.round(sum / all) : 0 }; };
-const copyReport = rep => { const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso, monthDocFor(rep)); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify('Report text copied to the clipboard'), () => notify('Could not copy. Select the text and copy it manually.', 'err')); };
+const copyReport = rep => { const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify('Report text copied to the clipboard'), () => notify('Could not copy. Select the text and copy it manually.', 'err')); };
 const settingsBtn = () => { const b = el('button', 'btn', 'Report settings'); b.type = 'button'; b.disabled = !canBuild(); b.addEventListener('click', settingsDlg); return b; };
 
+const SEC_COLORS = ['#0f8b8d', '#7b61ff', '#c2410c', '#2563eb', '#be185d', '#65a30d', '#b45309'];
+function addSection(rep) {
+  openDlg('Add a product section', box => {
+    const inp = el('input'); inp.type = 'text'; inp.maxLength = 60; inp.placeholder = 'Section name, e.g. Wasl+'; inp.setAttribute('aria-label', 'Section name');
+    const ok = el('button', 'btn primary', 'Add section'), no = el('button', 'btn', 'Cancel'); ok.type = no.type = 'button';
+    const go = () => {
+      const n = inp.value.replace(/\s+/g, ' ').trim(); if (!n) { inp.focus(); return; }
+      const pl = (rep.pl || productsOf(cfg())).slice(), k = 'c' + Date.now().toString(36);
+      pl.push({ k: k, n: n, squads: [], custom: true, c: SEC_COLORS[pl.filter(x => x.custom).length % SEC_COLORS.length] });
+      rep.pl = pl; rep.prods = rep.prods || {}; rep.prods[k] = { items: [], sum: '', sumH: '', sumEdited: false };
+      save(rep, 'added the section ' + n + ' to the weekly report', 'Add section'); closeDlg(); notify(n + ' added. Add its items below.'); renderReports();
+    };
+    ok.addEventListener('click', go); inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } }); no.addEventListener('click', closeDlg);
+    const row = el('div', 'row'); row.append(ok, no); box.append(inp, row);
+  });
+}
 function clearItems(rep) {
   confirmDlg('Remove all items from this report?', 'Every item under every product is removed so you can add your own. The product sections stay. You can undo this.', 'Remove all items', () => {
     Object.keys(rep.prods || {}).forEach(k => { rep.prods[k].items = []; rep.prods[k].sum = ''; rep.prods[k].sumH = ''; rep.prods[k].sumEdited = false; });
@@ -265,6 +298,7 @@ function detailView(pg, viewer, rep) {
     const upd = () => { ub.disabled = !U.canUndo() || !canBuild(); rb.disabled = !U.canRedo() || !canBuild(); ub.title = ub.ariaLabel = U.canUndo() ? 'Undo: ' + U.nextUndo() + ' (Ctrl/Cmd+Z)' : 'Nothing to undo'; rb.title = rb.ariaLabel = U.canRedo() ? 'Redo: ' + U.nextRedo() + ' (Ctrl/Cmd+Shift+Z)' : 'Nothing to redo'; };
     if (unsubR) unsubR(); unsubR = U.subscribe(upd); upd();
   }
+  if (!viewer && !sub) btn('+ Product section', '', () => addSection(rep), !canBuild());
   if (!viewer && !sub) btn('Clear all items', '', () => clearItems(rep), !canBuild());
   btn('Copy text', '', () => copyReport(rep));
   btn('Print / PDF', '', () => { document.body.classList.add('print-report'); const off = () => { document.body.classList.remove('print-report'); window.removeEventListener('afterprint', off); }; window.addEventListener('afterprint', off); window.print(); });
@@ -286,9 +320,7 @@ function detailView(pg, viewer, rep) {
     const l1 = el('label', '', 'From '), l2 = el('label', '', 'To '); l1.append(fa); l2.append(fb); ed.append(l1, l2, lb); hero.append(ed);
   }
   body.append(hero);
-  const glance = el('div', 'rglance');
-  pls.forEach(p => { const d = rep.prods[p.k]; if (!d) return; const v = d.items.filter(l => !l.hide), ap = avgPct(v), t = el('div', 'rtile'); t.style.setProperty('--c', colOf(p)); t.append(el('b', '', p.n)); if (ap !== null) t.append(el('span', 'rvp pc-' + pctBand(ap), ap + '%')); t.append(el('small', '', v.length ? v.length + ' item' + (v.length === 1 ? '' : 's') + ' · ' + v.filter(l => linePct(l) >= 100).length + ' done' : 'no items yet')); glance.append(t); });
-  body.append(glance); const mb = monthSummary(S.reports['mo' + monthOf(rep.a).replace('-', '')], pls, colOf, viewer); if (mb) body.append(mb); if (!ro) body.append(richBar());
+  body.append(progressBlock('Overall progress', fmtIso(rep.a) + ' – ' + fmtIso(rep.b), pls, rep.prods || {}, colOf));
   pls.forEach(p => body.append(prodBlock(rep, p, ro)));
   pg.append(meta, tools); if (rUI.note && rUI.noteFor === rep.id && !viewer && !sub) { const nt = el('p', 'rnote' + (rUI.err ? ' bad' : ''), rUI.note); nt.setAttribute('role', 'status'); pg.append(nt); } pg.append(body);
 }

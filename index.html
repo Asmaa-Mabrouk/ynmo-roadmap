@@ -977,6 +977,18 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .rhedit input[type=text] { flex: 1 1 260px; min-width: 0; }
 .rphead .rvp { margin-inline-start: auto; }
 .rtile .rvp { align-self: flex-start; }
+
+/* Item notes: an icon that shows the note as a tooltip */
+.nbtn { position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border: 1.5px solid transparent; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; opacity: .55; }
+.nbtn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.nbtn:hover, .nbtn:focus-visible, .nbtn.has { opacity: 1; }
+.nbtn.has { color: var(--brand); } .nbtn.has svg { fill: color-mix(in srgb, var(--brand) 18%, #fff); }
+.nbtn.ro { cursor: help; border-color: transparent; }
+.nbtn[data-tip]:hover::after, .nbtn[data-tip]:focus-visible::after { content: attr(data-tip); position: absolute; inset-inline-end: 0; bottom: calc(100% + 8px); width: max-content; max-width: 300px; padding: 8px 12px; border-radius: 10px; background: #1c2033; color: #fff; font-size: .85rem; font-weight: 500; line-height: 1.45; white-space: pre-wrap; text-align: start; box-shadow: 0 6px 20px rgba(20, 24, 50, .25); z-index: 60; pointer-events: none; }
+.rv .nbtn { order: 2; }
+.rmsec { margin-inline-start: 10px; }
+.rprog .rmsum b { flex: 0 0 170px; }
+@media print { body.print-report .nbtn:not(.ro) { display: none; } body.print-report .rmsec { display: none; } }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -6479,7 +6491,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       if (!d) return;
       const ap = avgPct(d.items);
       out.push(p.n.toUpperCase() + (ap === null ? "" : " - " + ap + "%"));
-      d.items.filter((l) => !l.hide).forEach((l) => out.push("- " + l.t + (l.jira ? " [" + l.jira + "]" : "") + " - " + linePct(l) + "%"));
+      d.items.filter((l) => !l.hide).forEach((l) => {
+        out.push("- " + l.t + (l.jira ? " [" + l.jira + "]" : "") + " - " + linePct(l) + "%");
+        if (l.note) out.push("  Note: " + String(l.note).replace(/\s+/g, " "));
+      });
       out.push("");
     });
     const mt = monthText(monthDoc, products, fmt);
@@ -6927,10 +6942,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       x.addEventListener("mousedown", (e) => e.preventDefault());
       x.addEventListener("click", () => {
         if (document.activeElement && document.activeElement.classList.contains("rt")) fn();
-        else {
-          const s = document.getElementById("save");
-          if (s) s.textContent = "Click inside a text box first";
-        }
+        else notify("Click inside an item first, then choose the formatting", "info");
       });
       bar3.append(x);
       return x;
@@ -7124,20 +7136,21 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
     return body;
   }
-  function monthSummary(doc2, pls, colOf3, viewer) {
-    if (!doc2 || !(doc2.lines || []).some((l) => String(l.t || "").trim()) || viewer && doc2.status !== "submitted") return null;
-    const sec = el("section", "rmonth"), hd = el("div", "rmhead"), a = el("a", "rmopen", "Open the month");
-    a.href = "#/monthly/" + doc2.mo;
-    hd.append(el("h2", "", "Monthly deliverables"), el("span", "rmmonth", monthLabel(doc2.mo)), a);
+  function progressBlock(title, subText, pls, prods, colOf3) {
+    const sec = el("section", "rmonth rprog"), hd = el("div", "rmhead");
+    hd.append(el("h2", "", title));
+    if (subText) hd.append(el("span", "rmmonth", subText));
     sec.append(hd);
-    const ov = overallBar(doc2);
-    if (ov) sec.append(ov);
+    const itemsOf2 = (p) => ((prods[p.k] || {}).items || []).filter((l) => !l.hide && String(l.t || "").trim());
+    const all = pls.reduce((a, p) => a.concat(itemsOf2(p)), []), ov = avgPct(all) || 0, done2 = all.filter((l) => linePct(l) >= 100).length;
+    const o = el("div", "rmall");
+    o.append(bar2(ov, true, "Overall progress"), el("b", "rmpct pc-" + pctBand(ov), ov + "%"), el("span", "rmsub", "complete · " + done2 + " of " + all.length + " item" + (all.length === 1 ? "" : "s") + " done"));
+    sec.append(o);
     pls.forEach((p) => {
-      const pl = doc2.lines.filter((i) => i.k === p.k && !i.adhoc && String(i.t || "").trim()), pp = monthProgress(pl);
-      if (pp.pct === null) return;
-      const r = el("div", "rmsum");
+      const its = itemsOf2(p), pp = avgPct(its) || 0, r = el("div", "rmsum");
+      r.dataset.k = p.k;
       r.style.setProperty("--c", colOf3(p));
-      r.append(el("b", "", p.n), bar2(pp.pct, false, p.n + " progress"), el("span", "rmpp pc-" + pctBand(pp.pct), pp.pct + "%"));
+      r.append(el("b", "", p.n), bar2(pp, false, p.n + " progress"), el("span", "rmpp pc-" + pctBand(pp), pp + "%"));
       sec.append(r);
     });
     return sec;
@@ -7289,6 +7302,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return m ? m[1] : null;
   };
   var colOf = (p) => {
+    if (p.c) return p.c;
     const l = LANES.concat(EXTRA_SECTIONS).find((x) => (p.squads || []).includes(x.k));
     return l ? l.c : "var(--brand)";
   };
@@ -7408,6 +7422,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const fill = !isNew && !ai, pl = productsOf(cfg()), { road, ka, kb } = fill ? roadFor(rep.a, rep.b) : { road: [], ka: NaN, kb: NaN }, sitems = fill ? itemsOf(rep.sp) : [];
     EXTRA_SECTIONS.forEach((x) => {
       if (sitems.some((i) => i.squad === x.k) && !pl.some((q) => q.squads.includes(x.k))) pl.push({ k: x.k, n: x.n, squads: [x.k] });
+    });
+    (rep.pl || []).filter((x) => x.custom).forEach((x) => {
+      if (!pl.some((q) => q.k === x.k)) pl.push(x);
     });
     rep.pl = pl;
     if (fill) rep.prods = buildProds(pl, rep.prods, sitems, road, ka, kb, rep.a, rep.b);
@@ -7546,8 +7563,51 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       r.append(a);
     }
     (l.tg || []).forEach((x) => r.append(el("span", "tgchip tg-" + x.c, "#" + x.n)));
+    if (l.note) {
+      const n = el("span", "nbtn has ro");
+      n.tabIndex = 0;
+      n.innerHTML = NOTE_ICON;
+      n.dataset.tip = l.note;
+      n.setAttribute("role", "note");
+      n.setAttribute("aria-label", "Note: " + l.note);
+      r.append(n);
+    }
     if (l.st === "risk" || l.st === "late") r.append(el("span", "chip rs-" + l.st, RSTATUS[l.st]));
     return r;
+  }
+  var NOTE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8l-4.5 4v-4H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 8.5h8M8 12h5"/></svg>';
+  function noteBtn(rep, l) {
+    const b = el("button", "nbtn" + (l.note ? " has" : ""));
+    b.type = "button";
+    b.innerHTML = NOTE_ICON;
+    if (l.note) b.dataset.tip = l.note;
+    b.setAttribute("aria-label", l.note ? "Edit note: " + l.note : "Add a note");
+    if (!l.note) b.title = "Add a note";
+    b.addEventListener("click", () => openDlg("Note for this item", (box2) => {
+      const ta = el("textarea");
+      ta.rows = 4;
+      ta.maxLength = 1e3;
+      ta.value = l.note || "";
+      ta.setAttribute("aria-label", "Note");
+      ta.placeholder = "A short note. It appears when someone hovers the note icon.";
+      const ok = el("button", "btn primary", "Save"), no = el("button", "btn", "Cancel"), rm = el("button", "btn", "Remove note");
+      ok.type = no.type = rm.type = "button";
+      rm.hidden = !l.note;
+      const put = (v) => {
+        l.note = v;
+        l.edited = true;
+        save(rep, "", v ? "Edit note" : "Remove note");
+        closeDlg();
+        renderReports();
+      };
+      ok.addEventListener("click", () => put(ta.value.trim()));
+      rm.addEventListener("click", () => put(""));
+      no.addEventListener("click", closeDlg);
+      const row = el("div", "row");
+      row.append(ok, rm, no);
+      box2.append(ta, row);
+    }));
+    return b;
   }
   function lineRow2(rep, d, l, ro) {
     if (ro) return viewLine(l);
@@ -7610,7 +7670,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       renderReports();
     });
     (l.tg || []).forEach((z) => r.append(el("span", "tgchip tg-" + z.c, "#" + z.n)));
-    r.append(h, x);
+    r.append(noteBtn(rep, l), h, x);
     return r;
   }
   function prodBlock(rep, p, ro) {
@@ -7624,6 +7684,18 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     if (ap !== null) hd.append(el("span", "rvp pc-" + pctBand(ap), ap + "%"));
     sec.append(hd);
     if (ro) sec.classList.add("rview");
+    else sec.append(richBar());
+    if (!ro && p.custom) {
+      const rm = el("button", "btn sm danger rmsec", "Remove section");
+      rm.type = "button";
+      rm.addEventListener("click", () => confirmDlg("Remove " + p.n + "?", "The section and its " + d.items.length + " item" + (d.items.length === 1 ? "" : "s") + " are removed from this report.", "Remove section", () => {
+        rep.pl = (rep.pl || []).filter((x) => x.k !== p.k);
+        delete rep.prods[p.k];
+        save(rep, "removed the section " + p.n + " from the weekly report", "Remove section");
+        renderReports();
+      }));
+      hd.append(rm);
+    }
     const ls = d.items.filter((l) => !ro || !l.hide), gh = el("div", "rgrp");
     ls.forEach((l) => gh.append(lineRow2(rep, d, l, ro)));
     if (!ro) {
@@ -7656,10 +7728,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     sec.append(gh);
     return sec;
   }
-  var monthDocFor = (rep) => {
-    const d = S.reports["mo" + monthOf(rep.a).replace("-", "")];
-    return d && (!isViewer() || d.status === "submitted") ? d : null;
-  };
   var statsOf = (r) => {
     let all = 0, done2 = 0, sum = 0;
     Object.keys(r.prods || {}).forEach((k) => ((r.prods[k] || {}).items || []).filter((l) => !l.hide).forEach((l) => {
@@ -7671,7 +7739,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return { all, done: done2, avg: all ? Math.round(sum / all) : 0 };
   };
   var copyReport = (rep) => {
-    const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso, monthDocFor(rep));
+    const txt = reportToText(rep, rep.pl || productsOf(cfg()), fmtIso);
     (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify("Report text copied to the clipboard"), () => notify("Could not copy. Select the text and copy it manually.", "err"));
   };
   var settingsBtn = () => {
@@ -7681,6 +7749,45 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     b.addEventListener("click", settingsDlg);
     return b;
   };
+  var SEC_COLORS = ["#0f8b8d", "#7b61ff", "#c2410c", "#2563eb", "#be185d", "#65a30d", "#b45309"];
+  function addSection(rep) {
+    openDlg("Add a product section", (box2) => {
+      const inp = el("input");
+      inp.type = "text";
+      inp.maxLength = 60;
+      inp.placeholder = "Section name, e.g. Wasl+";
+      inp.setAttribute("aria-label", "Section name");
+      const ok = el("button", "btn primary", "Add section"), no = el("button", "btn", "Cancel");
+      ok.type = no.type = "button";
+      const go = () => {
+        const n = inp.value.replace(/\s+/g, " ").trim();
+        if (!n) {
+          inp.focus();
+          return;
+        }
+        const pl = (rep.pl || productsOf(cfg())).slice(), k = "c" + Date.now().toString(36);
+        pl.push({ k, n, squads: [], custom: true, c: SEC_COLORS[pl.filter((x) => x.custom).length % SEC_COLORS.length] });
+        rep.pl = pl;
+        rep.prods = rep.prods || {};
+        rep.prods[k] = { items: [], sum: "", sumH: "", sumEdited: false };
+        save(rep, "added the section " + n + " to the weekly report", "Add section");
+        closeDlg();
+        notify(n + " added. Add its items below.");
+        renderReports();
+      };
+      ok.addEventListener("click", go);
+      inp.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          go();
+        }
+      });
+      no.addEventListener("click", closeDlg);
+      const row = el("div", "row");
+      row.append(ok, no);
+      box2.append(inp, row);
+    });
+  }
   function clearItems(rep) {
     confirmDlg("Remove all items from this report?", "Every item under every product is removed so you can add your own. The product sections stay. You can undo this.", "Remove all items", () => {
       Object.keys(rep.prods || {}).forEach((k) => {
@@ -7801,6 +7908,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       unsubR = U.subscribe(upd);
       upd();
     }
+    if (!viewer && !sub2) btn("+ Product section", "", () => addSection(rep), !canBuild());
     if (!viewer && !sub2) btn("Clear all items", "", () => clearItems(rep), !canBuild());
     btn("Copy text", "", () => copyReport(rep));
     btn("Print / PDF", "", () => {
@@ -7882,21 +7990,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       hero.append(ed);
     }
     body.append(hero);
-    const glance = el("div", "rglance");
-    pls.forEach((p) => {
-      const d = rep.prods[p.k];
-      if (!d) return;
-      const v = d.items.filter((l) => !l.hide), ap = avgPct(v), t = el("div", "rtile");
-      t.style.setProperty("--c", colOf(p));
-      t.append(el("b", "", p.n));
-      if (ap !== null) t.append(el("span", "rvp pc-" + pctBand(ap), ap + "%"));
-      t.append(el("small", "", v.length ? v.length + " item" + (v.length === 1 ? "" : "s") + " · " + v.filter((l) => linePct(l) >= 100).length + " done" : "no items yet"));
-      glance.append(t);
-    });
-    body.append(glance);
-    const mb = monthSummary(S.reports["mo" + monthOf(rep.a).replace("-", "")], pls, colOf, viewer);
-    if (mb) body.append(mb);
-    if (!ro) body.append(richBar());
+    body.append(progressBlock("Overall progress", fmtIso(rep.a) + " – " + fmtIso(rep.b), pls, rep.prods || {}, colOf));
     pls.forEach((p) => body.append(prodBlock(rep, p, ro)));
     pg.append(meta, tools);
     if (rUI.note && rUI.noteFor === rep.id && !viewer && !sub2) {
