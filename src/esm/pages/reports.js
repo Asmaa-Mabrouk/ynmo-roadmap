@@ -19,7 +19,7 @@ import { openMenu, closeMenu } from '../ui/menu.js';
 import { crumbs } from '../ui/crumbs.js';
 import { createUndo } from '../features/undo-stack.js';
 import { registerUndo } from '../features/undo-router.js';
-import { autoGrow, richBar, richBox, showRich, submitOnCtrlEnter } from '../features/rich-text.js';
+import { autoGrow, richBox, showRich, submitOnCtrlEnter } from '../features/rich-text.js';
 import { RSTATUS, linePct, avgPct, aiPayload, applyAi, buildProds, jiraUrl, newManualLine, productsOf, reportToText } from '../features/report-model.js';
 import { pctBand } from '../features/month-model.js';
 import { progressBlock } from '../features/month-view.js';
@@ -158,13 +158,15 @@ function settingsDlg() {
 }
 
 function viewLine(l) {
-  const r = el('div', 'rv ln-' + l.st), t = el('span', 'rvt'); showRich(t, l.h, l.t); r.append(el('span', 'rvp pc-' + pctBand(linePct(l)), linePct(l) + '%'), t);
+  const r = el('div', 'rv ln-' + l.st), t = el('span', 'rvt'); showRich(t, l.h, l.t); styleText(t, l); r.append(el('span', 'rvp pc-' + pctBand(linePct(l)), linePct(l) + '%'), t);
   const u = jiraUrl(cfg().jira, l.jira); if (l.jira) { const a = el(u ? 'a' : 'span', 'jira', l.jira); if (u) { a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer'; } r.append(a); }
   (l.tg || []).forEach(x => r.append(el('span', 'tgchip tg-' + x.c, '#' + x.n)));
   if (l.note) { const n = el('span', 'nbtn has ro'); n.tabIndex = 0; n.innerHTML = NOTE_ICON; n.dataset.tip = l.note; n.setAttribute('role', 'note'); n.setAttribute('aria-label', 'Note: ' + l.note); r.append(n); }
   if (l.st === 'risk' || l.st === 'late') r.append(el('span', 'chip rs-' + l.st, RSTATUS[l.st]));
   return r;
 }
+/** Basic per-item formatting: bold and size (-1 smaller ... +3 larger). Applied to the whole item, so it works with or without a selection. */
+const styleText = (t, l) => { t.style.fontWeight = l.fb ? '700' : ''; t.style.fontSize = l.fs ? (1 + 0.15 * l.fs).toFixed(2) + 'em' : ''; };
 const NOTE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8l-4.5 4v-4H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 8.5h8M8 12h5"/></svg>';
 /** Note icon of an item: hover (or focus) shows the note as a tooltip; in edit mode a click edits it. */
 function noteBtn(rep, l) {
@@ -189,7 +191,7 @@ function lineRow(rep, d, l, ro) {
   steps.forEach(v => { const o = el('option', '', v + '%'); o.value = String(v); o.selected = v === pc; st.append(o); });
   st.addEventListener('change', () => { const v = Number(st.value); touch({ pct: v, st: v >= 100 ? 'done' : l.st === 'done' ? 'on' : l.st }); renderReports(); });
   const t = richBox('sptext', l.h, l.t, 'Line text', (h, pl) => { if (!pl) { showRich(t, l.h, l.t); return; } touch({ t: pl.slice(0, 1200), h: h.slice(0, 4000) }); });
-  r.append(st, t);
+  styleText(t, l); r.append(st, t);
   const u = jiraUrl(cfg().jira, l.jira);
   if (l.jira) { const a = el(u ? 'a' : 'span', 'jira', l.jira); if (u) { a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer'; } r.append(a); }
   const h = el('button', 'btn sm', l.hide ? 'Show' : 'Hide'); h.type = 'button'; h.addEventListener('click', () => { touch({ hide: !l.hide }); renderReports(); });
@@ -198,11 +200,23 @@ function lineRow(rep, d, l, ro) {
   r.append(noteBtn(rep, l), h, x);
   return r;
 }
+/** Formatting bar of a product: bold and text size for the item you last clicked. */
+function fmtBar(rep, d, sec) {
+  const bar = el('div', 'rbar'); bar.setAttribute('role', 'toolbar'); bar.setAttribute('aria-label', 'Text formatting'); let last = null;
+  const mk = (txt, title, fn) => { const b = el('button', 'btn sm', txt); b.type = 'button'; b.title = title; b.setAttribute('aria-label', title); b.addEventListener('mousedown', e => e.preventDefault()); b.addEventListener('click', () => { const l = last && d.items.find(x => x.id === last); if (!l) { notify('Click an item first, then choose Bold or the size', 'info'); return; } fn(l); l.edited = true; save(rep, '', 'Format item'); const t = sec.querySelector('.rline[data-id="' + l.id + '"] .sptext'); if (t) styleText(t, l); mark(l); }); bar.append(b); return b; };
+  const bb = mk('B', 'Bold', l => { l.fb = !l.fb; }); bb.style.fontWeight = '800';
+  mk('A−', 'Smaller text', l => { l.fs = Math.max(-1, (l.fs || 0) - 1); }); mk('A+', 'Larger text', l => { l.fs = Math.min(3, (l.fs || 0) + 1); });
+  mk('Normal', 'Back to normal text', l => { l.fb = false; l.fs = 0; });
+  const mark = l => { bb.setAttribute('aria-pressed', l && l.fb ? 'true' : 'false'); bb.classList.toggle('on', !!(l && l.fb)); };
+  sec.addEventListener('focusin', e => { const r = e.target.closest && e.target.closest('.rline'); if (r) { last = r.dataset.id; mark(d.items.find(x => x.id === last)); } });
+  sec.addEventListener('pointerdown', e => { const r = e.target.closest && e.target.closest('.rline'); if (r) { last = r.dataset.id; mark(d.items.find(x => x.id === last)); } });
+  return bar;
+}
 function prodBlock(rep, p, ro) {
   const d = rep.prods[p.k]; if (!d) return el('div');
   const sec = el('section', 'rprod'); sec.dataset.k = p.k; sec.style.setProperty('--c', colOf(p));
   const hd = el('div', 'rphead'), ap = avgPct(d.items); hd.append(el('h2', '', p.n)); if (ap !== null) hd.append(el('span', 'rvp pc-' + pctBand(ap), ap + '%')); sec.append(hd);
-  if (ro) sec.classList.add('rview'); else sec.append(richBar());
+  if (ro) sec.classList.add('rview'); else sec.append(fmtBar(rep, d, sec));
   if (!ro && p.custom) { const rm = el('button', 'btn sm danger rmsec', 'Remove section'); rm.type = 'button'; rm.addEventListener('click', () => confirmDlg('Remove ' + p.n + '?', 'The section and its ' + d.items.length + ' item' + (d.items.length === 1 ? '' : 's') + ' are removed from this report.', 'Remove section', () => { rep.pl = (rep.pl || []).filter(x => x.k !== p.k); delete rep.prods[p.k]; save(rep, 'removed the section ' + p.n + ' from the weekly report', 'Remove section'); renderReports(); })); hd.append(rm); }
   const ls = d.items.filter(l => !ro || !l.hide), gh = el('div', 'rgrp');
   ls.forEach(l => gh.append(lineRow(rep, d, l, ro)));

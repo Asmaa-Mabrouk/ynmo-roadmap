@@ -989,6 +989,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .rmsec { margin-inline-start: 10px; }
 .rprog .rmsum b { flex: 0 0 170px; }
 @media print { body.print-report .nbtn:not(.ro) { display: none; } body.print-report .rmsec { display: none; } }
+
+.rbar .btn.on { background: var(--brand); color: #fff; border-color: var(--brand); }
+.rline .sptext { line-height: 1.35; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -6927,38 +6930,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       }
     });
   }
-  function richBar() {
-    const bar3 = document.createElement("div");
-    bar3.className = "rbar";
-    bar3.setAttribute("role", "toolbar");
-    bar3.setAttribute("aria-label", "Text formatting");
-    const b = (label, title, fn) => {
-      const x = document.createElement("button");
-      x.className = "btn sm";
-      x.textContent = label;
-      x.type = "button";
-      x.title = title;
-      x.setAttribute("aria-label", title);
-      x.addEventListener("mousedown", (e) => e.preventDefault());
-      x.addEventListener("click", () => {
-        if (document.activeElement && document.activeElement.classList.contains("rt")) fn();
-        else notify("Click inside an item first, then choose the formatting", "info");
-      });
-      bar3.append(x);
-      return x;
-    };
-    b("B", "Bold", () => document.execCommand("bold")).style.fontWeight = "800";
-    b("I", "Italic", () => document.execCommand("italic")).style.fontStyle = "italic";
-    b("U", "Underline", () => document.execCommand("underline")).style.textDecoration = "underline";
-    b("• List", "Bulleted list", () => document.execCommand("insertUnorderedList"));
-    b("1. List", "Numbered list", () => document.execCommand("insertOrderedList"));
-    b("Link", "Add link (https)", () => {
-      const u = window.prompt("Link address (https://…)", "https://");
-      if (u && /^https:\/\//i.test(u.trim())) document.execCommand("createLink", false, u.trim());
-    });
-    b("Clear", "Remove formatting", () => document.execCommand("removeFormat"));
-    return bar3;
-  }
   function richBox(cls, html, plain, label, onSave) {
     const d = document.createElement("div");
     d.className = "rt " + cls;
@@ -7551,6 +7522,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   function viewLine(l) {
     const r = el("div", "rv ln-" + l.st), t = el("span", "rvt");
     showRich(t, l.h, l.t);
+    styleText(t, l);
     r.append(el("span", "rvp pc-" + pctBand(linePct(l)), linePct(l) + "%"), t);
     const u = jiraUrl(cfg().jira, l.jira);
     if (l.jira) {
@@ -7575,6 +7547,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     if (l.st === "risk" || l.st === "late") r.append(el("span", "chip rs-" + l.st, RSTATUS[l.st]));
     return r;
   }
+  var styleText = (t, l) => {
+    t.style.fontWeight = l.fb ? "700" : "";
+    t.style.fontSize = l.fs ? (1 + 0.15 * l.fs).toFixed(2) + "em" : "";
+  };
   var NOTE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8l-4.5 4v-4H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 8.5h8M8 12h5"/></svg>';
   function noteBtn(rep, l) {
     const b = el("button", "nbtn" + (l.note ? " has" : ""));
@@ -7643,6 +7619,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       }
       touch({ t: pl.slice(0, 1200), h: h2.slice(0, 4e3) });
     });
+    styleText(t, l);
     r.append(st, t);
     const u = jiraUrl(cfg().jira, l.jira);
     if (l.jira) {
@@ -7673,6 +7650,67 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     r.append(noteBtn(rep, l), h, x);
     return r;
   }
+  function fmtBar(rep, d, sec) {
+    const bar3 = el("div", "rbar");
+    bar3.setAttribute("role", "toolbar");
+    bar3.setAttribute("aria-label", "Text formatting");
+    let last = null;
+    const mk = (txt, title, fn) => {
+      const b = el("button", "btn sm", txt);
+      b.type = "button";
+      b.title = title;
+      b.setAttribute("aria-label", title);
+      b.addEventListener("mousedown", (e) => e.preventDefault());
+      b.addEventListener("click", () => {
+        const l = last && d.items.find((x) => x.id === last);
+        if (!l) {
+          notify("Click an item first, then choose Bold or the size", "info");
+          return;
+        }
+        fn(l);
+        l.edited = true;
+        save(rep, "", "Format item");
+        const t = sec.querySelector('.rline[data-id="' + l.id + '"] .sptext');
+        if (t) styleText(t, l);
+        mark(l);
+      });
+      bar3.append(b);
+      return b;
+    };
+    const bb = mk("B", "Bold", (l) => {
+      l.fb = !l.fb;
+    });
+    bb.style.fontWeight = "800";
+    mk("A−", "Smaller text", (l) => {
+      l.fs = Math.max(-1, (l.fs || 0) - 1);
+    });
+    mk("A+", "Larger text", (l) => {
+      l.fs = Math.min(3, (l.fs || 0) + 1);
+    });
+    mk("Normal", "Back to normal text", (l) => {
+      l.fb = false;
+      l.fs = 0;
+    });
+    const mark = (l) => {
+      bb.setAttribute("aria-pressed", l && l.fb ? "true" : "false");
+      bb.classList.toggle("on", !!(l && l.fb));
+    };
+    sec.addEventListener("focusin", (e) => {
+      const r = e.target.closest && e.target.closest(".rline");
+      if (r) {
+        last = r.dataset.id;
+        mark(d.items.find((x) => x.id === last));
+      }
+    });
+    sec.addEventListener("pointerdown", (e) => {
+      const r = e.target.closest && e.target.closest(".rline");
+      if (r) {
+        last = r.dataset.id;
+        mark(d.items.find((x) => x.id === last));
+      }
+    });
+    return bar3;
+  }
   function prodBlock(rep, p, ro) {
     const d = rep.prods[p.k];
     if (!d) return el("div");
@@ -7684,7 +7722,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     if (ap !== null) hd.append(el("span", "rvp pc-" + pctBand(ap), ap + "%"));
     sec.append(hd);
     if (ro) sec.classList.add("rview");
-    else sec.append(richBar());
+    else sec.append(fmtBar(rep, d, sec));
     if (!ro && p.custom) {
       const rm = el("button", "btn sm danger rmsec", "Remove section");
       rm.type = "button";

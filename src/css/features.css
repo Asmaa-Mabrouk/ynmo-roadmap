@@ -566,3 +566,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .rmsec { margin-inline-start: 10px; }
 .rprog .rmsum b { flex: 0 0 170px; }
 @media print { body.print-report .nbtn:not(.ro) { display: none; } body.print-report .rmsec { display: none; } }
+
+.rbar .btn.on { background: var(--brand); color: #fff; border-color: var(--brand); }
+.rline .sptext { line-height: 1.35; }

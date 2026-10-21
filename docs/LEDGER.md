@@ -15,7 +15,7 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 | Backend | Supabase project **YNMO_PM**; SQL 01 to 06; Edge Functions `notify-approval`, `weekly-draft`, `jira-sync` (code in repo; deployment status per the open items below) |
 | Owner | Asmaa (Senior PM, TrianglZ, Ynmo ecosystem, Riyadh) |
 | Pages | Roadmap, Ideas, Roadmaps, Sprints, Reports, Monthly, Resources, Vacations, Capacity, Baselines, Log, Approvals |
-| Tests | `tests/run_all.sh`: last full run 88/88 scenarios and all feature scripts green (`sprints_reports.py` 94, `monthly_page.py` 41) |
+| Tests | `tests/run_all.sh`: last full run 88/88 scenarios and all feature scripts green (`sprints_reports.py` 94, `monthly_page.py` 43) |
 | Jira | Site `tatralab.atlassian.net`; default projects DYC (Daycare), FAS (Tifli), AU (AI). Plan, Warif and Sharjah project keys not known yet. Rovo was considered; the API route was chosen |
 | Google Drive export | Google Cloud project **YNMO PM** (trianglz.com, Internal consent), Drive API on, Web client created for `https://ynmo-roadmap.vercel.app`. Client ID to be pasted in the tool by an admin; the client secret is not used |
 
@@ -41,6 +41,18 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 8. Not yet tested against the real services: Jira, Google sign-in and Drive.
 
 ## Ledger updates
+
+🔄 YNMO LEDGER UPDATE — 2026-10-21
+Request: The formatting bar is not working; allow resizing and bold, just basics
+Surface: cross-cutting (Ynmo Roadmaps internal tool)
+Outcome: Per-product bar reduced to Bold, smaller/larger text and Normal, applied to the whole clicked item and saved.
+New facts / decisions locked:
+  • Weekly report items carry `fb` (bold) and `fs` (size step -1..3); formatting is per item, not per selection.
+Corrections to this skill:
+  • none
+Open / flagged:
+  • none
+Changelog: Basic bold and size formatting per item that works reliably.
 
 🔄 YNMO LEDGER UPDATE — 2026-10-21
 Request: Remove "Open the month"; progress calculated from the items written below (0 until items exist); add product sections that show in the bars; formatting per product; per-item note with hover tooltip
