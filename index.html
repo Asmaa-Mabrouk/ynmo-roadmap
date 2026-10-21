@@ -1042,6 +1042,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   .pr-prog { display: flex; align-items: center; gap: 8px; padding-top: 4px; } .pr-prog .pr-bar { flex: 1; } .pr-prog b { width: 40px; text-align: end; color: var(--pt); font-size: 9.5pt; }
   .pr-empty { color: #7b8099; font-style: italic; }
 }
+
+/* Out-of-scope flag: always red (outlined when off, solid red when on) */
+.flagbtn { color: #d1352b; opacity: .8; }
+.flagbtn:hover:not(.on) { background: #fdecea; opacity: 1; }
+.flagbtn.on { background: #d1352b; border-color: #d1352b; color: #fff; }
+.scopechip, .pr-flag { color: #fff; background: #d1352b; border-color: #d1352b; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
