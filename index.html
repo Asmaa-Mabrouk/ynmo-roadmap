@@ -1048,6 +1048,15 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .flagbtn:hover:not(.on) { background: #fdecea; opacity: 1; }
 .flagbtn.on { background: #d1352b; border-color: #d1352b; color: #fff; }
 .scopechip, .pr-flag { color: #fff; background: #d1352b; border-color: #d1352b; }
+
+/* Flag colours must beat `.rline .btn.sm` */
+.rline .btn.sm.flagbtn { color: #d1352b; background: transparent; border-color: transparent; opacity: .85; }
+.rline .btn.sm.flagbtn:hover:not(.on) { background: #fdecea; border-color: #f2b8b5; color: #d1352b; opacity: 1; }
+.rline .btn.sm.flagbtn.on, .rline .btn.sm.flagbtn.on:hover { background: #d1352b; border-color: #d1352b; color: #fff; opacity: 1; }
+
+/* Product name input must look like the heading (beats the generic input styles) */
+#pg-reports .rphead input.rname { font-size: 1.5rem; font-weight: 800; color: var(--c); background: transparent; border: 1.5px solid transparent; box-shadow: none; padding: 2px 8px; height: auto; }
+#pg-reports .rphead input.rname:hover, #pg-reports .rphead input.rname:focus { border-color: var(--line); background: #fff; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
