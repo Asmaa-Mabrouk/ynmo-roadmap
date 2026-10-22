@@ -1061,6 +1061,23 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 /* Out-of-scope flag: off = hollow grey flag, on = solid red; second click removes */
 .rline .btn.sm.flagbtn:not(.on) { color: #9aa0b4; opacity: 1; }
 .rline .btn.sm.flagbtn:hover:not(.on) { color: #d1352b; background: #fdecea; border-color: #f2b8b5; }
+
+/* Two flags: At risk (red) and Out of scope (grey, greys the whole item) */
+.rline .btn.sm.scopebtn:not(.on) { color: #9aa0b4; }
+.rline .btn.sm.scopebtn:hover:not(.on) { color: #5b6178; background: #eceef3; border-color: #cfd3de; }
+.rline .btn.sm.scopebtn.on, .rline .btn.sm.scopebtn.on:hover { background: #7b8099; border-color: #7b8099; color: #fff; opacity: 1; }
+.rline .btn.sm.riskbtn:not(.on) { color: #9aa0b4; }
+.rline .btn.sm.riskbtn:hover:not(.on) { color: #d1352b; background: #fdecea; border-color: #f2b8b5; }
+.riskchip { color: #fff; background: #d1352b; border-color: #d1352b; font-size: .75rem; font-weight: 700; padding: 1px 9px; border-radius: 99px; white-space: nowrap; }
+.scopechip { color: #fff; background: #7b8099; border-color: #7b8099; }
+.rline.oos, .rv.oos { background: #eceef3; border-radius: 10px; color: #6b7189; }
+.rline.oos .sptext, .rv.oos .rvt { color: #6b7189; }
+.rline.oos .spsel, .rv.oos .rvp { filter: grayscale(1); opacity: .75; }
+@media print {
+  .pr-flag.pr-oos { background: #7b8099; border-color: #7b8099; }
+  .pr-item.oos { background: #eceef3; color: #6b7189; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .pr-item.oos .pr-bar, .pr-item.oos .pr-prog b { filter: grayscale(1); }
+}
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -6564,7 +6581,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       const ap = avgPct(d.items);
       out.push(p.n.toUpperCase() + (ap === null ? "" : " - " + ap + "%"));
       d.items.filter((l) => !l.hide).forEach((l) => {
-        out.push("- " + l.t + (l.jira ? " [" + l.jira + "]" : "") + " - " + linePct(l) + "%");
+        out.push("- " + l.t + (l.jira ? " [" + l.jira + "]" : "") + " - " + linePct(l) + "%" + (l.rk ? " [AT RISK]" : "") + (l.fl ? " [OUT OF SCOPE]" : ""));
         if (l.note) out.push("  Note: " + String(l.note).replace(/\s+/g, " "));
       });
       out.push("");
@@ -7145,14 +7162,14 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   function buildPrint(rep, pls, o) {
     const root = el("div", "rprint"), range = o.fmt(rep.a) + " – " + o.fmt(rep.b);
     const items2 = (p) => ((rep.prods || {})[p.k] || { items: [] }).items.filter((l) => !l.hide && String(l.t || "").trim());
-    const all = pls.reduce((a, p) => a.concat(items2(p)), []), ov = avgPct(all) || 0, done2 = all.filter((l) => linePct(l) >= 100).length, scope = all.filter((l) => l.fl).length;
+    const all = pls.reduce((a, p) => a.concat(items2(p)), []), ov = avgPct(all) || 0, done2 = all.filter((l) => linePct(l) >= 100).length, scope = all.filter((l) => l.fl).length, risk = all.filter((l) => l.rk).length;
     const head = el("header", "pr-head"), left = el("div"), right = el("div", "pr-meta");
     left.append(el("div", "pr-brand", "YNMO"), el("div", "pr-kind", "Weekly product update"), el("h1", "", range), el("div", "pr-label", rep.label !== void 0 ? rep.label : "Sprint " + rep.n + " · week " + (rep.w || 1) + " of 2"));
     right.append(el("div", "", "Prepared by " + (rep.by || "—")), el("div", "", "Printed " + o.today));
     head.append(left, right);
     root.append(head);
     const sum = el("section", "pr-sum"), big = el("div", "pr-big pc-" + pctBand(ov));
-    big.append(el("b", "", ov + "%"), el("span", "", "overall progress"), bar3(ov), el("small", "", done2 + " of " + all.length + " item" + (all.length === 1 ? "" : "s") + " complete" + (scope ? " · " + scope + " out of scope" : "")));
+    big.append(el("b", "", ov + "%"), el("span", "", "overall progress"), bar3(ov), el("small", "", done2 + " of " + all.length + " item" + (all.length === 1 ? "" : "s") + " complete" + (risk ? " · " + risk + " at risk" : "") + (scope ? " · " + scope + " out of scope" : "")));
     const cards = el("div", "pr-cards");
     pls.forEach((p) => {
       const its = items2(p), ap = avgPct(its) || 0, c = el("div", "pr-card pc-" + pctBand(ap));
@@ -7170,8 +7187,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       h.append(el("h2", "", p.n), el("span", "pr-chip pc-" + pctBand(ap), ap + "%"));
       sec.append(h);
       its.forEach((l) => {
-        const v = linePct(l), r = el("div", "pr-item"), body = el("div", "pr-body"), t = el("div", "pr-text", l.t);
-        if (l.fl) t.append(el("span", "pr-flag", "Out of scope"));
+        const v = linePct(l), r = el("div", "pr-item" + (l.fl ? " oos" : "")), body = el("div", "pr-body"), t = el("div", "pr-text", l.t);
+        if (l.rk) t.append(el("span", "pr-flag", "At risk"));
+        if (l.fl) t.append(el("span", "pr-flag pr-oos", "Out of scope"));
         if (l.jira) t.append(el("span", "pr-jira", l.jira));
         body.append(t);
         if (l.note) body.append(el("div", "pr-note", l.note));
@@ -7462,7 +7480,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
   }
   function viewLine(l) {
-    const r = el("div", "rv ln-" + l.st), t = el("span", "rvt", l.t);
+    const r = el("div", "rv ln-" + l.st + (l.fl ? " oos" : "")), t = el("span", "rvt", l.t);
     r.append(el("span", "rvp pc-" + pctBand(linePct(l)), linePct(l) + "%"), t);
     const u = jiraUrl(cfg().jira, l.jira);
     if (l.jira) {
@@ -7475,6 +7493,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       r.append(a);
     }
     (l.tg || []).forEach((x) => r.append(el("span", "tgchip tg-" + x.c, "#" + x.n)));
+    if (l.rk) r.append(el("span", "chip riskchip", "At risk"));
     if (l.fl) r.append(el("span", "chip scopechip", "Out of scope"));
     if (l.note) {
       const n = el("span", "nbtn has ro");
@@ -7524,11 +7543,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   }
   function lineRow2(rep, d, l, ro) {
     if (ro) return viewLine(l);
-    const r = el("div", "rline ln-" + l.st + (l.hide ? " hid" : ""));
+    const r = el("div", "rline ln-" + l.st + (l.hide ? " hid" : "") + (l.fl ? " oos" : ""));
     r.dataset.id = l.id;
     const touch = (patch) => {
       Object.assign(l, patch, { edited: true });
-      save(rep, "", patch.fl !== void 0 ? "Flag out of scope" : patch.pct !== void 0 ? "Change percentage" : patch.st ? "Change status" : patch.g ? "Move to another group" : "Edit line");
+      save(rep, "", patch.rk !== void 0 ? "Flag at risk" : patch.fl !== void 0 ? "Flag out of scope" : patch.pct !== void 0 ? "Change percentage" : patch.st ? "Change status" : patch.g ? "Move to another group" : "Edit line");
     };
     const pc = linePct(l), st = el("select", "spsel mpct pc-" + pctBand(pc));
     st.setAttribute("aria-label", "Percent complete");
@@ -7567,9 +7586,18 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       }
       r.append(a);
     }
-    const fl = el("button", "btn sm flagbtn" + (l.fl ? " on" : ""), l.fl ? "⚑ Out of scope" : "⚐");
+    const rk = el("button", "btn sm flagbtn riskbtn" + (l.rk ? " on" : ""), l.rk ? "⚑ At risk" : "⚐");
+    rk.type = "button";
+    rk.title = l.rk ? "At risk: may not meet the deadline. Click again to remove." : "Click to flag as at risk (may not meet the deadline)";
+    rk.setAttribute("aria-label", "At risk");
+    rk.setAttribute("aria-pressed", l.rk ? "true" : "false");
+    rk.addEventListener("click", () => {
+      touch({ rk: !l.rk });
+      renderReports();
+    });
+    const fl = el("button", "btn sm flagbtn scopebtn" + (l.fl ? " on" : ""), l.fl ? "⊘ Out of scope" : "⊘");
     fl.type = "button";
-    fl.title = l.fl ? "Out of scope (added over the planned roadmap). Click again to remove the flag." : "Click to mark as out of scope (added over the planned roadmap)";
+    fl.title = l.fl ? "Out of scope (added over the planned roadmap). Click again to remove." : "Click to mark as out of scope (added over the planned roadmap)";
     fl.setAttribute("aria-label", "Out of scope");
     fl.setAttribute("aria-pressed", l.fl ? "true" : "false");
     fl.addEventListener("click", () => {
@@ -7586,7 +7614,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       renderReports();
     });
     (l.tg || []).forEach((z) => r.append(el("span", "tgchip tg-" + z.c, "#" + z.n)));
-    r.append(fl, noteBtn(rep, l), x);
+    r.append(rk, fl, noteBtn(rep, l), x);
     return r;
   }
   function prodBlock(rep, p, ro) {

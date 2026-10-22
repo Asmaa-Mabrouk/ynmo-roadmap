@@ -638,3 +638,20 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 /* Out-of-scope flag: off = hollow grey flag, on = solid red; second click removes */
 .rline .btn.sm.flagbtn:not(.on) { color: #9aa0b4; opacity: 1; }
 .rline .btn.sm.flagbtn:hover:not(.on) { color: #d1352b; background: #fdecea; border-color: #f2b8b5; }
+
+/* Two flags: At risk (red) and Out of scope (grey, greys the whole item) */
+.rline .btn.sm.scopebtn:not(.on) { color: #9aa0b4; }
+.rline .btn.sm.scopebtn:hover:not(.on) { color: #5b6178; background: #eceef3; border-color: #cfd3de; }
+.rline .btn.sm.scopebtn.on, .rline .btn.sm.scopebtn.on:hover { background: #7b8099; border-color: #7b8099; color: #fff; opacity: 1; }
+.rline .btn.sm.riskbtn:not(.on) { color: #9aa0b4; }
+.rline .btn.sm.riskbtn:hover:not(.on) { color: #d1352b; background: #fdecea; border-color: #f2b8b5; }
+.riskchip { color: #fff; background: #d1352b; border-color: #d1352b; font-size: .75rem; font-weight: 700; padding: 1px 9px; border-radius: 99px; white-space: nowrap; }
+.scopechip { color: #fff; background: #7b8099; border-color: #7b8099; }
+.rline.oos, .rv.oos { background: #eceef3; border-radius: 10px; color: #6b7189; }
+.rline.oos .sptext, .rv.oos .rvt { color: #6b7189; }
+.rline.oos .spsel, .rv.oos .rvp { filter: grayscale(1); opacity: .75; }
+@media print {
+  .pr-flag.pr-oos { background: #7b8099; border-color: #7b8099; }
+  .pr-item.oos { background: #eceef3; color: #6b7189; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .pr-item.oos .pr-bar, .pr-item.oos .pr-prog b { filter: grayscale(1); }
+}

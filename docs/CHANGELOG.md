@@ -105,4 +105,4 @@ Gantt roadmap, multiple roadmaps, ideas, resources, vacations, log, Supabase aut
 - Focusing a line no longer lets the browser re-centre the page; the page scrolls only when the caret is really out of view.
 - A redraw caused by someone else's change (or your own save arriving back) keeps your scroll position.
 
-- Out-of-scope flag is now an unmistakable two-state toggle: hollow grey flag (off) → click → solid red "Out of scope" (on) → click again removes it.
+- **Two item flags (2026-10-22):** **At risk** (`rk`, red flag) marks work that may not meet the deadline; **Out of scope** (`fl`, grey) marks work added over the planned roadmap and greys the whole item row. Each is a toggle (first click marks, second click removes), independent of the other. Both show to executives, in the PDF (grey row for out of scope, red/grey tags, counts in the summary) and in Copy text ([AT RISK] / [OUT OF SCOPE]).

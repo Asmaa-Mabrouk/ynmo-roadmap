@@ -141,7 +141,7 @@ export function reportToText(rep, products, fmt, monthDoc) {
   products.forEach(p => {
     const d = (rep.prods || {})[p.k]; if (!d) return;
     const ap = avgPct(d.items); out.push(p.n.toUpperCase() + (ap === null ? '' : ' - ' + ap + '%'));
-    d.items.filter(l => !l.hide).forEach(l => { out.push('- ' + l.t + (l.jira ? ' [' + l.jira + ']' : '') + ' - ' + linePct(l) + '%'); if (l.note) out.push('  Note: ' + String(l.note).replace(/\s+/g, ' ')); });
+    d.items.filter(l => !l.hide).forEach(l => { out.push('- ' + l.t + (l.jira ? ' [' + l.jira + ']' : '') + ' - ' + linePct(l) + '%' + (l.rk ? ' [AT RISK]' : '') + (l.fl ? ' [OUT OF SCOPE]' : '')); if (l.note) out.push('  Note: ' + String(l.note).replace(/\s+/g, ' ')); });
     out.push('');
   });
   const mt = monthText(monthDoc, products, fmt); if (mt.length) out.push('', ...mt);

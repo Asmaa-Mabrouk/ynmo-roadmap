@@ -47,7 +47,7 @@ Request: Remove hide/delete duplication on items; out-of-scope flag; rename/remo
 Surface: cross-cutting (Ynmo Roadmaps internal tool)
 Outcome: Plain-text items with ✕ delete, out-of-scope flag, renamable/removable sections, Save button (shares with executives, stays editable), delete only in the list ⋯ menu for editors, new print/PDF document. New SQL 07.
 New facts / decisions locked:
-  • "Save" = status `submitted` (visible to executives) but the report stays editable; no Reopen. Reports have `hidePl` (removed product keys) and items carry `fl` (out of scope) and `note`.
+  • "Save" = status `submitted` (visible to executives) but the report stays editable; no Reopen. Reports have `hidePl` (removed product keys) and items carry `rk` (at risk, red), `fl` (out of scope, grey, greys the row) and `note`.
   • Any editor may delete a report (SQL 07 replaces the admin-only rule for saved reports). Delete exists only in the list menu.
   • Print/PDF is a separate document built from data (features/report-print.js), not the editing screen.
 Corrections to this skill:

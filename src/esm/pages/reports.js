@@ -160,9 +160,10 @@ function settingsDlg() {
 }
 
 function viewLine(l) {
-  const r = el('div', 'rv ln-' + l.st), t = el('span', 'rvt', l.t); r.append(el('span', 'rvp pc-' + pctBand(linePct(l)), linePct(l) + '%'), t);
+  const r = el('div', 'rv ln-' + l.st + (l.fl ? ' oos' : '')), t = el('span', 'rvt', l.t); r.append(el('span', 'rvp pc-' + pctBand(linePct(l)), linePct(l) + '%'), t);
   const u = jiraUrl(cfg().jira, l.jira); if (l.jira) { const a = el(u ? 'a' : 'span', 'jira', l.jira); if (u) { a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer'; } r.append(a); }
   (l.tg || []).forEach(x => r.append(el('span', 'tgchip tg-' + x.c, '#' + x.n)));
+  if (l.rk) r.append(el('span', 'chip riskchip', 'At risk'));
   if (l.fl) r.append(el('span', 'chip scopechip', 'Out of scope'));
   if (l.note) { const n = el('span', 'nbtn has ro'); n.tabIndex = 0; n.innerHTML = NOTE_ICON; n.dataset.tip = l.note; n.setAttribute('role', 'note'); n.setAttribute('aria-label', 'Note: ' + l.note); r.append(n); }
   if (l.st === 'risk' || l.st === 'late') r.append(el('span', 'chip rs-' + l.st, RSTATUS[l.st]));
@@ -185,8 +186,8 @@ function noteBtn(rep, l) {
 }
 function lineRow(rep, d, l, ro) {
   if (ro) return viewLine(l);
-  const r = el('div', 'rline ln-' + l.st + (l.hide ? ' hid' : '')); r.dataset.id = l.id;
-  const touch = patch => { Object.assign(l, patch, { edited: true }); save(rep, '', patch.fl !== undefined ? 'Flag out of scope' : patch.pct !== undefined ? 'Change percentage' : patch.st ? 'Change status' : patch.g ? 'Move to another group' : 'Edit line'); };
+  const r = el('div', 'rline ln-' + l.st + (l.hide ? ' hid' : '') + (l.fl ? ' oos' : '')); r.dataset.id = l.id;
+  const touch = patch => { Object.assign(l, patch, { edited: true }); save(rep, '', patch.rk !== undefined ? 'Flag at risk' : patch.fl !== undefined ? 'Flag out of scope' : patch.pct !== undefined ? 'Change percentage' : patch.st ? 'Change status' : patch.g ? 'Move to another group' : 'Edit line'); };
   const pc = linePct(l), st = el('select', 'spsel mpct pc-' + pctBand(pc)); st.setAttribute('aria-label', 'Percent complete');
   const steps = []; for (let v = 0; v <= 100; v += 10) steps.push(v); if (!steps.includes(pc)) { steps.push(pc); steps.sort((a, b) => a - b); }
   steps.forEach(v => { const o = el('option', '', v + '%'); o.value = String(v); o.selected = v === pc; st.append(o); });
@@ -195,11 +196,13 @@ function lineRow(rep, d, l, ro) {
   r.append(st, t);
   const u = jiraUrl(cfg().jira, l.jira);
   if (l.jira) { const a = el(u ? 'a' : 'span', 'jira', l.jira); if (u) { a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer'; } r.append(a); }
-  const fl = el('button', 'btn sm flagbtn' + (l.fl ? ' on' : ''), l.fl ? '⚑ Out of scope' : '⚐'); fl.type = 'button'; fl.title = l.fl ? 'Out of scope (added over the planned roadmap). Click again to remove the flag.' : 'Click to mark as out of scope (added over the planned roadmap)'; fl.setAttribute('aria-label', 'Out of scope'); fl.setAttribute('aria-pressed', l.fl ? 'true' : 'false');
+  const rk = el('button', 'btn sm flagbtn riskbtn' + (l.rk ? ' on' : ''), l.rk ? '⚑ At risk' : '⚐'); rk.type = 'button'; rk.title = l.rk ? 'At risk: may not meet the deadline. Click again to remove.' : 'Click to flag as at risk (may not meet the deadline)'; rk.setAttribute('aria-label', 'At risk'); rk.setAttribute('aria-pressed', l.rk ? 'true' : 'false');
+  rk.addEventListener('click', () => { touch({ rk: !l.rk }); renderReports(); });
+  const fl = el('button', 'btn sm flagbtn scopebtn' + (l.fl ? ' on' : ''), l.fl ? '⊘ Out of scope' : '⊘'); fl.type = 'button'; fl.title = l.fl ? 'Out of scope (added over the planned roadmap). Click again to remove.' : 'Click to mark as out of scope (added over the planned roadmap)'; fl.setAttribute('aria-label', 'Out of scope'); fl.setAttribute('aria-pressed', l.fl ? 'true' : 'false');
   fl.addEventListener('click', () => { touch({ fl: !l.fl }); renderReports(); });
   const x = el('button', 'btn sm danger', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Delete item'); x.title = 'Delete this item'; x.addEventListener('click', () => { d.items = d.items.filter(z => z.id !== l.id); save(rep, '', 'Delete item'); renderReports(); });
   (l.tg || []).forEach(z => r.append(el('span', 'tgchip tg-' + z.c, '#' + z.n)));
-  r.append(fl, noteBtn(rep, l), x);
+  r.append(rk, fl, noteBtn(rep, l), x);
   return r;
 }
 function prodBlock(rep, p, ro) {
