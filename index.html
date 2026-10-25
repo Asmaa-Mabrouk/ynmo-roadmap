@@ -6146,6 +6146,18 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
     return { lines: out, added, updated, skipped: g.skipped, dup };
   }
+  var TAGS = [
+    { k: "daycare", n: "Daycare", c: "#d6338a", squads: ["daycare"] },
+    { k: "tifli", n: "Tifli", c: "#6d48a8", squads: ["tifli"] },
+    { k: "plan", n: "Plan", c: "#0d8560", squads: ["plan"] },
+    { k: "ai", n: "AI", c: "#2f6fe0", squads: ["ai"] },
+    { k: "finance", n: "Finance", c: "#7b8099", squads: [] },
+    { k: "initiative", n: "New initiative", c: "#d9a400", squads: [] }
+  ];
+  var legacyTag = (k, squad) => {
+    const t = TAGS.find((x) => squad && x.squads.includes(squad));
+    return t ? t.k : k === "plan_daycare" ? "plan" : TAGS.some((x) => x.k === k) ? k : "initiative";
+  };
   var SIZES = { quick: "Quick win", enh: "Small enhancement" };
   var tagsOf = (l) => (l.hp ? " [BUSINESS PRIORITY]" : "") + (SIZES[l.sz] ? " [" + SIZES[l.sz].toUpperCase() + "]" : "");
   function monthText(doc2, products, fmt) {
@@ -6188,8 +6200,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   }
   var esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   var uid2 = () => "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-  function productsOf(cfg3) {
-    const p = cfg3 && Array.isArray(cfg3.products) && cfg3.products.length ? cfg3.products : DEFAULT_PRODUCTS;
+  function productsOf(cfg2) {
+    const p = cfg2 && Array.isArray(cfg2.products) && cfg2.products.length ? cfg2.products : DEFAULT_PRODUCTS;
     return p.map((x) => ({ k: String(x.k), n: String(x.n || x.k), squads: (x.squads || []).map(String) }));
   }
   function jiraUrl(base3, key) {
@@ -8988,22 +9000,15 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   // src/esm/pages/monthly.js
   var STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9 6.8 19.6l1-5.8-4.3-4.1 5.9-.8z"/></svg>';
   var ui = { q: "", pr: "all", fl: "all", past: false, prod: "", open: "" };
-  var cfg2 = () => S.ideas.reportcfg || {};
   var canBuild2 = () => !isViewer() && canWrite();
   var curMonth = () => todayIso().slice(0, 7);
-  var colOf2 = (p) => {
-    const l = LANES.concat(EXTRA_SECTIONS).find((x) => (p.squads || []).includes(x.k));
-    return l ? l.c : "#55608a";
-  };
+  var colOf2 = (p) => p && p.c || "#7b8099";
   var docs = () => Object.keys(S.reports).filter((id) => S.reports[id] && S.reports[id].mo).map((id) => Object.assign({ id }, S.reports[id], { lines: S.reports[id].lines || [] }));
   var docOf = (m) => docs().find((d) => d.mo === m) || { id: monthId(m), mo: m, lines: [] };
   function boardProducts() {
-    const pl = productsOf(cfg2()).slice();
-    EXTRA_SECTIONS.forEach((x) => {
-      if (!pl.some((q) => q.k === x.k)) pl.push({ k: x.k, n: x.n, squads: [x.k] });
-    });
+    const pl = TAGS.map((t) => Object.assign({}, t));
     docs().forEach((d) => d.lines.forEach((l) => {
-      if (l.k && !pl.some((q) => q.k === l.k)) pl.push({ k: l.k, n: l.k, squads: [] });
+      if (l.k && !pl.some((q) => q.k === l.k)) pl.push({ k: l.k, n: l.k, squads: [], c: "#7b8099" });
     }));
     return pl;
   }
@@ -9021,7 +9026,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   function saveMonth(m, mutate, log) {
     const id = monthId(m), old = S.reports[id], d = old ? JSON.parse(JSON.stringify(old)) : { mo: m, lines: [] };
     d.lines = d.lines || [];
-    d.pl = d.pl && d.pl.length ? d.pl : productsOf(cfg2());
+    d.pl = TAGS.map((t) => ({ k: t.k, n: t.n, squads: t.squads }));
     mutate(d);
     d.status = "submitted";
     d.subAt = d.subAt || (/* @__PURE__ */ new Date()).toISOString();
@@ -9053,7 +9058,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     }, "synced the monthly deliverables for " + monthLabel(m) + " from the roadmap");
     const parts = [res.added + " added", res.updated + " estimates refreshed"];
     if (res.dup) parts.push(res.dup + " already on the board");
-    if (res.skipped) parts.push(res.skipped + " not in any product");
+    if (res.skipped) parts.push(res.skipped + " have no tag");
     notify(res.added || res.updated ? "Roadmap sync for " + monthLabel(m) + ": " + parts.join(", ") : res.dup || res.skipped ? "Nothing new for " + monthLabel(m) + ": " + parts.slice(2).join(", ") : "No roadmap feature ends in " + monthLabel(m), res.added || res.updated ? "ok" : "info");
     renderMonthly();
   }
@@ -9161,14 +9166,14 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       const ps = el("button", "mdprod");
       ps.type = "button";
       ps.textContent = p.n;
-      ps.title = "Change the product (and so the colour) of this card";
+      ps.title = "Choose the tag (and so the colour) of this card";
       ps.setAttribute("aria-haspopup", "menu");
-      ps.setAttribute("aria-label", "Product: " + p.n + ". Change");
+      ps.setAttribute("aria-label", "Tag: " + p.n + ". Change");
       ps.addEventListener("click", (e) => {
         e.stopPropagation();
         const b = ps.getBoundingClientRect();
         openCtx(b.left, b.bottom + 4, (mm) => {
-          mm.append(el("div", "mlab", "Product colour"));
+          mm.append(el("div", "mlab", "Tag"));
           prods.forEach((q) => {
             const x = mi(mm, (q.k === l.k ? "✓ " : "") + q.n, () => {
               if (q.k !== l.k) put({ k: q.k }, 'moved "' + l.t + '" to ' + q.n);
@@ -9431,6 +9436,17 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return col;
   }
   var migrated = /* @__PURE__ */ new Set();
+  function migrateTags() {
+    const old = docs().filter((d) => d.lines.some((l) => l.k && !TAGS.some((t) => t.k === l.k)));
+    if (!old.length) return;
+    const sq = /* @__PURE__ */ new Map();
+    allRoadmaps().forEach((rm) => withRm(rm.id, () => items().forEach((i) => sq.set(rm.id + ":" + i.id, i.sq))));
+    old.forEach((d) => saveMonth(d.mo, (dd) => {
+      dd.lines.forEach((l) => {
+        if (l.k && !TAGS.some((t) => t.k === l.k)) l.k = legacyTag(l.k, sq.get(l.src));
+      });
+    }, null));
+  }
   function renderMonthly() {
     const pg = $("pg-monthly");
     if (!pg) return;
@@ -9438,6 +9454,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const prevBoard = pg.querySelector(".mdboard"), sx = prevBoard ? prevBoard.scrollLeft : 0, sy = window.scrollY;
     pg.textContent = "";
     const viewer = isViewer(), ed = !viewer && canBuild2();
+    if (ed) migrateTags();
     if (ed) docs().forEach((d) => {
       if (d.status !== "submitted" && !migrated.has(d.id)) {
         migrated.add(d.id);
@@ -9461,8 +9478,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       }
     });
     const fp = el("select");
-    fp.setAttribute("aria-label", "Filter by product");
-    [["all", "All products"]].concat(prods.map((p) => [p.k, p.n])).forEach((x) => {
+    fp.setAttribute("aria-label", "Filter by tag");
+    [["all", "All tags"]].concat(prods.map((p) => [p.k, p.n])).forEach((x) => {
       const o = el("option", "", x[1]);
       o.value = x[0];
       o.selected = x[0] === ui.pr;
@@ -9495,7 +9512,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       });
       tools.append(pb);
     }
-    pg.append(pageHead("Monthly deliverables", viewer ? "What each product committed to deliver every month, coloured by product, and how far each deliverable is." : "What the business expects each month. Add a card for a product, or press Sync from Roadmap in a month to bring the features that end in it. Drag a card to move it to another month.", tools));
+    pg.append(pageHead("Monthly deliverables", viewer ? "What the business expects every month, tagged and coloured by Daycare, Tifli, Plan, AI, Finance or New initiative, and how far each deliverable is." : "What the business expects each month. Add a card with a tag, or press Sync from Roadmap in a month to bring the features that end in it. Drag a card to move it to another month.", tools));
     const sb0 = viewer ? null : setupBanner();
     if (sb0) pg.append(sb0);
     const board = el("div", "mdboard");

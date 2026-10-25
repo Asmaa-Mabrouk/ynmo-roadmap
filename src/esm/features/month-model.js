@@ -87,6 +87,17 @@ export function mergeRoad(lines, road, pl, m, today, others) {
   });
   return { lines: out, added: added, updated: updated, skipped: g.skipped, dup: dup };
 }
+/** The tags of the Monthly board, in the order of the dropdown. `squads` = the roadmap squads that sync into the tag. */
+export const TAGS = [
+  { k: 'daycare', n: 'Daycare', c: '#d6338a', squads: ['daycare'] },
+  { k: 'tifli', n: 'Tifli', c: '#6d48a8', squads: ['tifli'] },
+  { k: 'plan', n: 'Plan', c: '#0d8560', squads: ['plan'] },
+  { k: 'ai', n: 'AI', c: '#2f6fe0', squads: ['ai'] },
+  { k: 'finance', n: 'Finance', c: '#7b8099', squads: [] },
+  { k: 'initiative', n: 'New initiative', c: '#d9a400', squads: [] }
+];
+/** Tag of a card made before the tags were split: the old combined Plan / Daycare card becomes Plan (or the tag of its roadmap squad when known). */
+export const legacyTag = (k, squad) => { const t = TAGS.find(x => squad && x.squads.includes(squad)); return t ? t.k : k === 'plan_daycare' ? 'plan' : TAGS.some(x => x.k === k) ? k : 'initiative'; };
 export const SIZES = { quick: 'Quick win', enh: 'Small enhancement' };
 /** Flags of a card as text: business priority, and a small piece of work (quick win / enhancement). */
 const tagsOf = l => (l.hp ? ' [BUSINESS PRIORITY]' : '') + (SIZES[l.sz] ? ' [' + SIZES[l.sz].toUpperCase() + ']' : '');

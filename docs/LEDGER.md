@@ -43,6 +43,20 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 ## Ledger updates
 
 🔄 YNMO LEDGER UPDATE — 2026-10-25
+Request: Split Plan and Daycare in the Monthly module; tags chosen from a dropdown: Daycare pink, Tifli purple, Plan green, AI blue, Finance grey, New initiative gold
+Surface: cross-cutting (Ynmo Roadmaps internal tool)
+Outcome: The Monthly board has six fixed tags with those colours (dropdown on each card, chips when adding); old combined Plan / Daycare cards are converted to Plan.
+New facts / decisions locked:
+  • Monthly tags: Daycare #d6338a pink, Tifli #6d48a8 purple, Plan #0d8560 green, AI #2f6fe0 blue, Finance #7b8099 grey, New initiative #d9a400 gold. Sync maps squads daycare / tifli / plan / ai to their tag; Finance and New initiative are chosen by hand.
+  • The weekly report still uses its own products (Plan / Daycare combined there).
+Corrections to this skill:
+  • none
+Open / flagged:
+  • Should the weekly report also split Plan and Daycare?
+  • Roadmap squads other than daycare / tifli / plan / ai (custom lanes) are skipped by the Monthly sync; say if they should map to a tag.
+Changelog: Monthly: six colour tags (Plan and Daycare split).
+
+🔄 YNMO LEDGER UPDATE — 2026-10-25
 Request: Keep every user signed in for 48 hours (no direct sign-out); rename the gold flag "Business priority"; replace "Mark as ad hoc request" with a small-enhancement star icon beside the flag
 Surface: cross-cutting (Ynmo Roadmaps internal tool)
 Outcome: Idle sign-out is now 48 hours (was 30 min), still with the 60-second warning. Gold flag = Business priority (ribbon). Star button = Small enhancement; ad hoc item removed from the card menu.

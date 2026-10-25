@@ -6,7 +6,7 @@
  * A month is the doc `reports/mo<yyyymm>` (see features/month-model.js). The board always saves a month as `submitted`, so executives (viewers) see it all.
  */
 import { S } from '../core/state.js';
-import { $, LANES, el, iso, items } from '../core/model.js';
+import { $, el, iso, items } from '../core/model.js';
 import { fmtIso, logAct, pageHead, todayIso } from '../core/shared.js';
 import { write } from '../core/saving.js';
 import { canWrite, isViewer } from '../features/safety.js';
@@ -16,24 +16,20 @@ import { openCtx, mi } from '../ui/editing.js';
 import { confirmDlg } from '../ui/confirm.js';
 import { plainBox } from '../features/rich-text.js';
 import { openDlg, closeDlg } from '../features/safety.js';
-import { EXTRA_SECTIONS } from '../features/sprint-doc.js';
-import { productsOf } from '../features/report-model.js';
-import { adhocStats, clampPct, mergeRoad, monthId, monthLabel, monthProgress, monthRange, monthText, newLine, nextMonth, pctBand, SIZES } from '../features/month-model.js';
+import { adhocStats, clampPct, mergeRoad, monthId, monthLabel, monthProgress, monthRange, monthText, newLine, nextMonth, pctBand, SIZES, TAGS, legacyTag } from '../features/month-model.js';
 import { NOTE_ICON, setupBanner } from './reports.js';
 
 const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9 6.8 19.6l1-5.8-4.3-4.1 5.9-.8z"/></svg>';
 const ui = { q: '', pr: 'all', fl: 'all', past: false, prod: '', open: '' };
-const cfg = () => S.ideas.reportcfg || {};
 const canBuild = () => !isViewer() && canWrite();
 const curMonth = () => todayIso().slice(0, 7);
-const colOf = p => { const l = LANES.concat(EXTRA_SECTIONS).find(x => (p.squads || []).includes(x.k)); return l ? l.c : '#55608a'; };
+const colOf = p => (p && p.c) || '#7b8099';
 const docs = () => Object.keys(S.reports).filter(id => S.reports[id] && S.reports[id].mo).map(id => Object.assign({ id: id }, S.reports[id], { lines: S.reports[id].lines || [] }));
 const docOf = m => docs().find(d => d.mo === m) || { id: monthId(m), mo: m, lines: [] };
-/** Every product a card can belong to: the report products, the extra sections, and any product an existing card still uses. */
+/** The tags a card can have (Daycare, Tifli, Plan, AI, Finance, New initiative), plus any older tag a card still carries until it is converted. */
 function boardProducts() {
-  const pl = productsOf(cfg()).slice();
-  EXTRA_SECTIONS.forEach(x => { if (!pl.some(q => q.k === x.k)) pl.push({ k: x.k, n: x.n, squads: [x.k] }); });
-  docs().forEach(d => d.lines.forEach(l => { if (l.k && !pl.some(q => q.k === l.k)) pl.push({ k: l.k, n: l.k, squads: [] }); }));
+  const pl = TAGS.map(t => Object.assign({}, t));
+  docs().forEach(d => d.lines.forEach(l => { if (l.k && !pl.some(q => q.k === l.k)) pl.push({ k: l.k, n: l.k, squads: [], c: '#7b8099' }); }));
   return pl;
 }
 /** The months on the board: from this month to the last month that has a card or a column (never fewer than this month and the next). */
@@ -49,7 +45,7 @@ const pastCount = () => docs().filter(d => d.mo < curMonth() && d.lines.some(l =
 /** Changes a month through `mutate(doc)` and saves it (creating the doc the first time). */
 function saveMonth(m, mutate, log) {
   const id = monthId(m), old = S.reports[id], d = old ? JSON.parse(JSON.stringify(old)) : { mo: m, lines: [] };
-  d.lines = d.lines || []; d.pl = (d.pl && d.pl.length) ? d.pl : productsOf(cfg()); mutate(d);
+  d.lines = d.lines || []; d.pl = TAGS.map(t => ({ k: t.k, n: t.n, squads: t.squads })); mutate(d);
   d.status = 'submitted'; d.subAt = d.subAt || new Date().toISOString(); d.subBy = d.subBy || (S.me && (S.me.name || S.me.email)) || '';
   d.by = (S.me && (S.me.name || S.me.email)) || ''; d.ts = Date.now(); S.reports[id] = d; write('reports/' + id, d);
   if (log) logAct('report', log);
@@ -64,7 +60,7 @@ function syncMonth(m) {
   const others = []; docs().forEach(d => { if (d.mo !== m) d.lines.forEach(l => others.push(l)); });
   let res = null;
   saveMonth(m, d => { res = mergeRoad(d.lines, roadFeatures(m), boardProducts(), m, todayIso(), others); d.lines = res.lines; d.syncAt = new Date().toISOString(); }, 'synced the monthly deliverables for ' + monthLabel(m) + ' from the roadmap');
-  const parts = [res.added + ' added', res.updated + ' estimates refreshed']; if (res.dup) parts.push(res.dup + ' already on the board'); if (res.skipped) parts.push(res.skipped + ' not in any product');
+  const parts = [res.added + ' added', res.updated + ' estimates refreshed']; if (res.dup) parts.push(res.dup + ' already on the board'); if (res.skipped) parts.push(res.skipped + ' have no tag');
   notify(res.added || res.updated ? 'Roadmap sync for ' + monthLabel(m) + ': ' + parts.join(', ') : res.dup || res.skipped ? 'Nothing new for ' + monthLabel(m) + ': ' + parts.slice(2).join(', ') : 'No roadmap feature ends in ' + monthLabel(m), res.added || res.updated ? 'ok' : 'info');
   renderMonthly();
 }
@@ -110,10 +106,10 @@ function card(m, l, prods, ed) {
   const put = (patch, label) => { saveMonth(m, d => { const x = d.lines.find(z => z.id === l.id); if (x) Object.assign(x, patch); }, label); renderMonthly(); };
   const head = el('div', 'mdhead');
   if (ed) {
-    const ps = el('button', 'mdprod'); ps.type = 'button'; ps.textContent = p.n; ps.title = 'Change the product (and so the colour) of this card'; ps.setAttribute('aria-haspopup', 'menu'); ps.setAttribute('aria-label', 'Product: ' + p.n + '. Change');
+    const ps = el('button', 'mdprod'); ps.type = 'button'; ps.textContent = p.n; ps.title = 'Choose the tag (and so the colour) of this card'; ps.setAttribute('aria-haspopup', 'menu'); ps.setAttribute('aria-label', 'Tag: ' + p.n + '. Change');
     ps.addEventListener('click', e => {
       e.stopPropagation(); const b = ps.getBoundingClientRect();
-      openCtx(b.left, b.bottom + 4, mm => { mm.append(el('div', 'mlab', 'Product colour')); prods.forEach(q => { const x = mi(mm, (q.k === l.k ? '✓ ' : '') + q.n, () => { if (q.k !== l.k) put({ k: q.k }, 'moved "' + l.t + '" to ' + q.n); }); x.classList.add('mdpick'); x.style.setProperty('--c', colOf(q)); }); });
+      openCtx(b.left, b.bottom + 4, mm => { mm.append(el('div', 'mlab', 'Tag')); prods.forEach(q => { const x = mi(mm, (q.k === l.k ? '✓ ' : '') + q.n, () => { if (q.k !== l.k) put({ k: q.k }, 'moved "' + l.t + '" to ' + q.n); }); x.classList.add('mdpick'); x.style.setProperty('--c', colOf(q)); }); });
     });
     head.append(ps);
   } else head.append(el('span', 'mdprod ro', p.n));
@@ -207,23 +203,30 @@ function column(m, prods, ed) {
   return col;
 }
 const migrated = new Set();
+/** One-time conversion of cards made before the tags were split (e.g. the combined Plan / Daycare tag): a card follows the squad of the roadmap bar it came from. */
+function migrateTags() {
+  const old = docs().filter(d => d.lines.some(l => l.k && !TAGS.some(t => t.k === l.k))); if (!old.length) return;
+  const sq = new Map(); allRoadmaps().forEach(rm => withRm(rm.id, () => items().forEach(i => sq.set(rm.id + ':' + i.id, i.sq))));
+  old.forEach(d => saveMonth(d.mo, dd => { dd.lines.forEach(l => { if (l.k && !TAGS.some(t => t.k === l.k)) l.k = legacyTag(l.k, sq.get(l.src)); }); }, null));
+}
 export function renderMonthly() {
   const pg = $('pg-monthly'); if (!pg) return;
   const act = document.activeElement, ta0 = act && act.matches && act.matches('.mdcomp textarea') ? act : null, draft = ta0 ? { v: ta0.value, s: ta0.selectionStart, m: ta0.closest('.mdcol').dataset.mo } : null;
   const prevBoard = pg.querySelector('.mdboard'), sx = prevBoard ? prevBoard.scrollLeft : 0, sy = window.scrollY;
   pg.textContent = '';
   const viewer = isViewer(), ed = !viewer && canBuild();
+  if (ed) migrateTags();
   if (ed) docs().forEach(d => { if (d.status !== 'submitted' && !migrated.has(d.id)) { migrated.add(d.id); S.reports[d.id] = Object.assign({}, S.reports[d.id], { status: 'submitted', subAt: d.subAt || new Date().toISOString() }); write('reports/' + d.id, S.reports[d.id]); } });
   const prods = boardProducts(), tools = el('div', 'formrow');
   const q = el('input'); q.type = 'search'; q.placeholder = 'Search deliverables'; q.value = ui.q; q.setAttribute('aria-label', 'Search deliverables');
   q.addEventListener('input', () => { ui.q = q.value; renderMonthly(); const s = pg.querySelector('input[type=search]'); if (s) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); } });
-  const fp = el('select'); fp.setAttribute('aria-label', 'Filter by product'); [['all', 'All products']].concat(prods.map(p => [p.k, p.n])).forEach(x => { const o = el('option', '', x[1]); o.value = x[0]; o.selected = x[0] === ui.pr; fp.append(o); });
+  const fp = el('select'); fp.setAttribute('aria-label', 'Filter by tag'); [['all', 'All tags']].concat(prods.map(p => [p.k, p.n])).forEach(x => { const o = el('option', '', x[1]); o.value = x[0]; o.selected = x[0] === ui.pr; fp.append(o); });
   fp.addEventListener('change', () => { ui.pr = fp.value; renderMonthly(); });
   const ff = el('select'); ff.setAttribute('aria-label', 'Filter by flag'); [['all', 'All cards'], ['hp', 'Business priority'], ['quick', 'Quick wins'], ['enh', 'Small enhancements']].forEach(x => { const o = el('option', '', x[1]); o.value = x[0]; o.selected = x[0] === ui.fl; ff.append(o); });
   ff.addEventListener('change', () => { ui.fl = ff.value; renderMonthly(); });
   tools.append(q, fp, ff);
   const pc = pastCount(); if (pc || ui.past) { const pb = el('button', 'btn sm', ui.past ? 'Hide past months' : 'Show past months (' + pc + ')'); pb.type = 'button'; pb.addEventListener('click', () => { ui.past = !ui.past; renderMonthly(); }); tools.append(pb); }
-  pg.append(pageHead('Monthly deliverables', viewer ? 'What each product committed to deliver every month, coloured by product, and how far each deliverable is.' : 'What the business expects each month. Add a card for a product, or press Sync from Roadmap in a month to bring the features that end in it. Drag a card to move it to another month.', tools));
+  pg.append(pageHead('Monthly deliverables', viewer ? 'What the business expects every month, tagged and coloured by Daycare, Tifli, Plan, AI, Finance or New initiative, and how far each deliverable is.' : 'What the business expects each month. Add a card with a tag, or press Sync from Roadmap in a month to bring the features that end in it. Drag a card to move it to another month.', tools));
   const sb0 = viewer ? null : setupBanner(); if (sb0) pg.append(sb0);
   const board = el('div', 'mdboard'); visibleMonths().forEach(m => board.append(column(m, prods, ed)));
   if (ed) { const ms = visibleMonths(), nm = nextMonth(ms[ms.length - 1]); const ac = el('button', 'addcol mdaddmonth', '+ Add month (' + monthLabel(nm) + ')'); ac.type = 'button'; ac.id = 'addmonth'; ac.addEventListener('click', () => { saveMonth(nm, () => {}, 'added the ' + monthLabel(nm) + ' column to the monthly deliverables'); renderMonthly(); }); board.append(ac); }
