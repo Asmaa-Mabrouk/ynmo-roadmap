@@ -18,6 +18,7 @@ import { sb } from '../core/supabase.js';
 import { avatarEl } from '../ui/avatars.js';
 import { renderPermissions } from './permissions.js';
 import { notify } from '../ui/notify.js';
+import { applyAccessChange } from '../app/shell.js';
 
 /* ---------- resources ---------- */
 function personDocId(name) { return Object.keys(S.extras).find(i => S.extras[i] && S.extras[i].n === name && !S.extras[i].hidden); }
@@ -161,6 +162,9 @@ export async function loadMembers() {
   if (!S.me) return;
   const r = await sb.from('profiles').select('*').order('created_at', { ascending: true });
   if (!r.error && r.data) S.members = r.data;
+  const mine = S.members.find(m => m.id === S.me.id);
+  if (S.denied) S.denied = null; /* a save refused earlier must not keep blocking edits once an admin has changed access; a new refusal sets it again */
+  if (mine && (mine.access !== S.me.access || !!mine.is_admin !== !!S.me.is_admin || JSON.stringify(mine.perms || null) !== JSON.stringify(S.me.perms || null))) { Object.assign(S.me, { access: mine.access, is_admin: mine.is_admin, perms: mine.perms }); applyAccessChange(); }
   const pend = S.members.filter(m => !m.approved).length;
   const b = document.querySelector('#nav [data-p="admin"] .dot'); if (b) { b.hidden = !(S.me.is_admin && pend); b.textContent = pend; }
   if (state.page === 'admin') renderAdmin();

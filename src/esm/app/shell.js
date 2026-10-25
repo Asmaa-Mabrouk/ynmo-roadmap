@@ -17,14 +17,15 @@ import { renderReports } from '../pages/reports.js';
 import { renderMonthly } from '../pages/monthly.js';
 import { PAGES } from '../core/shared.js';
 import { ACTIVE_LOG_PAGE, isViewer } from '../features/safety.js';
+import { toast } from '../core/shared.js';
 import { closeCtx } from '../ui/editing.js';
 import { buildOff, buildPicker, closePicker, fillPersons } from '../ui/people-picker.js';
 import { hideLoading, showLoading } from '../ui/loading.js';
 import { makeDb, sb } from '../core/supabase.js';
-import { afterAuth, drawAvatar } from '../auth/profile.js';
+import { afterAuth, drawAvatar, loadProfile } from '../auth/profile.js';
 import { onSnap, setSave, snapDocs } from '../core/saving.js';
 import { startExtras } from './extras-wiring.js';
-import { LANDING, showLogin, showSetPw } from '../auth/gate.js';
+import { LANDING, doLogout, gateCard, showLogin, showSetPw } from '../auth/gate.js';
 import { bootShared } from '../features/sharing.js';
 
 /* ---------- shell: navigation and start ---------- */
@@ -61,8 +62,22 @@ export const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 export function softRender() { if (state.edit || S.dragging) { S.needRender = true; return; } render(); }
 export let started = false;
+/** Approved, but no admin has given this person View on any module yet: say so instead of showing an empty app. */
+function showNoAccess() {
+  const c = gateCard('No access yet', 'Your account is approved, but an admin has not given you access to any module yet. Ask an admin to open Users & permissions and switch on what you need.');
+  const b1 = el('button', 'btn primary', 'Check again'); b1.type = 'button'; b1.addEventListener('click', async () => { b1.disabled = true; await loadProfile(); b1.disabled = false; start(); });
+  const b2 = el('button', 'btn', 'Log out'); b2.type = 'button'; b2.addEventListener('click', doLogout); c.append(b1, b2);
+}
+/** An admin changed this person's access while they are signed in: follow it (menu, read-only state, current page) without waiting for a reload. */
+export function applyAccessChange() {
+  if (!PAGES.some(x => pageOk(x[0]))) { location.reload(); return; }
+  S.readonly = isViewer() || !!S.SHARE; S.denied = null; $('shell').classList.toggle('viewer', isViewer());
+  buildNav(); showPage(state.page); toast('Your access was changed by an admin.');
+}
 export function start() {
-  if (started) return; started = true;
+  if (started) return;
+  if (!PAGES.some(x => pageOk(x[0]))) { showNoAccess(); return; }
+  started = true;
   showLoading('Loading your roadmap…'); setTimeout(hideLoading, 10000);
   $('gate').hidden = true; $('shell').classList.remove('app-hidden');
   S.db = makeDb(); drawAvatar(); buildNav();

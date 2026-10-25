@@ -42,6 +42,22 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-25 - QA pass: Monthly and permissions
+```
+🔄 YNMO LEDGER UPDATE — 2026-10-25
+Request: QA engineer pass (end-to-end, edge cases), fix issues without touching live data; "edit permission is not saved" check
+Surface: cross-cutting (Roadmaps tool)
+Outcome: 6 issues found and fixed (Q1-Q6), 3 new test scripts, full suite green
+New facts / decisions locked:
+  • Card numbers are never reused (ideas/cardseq); Add to roadmap validates dates inside the roadmap
+  • No module access shows a "No access yet" screen; access changes by an admin apply within ~20 s
+  • Before 08-permissions.sql, saving permissions stores legacy access only (Edit = every module)
+Corrections to this skill: none
+Open / flagged:
+  • Run supabase/sql/08-permissions.sql (after 07) so per-module levels are enforced and stored
+Changelog: QA pass; card numbers, dates, no-access, live access, perms fallback fixed
+```
+
 🔄 YNMO LEDGER UPDATE — 2026-10-25
 Request: Permission module (per user, per module View / Edit / Delete switches; admins can grant admin to approve users and manage permissions); Monthly Undo only for the user's own actions; remove the Monthly subtitle.
 Surface: cross-cutting (Roadmaps tool)

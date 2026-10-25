@@ -18,9 +18,14 @@ const summary = p => MODULES.filter(m => p[m.k] > 0).map(m => m.n + ' ' + LEVELS
 const sameP = (a, b) => MODULES.every(m => (a[m.k] | 0) === (b[m.k] | 0));
 
 async function patchProfile(m, patch, okMsg, log, reload) {
-  const r = await sb.from('profiles').update(patch).eq('id', m.id);
-  if (r.error) { toast('Could not save: ' + r.error.message + (/perms/.test(r.error.message || '') ? ' (run supabase/sql/08-permissions.sql first)' : '')); return false; }
-  Object.assign(m, patch); logAct('access', log); toast(okMsg); await reload(); return true;
+  let r = await sb.from('profiles').update(patch).eq('id', m.id), note = '';
+  /* The database has not had supabase/sql/08-permissions.sql run yet: there is no perms column. Save the legacy access value so the change still takes effect (editor = can edit everywhere) instead of failing. */
+  if (r.error && 'perms' in patch && /perms/.test(r.error.message || '')) {
+    const lite = Object.assign({}, patch); delete lite.perms; r = await sb.from('profiles').update(lite).eq('id', m.id);
+    if (!r.error) { note = ' Per-module levels need supabase/sql/08-permissions.sql; until then Edit applies to every module.'; patch = lite; }
+  }
+  if (r.error) { toast('Could not save: ' + r.error.message); return false; }
+  Object.assign(m, patch); logAct('access', log); toast(okMsg + note); await reload(); return true;
 }
 
 function sw(label, on, disabled, onChange) {

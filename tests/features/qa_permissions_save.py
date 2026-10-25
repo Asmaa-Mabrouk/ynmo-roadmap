@@ -1,0 +1,43 @@
+import sys, os; sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__)))); os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))+"/out")
+from h18 import *
+"""Permission scenarios: after an admin grants Edit, the person's changes must really be saved (live and after a reload), also while the database still lacks the perms column. Fake test database only."""
+R=[]
+def ok(n,c): R.append((n,bool(c))); print(('PASS ' if c else 'FAIL ')+n)
+sw=lambda P,label: P.locator('#permissions button.permsw[aria-label="%s"]'%label)
+def add(P,text):
+    c=P.locator('.mdcol[data-mo="2026-10"]'); c.locator('.mdopen').click(); ta=c.locator('.mdadd textarea'); ta.fill(text); ta.press('Enter'); P.wait_for_timeout(600); P.keyboard.press('Escape'); P.wait_for_timeout(300)
+def scenario(noperms):
+    errs=[]; b=pw.chromium.launch(); ctx=mkctx(b, "window.__noPerms=%s"%('true' if noperms else 'false')); ctx.clock.set_fixed_time("2026-10-20T10:00:00")
+    A=newpage(ctx,errs); signup(A,'Admin','adm@x.com'); B=newpage(ctx,errs); signup(B,'Bea','bea@x.com')
+    A.click('#nav button[data-p="admin"]'); A.wait_for_timeout(700); A.locator('#permissions .permuser:has-text("Bea")').click(); A.wait_for_timeout(300)
+    A.click('#permissions button:text-is("Approve with these permissions")'); A.wait_for_timeout(800)
+    B.click('button:has-text("Check again")'); B.wait_for_timeout(1300); B.click('#nav button[data-p="monthly"]'); B.wait_for_timeout(700)
+    tag=' (no perms column)' if noperms else ''
+    ok('S1 Bea is a Viewer first, cannot add'+tag, B.locator('.mdopen').count()==0)
+    A.locator('#permissions .permuser:has-text("Bea")').click(); A.wait_for_timeout(300)
+    sw(A,'Edit Monthly deliverables').click(); A.click('#permissions button:text-is("Save permissions")'); A.wait_for_timeout(900)
+    ok('S2 the admin sees a saved message, not an error'+tag, A.locator('.toast:has-text("saved for Bea")').count()>=1 or A.locator('text=/saved for Bea/').count()>=1)
+    A.reload(); A.wait_for_timeout(1200); A.click('#nav button[data-p="admin"]'); A.wait_for_timeout(800); A.locator('#permissions .permuser:has-text("Bea")').click(); A.wait_for_timeout(300)
+    ok('S3 the Edit switch is still on after the admin reloads'+tag, sw(A,'Edit Monthly deliverables').get_attribute('aria-checked')=='true')
+    B.reload(); B.wait_for_timeout(1500); B.click('#nav button[data-p="monthly"]'); B.wait_for_timeout(700)
+    ok('S4 Bea can now add a card'+tag, B.locator('.mdopen').count()>=1)
+    add(B,'Saved by Bea')
+    B.reload(); B.wait_for_timeout(1500); B.click('#nav button[data-p="monthly"]'); B.wait_for_timeout(800)
+    ok('S5 the card Bea added is still there after a reload'+tag, B.locator('.mdcard:has-text("Saved by Bea")').count()==1)
+    A.click('#nav button[data-p="monthly"]'); A.wait_for_timeout(1500)
+    ok('S6 the admin sees Bea\'s card'+tag, A.locator('.mdcard:has-text("Saved by Bea")').count()==1)
+    B.locator('.mdcard:has-text("Saved by Bea") .kebab').click(); B.wait_for_timeout(300)
+    ok('S7 Edit without Delete: the card menu has no Delete card'+tag, (B.locator('#ctx .mi:text-is("Delete card")').count()==(1 if noperms else 0)) and B.locator("#ctx .mi").count()>=1)
+    B.keyboard.press('Escape')
+    A.click('#nav button[data-p="admin"]'); A.wait_for_timeout(600); A.locator('#permissions .permuser:has-text("Bea")').click(); A.wait_for_timeout(300)
+    sw(A,'Delete Monthly deliverables').click(); A.click('#permissions button:text-is("Save permissions")'); A.wait_for_timeout(900)
+    B.reload(); B.wait_for_timeout(1500); B.click('#nav button[data-p="monthly"]'); B.wait_for_timeout(800)
+    B.locator('.mdcard:has-text("Saved by Bea") .kebab').click(); B.wait_for_timeout(300)
+    ok('S8 after Delete is granted the menu has Delete card'+tag, B.locator('#ctx .mi:text-is("Delete card")').count()==1)
+    B.locator('#ctx .mi:text-is("Delete card")').click(); B.click('#xdlg button:text-is("Delete card")'); B.wait_for_timeout(700)
+    B.reload(); B.wait_for_timeout(1500); B.click('#nav button[data-p="monthly"]'); B.wait_for_timeout(800)
+    ok('S9 the deletion was saved'+tag, B.locator('.mdcard:has-text("Saved by Bea")').count()==0)
+    ok('no page errors'+tag, errs==[]); b.close()
+with sync_playwright() as pw:
+    scenario(False); scenario(True)
+    print(sum(1 for _,c in R if c),'/',len(R))

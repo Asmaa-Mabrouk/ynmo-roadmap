@@ -4606,14 +4606,23 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
   var summary = (p) => MODULES.filter((m) => p[m.k] > 0).map((m) => m.n + " " + LEVELS[p[m.k]]).join(", ") || "no access";
   var sameP = (a, b) => MODULES.every((m) => (a[m.k] | 0) === (b[m.k] | 0));
   async function patchProfile(m, patch, okMsg, log, reload) {
-    const r = await sb.from("profiles").update(patch).eq("id", m.id);
+    let r = await sb.from("profiles").update(patch).eq("id", m.id), note = "";
+    if (r.error && "perms" in patch && /perms/.test(r.error.message || "")) {
+      const lite = Object.assign({}, patch);
+      delete lite.perms;
+      r = await sb.from("profiles").update(lite).eq("id", m.id);
+      if (!r.error) {
+        note = " Per-module levels need supabase/sql/08-permissions.sql; until then Edit applies to every module.";
+        patch = lite;
+      }
+    }
     if (r.error) {
-      toast("Could not save: " + r.error.message + (/perms/.test(r.error.message || "") ? " (run supabase/sql/08-permissions.sql first)" : ""));
+      toast("Could not save: " + r.error.message);
       return false;
     }
     Object.assign(m, patch);
     logAct("access", log);
-    toast(okMsg);
+    toast(okMsg + note);
     await reload();
     return true;
   }
@@ -5031,6 +5040,12 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     if (!S.me) return;
     const r = await sb.from("profiles").select("*").order("created_at", { ascending: true });
     if (!r.error && r.data) S.members = r.data;
+    const mine = S.members.find((m) => m.id === S.me.id);
+    if (S.denied) S.denied = null;
+    if (mine && (mine.access !== S.me.access || !!mine.is_admin !== !!S.me.is_admin || JSON.stringify(mine.perms || null) !== JSON.stringify(S.me.perms || null))) {
+      Object.assign(S.me, { access: mine.access, is_admin: mine.is_admin, perms: mine.perms });
+      applyAccessChange();
+    }
     const pend = S.members.filter((m) => !m.approved).length;
     const b = document.querySelector('#nav [data-p="admin"] .dot');
     if (b) {
@@ -8466,6 +8481,11 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     if (!quiet) record(m, old, d);
     if (log) logAct("report", log);
   }
+  var reserveNos = (k) => {
+    const base3 = Math.max(maxNo(), S.ideas.cardseq && +S.ideas.cardseq.n || 0);
+    if (canWrite()) saveIdea("cardseq", { cfg: true, n: base3 + k });
+    return base3 + 1;
+  };
   var maxNo = () => rawDocs().reduce((a, d) => d.lines.reduce((b, l) => Math.max(b, +l.no || 0), a), 0);
   var onRoadmap = (l) => !!(l.rid && S.over[l.rid] && !S.over[l.rid].x);
   function addToRoadmap(m, l, tag) {
@@ -8501,7 +8521,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       no.addEventListener("click", closeDlg);
       ok.addEventListener("click", () => {
         const k0 = kOfIso(d0.value), k1 = kOfIso(d1.value);
-        if (isNaN(k0) || isNaN(k1)) {
+        if (isNaN(k0) || isNaN(k1) || k0 < 0 || k1 < 0 || k0 > NDAYS - 1 || k1 > NDAYS - 1) {
           err.textContent = "Choose a start and an end date inside " + r.n + ".";
           return;
         }
@@ -8965,8 +8985,9 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
         return;
       }
       ta.value = "";
+      const first = reserveNos(ts.length);
       saveMonth(m, (d) => {
-        let n = Math.max(maxNo(), ...d.lines.map((x) => +x.no || 0));
+        let n = first - 1;
         ts.forEach((t) => {
           const x = newLine(ui2.prod, t, {});
           x.no = ++n;
@@ -9086,7 +9107,8 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     if (!old.length) return;
     const sq = /* @__PURE__ */ new Map();
     allRoadmaps().forEach((rm) => withRm(rm.id, () => items().forEach((i) => sq.set(rm.id + ":" + i.id, i.sq))));
-    let n = maxNo();
+    const todo = old.reduce((a, d) => a + d.lines.filter((l) => String(l.t || "").trim() && !l.no).length, 0);
+    let n = todo ? reserveNos(todo) - 1 : maxNo();
     old.sort((x, y) => x.mo < y.mo ? -1 : 1).forEach((d) => saveMonth(d.mo, (dd) => {
       dd.lines.forEach((l) => {
         if (l.k && !TAGS.some((t) => t.k === l.k)) l.k = legacyTag(l.k, sq.get(l.src));
@@ -9366,8 +9388,39 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     render();
   }
   var started = false;
+  function showNoAccess() {
+    const c = gateCard("No access yet", "Your account is approved, but an admin has not given you access to any module yet. Ask an admin to open Users & permissions and switch on what you need.");
+    const b1 = el("button", "btn primary", "Check again");
+    b1.type = "button";
+    b1.addEventListener("click", async () => {
+      b1.disabled = true;
+      await loadProfile();
+      b1.disabled = false;
+      start();
+    });
+    const b2 = el("button", "btn", "Log out");
+    b2.type = "button";
+    b2.addEventListener("click", doLogout);
+    c.append(b1, b2);
+  }
+  function applyAccessChange() {
+    if (!PAGES.some((x) => pageOk(x[0]))) {
+      location.reload();
+      return;
+    }
+    S.readonly = isViewer() || !!S.SHARE;
+    S.denied = null;
+    $("shell").classList.toggle("viewer", isViewer());
+    buildNav();
+    showPage(state.page);
+    toast("Your access was changed by an admin.");
+  }
   function start() {
     if (started) return;
+    if (!PAGES.some((x) => pageOk(x[0]))) {
+      showNoAccess();
+      return;
+    }
     started = true;
     showLoading("Loading your roadmap…");
     setTimeout(hideLoading, 1e4);

@@ -23,7 +23,7 @@ window.supabase={createClient:()=>({
     insert:async r=>{const s=rd();s.profiles.push({approved:false,is_admin:false,created_at:new Date().toISOString(),...r});wr(s);return {}},
     update(p){upd=p;op='upd';return b}, then(res,rej){return run(false).then(res,rej)}};
    async function run(one){ await gate(); const s=rd(); let rows=s.profiles.filter(r=>f.every(([c,v])=>r[c]===v));
-     if(op==='upd'){rows.forEach(r=>Object.assign(r,upd));wr(s);return {};}
+     if(op==='upd'){ if(window.__noPerms&&upd&&'perms' in upd) return {error:{message:"Could not find the 'perms' column of 'profiles' in the schema cache"}}; rows.forEach(r=>Object.assign(r,upd));wr(s);return {};}
      return {data:one?(rows[0]||null):rows}; }
    return b; }
   let want=null,rng=null;const q={select(){return q},order(){return q},limit(){return q},range(a,b){rng=[a,b];return q},eq(c,v){want=v;return q},maybeSingle(){return gate().then(()=>{const s=rd();return {data:s[t][want]!==undefined?{id:want,data:s[t][want]}:null}})},then(res,rej){return gate().then(()=>{let rows=Object.keys(rd()[t]).map(id=>({id,data:rd()[t][id]})); if(t==='activity') rows.sort((a,b)=>(a.data.at<b.data.at?1:-1)); if(window.__page&&t==='activity'&&!rng) rows=rows.slice(0,window.__page); if(rng) rows=rows.slice(rng[0],rng[1]+1); return {data:rows}}).then(res,rej)}};

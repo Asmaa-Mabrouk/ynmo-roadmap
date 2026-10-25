@@ -18,6 +18,7 @@ import { openCtx, mi, primarySq } from '../ui/editing.js';
 import { confirmDlg } from '../ui/confirm.js';
 import { plainBox } from '../features/rich-text.js';
 import { openDlg, closeDlg } from '../features/safety.js';
+import { saveIdea } from './ideas.js';
 import { diffDoc, undoChanges } from '../features/month-undo.js';
 import { adhocStats, cardId, notesOf, clampPct, monthId, monthLabel, monthProgress, monthRange, monthText, newLine, nextMonth, pctBand, SIZES, TAGS, legacyTag } from '../features/month-model.js';
 import { NOTE_ICON, setupBanner } from './reports.js';
@@ -80,6 +81,8 @@ function saveMonth(m, mutate, log, quiet) {
   if (!quiet) record(m, old, d);
   if (log) logAct('report', log);
 }
+/** Card numbers are never reused, even after the newest card is deleted: the highest number ever given is kept in the settings doc `ideas/cardseq`. Returns the first of `k` new numbers. */
+const reserveNos = k => { const base = Math.max(maxNo(), (S.ideas.cardseq && +S.ideas.cardseq.n) || 0); if (canWrite()) saveIdea('cardseq', { cfg: true, n: base + k }); return base + 1; };
 const maxNo = () => rawDocs().reduce((a, d) => d.lines.reduce((b, l) => Math.max(b, +l.no || 0), a), 0);
 /** Is the roadmap bar made from this card still there? */
 const onRoadmap = l => !!(l.rid && S.over[l.rid] && !S.over[l.rid].x);
@@ -99,7 +102,7 @@ function addToRoadmap(m, l, tag) {
     const ok = el('button', 'btn primary', 'Add to roadmap'), no = el('button', 'btn', 'Cancel'); ok.type = no.type = 'button'; no.addEventListener('click', closeDlg);
     ok.addEventListener('click', () => {
       const k0 = kOfIso(d0.value), k1 = kOfIso(d1.value);
-      if (isNaN(k0) || isNaN(k1)) { err.textContent = 'Choose a start and an end date inside ' + r.n + '.'; return; }
+      if (isNaN(k0) || isNaN(k1) || k0 < 0 || k1 < 0 || k0 > NDAYS - 1 || k1 > NDAYS - 1) { err.textContent = 'Choose a start and an end date inside ' + r.n + '.'; return; }
       if (k1 < k0) { err.textContent = 'The end must be on or after the start.'; return; }
       pushHistory();
       const nid = 'c' + Date.now().toString(36), none = who.value === '__none', all = items().filter(x => x.sq === sq.value);
@@ -260,7 +263,7 @@ function composer(m, prods) {
   ta.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); f.requestSubmit(); } else if (e.key === 'Escape') { e.preventDefault(); close(); } });
   f.addEventListener('submit', e => {
     e.preventDefault(); const ts = ta.value.split('\n').map(x => x.replace(/^\s*[-*•\d.)]+\s+/, '').trim()).filter(Boolean); if (!ts.length) { ta.focus(); return; }
-    ta.value = ''; saveMonth(m, d => { let n = Math.max(maxNo(), ...d.lines.map(x => +x.no || 0)); ts.forEach(t => { const x = newLine(ui.prod, t, {}); x.no = ++n; d.lines.push(x); }); }, 'added ' + (ts.length === 1 ? 'a deliverable' : ts.length + ' deliverables') + ' to ' + lab(m)); ui.focusComp = true; renderMonthly();
+    ta.value = ''; const first = reserveNos(ts.length); saveMonth(m, d => { let n = first - 1; ts.forEach(t => { const x = newLine(ui.prod, t, {}); x.no = ++n; d.lines.push(x); }); }, 'added ' + (ts.length === 1 ? 'a deliverable' : ts.length + ' deliverables') + ' to ' + lab(m)); ui.focusComp = true; renderMonthly();
   });
   const row = el('div', 'mdcrow'); row.append(go, no); f.append(ta, chips, row); wrap.append(f); return wrap;
 }
@@ -299,7 +302,7 @@ const migrated = new Set();
 function fixCards() {
   const bad = d => d.lines.some(l => (l.k && !TAGS.some(t => t.k === l.k)) || (String(l.t || '').trim() && !l.no)); const old = rawDocs().filter(bad); if (!old.length) return;
   const sq = new Map(); allRoadmaps().forEach(rm => withRm(rm.id, () => items().forEach(i => sq.set(rm.id + ':' + i.id, i.sq))));
-  let n = maxNo();
+  const todo = old.reduce((a, d) => a + d.lines.filter(l => String(l.t || '').trim() && !l.no).length, 0); let n = todo ? reserveNos(todo) - 1 : maxNo();
   old.sort((x, y) => (x.mo < y.mo ? -1 : 1)).forEach(d => saveMonth(d.mo, dd => { dd.lines.forEach(l => { if (l.k && !TAGS.some(t => t.k === l.k)) l.k = legacyTag(l.k, sq.get(l.src)); if (String(l.t || '').trim() && !l.no) l.no = ++n; }); }, null, true));
 }
 export function renderMonthly() {
