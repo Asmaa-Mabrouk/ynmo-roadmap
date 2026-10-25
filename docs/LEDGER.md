@@ -43,6 +43,18 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 ## Ledger updates
 
 🔄 YNMO LEDGER UPDATE — 2026-10-25
+Request: Make the Monthly board more like Trello: change a card's product colour, insert a new card smoothly
+Surface: cross-cutting (Ynmo Roadmaps internal tool)
+Outcome: "+ Add a card" composer at the bottom of each column (product colour chips, Enter adds and stays open, pasted list = cards, Esc closes); product label on a card opens a product menu and repaints the card; drag cards to re-order or into another month with a drop line.
+New facts / decisions locked:
+  • Card order inside a month is the order of `lines` in the month doc (drag changes it).
+Corrections to this skill:
+  • none
+Open / flagged:
+  • Still pending: run supabase/sql/07-reports-editor-delete.sql; decide whether unfinished features carry to the next month; green threshold (100%).
+Changelog: Monthly board: Trello-style composer, product relabel, drag re-order.
+
+🔄 YNMO LEDGER UPDATE — 2026-10-25
 Request: Remove Capacity and Baselines; new Monthly deliverables module like Ideas, one column per month (October, November, + add month), cards coloured by product, Sync from Roadmap per month, never replicate a feature written on several people
 Surface: cross-cutting (Ynmo Roadmaps internal tool)
 Outcome: Capacity and Baselines pages (and "Plan vs now" ghost bars) removed; Monthly deliverables is a board with a column per month, product-coloured cards, per-month sync, move/drag, ad hoc, search/filter; executives see it read-only.

@@ -1076,9 +1076,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .mdprog .mdpct { font-size: 1.25rem; color: var(--pt); }
 .mdprog small { grid-column: 1 / -1; color: var(--muted); }
 .mdsync { justify-self: start; }
-.mdadd { display: flex; gap: 6px; }
-.mdadd input { flex: 1; min-width: 0; }
-.mdadd .mdpsel, .mdhead select.mdprod { border-radius: 8px; border: 1.5px solid var(--c); color: var(--c); font-weight: 700; padding: 3px 6px; max-width: 120px; background: #fff; font-size: 12.5px; }
 .mdcard { --c: #55608a; border-inline-start: 6px solid var(--c); background: color-mix(in srgb, var(--c) 9%, #fff); padding-top: 12px; }
 .mdhead { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
 .mdhead .mdprod.ro { font-size: .75rem; font-weight: 800; color: #fff; background: var(--c); border-radius: 99px; padding: 1px 10px; }
@@ -1097,9 +1094,28 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .mdcol h2 { font-size: 1.1rem; flex-wrap: wrap; row-gap: 4px; }
 .mdnow { white-space: nowrap; }
 .mdprog .mdpct { white-space: nowrap; }
-.mdadd { flex-direction: column; }
-.mdadd .mdpsel { max-width: none; width: 100%; }
-.mdadd input { width: 100%; }
+
+/* Trello-like: solid product label on the card, composer at the bottom of the column, drop line while dragging */
+.mdcard { background: color-mix(in srgb, var(--c) 17%, #fff); border-inline-start-width: 8px; }
+.mdhead button.mdprod { cursor: pointer; border: 0; border-radius: 99px; background: var(--c); color: #fff; font-weight: 800; font-size: .75rem; padding: 3px 12px; max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mdhead button.mdprod:hover, .mdhead button.mdprod:focus-visible { filter: brightness(.92); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 30%, transparent); }
+#ctx .mi.mdpick { border-inline-start: 8px solid var(--c); border-radius: 6px; margin: 2px 0; }
+.mdcomp { margin-top: 2px; }
+.mdopen { width: 100%; text-align: start; border: 0; background: transparent; color: var(--muted); font-weight: 700; padding: 8px 10px; border-radius: 10px; cursor: pointer; }
+.mdopen:hover, .mdopen:focus-visible { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink); }
+.mdadd { display: grid; gap: 8px; padding: 8px; border-radius: 12px; background: color-mix(in srgb, var(--c) 17%, #fff); border-inline-start: 8px solid var(--c); box-shadow: var(--shadow); }
+.mdadd textarea { width: 100%; resize: none; font: inherit; font-weight: 600; border: 1.5px solid transparent; background: #fff; border-radius: 8px; padding: 8px; }
+.mdadd textarea:focus { outline: none; border-color: var(--c); }
+.mdchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.mdchip { border: 2px solid var(--c); background: #fff; color: var(--c); font-weight: 800; font-size: .75rem; border-radius: 99px; padding: 2px 10px; cursor: pointer; }
+.mdchip.on { background: var(--c); color: #fff; }
+.mdcrow { display: flex; gap: 8px; align-items: center; }
+.mddrop { height: 4px; border-radius: 4px; background: var(--brand); margin: -2px 0; }
+.mdcard.dragging { opacity: .45; transform: rotate(1.5deg); }
+.mdcard { transition: box-shadow .15s, transform .15s; } .mdcard:hover { box-shadow: 0 4px 14px rgba(20, 30, 60, .14); }
+.mdcol h2 { font-size: 1rem; flex-wrap: nowrap; gap: 6px !important; }
+.mdcol h2 .colmore { flex: none; }
+.mdnow { margin-inline-start: 0; font-size: .66rem; padding: 1px 7px; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -8942,7 +8958,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   });
 
   // src/esm/pages/monthly.js
-  var ui = { q: "", pr: "all", past: false, prod: "" };
+  var ui = { q: "", pr: "all", past: false, prod: "", open: "" };
   var cfg2 = () => S.ideas.reportcfg || {};
   var canBuild2 = () => !isViewer() && canWrite();
   var curMonth = () => todayIso().slice(0, 7);
@@ -9025,8 +9041,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const txt = monthText(docOf(m), boardProducts(), fmtIso).join("\n") || monthLabel(m) + "\nNo deliverables yet.";
     (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify("Month text copied to the clipboard"), () => notify("Could not copy. Select the text and copy it manually.", "err"));
   };
-  var moveCard = (from, id, to) => {
-    if (from === to) return;
+  var moveCard = (from, id, to, before) => {
+    if (from === to && before === id) return;
     let line = null;
     saveMonth(from, (d) => {
       line = d.lines.find((l) => l.id === id);
@@ -9034,8 +9050,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     }, null);
     if (!line) return;
     saveMonth(to, (d) => {
-      d.lines.push(line);
-    }, 'moved "' + line.t + '" to the ' + monthLabel(to) + " deliverables");
+      const i = before ? d.lines.findIndex((l) => l.id === before) : -1;
+      if (i >= 0) d.lines.splice(i, 0, line);
+      else d.lines.push(line);
+    }, from === to ? null : 'moved "' + line.t + '" to the ' + monthLabel(to) + " deliverables");
     renderMonthly();
   };
   var pctSelect = (v, label, onChange) => {
@@ -9070,15 +9088,26 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     };
     const head = el("div", "mdhead");
     if (ed) {
-      const ps = el("select", "mdprod");
-      ps.setAttribute("aria-label", "Product");
-      prods.forEach((q) => {
-        const o = el("option", "", q.n);
-        o.value = q.k;
-        o.selected = q.k === l.k;
-        ps.append(o);
+      const ps = el("button", "mdprod");
+      ps.type = "button";
+      ps.textContent = p.n;
+      ps.title = "Change the product (and so the colour) of this card";
+      ps.setAttribute("aria-haspopup", "menu");
+      ps.setAttribute("aria-label", "Product: " + p.n + ". Change");
+      ps.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const b = ps.getBoundingClientRect();
+        openCtx(b.left, b.bottom + 4, (mm) => {
+          mm.append(el("div", "mlab", "Product colour"));
+          prods.forEach((q) => {
+            const x = mi(mm, (q.k === l.k ? "✓ " : "") + q.n, () => {
+              if (q.k !== l.k) put({ k: q.k }, 'moved "' + l.t + '" to ' + q.n);
+            });
+            x.classList.add("mdpick");
+            x.style.setProperty("--c", colOf2(q));
+          });
+        });
       });
-      ps.addEventListener("change", () => put({ k: ps.value }, 'moved "' + l.t + '" to ' + (prods.find((q) => q.k === ps.value) || {}).n));
       head.append(ps);
     } else head.append(el("span", "mdprod ro", p.n));
     const t = ed ? plainBox("mdtext", l.t, "Deliverable", (v) => {
@@ -9147,6 +9176,82 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     }
     return r;
   }
+  function composer(m, prods) {
+    const wrap = el("div", "mdcomp");
+    if (ui.open !== m) {
+      const b = el("button", "mdopen", "+ Add a card");
+      b.type = "button";
+      b.addEventListener("click", () => {
+        ui.open = m;
+        ui.focusComp = true;
+        renderMonthly();
+      });
+      wrap.append(b);
+      return wrap;
+    }
+    const f = el("form", "mdadd"), ta = el("textarea"), chips = el("div", "mdchips"), byK = (k) => prods.find((q) => q.k === k) || prods[0];
+    ui.prod = byK(ui.prod).k;
+    f.style.setProperty("--c", colOf2(byK(ui.prod)));
+    ta.rows = 2;
+    ta.maxLength = 1200;
+    ta.placeholder = "Enter a title for this card. One card per line if you paste a list.";
+    ta.setAttribute("aria-label", "New card for " + monthLabel(m));
+    prods.forEach((q) => {
+      const c = el("button", "mdchip" + (q.k === ui.prod ? " on" : ""), q.n);
+      c.type = "button";
+      c.style.setProperty("--c", colOf2(q));
+      c.dataset.k = q.k;
+      c.setAttribute("aria-pressed", String(q.k === ui.prod));
+      c.addEventListener("click", () => {
+        ui.prod = q.k;
+        f.style.setProperty("--c", colOf2(q));
+        chips.querySelectorAll(".mdchip").forEach((x) => {
+          const on = x.dataset.k === q.k;
+          x.classList.toggle("on", on);
+          x.setAttribute("aria-pressed", String(on));
+        });
+        ta.focus();
+      });
+      chips.append(c);
+    });
+    const go = el("button", "btn primary sm", "Add card"), no = el("button", "btn sm", "✕");
+    go.type = "submit";
+    no.type = "button";
+    no.setAttribute("aria-label", "Close");
+    no.title = "Close (Esc)";
+    const close = () => {
+      ui.open = "";
+      renderMonthly();
+    };
+    no.addEventListener("click", close);
+    ta.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        f.requestSubmit();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        close();
+      }
+    });
+    f.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const ts = ta.value.split("\n").map((x) => x.replace(/^\s*[-*•\d.)]+\s+/, "").trim()).filter(Boolean);
+      if (!ts.length) {
+        ta.focus();
+        return;
+      }
+      saveMonth(m, (d) => {
+        ts.forEach((t) => d.lines.push(newLine(ui.prod, t, {})));
+      }, "added " + (ts.length === 1 ? "a deliverable" : ts.length + " deliverables") + " to " + monthLabel(m));
+      ui.focusComp = true;
+      renderMonthly();
+    });
+    const row = el("div", "mdcrow");
+    row.append(go, no);
+    f.append(ta, chips, row);
+    wrap.append(f);
+    return wrap;
+  }
   function column(m, prods, ed) {
     const d = docOf(m), now = m === curMonth(), col = el("div", "col mdcol" + (now ? " now" : ""));
     col.dataset.mo = m;
@@ -9191,60 +9296,42 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       sy.title = "Brings in the roadmap features that end in " + monthLabel(m) + ", each once. Percentages you set are never overwritten.";
       sy.addEventListener("click", () => syncMonth(m));
       col.append(sy);
-      const f = el("form", "mdadd"), ps = el("select", "mdpsel"), ti = el("input");
-      ps.setAttribute("aria-label", "Product for the new card");
-      prods.forEach((q) => {
-        const o = el("option", "", q.n);
-        o.value = q.k;
-        o.selected = q.k === (ui.prod || prods[0].k);
-        ps.append(o);
-      });
-      ps.addEventListener("change", () => {
-        ui.prod = ps.value;
-        ps.style.setProperty("--c", colOf2(prods.find((q) => q.k === ps.value)));
-      });
-      ps.style.setProperty("--c", colOf2(prods.find((q) => q.k === (ui.prod || prods[0].k)) || prods[0]));
-      ti.type = "text";
-      ti.maxLength = 300;
-      ti.placeholder = "Add a deliverable and press Enter";
-      ti.setAttribute("aria-label", "New deliverable for " + monthLabel(m));
-      f.append(ps, ti);
-      f.addEventListener("submit", (e) => {
-        e.preventDefault();
-        const v = ti.value.trim();
-        if (!v) {
-          ti.focus();
-          return;
-        }
-        ui.prod = ps.value;
-        saveMonth(m, (dd) => {
-          dd.lines.push(newLine(ps.value, v, {}));
-        }, "added a deliverable to " + monthLabel(m));
-        renderMonthly();
-        const n = $("pg-monthly").querySelector('.mdcol[data-mo="' + m + '"] .mdadd input');
-        if (n) n.focus();
-      });
-      col.append(f);
     }
     shown.forEach((l) => col.append(card(m, l, prods, ed)));
-    if (!shown.length) col.append(el("div", "hint", lines.length ? "Nothing matches the filter." : "Nothing here yet."));
+    if (!shown.length && !(ed && ui.open === m)) col.append(el("div", "hint", lines.length ? "Nothing matches the filter." : "Nothing here yet."));
+    if (ed) col.append(composer(m, prods));
     if (ed) {
       const ok = (e) => [...e.dataTransfer ? e.dataTransfer.types : []].includes("text/mdcard");
+      const line = el("div", "mddrop"), beforeOf = (e) => {
+        const cs = [...col.querySelectorAll(".mdcard:not(.dragging)")];
+        return cs.find((c) => {
+          const r = c.getBoundingClientRect();
+          return e.clientY < r.top + r.height / 2;
+        }) || null;
+      };
       col.addEventListener("dragover", (e) => {
         if (!ok(e)) return;
         e.preventDefault();
         col.classList.add("dropcol");
+        const c = beforeOf(e);
+        if (c) c.before(line);
+        else col.append(line);
       });
       col.addEventListener("dragleave", (e) => {
-        if (!col.contains(e.relatedTarget)) col.classList.remove("dropcol");
+        if (!col.contains(e.relatedTarget)) {
+          col.classList.remove("dropcol");
+          line.remove();
+        }
       });
       col.addEventListener("drop", (e) => {
+        const c = beforeOf(e);
+        line.remove();
         col.classList.remove("dropcol");
         const v = e.dataTransfer.getData("text/mdcard");
         if (!v) return;
         e.preventDefault();
         const i = v.indexOf("|");
-        moveCard(v.slice(0, i), v.slice(i + 1), m);
+        moveCard(v.slice(0, i), v.slice(i + 1), m, c ? c.dataset.id : "");
       });
     }
     return col;
@@ -9319,6 +9406,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       board.append(ac);
     }
     pg.append(board);
+    const cta = pg.querySelector(".mdcomp textarea");
+    if (cta && ui.focusComp) {
+      ui.focusComp = false;
+      cta.focus({ preventScroll: true });
+      cta.scrollIntoView({ block: "nearest" });
+    }
     if (sx) {
       const nb = pg.querySelector(".mdboard");
       if (nb) nb.scrollLeft = sx;
