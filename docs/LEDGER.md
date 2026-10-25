@@ -15,7 +15,7 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 | Backend | Supabase project **YNMO_PM**; SQL 01 to 07; Edge Functions `notify-approval`, `weekly-draft`, `jira-sync` (code in repo; deployment status per the open items below) |
 | Owner | Asmaa (Senior PM, TrianglZ, Ynmo ecosystem, Riyadh) |
 | Pages | Roadmap, Ideas, Roadmaps, Sprints, Reports, Monthly deliverables, Resources, Vacations, Log, Approvals |
-| Tests | `tests/run_all.sh`: last full run 88/88 scenarios and all feature scripts green (`sprints_reports.py` 94, `monthly_page.py` 43) |
+| Tests | `tests/run_all.sh`: last full run 88/88 scenarios and all feature scripts green (`sprints_reports.py` 94, `monthly_page.py` 79) |
 | Jira | Site `tatralab.atlassian.net`; default projects DYC (Daycare), FAS (Tifli), AU (AI). Plan, Warif and Sharjah project keys not known yet. Rovo was considered; the API route was chosen |
 | Google Drive export | Google Cloud project **YNMO PM** (trianglz.com, Internal consent), Drive API on, Web client created for `https://ynmo-roadmap.vercel.app`. Client ID to be pasted in the tool by an admin; the client secret is not used |
 
@@ -41,6 +41,19 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 8. Not yet tested against the real services: Jira, Google sign-in and Drive.
 
 ## Ledger updates
+
+🔄 YNMO LEDGER UPDATE — 2026-10-25
+Request: Remove Sync from Roadmap (add to roadmap from a card instead, with dates and assignee); green note with red bubble; card ids Product abbreviation#ID.
+Surface: cross-cutting (Roadmaps tool)
+Outcome: Sync removed; card menu "Add to roadmap…" (assignee, squad, start, end) creates a linked bar; ids DC/TF/PL/AI/FN/NI#n; red bubble on notes.
+New facts / decisions locked:
+  • Card id = tag abbreviation + # + a number that never changes (max+1 across all months); abbreviation follows the tag.
+  • Roadmap scheduling is per card, not per month; a card stores rid/rm of its bar.
+Corrections to this skill:
+  • none
+Open / flagged:
+  • Same-month overwrite risk (one doc per month); per-card documents not decided. Run supabase/sql/07; check Supabase Auth session limits are not below 48 h.
+Changelog: Monthly: add-to-roadmap replaces sync; card ids; note bubble.
 
 🔄 YNMO LEDGER UPDATE — 2026-10-25
 Request: Split Plan and Daycare in the Monthly module; tags chosen from a dropdown: Daycare pink, Tifli purple, Plan green, AI blue, Finance grey, New initiative gold

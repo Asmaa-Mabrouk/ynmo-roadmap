@@ -716,3 +716,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .mdstar.on, .mdstar.on:hover { color: #fff; background: #6d48a8; border-color: #6d48a8; } .mdstar.on svg { fill: currentColor; }
 .mdhp, .mdhead .mdhp { margin-inline-start: 0; }
 .mdsz svg { width: 12px; height: 12px; fill: currentColor; stroke: currentColor; stroke-width: 1.5; vertical-align: -1px; }
+
+/* Card id (DC#12), green note with a red bubble */
+.mdid { border: 0; background: transparent; font: 700 .72rem/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: color-mix(in srgb, var(--c) 70%, #1c2030); padding: 3px 4px; border-radius: 6px; cursor: copy; letter-spacing: .02em; }
+span.mdid { cursor: default; }
+button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, var(--c) 18%, #fff); }
+.mdnote.has::before { content: ''; position: absolute; top: -3px; inset-inline-end: -3px; width: 11px; height: 11px; border-radius: 50%; background: #e5383b; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(229, 56, 59, .35); animation: mdpulse 1.8s ease-out infinite; }
+@keyframes mdpulse { 0% { box-shadow: 0 0 0 0 rgba(229, 56, 59, .55); } 70%, 100% { box-shadow: 0 0 0 7px rgba(229, 56, 59, 0); } }
+@media (prefers-reduced-motion: reduce) { .mdnote.has::before { animation: none; } }

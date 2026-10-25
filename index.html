@@ -1139,6 +1139,14 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .mdstar.on, .mdstar.on:hover { color: #fff; background: #6d48a8; border-color: #6d48a8; } .mdstar.on svg { fill: currentColor; }
 .mdhp, .mdhead .mdhp { margin-inline-start: 0; }
 .mdsz svg { width: 12px; height: 12px; fill: currentColor; stroke: currentColor; stroke-width: 1.5; vertical-align: -1px; }
+
+/* Card id (DC#12), green note with a red bubble */
+.mdid { border: 0; background: transparent; font: 700 .72rem/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: color-mix(in srgb, var(--c) 70%, #1c2030); padding: 3px 4px; border-radius: 6px; cursor: copy; letter-spacing: .02em; }
+span.mdid { cursor: default; }
+button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, var(--c) 18%, #fff); }
+.mdnote.has::before { content: ''; position: absolute; top: -3px; inset-inline-end: -3px; width: 11px; height: 11px; border-radius: 50%; background: #e5383b; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(229, 56, 59, .35); animation: mdpulse 1.8s ease-out infinite; }
+@keyframes mdpulse { 0% { box-shadow: 0 0 0 0 rgba(229, 56, 59, .55); } 70%, 100% { box-shadow: 0 0 0 7px rgba(229, 56, 59, 0); } }
+@media (prefers-reduced-motion: reduce) { .mdnote.has::before { animation: none; } }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -6051,7 +6059,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     v = clampPct(v);
     return v >= 100 ? "g" : v > 50 ? "o" : v > 0 ? "y" : "n";
   };
-  var dayN = (iso4) => Math.round(Date.parse(iso4 + "T00:00:00Z") / 864e5);
   var addD = (iso4, n) => new Date(Date.parse(iso4 + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
   var isMonth = (m) => /^\d{4}-(0[1-9]|1[0-2])$/.test(m || "");
   var monthId = (m) => "mo" + m.replace("-", "");
@@ -6080,83 +6087,22 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const a = live(lines).filter((l) => l.adhoc);
     return { n: a.length, done: a.filter((l) => clampPct(l.pct) >= 100).length };
   }
-  function assumePct(bar4, today) {
-    if (bar4.st === "done") return 100;
-    if (bar4.ms) return 0;
-    const len = dayN(bar4.b) - dayN(bar4.a) + 1;
-    if (!(len >= 1)) return 0;
-    const passed = Math.min(len, dayN(today) - dayN(bar4.a) + 1);
-    if (passed <= 0) return 0;
-    return Math.min(90, Math.round(100 * passed / len / 5) * 5);
-  }
-  var norm = (t) => String(t || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
-  var lineKey = (k, t) => k + "|" + norm(t);
-  function groupRoad(road, pl) {
-    const g = /* @__PURE__ */ new Map();
-    let skipped = 0;
-    road.forEach((b) => {
-      const p = pl.find((q) => (q.squads || []).includes(b.sq));
-      if (!p) {
-        skipped++;
-        return;
-      }
-      const key = lineKey(p.k, b.t), x = g.get(key);
-      if (!x) g.set(key, { ids: [b.id], t: b.t, k: p.k, a: b.a, b: b.b, st: b.st, ms: !!b.ms });
-      else {
-        x.ids.push(b.id);
-        if (b.a < x.a) x.a = b.a;
-        if (b.b > x.b) x.b = b.b;
-        if (b.st !== "done") x.st = b.st;
-        x.ms = x.ms && !!b.ms;
-      }
-    });
-    return { features: [...g.values()], skipped };
-  }
-  function mergeRoad(lines, road, pl, m, today, others2) {
-    const out = lines.map((l) => Object.assign({}, l)), bySrc = /* @__PURE__ */ new Map(), have = /* @__PURE__ */ new Set(), haveSrc = /* @__PURE__ */ new Set();
-    out.forEach((l) => {
-      if (l.src) bySrc.set(l.src, l);
-      have.add(lineKey(l.k, l.t));
-    });
-    (others2 || []).forEach((l) => {
-      have.add(lineKey(l.k, l.t));
-      if (l.src) haveSrc.add(l.src);
-    });
-    const g = groupRoad(road, pl);
-    let added = 0, updated = 0, dup = 0;
-    g.features.sort((x, y) => x.a < y.a ? -1 : x.a > y.a ? 1 : String(x.t).localeCompare(String(y.t))).forEach((f) => {
-      const pct2 = assumePct(f, today), ex = f.ids.map((i) => bySrc.get(i)).find(Boolean);
-      if (ex) {
-        if (!ex.pe && clampPct(ex.pct) !== pct2) {
-          ex.pct = pct2;
-          updated++;
-        }
-        return;
-      }
-      if (f.b.slice(0, 7) !== m) return;
-      if (have.has(lineKey(f.k, f.t)) || f.ids.some((i) => haveSrc.has(i))) {
-        dup++;
-        return;
-      }
-      const n = newLine(f.k, f.t, { src: f.ids[0] });
-      n.pct = pct2;
-      out.push(n);
-      have.add(lineKey(f.k, f.t));
-      added++;
-    });
-    return { lines: out, added, updated, skipped: g.skipped, dup };
-  }
   var TAGS = [
-    { k: "daycare", n: "Daycare", c: "#d6338a", squads: ["daycare"] },
-    { k: "tifli", n: "Tifli", c: "#6d48a8", squads: ["tifli"] },
-    { k: "plan", n: "Plan", c: "#0d8560", squads: ["plan"] },
-    { k: "ai", n: "AI", c: "#2f6fe0", squads: ["ai"] },
-    { k: "finance", n: "Finance", c: "#7b8099", squads: [] },
-    { k: "initiative", n: "New initiative", c: "#d9a400", squads: [] }
+    { k: "daycare", n: "Daycare", ab: "DC", c: "#d6338a", squads: ["daycare"] },
+    { k: "tifli", n: "Tifli", ab: "TF", c: "#6d48a8", squads: ["tifli"] },
+    { k: "plan", n: "Plan", ab: "PL", c: "#0d8560", squads: ["plan"] },
+    { k: "ai", n: "AI", ab: "AI", c: "#2f6fe0", squads: ["ai"] },
+    { k: "finance", n: "Finance", ab: "FN", c: "#7b8099", squads: [] },
+    { k: "initiative", n: "New initiative", ab: "NI", c: "#d9a400", squads: [] }
   ];
   var legacyTag = (k, squad) => {
     const t = TAGS.find((x) => squad && x.squads.includes(squad));
     return t ? t.k : k === "plan_daycare" ? "plan" : TAGS.some((x) => x.k === k) ? k : "initiative";
+  };
+  var cardId = (l) => {
+    if (!l || !l.no) return "";
+    const t = TAGS.find((x) => x.k === l.k);
+    return (t ? t.ab : String(l.k || "??").slice(0, 2).toUpperCase()) + "#" + l.no;
   };
   var SIZES = { quick: "Quick win", enh: "Small enhancement" };
   var tagsOf = (l) => (l.hp ? " [BUSINESS PRIORITY]" : "") + (SIZES[l.sz] ? " [" + SIZES[l.sz].toUpperCase() + "]" : "");
@@ -6169,7 +6115,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       const pl = its.filter((l) => !l.adhoc), ad = its.filter((l) => l.adhoc), pp = monthProgress(pl);
       out.push(p.n + (pp.pct === null ? "" : " - " + pp.pct + "%"));
       pl.forEach((l) => {
-        out.push("- " + l.t + ": " + clampPct(l.pct) + "%" + tagsOf(l));
+        out.push("- " + (cardId(l) ? cardId(l) + " " : "") + l.t + ": " + clampPct(l.pct) + "%" + tagsOf(l));
         if (l.note) out.push("  Note: " + String(l.note).replace(/\s+/g, " "));
       });
       if (ad.length) {
@@ -9037,30 +8983,70 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     write("reports/" + id, d);
     if (log) logAct("report", log);
   }
-  function roadFeatures(m) {
-    const r = monthRange(m), out = [];
-    allRoadmaps().filter((x) => x.a <= r.b && x.b >= r.a).forEach((rm) => withRm(rm.id, () => items().forEach((i) => {
-      if (i.d0 === void 0) return;
-      out.push({ id: rm.id + ":" + i.id, t: i.t, sq: i.sq, a: iso(i.d0), b: iso(i.d1), st: i.st, ms: !!i.ms });
-    })));
-    return out;
-  }
-  function syncMonth(m) {
-    const others2 = [];
-    docs().forEach((d) => {
-      if (d.mo !== m) d.lines.forEach((l) => others2.push(l));
+  var maxNo = () => docs().reduce((a, d) => d.lines.reduce((b, l) => Math.max(b, +l.no || 0), a), 0);
+  var onRoadmap = (l) => !!(l.rid && S.over[l.rid] && !S.over[l.rid].x);
+  function addToRoadmap(m, l, tag) {
+    if (!canEdit()) return;
+    const r = curRm(), mr = monthRange(m);
+    openDlg("Add to " + r.n, (box2) => {
+      box2.append(el("div", "sub2", cardId(l) + " · " + l.t));
+      const a0 = mr.a < r.a ? r.a : mr.a, b0 = mr.b > r.b ? r.b : mr.b, d0 = el("input"), d1 = el("input");
+      d0.type = d1.type = "date";
+      d0.min = d1.min = r.a;
+      d0.max = d1.max = r.b;
+      d0.value = a0 <= r.b ? a0 : r.a;
+      d1.value = b0 >= d0.value ? b0 : d0.value;
+      d0.setAttribute("aria-label", "Start date");
+      d1.setAttribute("aria-label", "End date");
+      const names = [...directory().keys()].sort((x, y) => x.localeCompare(y)), who = selOf([["__none", "Unassigned"]].concat(names.map((n) => [n, n])), "__none");
+      who.setAttribute("aria-label", "Assignee");
+      const fromTag = (tag.squads || []).find((k) => LANES.some((x) => x.k === k)), sq = selOf(LANES.map((x) => [x.k, x.n]), fromTag || LANES[0].k);
+      sq.setAttribute("aria-label", "Squad");
+      if (!fromTag) who.addEventListener("change", () => {
+        if (who.value !== "__none") sq.value = primarySq(who.value);
+      });
+      d0.addEventListener("change", () => {
+        if (d1.value < d0.value) d1.value = d0.value;
+      });
+      const err = el("div", "gerr");
+      err.setAttribute("aria-live", "polite");
+      const grid = el("div", "padd");
+      grid.style.gridTemplateColumns = "1fr";
+      grid.append(fld("Assignee", who), fld("Squad", sq), fld("Start", d0), fld("End", d1));
+      const ok = el("button", "btn primary", "Add to roadmap"), no = el("button", "btn", "Cancel");
+      ok.type = no.type = "button";
+      no.addEventListener("click", closeDlg);
+      ok.addEventListener("click", () => {
+        const k0 = kOfIso(d0.value), k1 = kOfIso(d1.value);
+        if (isNaN(k0) || isNaN(k1)) {
+          err.textContent = "Choose a start and an end date inside " + r.n + ".";
+          return;
+        }
+        if (k1 < k0) {
+          err.textContent = "The end must be on or after the start.";
+          return;
+        }
+        pushHistory();
+        const nid = "c" + Date.now().toString(36), none = who.value === "__none", all = items().filter((x) => x.sq === sq.value);
+        S.over[nid] = { custom: true, rm: state.rm, t: l.t, n: l.note || "", sq: sq.value, pr: sq.value === "ai" ? ["tifli"] : [sq.value], d0: Math.max(0, k0), d1: Math.min(NDAYS - 1, k1), st: "planned", res: none ? [] : [who.value], ord: all.length ? Math.max.apply(null, all.map((x) => x.ord)) + 1 : 0, card: l.id };
+        persist(nid);
+        saveMonth(m, (d) => {
+          const x = d.lines.find((z) => z.id === l.id);
+          if (x) {
+            x.rid = nid;
+            x.rm = state.rm;
+          }
+        }, null);
+        logAct("roadmap", 'added "' + l.t + '" (' + cardId(l) + ") to " + r.n + " from " + d0.value + " to " + d1.value + (none ? "" : " for " + who.value));
+        closeDlg();
+        render();
+        renderMonthly();
+        toast('Added "' + l.t + '" to ' + r.n + ".");
+      });
+      const row = el("div", "row");
+      row.append(ok, no);
+      box2.append(grid, err, row);
     });
-    let res = null;
-    saveMonth(m, (d) => {
-      res = mergeRoad(d.lines, roadFeatures(m), boardProducts(), m, todayIso(), others2);
-      d.lines = res.lines;
-      d.syncAt = (/* @__PURE__ */ new Date()).toISOString();
-    }, "synced the monthly deliverables for " + monthLabel(m) + " from the roadmap");
-    const parts = [res.added + " added", res.updated + " estimates refreshed"];
-    if (res.dup) parts.push(res.dup + " already on the board");
-    if (res.skipped) parts.push(res.skipped + " have no tag");
-    notify(res.added || res.updated ? "Roadmap sync for " + monthLabel(m) + ": " + parts.join(", ") : res.dup || res.skipped ? "Nothing new for " + monthLabel(m) + ": " + parts.slice(2).join(", ") : "No roadmap feature ends in " + monthLabel(m), res.added || res.updated ? "ok" : "info");
-    renderMonthly();
   }
   function deleteMonth(m) {
     confirmDlg("Delete " + monthLabel(m) + "?", "Every card of " + monthLabel(m) + " is deleted for everyone, including the executives who can see them.", "Delete month", () => {
@@ -9185,6 +9171,18 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       });
       head.append(ps);
     } else head.append(el("span", "mdprod ro", p.n));
+    if (cardId(l)) {
+      const idb = el(ed ? "button" : "span", "mdid", cardId(l));
+      if (ed) {
+        idb.type = "button";
+        idb.title = "Click to copy " + cardId(l);
+        idb.setAttribute("aria-label", "Card id " + cardId(l) + ", click to copy");
+        idb.addEventListener("click", () => {
+          (navigator.clipboard ? navigator.clipboard.writeText(cardId(l)) : Promise.reject()).then(() => notify(cardId(l) + " copied"), () => notify("Could not copy", "err"));
+        });
+      }
+      head.append(idb);
+    }
     const t = ed ? plainBox("mdtext", l.t, "Deliverable", (v) => {
       if (!v) {
         t.textContent = l.t;
@@ -9219,6 +9217,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         const b = more.getBoundingClientRect();
         openCtx(b.right - 200, b.bottom + 4, (mm) => {
           Object.keys(SIZES).forEach((k) => mi(mm, (l.sz === k ? "✓ " : "") + SIZES[k], () => put({ sz: l.sz === k ? "" : k }, l.sz === k ? "removed the " + SIZES[k] + " flag" : 'flagged "' + l.t + '" as ' + SIZES[k])));
+          if (onRoadmap(l)) mi(mm, "Show on roadmap", () => {
+            if (l.rm) useRoadmap(l.rm);
+            showPage("roadmap");
+          });
+          else mi(mm, "Add to roadmap…", () => addToRoadmap(m, l, p));
           mm.append(el("div", "msep"));
           if (l.adhoc) mi(mm, "Mark as planned (not ad hoc)", () => put({ adhoc: false }, "marked as planned"));
           const others2 = visibleMonths().filter((x) => x !== m);
@@ -9241,9 +9244,13 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       foot.append(z);
     }
     if (l.adhoc) foot.append(el("span", "chip mdadhoc", "Ad hoc"));
-    if (l.src) {
-      const b = el("span", "chip mdroad", l.pe ? "Roadmap" : "Roadmap · estimated");
-      b.title = l.pe ? "Came from the roadmap; the percentage was set by a person." : "Came from the roadmap; the percentage is estimated from its dates. Change it to set your own.";
+    if (onRoadmap(l)) {
+      const b = el("span", "chip mdroad", "On roadmap");
+      b.title = "This card is a bar on the roadmap";
+      foot.append(b);
+    } else if (l.src) {
+      const b = el("span", "chip mdroad", "From roadmap");
+      b.title = "Brought in from the roadmap";
       foot.append(b);
     }
     foot.append(noteBtn2(m, l, ed));
@@ -9340,7 +9347,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       }
       ta.value = "";
       saveMonth(m, (d) => {
-        ts.forEach((t) => d.lines.push(newLine(ui.prod, t, {})));
+        let n = Math.max(maxNo(), ...d.lines.map((x) => +x.no || 0));
+        ts.forEach((t) => {
+          const x = newLine(ui.prod, t, {});
+          x.no = ++n;
+          d.lines.push(x);
+        });
       }, "added " + (ts.length === 1 ? "a deliverable" : ts.length + " deliverables") + " to " + monthLabel(m));
       ui.focusComp = true;
       renderMonthly();
@@ -9356,7 +9368,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     col.dataset.mo = m;
     col.style.setProperty("--c", now ? "var(--brand)" : "#55608a");
     const fq = ui.q.trim().toLowerCase();
-    const lines = d.lines.filter((l) => String(l.t || "").trim()), shown = lines.filter((l) => (ui.pr === "all" || l.k === ui.pr) && (ui.fl === "all" || (ui.fl === "hp" ? l.hp : l.sz === ui.fl)) && (!fq || String(l.t).toLowerCase().includes(fq)));
+    const lines = d.lines.filter((l) => String(l.t || "").trim()), shown = lines.filter((l) => (ui.pr === "all" || l.k === ui.pr) && (ui.fl === "all" || (ui.fl === "hp" ? l.hp : l.sz === ui.fl)) && (!fq || (String(l.t) + " " + cardId(l)).toLowerCase().includes(fq)));
     const h = el("h2");
     h.append(document.createTextNode(monthLabel(m)), el("span", "badge", String(lines.length)));
     if (now) h.append(el("span", "chip mdnow", "This month"));
@@ -9369,7 +9381,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         e.stopPropagation();
         const b = more.getBoundingClientRect();
         openCtx(b.right - 190, b.bottom + 4, (mm) => {
-          mi(mm, "Sync from Roadmap", () => syncMonth(m));
           mi(mm, "Copy text", () => copyMonth(m));
           if (S.reports[monthId(m)]) {
             mm.append(el("div", "msep"));
@@ -9389,13 +9400,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     b0.setAttribute("aria-label", "Progress of " + monthLabel(m));
     pr.append(b0, el("b", "mdpct", pv + "%"), el("small", "", prog.pct === null ? "No planned deliverables yet" : prog.done + " of " + prog.n + " done" + (ad.n ? " · " + ad.n + " ad hoc" : "")));
     col.append(pr);
-    if (ed) {
-      const sy = el("button", "btn sm mdsync", "↻ Sync from Roadmap");
-      sy.type = "button";
-      sy.title = "Brings in the roadmap features that end in " + monthLabel(m) + ", each once. Percentages you set are never overwritten.";
-      sy.addEventListener("click", () => syncMonth(m));
-      col.append(sy);
-    }
     shown.forEach((l) => col.append(card(m, l, prods, ed)));
     if (!shown.length && !(ed && ui.open === m)) col.append(el("div", "hint", lines.length ? "Nothing matches the filter." : "Nothing here yet."));
     if (ed) col.append(composer(m, prods));
@@ -9436,14 +9440,17 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return col;
   }
   var migrated = /* @__PURE__ */ new Set();
-  function migrateTags() {
-    const old = docs().filter((d) => d.lines.some((l) => l.k && !TAGS.some((t) => t.k === l.k)));
+  function fixCards() {
+    const bad = (d) => d.lines.some((l) => l.k && !TAGS.some((t) => t.k === l.k) || String(l.t || "").trim() && !l.no);
+    const old = docs().filter(bad);
     if (!old.length) return;
     const sq = /* @__PURE__ */ new Map();
     allRoadmaps().forEach((rm) => withRm(rm.id, () => items().forEach((i) => sq.set(rm.id + ":" + i.id, i.sq))));
-    old.forEach((d) => saveMonth(d.mo, (dd) => {
+    let n = maxNo();
+    old.sort((x, y) => x.mo < y.mo ? -1 : 1).forEach((d) => saveMonth(d.mo, (dd) => {
       dd.lines.forEach((l) => {
         if (l.k && !TAGS.some((t) => t.k === l.k)) l.k = legacyTag(l.k, sq.get(l.src));
+        if (String(l.t || "").trim() && !l.no) l.no = ++n;
       });
     }, null));
   }
@@ -9454,7 +9461,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const prevBoard = pg.querySelector(".mdboard"), sx = prevBoard ? prevBoard.scrollLeft : 0, sy = window.scrollY;
     pg.textContent = "";
     const viewer = isViewer(), ed = !viewer && canBuild2();
-    if (ed) migrateTags();
+    if (ed) fixCards();
     if (ed) docs().forEach((d) => {
       if (d.status !== "submitted" && !migrated.has(d.id)) {
         migrated.add(d.id);
@@ -9512,7 +9519,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       });
       tools.append(pb);
     }
-    pg.append(pageHead("Monthly deliverables", viewer ? "What the business expects every month, tagged and coloured by Daycare, Tifli, Plan, AI, Finance or New initiative, and how far each deliverable is." : "What the business expects each month. Add a card with a tag, or press Sync from Roadmap in a month to bring the features that end in it. Drag a card to move it to another month.", tools));
+    pg.append(pageHead("Monthly deliverables", viewer ? "What the business expects every month, tagged and coloured by Daycare, Tifli, Plan, AI, Finance or New initiative, and how far each deliverable is." : "What the business expects each month. Add a card with a tag. Use the ⋯ menu of a card to put it on the roadmap with a start, an end and an assignee. Drag a card to move it to another month.", tools));
     const sb0 = viewer ? null : setupBanner();
     if (sb0) pg.append(sb0);
     const board = el("div", "mdboard");
