@@ -111,6 +111,17 @@ const moveCard = (from, id, to, before) => {
   }); renderMonthly();
 };
 
+/** While a card is dragged, the page (and the board sideways) scrolls by itself when the pointer is near an edge, so a card can be dropped far away. */
+let asRaf = 0, asX = 0, asY = 0;
+const asTrack = e => { asX = e.clientX; asY = e.clientY; };
+const asStep = () => {
+  const edge = 90, vy = asY < edge ? -Math.ceil((edge - asY) / 4) : asY > window.innerHeight - edge ? Math.ceil((asY - (window.innerHeight - edge)) / 4) : 0;
+  if (vy) window.scrollBy(0, Math.max(-28, Math.min(28, vy)));
+  const bd = document.querySelector('#pg-monthly .mdboard'); if (bd) { const r = bd.getBoundingClientRect(), vx = asX < r.left + edge ? -Math.ceil((r.left + edge - asX) / 4) : asX > r.right - edge ? Math.ceil((asX - (r.right - edge)) / 4) : 0; if (vx && asY >= r.top && asY <= r.bottom) bd.scrollLeft += Math.max(-28, Math.min(28, vx)); }
+  asRaf = requestAnimationFrame(asStep);
+};
+const startAutoScroll = () => { stopAutoScroll(); document.addEventListener('dragover', asTrack); asRaf = requestAnimationFrame(asStep); };
+const stopAutoScroll = () => { cancelAnimationFrame(asRaf); asRaf = 0; document.removeEventListener('dragover', asTrack); };
 const pctSelect = (v, label, onChange) => {
   const st = el('select', 'spsel mpct pc-' + pctBand(v)); st.setAttribute('aria-label', label);
   const steps = []; for (let x = 0; x <= 100; x += 10) steps.push(x); if (!steps.includes(v)) { steps.push(v); steps.sort((a, b) => a - b); }
@@ -179,8 +190,8 @@ function card(m, l, prods, ed) {
     const g = el('div', 'grip', '⋮⋮'); g.title = 'Drag to another month'; g.setAttribute('aria-hidden', 'true'); r.prepend(g);
     const on = () => { r.draggable = true; }, off = () => { r.draggable = false; };
     g.addEventListener('pointerdown', on); document.addEventListener('pointerup', off, true);
-    r.addEventListener('dragstart', e => { if (!r.draggable) return; e.dataTransfer.setData('text/mdcard', m + '|' + l.id); e.dataTransfer.effectAllowed = 'move'; r.classList.add('dragging'); });
-    r.addEventListener('dragend', () => { off(); r.classList.remove('dragging'); document.querySelectorAll('.dropcol').forEach(x => x.classList.remove('dropcol')); });
+    r.addEventListener('dragstart', e => { if (!r.draggable) return; startAutoScroll(); e.dataTransfer.setData('text/mdcard', m + '|' + l.id); e.dataTransfer.effectAllowed = 'move'; r.classList.add('dragging'); });
+    r.addEventListener('dragend', () => { off(); stopAutoScroll(); r.classList.remove('dragging'); document.querySelectorAll('.dropcol').forEach(x => x.classList.remove('dropcol')); });
   }
   return r;
 }

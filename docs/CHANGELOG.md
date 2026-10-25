@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased – Sprints + Weekly executive report
+- **Monthly: drag auto-scroll (2026-10-25):** while a card is being dragged, the page scrolls up or down by itself when the pointer is near the top or bottom edge (and the board scrolls sideways near its left and right edges), so a card can be dragged from the top of a long column to the bottom or to a far month in one move.
+
 - **Monthly: Undo, move fix, two on-premise tags (2026-10-25):** **Undo** button (and Ctrl+Z) on the Monthly board steps back through your changes (add, edit, move, delete, tag, flags, notes; moving a card to another month is one step). **Bug fixed:** moving a card within the same column could delete it, because the card was removed and re-added in two separate saves; it is now one save (and across months the card is added to the new month first, then removed). The tag button on every card now shows a **▾ arrow**; click it to pick another tag from the dropdown at any time. New tags **SCHS** (#2e818d, SC) and **Warif** (#5dd9d2, WR) for the on-premise products.
 
 - **Monthly: Add to roadmap, card ids, note bubble (2026-10-25):** the **Sync from Roadmap** button and menu item are gone. Instead a card's ⋯ menu has **Add to roadmap…**: pick the assignee, squad, start and end date and the card becomes a bar on the open roadmap, linked to the card (it then shows an "On roadmap" chip and "Show on roadmap"). Every card gets an id for tracking, **tag abbreviation # number** (DC#12, TF#3, PL#7, AI, FN, NI); click it to copy; the number stays when the tag changes, older cards were numbered once, and the search also finds ids. A card with a note now shows the **green icon with a red bubble** to grab attention.

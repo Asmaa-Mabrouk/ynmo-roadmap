@@ -43,6 +43,18 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 ## Ledger updates
 
 🔄 YNMO LEDGER UPDATE — 2026-10-25
+Request: Dragging a card from the top to the bottom does not scroll automatically; fix it.
+Surface: cross-cutting (Roadmaps tool)
+Outcome: Auto-scroll while dragging a Monthly card (page vertical, board horizontal) near the edges.
+New facts / decisions locked:
+  • none
+Corrections to this skill:
+  • none
+Open / flagged:
+  • Same as before: per-card documents, SQL 07, Auth session limit >= 48 h.
+Changelog: Monthly: auto-scroll while dragging a card.
+
+🔄 YNMO LEDGER UPDATE — 2026-10-25
 Request: Change a card's tag from a dropdown with an arrow; add SCHS #2e818d and Warif #5dd9d2 tags; add Undo; fix a card disappearing when moved inside one column.
 Surface: cross-cutting (Roadmaps tool)
 Outcome: ▾ arrow on the tag button; 8 tags (SC#, WR#); Undo button + Ctrl+Z (50 steps, this session); same-column move is one atomic save.

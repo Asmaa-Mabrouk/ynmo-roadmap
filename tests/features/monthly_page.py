@@ -165,6 +165,15 @@ with sync_playwright() as pw:
     oc.locator('.mdcard').first.locator('button.mdprod').click(); A.wait_for_timeout(200)
     ok('the tag dropdown lists SCHS and Warif', A.locator('#ctx .mi.mdpick:has-text("SCHS")').count()==1 and A.locator('#ctx .mi.mdpick:has-text("Warif")').count()==1)
     A.keyboard.press('Escape'); A.wait_for_timeout(200)
+    # drag auto-scroll
+    oc.locator('.mdopen').click(); ta=oc.locator('.mdadd textarea'); ta.fill('\n'.join('Long %d'%i for i in range(14))); ta.press('Enter'); A.wait_for_timeout(700); A.keyboard.press('Escape'); A.wait_for_timeout(300)
+    A.evaluate("window.scrollTo(0,0)")
+    g=oc.locator('.mdcard:has-text("Long 0") .grip'); g.hover(); A.mouse.down(); A.mouse.move(600,400,steps=4); vh=A.viewport_size['height']; A.mouse.move(600,vh-20,steps=6); A.wait_for_timeout(1200); y1=A.evaluate("window.scrollY"); A.mouse.up(); A.wait_for_timeout(500)
+    ok('dragging a card near the bottom edge scrolls the page by itself', y1>100)
+    A.evaluate("window.scrollTo(0,0)"); A.wait_for_timeout(200)
+    for i in range(14):
+        c=oc.locator('.mdcard:has-text("Long %d")'%i)
+        if c.count(): c.first.locator('.kebab').click(); A.locator('#ctx .mi:text-is("Delete card")').click(); A.click('#xdlg button:text-is("Delete card")'); A.wait_for_timeout(250)
     # tags and their colours
     A.locator('.mdcol[data-mo="2026-10"] .mdopen').click(); A.wait_for_timeout(200)
     cc=A.locator('.mdcol[data-mo="2026-10"] .mdchip').evaluate_all("o=>Object.fromEntries(o.map(x=>[x.dataset.k,getComputedStyle(x).borderTopColor]))")
