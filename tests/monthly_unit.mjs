@@ -10,7 +10,7 @@ ok('new line is trimmed and starts at 0%', a.t === 'Onboarding v2' && newLine('x
 ok('month progress is weighted and leaves ad hoc and blank lines out', JSON.stringify(monthProgress([a, b, c, newLine('tifli', '  ')])) === JSON.stringify({ pct: 85, n: 2, done: 1 }));
 ok('empty list has no percentage', monthProgress([]).pct === null && monthProgress([c]).pct === null);
 ok('ad hoc statistics', JSON.stringify(adhocStats([a, b, c])) === JSON.stringify({ n: 1, done: 0 }));
-ok('every tag has a two-letter abbreviation', TAGS.map(t => t.ab).join() === 'DC,TF,PL,AI,FN,NI' && TAGS.length === 6);
+ok('every tag has a two-letter abbreviation', TAGS.map(t => t.ab).join() === 'DC,TF,PL,AI,FN,NI,SC,WR' && TAGS.length === 8);
 ok('card id is the tag abbreviation # the card number', cardId({ k: 'daycare', no: 12 }) === 'DC#12' && cardId({ k: 'tifli', no: 3 }) === 'TF#3' && cardId({ k: 'initiative', no: 40 }) === 'NI#40');
 ok('no number, no id; unknown tag uses its first two letters', cardId({ k: 'plan' }) === '' && cardId(null) === '' && cardId({ k: 'xyz', no: 5 }) === 'XY#5');
 ok('the id follows the tag when the tag is changed', cardId(Object.assign({}, { k: 'daycare', no: 7 }, { k: 'plan' })) === 'PL#7');

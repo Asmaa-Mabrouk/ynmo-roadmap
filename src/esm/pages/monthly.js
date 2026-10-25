@@ -45,8 +45,18 @@ function visibleMonths() {
 const pastCount = () => docs().filter(d => d.mo < curMonth() && d.lines.some(l => String(l.t || '').trim())).length;
 
 /** Changes a month through `mutate(doc)` and saves it (creating the doc the first time). */
-function saveMonth(m, mutate, log) {
-  const id = monthId(m), old = S.reports[id], d = old ? JSON.parse(JSON.stringify(old)) : { mo: m, lines: [] };
+/** Undo for the board: before every save the month's previous doc is remembered (one entry per action, so moving a card to another month is one step). */
+const undoStack = []; let grp = null, replaying = false;
+const remember = (id, old) => { if (replaying) return; const snap = { id, doc: old ? JSON.parse(JSON.stringify(old)) : null }; if (grp) { if (!grp.some(x => x.id === id)) grp.push(snap); } else { undoStack.push([snap]); if (undoStack.length > 50) undoStack.shift(); } };
+const grouped = fn => { grp = []; try { fn(); } finally { if (grp.length) { undoStack.push(grp); if (undoStack.length > 50) undoStack.shift(); } grp = null; } };
+export function undoMonthly() {
+  const a = undoStack.pop(); if (!a) { notify('Nothing to undo'); return; }
+  replaying = true; try { a.slice().reverse().forEach(x => { if (x.doc) { x.doc.ts = Date.now(); S.reports[x.id] = x.doc; write('reports/' + x.id, x.doc); } else { delete S.reports[x.id]; write('reports/' + x.id, null); } }); } finally { replaying = false; }
+  logAct('report', 'undid the last change on the Monthly board'); renderMonthly(); notify('Undone');
+}
+function saveMonth(m, mutate, log, quiet) {
+  const id = monthId(m), old = S.reports[id]; if (!quiet) remember(id, old);
+  const d = old ? JSON.parse(JSON.stringify(old)) : { mo: m, lines: [] };
   d.lines = d.lines || []; d.pl = TAGS.map(t => ({ k: t.k, n: t.n, squads: t.squads })); mutate(d);
   d.status = 'submitted'; d.subAt = d.subAt || new Date().toISOString(); d.subBy = d.subBy || (S.me && (S.me.name || S.me.email)) || '';
   d.by = (S.me && (S.me.name || S.me.email)) || ''; d.ts = Date.now(); S.reports[id] = d; write('reports/' + id, d);
@@ -77,7 +87,7 @@ function addToRoadmap(m, l, tag) {
       const nid = 'c' + Date.now().toString(36), none = who.value === '__none', all = items().filter(x => x.sq === sq.value);
       S.over[nid] = { custom: true, rm: state.rm, t: l.t, n: l.note || '', sq: sq.value, pr: sq.value === 'ai' ? ['tifli'] : [sq.value], d0: Math.max(0, k0), d1: Math.min(NDAYS - 1, k1), st: 'planned', res: none ? [] : [who.value], ord: all.length ? Math.max.apply(null, all.map(x => x.ord)) + 1 : 0, card: l.id };
       persist(nid);
-      saveMonth(m, d => { const x = d.lines.find(z => z.id === l.id); if (x) { x.rid = nid; x.rm = state.rm; } }, null);
+      saveMonth(m, d => { const x = d.lines.find(z => z.id === l.id); if (x) { x.rid = nid; x.rm = state.rm; } }, null, true);
       logAct('roadmap', 'added "' + l.t + '" (' + cardId(l) + ') to ' + r.n + ' from ' + d0.value + ' to ' + d1.value + (none ? '' : ' for ' + who.value));
       closeDlg(); render(); renderMonthly(); toast('Added "' + l.t + '" to ' + r.n + '.');
     });
@@ -92,10 +102,13 @@ function deleteMonth(m) {
 const copyMonth = m => { const txt = monthText(docOf(m), boardProducts(), fmtIso).join('\n') || monthLabel(m) + '\nNo deliverables yet.'; (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify('Month text copied to the clipboard'), () => notify('Could not copy. Select the text and copy it manually.', 'err')); };
 /** Moves a card to month `to`, before the card `before` (or to the end). Within one month this re-orders. */
 const moveCard = (from, id, to, before) => {
-  if (from === to && before === id) return; let line = null;
-  saveMonth(from, d => { line = d.lines.find(l => l.id === id); d.lines = d.lines.filter(l => l.id !== id); }, null);
-  if (!line) return;
-  saveMonth(to, d => { const i = before ? d.lines.findIndex(l => l.id === before) : -1; if (i >= 0) d.lines.splice(i, 0, line); else d.lines.push(line); }, from === to ? null : 'moved "' + line.t + '" to the ' + monthLabel(to) + ' deliverables'); renderMonthly();
+  if (from === to && before === id) return;
+  const src = docOf(from), line = src && src.lines.find(l => l.id === id); if (!line) return; const copy = JSON.parse(JSON.stringify(line));
+  const put = (d) => { const i = before ? d.lines.findIndex(l => l.id === before) : -1; if (i >= 0) d.lines.splice(i, 0, copy); else d.lines.push(copy); };
+  grouped(() => {
+    if (from === to) saveMonth(from, d => { d.lines = d.lines.filter(l => l.id !== id); put(d); }, null);
+    else { saveMonth(to, d => { d.lines = d.lines.filter(l => l.id !== id); put(d); }, 'moved "' + line.t + '" to the ' + monthLabel(to) + ' deliverables'); saveMonth(from, d => { d.lines = d.lines.filter(l => l.id !== id); }, null); }
+  }); renderMonthly();
 };
 
 const pctSelect = (v, label, onChange) => {
@@ -126,7 +139,7 @@ function card(m, l, prods, ed) {
   const put = (patch, label) => { saveMonth(m, d => { const x = d.lines.find(z => z.id === l.id); if (x) Object.assign(x, patch); }, label); renderMonthly(); };
   const head = el('div', 'mdhead');
   if (ed) {
-    const ps = el('button', 'mdprod'); ps.type = 'button'; ps.textContent = p.n; ps.title = 'Choose the tag (and so the colour) of this card'; ps.setAttribute('aria-haspopup', 'menu'); ps.setAttribute('aria-label', 'Tag: ' + p.n + '. Change');
+    const ps = el('button', 'mdprod'); ps.type = 'button'; ps.append(p.n + ' ', Object.assign(el('span', 'mdcaret', '▾'), { ariaHidden: 'true' })); ps.title = 'Choose the tag (and so the colour) of this card'; ps.setAttribute('aria-haspopup', 'menu'); ps.setAttribute('aria-label', 'Tag: ' + p.n + '. Change');
     ps.addEventListener('click', e => {
       e.stopPropagation(); const b = ps.getBoundingClientRect();
       openCtx(b.left, b.bottom + 4, mm => { mm.append(el('div', 'mlab', 'Tag')); prods.forEach(q => { const x = mi(mm, (q.k === l.k ? '✓ ' : '') + q.n, () => { if (q.k !== l.k) put({ k: q.k }, 'moved "' + l.t + '" to ' + q.n); }); x.classList.add('mdpick'); x.style.setProperty('--c', colOf(q)); }); });
@@ -227,7 +240,7 @@ function fixCards() {
   const bad = d => d.lines.some(l => (l.k && !TAGS.some(t => t.k === l.k)) || (String(l.t || '').trim() && !l.no)); const old = docs().filter(bad); if (!old.length) return;
   const sq = new Map(); allRoadmaps().forEach(rm => withRm(rm.id, () => items().forEach(i => sq.set(rm.id + ':' + i.id, i.sq))));
   let n = maxNo();
-  old.sort((x, y) => (x.mo < y.mo ? -1 : 1)).forEach(d => saveMonth(d.mo, dd => { dd.lines.forEach(l => { if (l.k && !TAGS.some(t => t.k === l.k)) l.k = legacyTag(l.k, sq.get(l.src)); if (String(l.t || '').trim() && !l.no) l.no = ++n; }); }, null));
+  old.sort((x, y) => (x.mo < y.mo ? -1 : 1)).forEach(d => saveMonth(d.mo, dd => { dd.lines.forEach(l => { if (l.k && !TAGS.some(t => t.k === l.k)) l.k = legacyTag(l.k, sq.get(l.src)); if (String(l.t || '').trim() && !l.no) l.no = ++n; }); }, null, true));
 }
 export function renderMonthly() {
   const pg = $('pg-monthly'); if (!pg) return;
@@ -245,6 +258,7 @@ export function renderMonthly() {
   const ff = el('select'); ff.setAttribute('aria-label', 'Filter by flag'); [['all', 'All cards'], ['hp', 'Business priority'], ['quick', 'Quick wins'], ['enh', 'Small enhancements']].forEach(x => { const o = el('option', '', x[1]); o.value = x[0]; o.selected = x[0] === ui.fl; ff.append(o); });
   ff.addEventListener('change', () => { ui.fl = ff.value; renderMonthly(); });
   tools.append(q, fp, ff);
+  if (ed) { const ub = el('button', 'btn sm mdundo', '↶ Undo'); ub.type = 'button'; ub.id = 'mdundo'; ub.disabled = !undoStack.length; ub.title = 'Undo the last change on this board (Ctrl+Z)'; ub.addEventListener('click', undoMonthly); tools.append(ub); }
   const pc = pastCount(); if (pc || ui.past) { const pb = el('button', 'btn sm', ui.past ? 'Hide past months' : 'Show past months (' + pc + ')'); pb.type = 'button'; pb.addEventListener('click', () => { ui.past = !ui.past; renderMonthly(); }); tools.append(pb); }
   pg.append(pageHead('Monthly deliverables', viewer ? 'What the business expects every month, tagged and coloured by Daycare, Tifli, Plan, AI, Finance or New initiative, and how far each deliverable is.' : 'What the business expects each month. Add a card with a tag. Use the ⋯ menu of a card to put it on the roadmap with a start, an end and an assignee. Drag a card to move it to another month.', tools));
   const sb0 = viewer ? null : setupBanner(); if (sb0) pg.append(sb0);
@@ -256,3 +270,9 @@ export function renderMonthly() {
   else if (cta && ui.focusComp) { ui.focusComp = false; cta.focus({ preventScroll: true }); cta.scrollIntoView({ block: 'nearest' }); }
   if (sx) { const nb = pg.querySelector('.mdboard'); if (nb) nb.scrollLeft = sx; } if (sy && Math.abs(window.scrollY - sy) > 1) window.scrollTo(0, sy);
 }
+
+document.addEventListener('keydown', e => {
+  if (!(e.ctrlKey || e.metaKey) || e.shiftKey || (e.key || '').toLowerCase() !== 'z') return;
+  const pg = $('pg-monthly'); if (!pg || !pg.offsetParent) return; const t = e.target; if (t && t.matches && t.matches('input, textarea, select, [contenteditable]')) return;
+  if (isViewer() || !canBuild()) return; e.preventDefault(); undoMonthly();
+});

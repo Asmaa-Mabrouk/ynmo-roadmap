@@ -43,7 +43,9 @@ export const TAGS = [
   { k: 'plan', n: 'Plan', ab: 'PL', c: '#0d8560', squads: ['plan'] },
   { k: 'ai', n: 'AI', ab: 'AI', c: '#2f6fe0', squads: ['ai'] },
   { k: 'finance', n: 'Finance', ab: 'FN', c: '#7b8099', squads: [] },
-  { k: 'initiative', n: 'New initiative', ab: 'NI', c: '#d9a400', squads: [] }
+  { k: 'initiative', n: 'New initiative', ab: 'NI', c: '#d9a400', squads: [] },
+  { k: 'schs', n: 'SCHS', ab: 'SC', c: '#2e818d', squads: [] },
+  { k: 'warif', n: 'Warif', ab: 'WR', c: '#5dd9d2', squads: [] }
 ];
 /** Tag of a card made before the tags were split: the old combined Plan / Daycare card becomes Plan (or the tag of its roadmap squad when known). */
 export const legacyTag = (k, squad) => { const t = TAGS.find(x => squad && x.squads.includes(squad)); return t ? t.k : k === 'plan_daycare' ? 'plan' : TAGS.some(x => x.k === k) ? k : 'initiative'; };

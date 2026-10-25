@@ -1147,6 +1147,9 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
 .mdnote.has::before { content: ''; position: absolute; top: -3px; inset-inline-end: -3px; width: 11px; height: 11px; border-radius: 50%; background: #e5383b; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(229, 56, 59, .35); animation: mdpulse 1.8s ease-out infinite; }
 @keyframes mdpulse { 0% { box-shadow: 0 0 0 0 rgba(229, 56, 59, .55); } 70%, 100% { box-shadow: 0 0 0 7px rgba(229, 56, 59, 0); } }
 @media (prefers-reduced-motion: reduce) { .mdnote.has::before { animation: none; } }
+
+.mdprod .mdcaret { font-size: .7em; opacity: .75; margin-inline-start: 2px; }
+.mdundo[disabled] { opacity: .45; cursor: default; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -6093,7 +6096,9 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     { k: "plan", n: "Plan", ab: "PL", c: "#0d8560", squads: ["plan"] },
     { k: "ai", n: "AI", ab: "AI", c: "#2f6fe0", squads: ["ai"] },
     { k: "finance", n: "Finance", ab: "FN", c: "#7b8099", squads: [] },
-    { k: "initiative", n: "New initiative", ab: "NI", c: "#d9a400", squads: [] }
+    { k: "initiative", n: "New initiative", ab: "NI", c: "#d9a400", squads: [] },
+    { k: "schs", n: "SCHS", ab: "SC", c: "#2e818d", squads: [] },
+    { k: "warif", n: "Warif", ab: "WR", c: "#5dd9d2", squads: [] }
   ];
   var legacyTag = (k, squad) => {
     const t = TAGS.find((x) => squad && x.squads.includes(squad));
@@ -8969,8 +8974,60 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     return out;
   }
   var pastCount = () => docs().filter((d) => d.mo < curMonth() && d.lines.some((l) => String(l.t || "").trim())).length;
-  function saveMonth(m, mutate, log) {
-    const id = monthId(m), old = S.reports[id], d = old ? JSON.parse(JSON.stringify(old)) : { mo: m, lines: [] };
+  var undoStack = [];
+  var grp = null;
+  var replaying = false;
+  var remember2 = (id, old) => {
+    if (replaying) return;
+    const snap = { id, doc: old ? JSON.parse(JSON.stringify(old)) : null };
+    if (grp) {
+      if (!grp.some((x) => x.id === id)) grp.push(snap);
+    } else {
+      undoStack.push([snap]);
+      if (undoStack.length > 50) undoStack.shift();
+    }
+  };
+  var grouped = (fn) => {
+    grp = [];
+    try {
+      fn();
+    } finally {
+      if (grp.length) {
+        undoStack.push(grp);
+        if (undoStack.length > 50) undoStack.shift();
+      }
+      grp = null;
+    }
+  };
+  function undoMonthly() {
+    const a = undoStack.pop();
+    if (!a) {
+      notify("Nothing to undo");
+      return;
+    }
+    replaying = true;
+    try {
+      a.slice().reverse().forEach((x) => {
+        if (x.doc) {
+          x.doc.ts = Date.now();
+          S.reports[x.id] = x.doc;
+          write("reports/" + x.id, x.doc);
+        } else {
+          delete S.reports[x.id];
+          write("reports/" + x.id, null);
+        }
+      });
+    } finally {
+      replaying = false;
+    }
+    logAct("report", "undid the last change on the Monthly board");
+    renderMonthly();
+    notify("Undone");
+  }
+  function saveMonth(m, mutate, log, quiet) {
+    const id = monthId(m), old = S.reports[id];
+    if (!quiet) remember2(id, old);
+    const d = old ? JSON.parse(JSON.stringify(old)) : { mo: m, lines: [] };
     d.lines = d.lines || [];
     d.pl = TAGS.map((t) => ({ k: t.k, n: t.n, squads: t.squads }));
     mutate(d);
@@ -9036,7 +9093,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
             x.rid = nid;
             x.rm = state.rm;
           }
-        }, null);
+        }, null, true);
         logAct("roadmap", 'added "' + l.t + '" (' + cardId(l) + ") to " + r.n + " from " + d0.value + " to " + d1.value + (none ? "" : " for " + who.value));
         closeDlg();
         render();
@@ -9063,17 +9120,29 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
   };
   var moveCard = (from, id, to, before) => {
     if (from === to && before === id) return;
-    let line = null;
-    saveMonth(from, (d) => {
-      line = d.lines.find((l) => l.id === id);
-      d.lines = d.lines.filter((l) => l.id !== id);
-    }, null);
+    const src = docOf(from), line = src && src.lines.find((l) => l.id === id);
     if (!line) return;
-    saveMonth(to, (d) => {
+    const copy = JSON.parse(JSON.stringify(line));
+    const put = (d) => {
       const i = before ? d.lines.findIndex((l) => l.id === before) : -1;
-      if (i >= 0) d.lines.splice(i, 0, line);
-      else d.lines.push(line);
-    }, from === to ? null : 'moved "' + line.t + '" to the ' + monthLabel(to) + " deliverables");
+      if (i >= 0) d.lines.splice(i, 0, copy);
+      else d.lines.push(copy);
+    };
+    grouped(() => {
+      if (from === to) saveMonth(from, (d) => {
+        d.lines = d.lines.filter((l) => l.id !== id);
+        put(d);
+      }, null);
+      else {
+        saveMonth(to, (d) => {
+          d.lines = d.lines.filter((l) => l.id !== id);
+          put(d);
+        }, 'moved "' + line.t + '" to the ' + monthLabel(to) + " deliverables");
+        saveMonth(from, (d) => {
+          d.lines = d.lines.filter((l) => l.id !== id);
+        }, null);
+      }
+    });
     renderMonthly();
   };
   var pctSelect = (v, label, onChange) => {
@@ -9151,7 +9220,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     if (ed) {
       const ps = el("button", "mdprod");
       ps.type = "button";
-      ps.textContent = p.n;
+      ps.append(p.n + " ", Object.assign(el("span", "mdcaret", "▾"), { ariaHidden: "true" }));
       ps.title = "Choose the tag (and so the colour) of this card";
       ps.setAttribute("aria-haspopup", "menu");
       ps.setAttribute("aria-label", "Tag: " + p.n + ". Change");
@@ -9452,7 +9521,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
         if (l.k && !TAGS.some((t) => t.k === l.k)) l.k = legacyTag(l.k, sq.get(l.src));
         if (String(l.t || "").trim() && !l.no) l.no = ++n;
       });
-    }, null));
+    }, null, true));
   }
   function renderMonthly() {
     const pg = $("pg-monthly");
@@ -9509,6 +9578,15 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       renderMonthly();
     });
     tools.append(q, fp, ff);
+    if (ed) {
+      const ub = el("button", "btn sm mdundo", "↶ Undo");
+      ub.type = "button";
+      ub.id = "mdundo";
+      ub.disabled = !undoStack.length;
+      ub.title = "Undo the last change on this board (Ctrl+Z)";
+      ub.addEventListener("click", undoMonthly);
+      tools.append(ub);
+    }
     const pc = pastCount();
     if (pc || ui.past) {
       const pb = el("button", "btn sm", ui.past ? "Hide past months" : "Show past months (" + pc + ")");
@@ -9553,6 +9631,16 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     }
     if (sy && Math.abs(window.scrollY - sy) > 1) window.scrollTo(0, sy);
   }
+  document.addEventListener("keydown", (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.shiftKey || (e.key || "").toLowerCase() !== "z") return;
+    const pg = $("pg-monthly");
+    if (!pg || !pg.offsetParent) return;
+    const t = e.target;
+    if (t && t.matches && t.matches("input, textarea, select, [contenteditable]")) return;
+    if (isViewer() || !canBuild2()) return;
+    e.preventDefault();
+    undoMonthly();
+  });
 
   // src/esm/ui/loading.js
   function showLoading(msg) {

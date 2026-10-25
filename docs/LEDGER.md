@@ -43,6 +43,19 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 ## Ledger updates
 
 🔄 YNMO LEDGER UPDATE — 2026-10-25
+Request: Change a card's tag from a dropdown with an arrow; add SCHS #2e818d and Warif #5dd9d2 tags; add Undo; fix a card disappearing when moved inside one column.
+Surface: cross-cutting (Roadmaps tool)
+Outcome: ▾ arrow on the tag button; 8 tags (SC#, WR#); Undo button + Ctrl+Z (50 steps, this session); same-column move is one atomic save.
+New facts / decisions locked:
+  • On-premise products SCHS (#2e818d) and Warif (#5dd9d2) are Monthly tags, ids SC#n and WR#n.
+  • Board undo is per browser session; it does not undo "Add to roadmap" or the one-time card numbering.
+Corrections to this skill:
+  • none
+Open / flagged:
+  • Undo restores a whole month doc, so it also reverts a colleague's change made to that month since; per-card documents would fix this and the overwrite risk.
+Changelog: Monthly: undo, move-bug fix, SCHS and Warif tags.
+
+🔄 YNMO LEDGER UPDATE — 2026-10-25
 Request: Remove Sync from Roadmap (add to roadmap from a card instead, with dates and assignee); green note with red bubble; card ids Product abbreviation#ID.
 Surface: cross-cutting (Roadmaps tool)
 Outcome: Sync removed; card menu "Add to roadmap…" (assignee, squad, start, end) creates a linked bar; ids DC/TF/PL/AI/FN/NI#n; red bubble on notes.
