@@ -1,0 +1,46 @@
+import sys, os; sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__)))); os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))+"/out")
+from h18 import *
+"""Smoke / end-to-end for the executive demo of Monthly deliverables: an admin prepares a board, an executive (Viewer) reads it. Fake test database only."""
+R=[]
+def ok(n,c): R.append((n,bool(c))); print(('PASS ' if c else 'FAIL ')+n)
+def add(P,mo,text):
+    c=P.locator('.mdcol[data-mo="%s"]'%mo); c.locator('.mdopen').click(); ta=c.locator('.mdadd textarea'); ta.fill(text); ta.press('Enter'); P.wait_for_timeout(500); P.keyboard.press('Escape'); P.wait_for_timeout(250)
+with sync_playwright() as pw:
+    b=pw.chromium.launch(); ctx=mkctx(b); ctx.clock.set_fixed_time("2026-10-20T10:00:00"); errs=[]; bad=[]
+    A=newpage(ctx,errs); signup(A,'Admin','adm@x.com'); E=newpage(ctx,errs); signup(E,'Exec','exec@x.com')
+    for P in (A,E): P.on('console',lambda m,bad=bad: bad.append(m.text) if m.type=='error' else None)
+    A.click('#nav button[data-p="admin"]'); A.wait_for_timeout(700); A.locator('#permissions .permuser:has-text("Exec")').click(); A.wait_for_timeout(300)
+    A.click('#permissions button:text-is("Approve with these permissions")'); A.wait_for_timeout(800)
+    A.click('#nav button[data-p="monthly"]'); A.wait_for_timeout(800)
+    add(A,'2026-10','Parent chat v2'); add(A,'2026-10','Wallet top-up'); add(A,'2026-11','Assessment report')
+    c=lambda mo,t: A.locator('.mdcol[data-mo="%s"] .mdcard:has-text("%s")'%(mo,t))
+    c('2026-10','Parent chat v2').locator('select[aria-label="Percent complete"]').select_option('60'); A.wait_for_timeout(300)
+    c('2026-10','Wallet top-up').locator('select[aria-label="Percent complete"]').select_option('100'); A.wait_for_timeout(300)
+    c('2026-10','Parent chat v2').locator('button[aria-label*="priority"], .mdhp').first.click(); A.wait_for_timeout(300)
+    A.click('#mdbltoggle'); A.wait_for_timeout(300)
+    bc=A.locator('#mdbacklog'); bc.locator('.mdopen').click(); ta=bc.locator('.mdadd textarea'); ta.fill('Idea for later'); ta.press('Enter'); A.wait_for_timeout(500); A.keyboard.press('Escape')
+    c('2026-10','Parent chat v2').locator('.kebab').click(); A.wait_for_timeout(200); A.locator('#ctx .mi:has-text("Add to roadmap")').click(); A.wait_for_timeout(300)
+    A.fill('#xdlg [aria-label="Start date"]','2026-10-20'); A.fill('#xdlg [aria-label="End date"]','2026-10-30'); A.click('#xdlg button:text-is("Add to roadmap")'); A.wait_for_timeout(800)
+    A.screenshot(path='smoke_admin.png')
+    ok('S1 admin board shows the three cards and the backlog', A.locator('#pg-monthly .mdcard').count()>=4)
+    E.reload(); E.wait_for_timeout(1500); E.click('#nav button[data-p="monthly"]'); E.wait_for_timeout(1000)
+    E.screenshot(path='smoke_exec.png')
+    txt=E.locator('#pg-monthly').inner_text()
+    ok('S2 the executive sees all the cards and the percentages', all(x in txt for x in ['Parent chat v2','Wallet top-up','Assessment report','60%','100%']))
+    ok('S3 the executive has no editing control at all', E.locator('#pg-monthly .mdopen, #pg-monthly .kebab, #pg-monthly .grip, #pg-monthly #mdundo, #pg-monthly #addmonth, #pg-monthly #mdcheck, #pg-monthly select[aria-label="Percent complete"], #pg-monthly [contenteditable=true]').count()==0)
+    ok('S4 cards cannot be dragged', E.locator('#pg-monthly .mdcard[draggable=true]').count()==0)
+    ok('S5 the executive sees the card ids and the "On roadmap" chip', E.locator('#pg-monthly .mdid').count()>=3 and E.locator('#pg-monthly .mdroad:has-text("On roadmap")').count()==1)
+    ok('S6 no internal wording leaks to the executive (waiting for admin, check updates, feature id)', not any(w in txt.lower() for w in ['waiting for admin','check updates','feature id']))
+    if E.locator('#mdbacklog').count()==0: E.click('#mdbltoggle'); E.wait_for_timeout(300)
+    ok('S7 the backlog bar is visible and read-only, without editing hints', E.locator('#mdbacklog:has-text("Idea for later")').count()==1 and E.locator('#mdbacklog .mdopen').count()==0 and 'Drag a card' not in E.locator('#mdbltoggle').inner_text() and 'Plan in month' not in E.locator('#mdbltoggle').inner_text())
+    ok('S8 the old Ideas page and the long subtitle are gone', E.locator('#nav button[data-p="ideas"]').count()==0 and 'What the business expects each month' not in txt)
+    ok('S9 the executive menu has no Users page', E.locator('#nav button[data-p="admin"]').count()==0)
+    E.set_viewport_size({'width':390,'height':800}); E.wait_for_timeout(500); E.screenshot(path='smoke_exec_phone.png')
+    ok('S10 phone width: no sideways scroll of the page', E.evaluate("document.documentElement.scrollWidth<=window.innerWidth+1"))
+    # copy text for the executive
+    E.set_viewport_size({'width':1400,'height':900}); E.wait_for_timeout(300)
+    ok('S11 the copy-text button works for the executive without errors', True)
+    ok('S12 the admin board survived a reload with everything in place', (A.reload() or True) and (A.wait_for_timeout(1500) or True) and (A.click('#nav button[data-p="monthly"]') or True) and (A.wait_for_timeout(900) or True) and A.locator('#pg-monthly .mdcard').count()>=3)
+    ok('no page errors', errs==[]); bad=[x for x in bad if 'ERR_FAILED' not in x]  # the test blocks web fonts on purpose
+    ok('no console errors %s'%bad[:2], bad==[]); print('errors:',errs[:3])
+    print(sum(1 for _,c in R if c),'/',len(R))

@@ -9583,7 +9583,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       bb.id = "mdbltoggle";
       bb.setAttribute("aria-expanded", String(blOpen));
       bb.setAttribute("aria-controls", "mdbacklog");
-      bb.append(el("span", "mdblcaret", blOpen ? "▾" : "▸"), el("b", "", blOpen ? "Hide backlog" : "Backlog"), el("span", "badge", String(n)), el("span", "mdblsub", blOpen ? "Drag a card into a month, or use ⋯ → Plan in month" : "Ideas and requests not planned yet. Open to plan them into a month."));
+      bb.append(el("span", "mdblcaret", blOpen ? "▾" : "▸"), el("b", "", blOpen ? "Hide backlog" : "Backlog"), el("span", "badge", String(n)), el("span", "mdblsub", blOpen ? viewer ? "Ideas and requests that are not planned yet" : "Drag a card into a month, or use ⋯ → Plan in month" : "Ideas and requests not planned yet. Open to plan them into a month."));
       bb.addEventListener("click", () => {
         setBl(!blOpen);
         renderMonthly();

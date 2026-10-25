@@ -42,6 +42,20 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-26 - Monthly smoke test for the executive demo
+```
+🔄 YNMO LEDGER UPDATE — 2026-10-26
+Request: end-to-end and smoke test of Monthly before the executive demo
+Surface: cross-cutting (Roadmaps tool)
+Outcome: all Monthly suites green; one fix (editing hint hidden from Viewers); new smoke_monthly_exec.py
+New facts / decisions locked:
+  • Executives (Viewers) see no editing control or internal wording on Monthly
+Corrections to this skill: none
+Open / flagged:
+  • Drag-handle dots overlap the Business priority ribbon on editor view (cosmetic, not shown to executives)
+Changelog: Monthly smoke test; viewer hint fixed
+```
+
 ### 2026-10-25 - Linked features (roadmap, Monthly, weekly report)
 ```
 🔄 YNMO LEDGER UPDATE — 2026-10-25

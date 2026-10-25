@@ -331,7 +331,7 @@ export function renderMonthly() {
   pg.append(pageHead('Monthly deliverables', null, tools));
   const sb0 = viewer ? null : setupBanner(); if (sb0) pg.append(sb0);
   { const n = docOf(BL).lines.filter(l => String(l.t || '').trim()).length, bb = el('button', 'mdblbar' + (blOpen ? ' on' : '')); bb.type = 'button'; bb.id = 'mdbltoggle'; bb.setAttribute('aria-expanded', String(blOpen)); bb.setAttribute('aria-controls', 'mdbacklog');
-    bb.append(el('span', 'mdblcaret', blOpen ? '▾' : '▸'), el('b', '', blOpen ? 'Hide backlog' : 'Backlog'), el('span', 'badge', String(n)), el('span', 'mdblsub', blOpen ? 'Drag a card into a month, or use ⋯ → Plan in month' : 'Ideas and requests not planned yet. Open to plan them into a month.'));
+    bb.append(el('span', 'mdblcaret', blOpen ? '▾' : '▸'), el('b', '', blOpen ? 'Hide backlog' : 'Backlog'), el('span', 'badge', String(n)), el('span', 'mdblsub', blOpen ? (viewer ? 'Ideas and requests that are not planned yet' : 'Drag a card into a month, or use ⋯ → Plan in month') : 'Ideas and requests not planned yet. Open to plan them into a month.'));
     bb.addEventListener('click', () => { setBl(!blOpen); renderMonthly(); }); pg.append(bb); }
   if (ed) setTimeout(ensureRecords, 0); /* keeps the hidden link records of the cards up to date */
   const board = el('div', 'mdboard'); if (blOpen) board.append(column(BL, prods, ed)); visibleMonths().forEach(m => board.append(column(m, prods, ed)));
