@@ -13,13 +13,9 @@ with sync_playwright() as pw:
     A.wait_for_timeout(5800)
     ok('auto sign-out after idle', A.locator('#gate').is_visible() and 'Sign in' in A.locator('#gate').inner_text())
     ctx.close()
-    # capacity with leave + undo clash
+    # undo clash (needs a signed-in editor)
     ctx=mkctx(b); errs=[]
     A=newpage(ctx,errs); signup(A,'Admin','adm@x.com')
-    A.evaluate("""()=>{const s=JSON.parse(localStorage.getItem('fk3'));s.vacations.v1={p:'Emad',a0:'2026-10-04',a1:'2026-10-08',t:'Annual',n:''};localStorage.setItem('fk3',JSON.stringify(s));}""")
-    A.reload(); A.wait_for_timeout(1500); A.click('#nav button[data-p="capacity"]'); A.wait_for_timeout(500)
-    row=A.locator('.captable tbody tr:has-text("Emad")').first.inner_text()
-    ok('capacity leave week flagged', 'Leave!' in row); print(row[:80])
     # undo clash
     A.click('#nav button[data-p="roadmap"]'); A.wait_for_timeout(300)
     bar=A.locator('.bar').first; bid=bar.get_attribute('data-id')

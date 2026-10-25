@@ -30,8 +30,6 @@ import './features/safety.js';
 import './features/presence.js';
 import './features/dependencies.js';
 import './features/log-tools.js';
-import './features/capacity.js';
-import './features/baselines.js';
 import './features/sharing.js';
 import './app/extras-wiring.js';
 import './ui/dropdowns.js';

@@ -11,7 +11,7 @@ python3 tests/e2e_qa.py            # only the 88 scenarios; results in tests/out
 Postgres/Auth/Realtime/RPC fake, so **no real project is touched** and multi-user scenarios run with two tabs.
 The fake does not enforce RLS – RLS is verified manually (below).
 
-Areas: Auth · Roadmap editing · Ideas · Resources · Vacations · Capacity · Baselines · Log/undo · Sharing/viewer · Multi-user (M*) · Security (S*) · Responsive.
+Areas: Auth · Roadmap editing · Ideas · Resources · Vacations · Monthly deliverables · Log/undo · Sharing/viewer · Multi-user (M*) · Security (S*) · Responsive.
 All 88 scenarios are expected to pass.
 
 ## Test handles
@@ -33,7 +33,7 @@ The bundle is an IIFE, so tests reach internals through `window.__ynmo` (`items,
 
 `tests/features/*.py` are focused scripts that print `PASS`/`FAIL` lines; `run_all.sh` fails on any `FAIL`. Key ones:
 - `sprints_reports.py` (98): sprint document, report list and sheet (open a card, breadcrumb, Back), AI with a fake function (`window.__aiFail` simulates an outage), undo, viewers see only submitted reports, phone width.
-- `monthly_page.py` (43) and `tests/monthly_unit.mjs` (23, plain Node, no browser): delete a report (menu and page, confirm), the Monthly page, Sync from Roadmap with estimated percentages (edited ones kept), ad hoc requests, undo, copy text, submit/read-only, month shown in the weekly report, delete month, phone width.
+- `monthly_page.py` and `tests/monthly_unit.mjs` (plain Node, no browser): delete a report (menu and page, confirm), the Monthly deliverables board (columns, add month, cards coloured by product, percentage colours, Sync from Roadmap per month without ever repeating a feature, move/delete cards, ad hoc, copy text, delete month, read-only for executives, phone width).
 - `jira_pull.py`: the fake client answers `functions.invoke('jira-sync')` from `window.__jira` (or fails with `window.__jiraFail`).
 - `google_drive.py`, `gdoc_export.py`: a fake Google Identity Services script and a routed Drive API; no real Google call is made.
 - `prod_colors_sections.py`, `colors_remove.py`, `drag_rows.py`, `notes.py`, `sprint_scroll.py` (fails on the old code), plus the older `t*.py` scripts.

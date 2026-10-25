@@ -1,7 +1,7 @@
 /**
  * @module features/dependencies
  * Milestones, dependencies and overlay.
- * Finish-to-start dependencies between bars with conflict detection (depIssues), milestone toggle, and the SVG overlay that draws arrows and ghost baseline bars.
+ * Finish-to-start dependencies between bars with conflict detection (depIssues), milestone toggle, and the SVG overlay that draws arrows .
  * Dependencies are explicit ES imports; shared mutable state lives in `S` (core/state.js).
  */
 import { S } from '../core/state.js';
@@ -49,17 +49,12 @@ export function openDeps(it) {
 export function toggleMilestone(it) { if (it.ms) commit(it.id, { ms: false }); else commit(it.id, { ms: true, d1: it.d0 }); }
 
 
-try { S.ghostOn = localStorage.getItem('ynmo-ghost') === '1'; } catch (e) { /* storage unavailable */ }
-function activeBaseline() {
-  const l = Object.keys(S.baselines).map(id => Object.assign({ id: id }, S.baselines[id])).filter(b => b.rm === state.rm);
-  return l.find(b => b.active) || null;
-}
 const SVGNS = 'http://www.w3.org/2000/svg';
 function sv(tag, attrs) { const n = document.createElementNS(SVGNS, tag); Object.keys(attrs || {}).forEach(k => n.setAttribute(k, attrs[k])); return n; }
 function drawOverlay() {
   const g = $('grid'); if (!g) return;
   const old = g.querySelector('svg.ovl'); if (old) old.remove();
-  const all = items(), issues = depIssues(all), base = S.ghostOn ? activeBaseline() : null;
+  const all = items(), issues = depIssues(all);
   const sum = $('summary'); const oldc = sum && sum.querySelector('.depchip'); if (oldc) oldc.remove();
   const bad = issues.filter(x => x.bad);
   if (sum && issues.length) {
@@ -68,7 +63,7 @@ function drawOverlay() {
     c.addEventListener('click', () => { const x = bad[0]; if (!x) return; const b = [...g.querySelectorAll('.bar')].find(y => y.dataset.id === x.to.id); if (b) { b.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' }); b.classList.add('flash'); setTimeout(() => b.classList.remove('flash'), 1600); } });
     sum.append(c);
   }
-  if (!issues.length && !base) return;
+  if (!issues.length) return;
   const gr = g.getBoundingClientRect(), first = new Map();
   g.querySelectorAll('.bar').forEach(b => { if (!first.has(b.dataset.id)) first.set(b.dataset.id, b); });
   const svg = sv('svg', { class: 'ovl', width: g.scrollWidth, height: g.scrollHeight, 'aria-hidden': 'true' });
@@ -85,23 +80,9 @@ function drawOverlay() {
     const p = sv('path', { d: d, fill: 'none', stroke: x.bad ? '#c0392b' : '#55608a', 'stroke-width': x.bad ? '2' : '1.5', 'marker-end': 'url(#ar-' + (x.bad ? 'bad' : 'ok') + ')', class: 'dep' + (x.bad ? ' bad' : '') });
     const t = sv('title'); t.textContent = tip; p.append(t); svg.append(p);
   });
-  if (base) {
-    const w0 = g.querySelector('.wk'); if (w0) {
-      const wr = w0.getBoundingClientRect(), dw = wr.width, L = wr.left - gr.left;
-      const bi = new Map((base.items || []).map(i => [i.id, i]));
-      first.forEach((bar, id) => {
-        const o = bi.get(id), it = all.find(i => i.id === id); if (!o || !it || (o.d0 === it.d0 && o.d1 === it.d1)) return;
-        const r = bar.getBoundingClientRect(), y = r.bottom - gr.top - 1;
-        const g1 = sv('rect', { x: L + o.d0 * dw + 1, y: y, width: Math.max(4, (o.d1 - o.d0 + 1) * dw - 2), height: 5, rx: 2.5, fill: '#e5a513', opacity: '.9', class: 'ghost' });
-        const t = sv('title'); const sl = it.d1 - o.d1;
-        t.textContent = 'Plan: ' + dlabel(o.d0) + (o.d1 > o.d0 ? ' to ' + dlabel(o.d1) : '') + ' · now ' + (sl === 0 ? 'starts ' + (it.d0 - o.d0 > 0 ? 'later' : 'earlier') : sl > 0 ? 'ends ' + sl + ' day(s) later' : 'ends ' + (-sl) + ' day(s) earlier'); g1.append(t); svg.append(g1);
-      });
-    }
-  }
   g.append(svg);
 }
 export function afterRender() {
   try { drawOverlay(); decorateLocks(); } catch (e) { /* overlay is optional */ }
-  const gb = $('ghostbtn'); if (gb) { const b = activeBaseline(); gb.hidden = !b; gb.setAttribute('aria-pressed', String(S.ghostOn)); }
 }
 

@@ -41,22 +41,6 @@ with sync_playwright() as pw:
     print('chip text:',A.locator('.depchip').inner_text())
     # log entry for dep
     A.click('#nav button[data-p="log"]'); A.wait_for_timeout(300); ok('dep logged', 'depends on' in A.locator('#pg-log').inner_text())
-    # ---- capacity
-    A.click('#nav button[data-p="capacity"]'); A.wait_for_timeout(400)
-    ok('capacity table', A.locator('.captable tbody tr').count()>=3 and A.locator('.capcell').count()>20)
-    A.screenshot(path='v4_cap.png')
-    print(A.locator('.captable tbody tr').first.inner_text()[:100].replace('\n',' '))
-    # ---- baselines
-    A.click('#nav button[data-p="baselines"]'); A.wait_for_timeout(300); A.click('button:text-is("Save snapshot")'); A.wait_for_timeout(600)
-    ok('snapshot saved', A.locator('.snaprow').count()==1 and A.locator('.snaprow .badge:text-is("baseline")').count()==1)
-    A.click('#nav button[data-p="roadmap"]'); A.wait_for_timeout(300)
-    A.locator('.bar[data-id="%s"]'%a_id).first.press('ArrowRight'); A.locator('.bar[data-id="%s"]'%a_id).first.press('ArrowRight'); A.wait_for_timeout(500)
-    ok('ghost btn visible', A.locator('#ghostbtn').is_visible())
-    A.click('#ghostbtn'); A.wait_for_timeout(400)
-    ok('ghost rect drawn', A.locator('svg.ovl rect.ghost').count()>=1)
-    A.screenshot(path='v4_ghost.png')
-    A.click('#nav button[data-p="baselines"]'); A.wait_for_timeout(300); A.click('button:text-is("Compare with now")'); A.wait_for_timeout(300)
-    ok('compare shows moved', '1' in A.locator('.cmpbox .summary div').first.inner_text() and 'Moved' in A.locator('.cmpbox').inner_text())
     # ---- share
     A.click('#nav button[data-p="roadmaps"]'); A.wait_for_timeout(300); A.locator('.rmcard button:text-is("Share")').first.click(); A.wait_for_timeout(300); A.click('button:text-is("Create share link")'); A.wait_for_timeout(500)
     url=A.locator('#shareurl').input_value(); ok('share url', '#/share/' in url)
@@ -72,7 +56,7 @@ with sync_playwright() as pw:
     A.keyboard.press('Escape'); A.click('#nav button[data-p="admin"]'); A.wait_for_timeout(500)
     A.locator('select[aria-label="Access for Engy"]').select_option('viewer'); A.wait_for_timeout(600)
     B.reload(); B.wait_for_timeout(1500)
-    ok('viewer nav limited', B.locator('#nav button').count()==6)
+    ok('viewer nav limited', B.locator('#nav button').count()==4)
     ok('viewer cannot add', not B.locator('#add').is_visible())
     B.locator('.bar').first.dblclick(); B.wait_for_timeout(200); ok('viewer no edit', B.locator('input.bi').count()==0)
     B.screenshot(path='v4_viewer.png')

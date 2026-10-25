@@ -30,8 +30,6 @@ with sync_playwright() as pw:
     A.click('#nav button[data-p="roadmap"]'); A.wait_for_timeout(300)
     ok('no "1 dependencies"', '1 dependencies' not in A.locator('body').inner_text())
     A.evaluate("""()=>{const s=JSON.parse(localStorage.getItem('fk3'));s.vacations.v1={p:'Emad',a0:'2026-10-05',a1:'2026-10-07',t:'Annual',n:''};localStorage.setItem('fk3',JSON.stringify(s));}""")
-    A.reload(); A.wait_for_timeout(1500); A.click('#nav button[data-p="capacity"]'); A.wait_for_timeout(500)
-    ok('partial leave week flagged with ⚑', '⚑' in A.locator('.captable tbody tr:has-text("Emad")').first.inner_text())
     # 4. stale vacation banner disappears when that leave is removed
     A.click('#nav button[data-p="vacations"]'); A.wait_for_timeout(300)
     sel=A.locator('#pg-vacations form select').first; sel.select_option('Emad')

@@ -421,7 +421,7 @@ body { margin: 0; }
 .tg { color: #454b68; }
 .bar .tg { opacity: 1; }
 
-/* ---------- v4: offline bar, dialogs, presence, dependencies, capacity, baselines ---------- */
+/* ---------- v4: offline bar, dialogs, presence, dependencies ---------- */
 .offbar { position: sticky; top: 0; z-index: 60; margin-inline-start: var(--rail); min-height: 34px; padding: 7px 24px; background: #7a2e0e; color: #fff; font-weight: 700; font-size: 13px; text-align: center; }
 .offbar.sharebar { background: var(--brand-2); }
 body.offline .topbar, body.sharedview .topbar { top: 34px; }
@@ -455,20 +455,6 @@ svg.ovl { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 6;
 svg.ovl path.dep { pointer-events: stroke; }
 .depchip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 2px 10px; font-weight: 700; font-size: 12.5px; cursor: pointer; color: var(--ink); }
 .depchip.bad { border-color: #c0392b; color: #8f2418; background: #fdecea; }
-.capwrap { overflow: auto; }
-.captable { border-collapse: separate; border-spacing: 3px; min-width: 100%; }
-.captable th { font-size: 12px; font-weight: 700; text-align: center; color: var(--muted); padding: 2px 4px; white-space: nowrap; }
-.captable th.capname { text-align: start; color: var(--ink); font-size: 13.5px; position: sticky; inset-inline-start: 0; background: var(--surface); padding-inline-end: 12px; z-index: 1; }
-.capcell { text-align: center; font-weight: 700; font-size: 12.5px; min-width: 52px; height: 32px; border-radius: 8px; font-variant-numeric: tabular-nums; }
-.capcell.none { background: var(--surface-2); color: var(--muted); font-weight: 500; }
-.capcell.lo { background: #d9f2ea; color: #0b4d38; }
-.capcell.ok { background: #a8e0cb; color: #073b2a; }
-.capcell.x2 { background: #ffe0a3; color: #5c3900; }
-.capcell.x3 { background: #f6b3ab; color: #6b1409; }
-.capcell.lv { background: #e6e0f7; color: #3d2673; }
-.caplegend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--muted); }
-.caplegend span { display: inline-flex; align-items: center; gap: 6px; }
-.caplegend i { display: inline-block; width: 18px; height: 14px; min-width: 0; }
 .cmpbox { border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 8px; margin: 6px 0 12px; }
 .cmpsec h3 { font-size: .95rem; margin: 6px 0 2px; }
 .cmprow { font-size: 13.5px; padding: 3px 0; border-bottom: 1px dashed var(--line); }
@@ -1078,6 +1064,42 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   .pr-item.oos { background: #eceef3; color: #6b7189; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .pr-item.oos .pr-bar, .pr-item.oos .pr-prog b { filter: grayscale(1); }
 }
+
+/* ---------- Monthly deliverables board: one column per month, cards coloured by product ---------- */
+.mdboard { display: flex; gap: 14px; align-items: flex-start; overflow-x: auto; padding-bottom: 14px; }
+.mdcol { flex: 0 0 330px; max-width: 330px; }
+.mdboard .addcol { flex: 0 0 250px; align-self: flex-start; min-height: 120px; }
+.mdcol .badge { margin-inline-start: 8px; }
+.mdnow { margin-inline-start: 8px; background: var(--brand); color: #fff; border-color: var(--brand); font-size: .7rem; font-weight: 700; padding: 1px 8px; border-radius: 99px; }
+.mdprog { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; }
+.mdprog .mbar { width: auto; }
+.mdprog .mdpct { font-size: 1.25rem; color: var(--pt); }
+.mdprog small { grid-column: 1 / -1; color: var(--muted); }
+.mdsync { justify-self: start; }
+.mdadd { display: flex; gap: 6px; }
+.mdadd input { flex: 1; min-width: 0; }
+.mdadd .mdpsel, .mdhead select.mdprod { border-radius: 8px; border: 1.5px solid var(--c); color: var(--c); font-weight: 700; padding: 3px 6px; max-width: 120px; background: #fff; font-size: 12.5px; }
+.mdcard { --c: #55608a; border-inline-start: 6px solid var(--c); background: color-mix(in srgb, var(--c) 9%, #fff); padding-top: 12px; }
+.mdhead { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
+.mdhead .mdprod.ro { font-size: .75rem; font-weight: 800; color: #fff; background: var(--c); border-radius: 99px; padding: 1px 10px; }
+.mdhead .kebab { margin-inline-start: auto; width: 28px; height: 28px; }
+.mdtext { font-weight: 600; white-space: pre-wrap; border-radius: 6px; padding: 2px 4px; margin: 0 -4px; min-height: 1.2em; }
+.mdtext[contenteditable]:hover, .mdtext[contenteditable]:focus { background: #fff; outline: 1.5px solid var(--line); }
+.mdfoot { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.mdfoot select.mpct { min-width: 78px; font-weight: 700; border-width: 1.5px; }
+.mdfoot select.mpct.pc-n { color: var(--muted); border-color: var(--line); } .mdfoot select.mpct.pc-y { color: #8a6d00; border-color: #e3b505; } .mdfoot select.mpct.pc-o { color: #b85f00; border-color: #f08a24; } .mdfoot select.mpct.pc-g { color: #1d7a52; border-color: #2e9d6b; }
+.mdroad, .mdadhoc { font-size: .72rem; padding: 1px 8px; }
+.mdadhoc { background: #fff4dc; border-color: #e8c370; color: #7a5300; }
+.mdcard.fin .mdtext { color: #1d7a52; }
+.mdcard .grip { position: absolute; top: 2px; left: 50%; }
+
+.mdcol, .mdcol > * { min-width: 0; }
+.mdcol h2 { font-size: 1.1rem; flex-wrap: wrap; row-gap: 4px; }
+.mdnow { white-space: nowrap; }
+.mdprog .mdpct { white-space: nowrap; }
+.mdadd { flex-direction: column; }
+.mdadd .mdpsel { max-width: none; width: 100%; }
+.mdadd input { width: 100%; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -1149,8 +1171,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 <section class="pg page" id="pg-monthly" hidden></section>
 <section class="pg page" id="pg-resources" hidden></section>
 <section class="pg page" id="pg-vacations" hidden></section>
-<section class="pg page" id="pg-capacity" hidden></section>
-<section class="pg page" id="pg-baselines" hidden></section>
 <section class="pg page" id="pg-log" hidden></section>
 <section class="pg page" id="pg-admin" hidden></section>
 </main>
@@ -1189,9 +1209,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     logsBusy: false,
     logsOld: [],
     SHARE: false,
-    ghostOn: false,
     undoStack: [],
-    baselines: {},
     shares: {},
     sprints: {},
     sitems: {},
@@ -1558,9 +1576,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
             if (r.error) throw err(r.error);
           },
           async merge(fields, full) {
-            const cur3 = await sb.from(t).select("data").eq("id", id).maybeSingle();
-            if (cur3.error) throw err(cur3.error);
-            const base3 = cur3.data && cur3.data.data || {};
+            const cur2 = await sb.from(t).select("data").eq("id", id).maybeSingle();
+            if (cur2.error) throw err(cur2.error);
+            const base3 = cur2.data && cur2.data.data || {};
             const r = await sb.from(t).upsert({ id, data: Object.assign({}, base3, fields) });
             if (r.error) throw err(r.error);
           },
@@ -1778,7 +1796,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const done2 = S.members.filter((m) => m.approved);
     const c = el("div", "card");
     c.append(el("h2", "", "Who can edit"));
-    c.append(el("div", "hint", "Editors change the plan. Viewers can look at the roadmap, capacity, snapshots and log, but cannot change anything."));
+    c.append(el("div", "hint", "Editors change the plan. Viewers can look at the roadmap, reports and log, but cannot change anything."));
     done2.forEach((m) => {
       const row = el("div", "formrow");
       row.style.alignItems = "center";
@@ -1916,8 +1934,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const below = window.innerHeight - b.bottom, top = below >= h + 12 || below >= b.top ? b.bottom + 6 : b.top - h - 6;
     box2.style.top = Math.max(8, top) + "px";
     box2.style.left = Math.max(8, Math.min(b.left, window.innerWidth - box2.offsetWidth - 8)) + "px";
-    const cur3 = box2.querySelector(".sel");
-    if (cur3) cur3.scrollIntoView({ block: "nearest" });
+    const cur2 = box2.querySelector(".sel");
+    if (cur2) cur2.scrollIntoView({ block: "nearest" });
     q.focus({ preventScroll: true });
     if (document.activeElement !== q) setTimeout(() => {
       if (cpop === box2) q.focus({ preventScroll: true });
@@ -2124,20 +2142,20 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     q.placeholder = "Search people";
     const list = el("div", "plist");
     const draw = () => {
-      const cur3 = pickerItem();
-      if (!cur3) return;
+      const cur2 = pickerItem();
+      if (!cur2) return;
       list.textContent = "";
       const ws = fold(q.value).split(/\s+/).filter(Boolean);
       const dir = [...directory().values()].filter((x) => {
         const t = fold(x.name);
         return ws.every((w) => t.includes(w));
       });
-      dir.sort((a, b) => b.sqs.has(cur3.sq) - a.sqs.has(cur3.sq) || a.name.localeCompare(b.name));
+      dir.sort((a, b) => b.sqs.has(cur2.sq) - a.sqs.has(cur2.sq) || a.name.localeCompare(b.name));
       if (!dir.length) list.append(el("div", "sub2", "No one matches. Add them below."));
       dir.forEach((x) => {
         const row = el("label", "prow"), cb = el("input");
         cb.type = "checkbox";
-        cb.checked = cur3.res.includes(x.name);
+        cb.checked = cur2.res.includes(x.name);
         cb.addEventListener("change", () => {
           const now = pickerItem();
           if (!now) return;
@@ -2175,15 +2193,15 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         nn.focus();
         return;
       }
-      const cur3 = pickerItem();
-      if (!cur3) return;
+      const cur2 = pickerItem();
+      if (!cur2) return;
       if (!directory().has(name)) {
         const pid = "p" + Date.now().toString(36);
-        S.extras[pid] = { n: name, role: rs.value, sq: cur3.sq };
+        S.extras[pid] = { n: name, role: rs.value, sq: cur2.sq };
         write("people/" + pid, S.extras[pid]);
         fillPersons();
       }
-      commit(cur3.id, { res: [...new Set(cur3.res.concat([name]))] });
+      commit(cur2.id, { res: [...new Set(cur2.res.concat([name]))] });
       nn.value = "";
       draw();
     };
@@ -2668,579 +2686,14 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return false;
   }
 
-  // src/esm/features/dependencies.js
-  function depsOf(it) {
-    return Array.isArray(it.dep) ? it.dep : [];
-  }
-  function dependents(id, all) {
-    const out = /* @__PURE__ */ new Set(), walk = (x) => all.forEach((i) => {
-      if (depsOf(i).includes(x) && !out.has(i.id)) {
-        out.add(i.id);
-        walk(i.id);
-      }
-    });
-    walk(id);
-    return out;
-  }
-  function depIssues(all) {
-    const byId = new Map(all.map((i) => [i.id, i])), out = [];
-    all.forEach((s) => depsOf(s).forEach((pid) => {
-      const p = byId.get(pid);
-      if (!p) return;
-      const gap = s.d0 - p.d1 - 1;
-      out.push({ from: p, to: s, gap, bad: s.d0 <= p.d1 });
-    }));
-    return out;
-  }
-  function openDeps(it) {
-    const all = items(), block = dependents(it.id, all), cur3 = new Set(depsOf(it));
-    const cands = all.filter((i) => i.id !== it.id && !block.has(i.id)).sort((a, b) => a.d0 - b.d0 || a.t.localeCompare(b.t));
-    openDlg("Depends on… " + it.t, (box2) => {
-      box2.append(el("p", "hint", "This bar should start after the ones you tick have finished. An arrow is drawn, and it turns red if the dates clash."));
-      const q = el("input");
-      q.type = "search";
-      q.placeholder = "Search features";
-      q.setAttribute("aria-label", "Search features");
-      q.style.width = "100%";
-      box2.append(q);
-      const list = el("div", "deplist");
-      box2.append(list);
-      const draw = () => {
-        list.textContent = "";
-        const t = q.value.trim().toLowerCase();
-        cands.filter((i) => !t || i.t.toLowerCase().includes(t) || i.res.join(" ").toLowerCase().includes(t) || cur3.has(i.id)).forEach((i) => {
-          const l = el("label", "deprow"), c = el("input");
-          c.type = "checkbox";
-          c.checked = cur3.has(i.id);
-          c.addEventListener("change", () => {
-            if (c.checked) cur3.add(i.id);
-            else cur3.delete(i.id);
-          });
-          l.append(c, el("span", "", (i.ms ? "◆ " : "") + i.t), el("small", "", dlabel(i.d0) + (i.ms ? "" : " to " + dlabel(i.d1)) + (i.res.length ? " · " + i.res.join(", ") : "")));
-          list.append(l);
-        });
-        if (!list.children.length) list.append(el("div", "hint", "Nothing matches."));
-      };
-      q.addEventListener("input", draw);
-      draw();
-      const save3 = el("button", "btn primary", "Save");
-      save3.type = "button";
-      const cancel = el("button", "btn", "Cancel");
-      cancel.type = "button";
-      cancel.addEventListener("click", closeDlg);
-      save3.addEventListener("click", () => {
-        closeDlg();
-        const next = [...cur3];
-        if (JSON.stringify(next.sort()) !== JSON.stringify(depsOf(it).slice().sort())) commit(it.id, { dep: next });
-      });
-      const row = el("div", "formrow");
-      row.append(save3, cancel);
-      box2.append(row);
-    });
-  }
-  function toggleMilestone(it) {
-    if (it.ms) commit(it.id, { ms: false });
-    else commit(it.id, { ms: true, d1: it.d0 });
-  }
-  try {
-    S.ghostOn = localStorage.getItem("ynmo-ghost") === "1";
-  } catch (e) {
-  }
-  function activeBaseline() {
-    const l = Object.keys(S.baselines).map((id) => Object.assign({ id }, S.baselines[id])).filter((b) => b.rm === state.rm);
-    return l.find((b) => b.active) || null;
-  }
-  var SVGNS = "http://www.w3.org/2000/svg";
-  function sv(tag, attrs) {
-    const n = document.createElementNS(SVGNS, tag);
-    Object.keys(attrs || {}).forEach((k) => n.setAttribute(k, attrs[k]));
-    return n;
-  }
-  function drawOverlay() {
-    const g = $("grid");
-    if (!g) return;
-    const old = g.querySelector("svg.ovl");
-    if (old) old.remove();
-    const all = items(), issues = depIssues(all), base3 = S.ghostOn ? activeBaseline() : null;
-    const sum = $("summary");
-    const oldc = sum && sum.querySelector(".depchip");
-    if (oldc) oldc.remove();
-    const bad = issues.filter((x) => x.bad);
-    if (sum && issues.length) {
-      const c = el("button", "depchip" + (bad.length ? " bad" : ""), bad.length ? "⛓ " + bad.length + (bad.length === 1 ? " dependency clash" : " dependency clashes") : "⛓ " + issues.length + (issues.length === 1 ? " dependency, all fine" : " dependencies, all fine"));
-      c.type = "button";
-      c.title = bad.length ? bad.map((x) => '"' + x.to.t + '" starts before "' + x.from.t + '" ends').join("\n") : "Every dependent bar starts after its predecessor ends";
-      c.addEventListener("click", () => {
-        const x = bad[0];
-        if (!x) return;
-        const b = [...g.querySelectorAll(".bar")].find((y) => y.dataset.id === x.to.id);
-        if (b) {
-          b.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
-          b.classList.add("flash");
-          setTimeout(() => b.classList.remove("flash"), 1600);
-        }
-      });
-      sum.append(c);
-    }
-    if (!issues.length && !base3) return;
-    const gr = g.getBoundingClientRect(), first = /* @__PURE__ */ new Map();
-    g.querySelectorAll(".bar").forEach((b) => {
-      if (!first.has(b.dataset.id)) first.set(b.dataset.id, b);
-    });
-    const svg = sv("svg", { class: "ovl", width: g.scrollWidth, height: g.scrollHeight, "aria-hidden": "true" });
-    const defs = sv("defs");
-    ["ok", "bad"].forEach((k) => {
-      const m = sv("marker", { id: "ar-" + k, viewBox: "0 0 8 8", refX: "7", refY: "4", markerWidth: "7", markerHeight: "7", orient: "auto" });
-      m.append(sv("path", { d: "M0 0 8 4 0 8z", fill: k === "bad" ? "#c0392b" : "#55608a" }));
-      defs.append(m);
-    });
-    svg.append(defs);
-    issues.forEach((x) => {
-      const a = first.get(x.from.id), b = first.get(x.to.id);
-      if (!a || !b) return;
-      const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
-      const x1 = ra.right - gr.left - 1, y1 = ra.top + ra.height / 2 - gr.top, x2 = rb.left - gr.left, y2 = rb.top + rb.height / 2 - gr.top;
-      let d;
-      if (x2 >= x1 + 14) d = "M" + x1 + " " + y1 + " H" + (x1 + 7) + " V" + y2 + " H" + (x2 - 1);
-      else {
-        const my = y2 > y1 ? Math.max(ra.bottom, rb.top) - gr.top + 2 : Math.min(ra.top, rb.bottom) - gr.top - 2;
-        d = "M" + x1 + " " + y1 + " H" + (x1 + 7) + " V" + my + " H" + (x2 - 7) + " V" + y2 + " H" + (x2 - 1);
-      }
-      const tip2 = '"' + x.from.t + '" → "' + x.to.t + '": ' + (x.bad ? x.gap === -1 ? "starts the same day the first ends" : "starts " + (-x.gap - 1) + " day(s) before the first ends" : x.gap === 0 ? "starts the next day, no buffer" : x.gap + " day(s) of buffer");
-      const p = sv("path", { d, fill: "none", stroke: x.bad ? "#c0392b" : "#55608a", "stroke-width": x.bad ? "2" : "1.5", "marker-end": "url(#ar-" + (x.bad ? "bad" : "ok") + ")", class: "dep" + (x.bad ? " bad" : "") });
-      const t = sv("title");
-      t.textContent = tip2;
-      p.append(t);
-      svg.append(p);
-    });
-    if (base3) {
-      const w0 = g.querySelector(".wk");
-      if (w0) {
-        const wr = w0.getBoundingClientRect(), dw = wr.width, L = wr.left - gr.left;
-        const bi = new Map((base3.items || []).map((i) => [i.id, i]));
-        first.forEach((bar4, id) => {
-          const o = bi.get(id), it = all.find((i) => i.id === id);
-          if (!o || !it || o.d0 === it.d0 && o.d1 === it.d1) return;
-          const r = bar4.getBoundingClientRect(), y = r.bottom - gr.top - 1;
-          const g1 = sv("rect", { x: L + o.d0 * dw + 1, y, width: Math.max(4, (o.d1 - o.d0 + 1) * dw - 2), height: 5, rx: 2.5, fill: "#e5a513", opacity: ".9", class: "ghost" });
-          const t = sv("title");
-          const sl = it.d1 - o.d1;
-          t.textContent = "Plan: " + dlabel(o.d0) + (o.d1 > o.d0 ? " to " + dlabel(o.d1) : "") + " · now " + (sl === 0 ? "starts " + (it.d0 - o.d0 > 0 ? "later" : "earlier") : sl > 0 ? "ends " + sl + " day(s) later" : "ends " + -sl + " day(s) earlier");
-          g1.append(t);
-          svg.append(g1);
-        });
-      }
-    }
-    g.append(svg);
-  }
-  function afterRender() {
-    try {
-      drawOverlay();
-      decorateLocks();
-    } catch (e) {
-    }
-    const gb = $("ghostbtn");
-    if (gb) {
-      const b = activeBaseline();
-      gb.hidden = !b;
-      gb.setAttribute("aria-pressed", String(S.ghostOn));
-    }
-  }
-
-  // src/esm/pages/log.js
-  var logUI = { u: "all", a: "all" };
-  function renderLog() {
-    const root = $("pg-log");
-    root.textContent = "";
-    const every = allLogs(), done2 = undoneSet();
-    const users = [...new Set(every.map((l) => l.data.name))].sort();
-    const su = selOf([["all", "Everyone"]].concat(users.map((u) => [u, u])), logUI.u), sa = selOf([["all", "All changes"], ["edit", "Edits"], ["roadmap", "Roadmaps"], ["idea", "Ideas"], ["sprint", "Sprints"], ["report", "Reports"], ["resource", "Resources"], ["vacation", "Vacations"], ["access", "Access"]], logUI.a);
-    su.setAttribute("aria-label", "Filter by person");
-    sa.setAttribute("aria-label", "Filter by type of change");
-    su.addEventListener("change", () => {
-      logUI.u = su.value;
-      renderLog();
-    });
-    sa.addEventListener("change", () => {
-      logUI.a = sa.value;
-      renderLog();
-    });
-    const rows2 = every.filter((l) => (logUI.u === "all" || l.data.name === logUI.u) && (logUI.a === "all" || l.data.act === logUI.a));
-    const ex = el("button", "btn", "Export CSV");
-    ex.type = "button";
-    ex.id = "logexport";
-    ex.addEventListener("click", () => exportLog(rows2.map((l) => l.data)));
-    const tools = el("div", "formrow");
-    tools.append(su, sa, ex);
-    root.append(pageHead("Log", "Who changed what, and when. Newest first. Times show in your time zone." + (canEdit() ? " Undo puts an edit back the way it was." : ""), tools));
-    const card = el("div", "card");
-    let day = "";
-    if (!rows2.length) card.append(el("div", "hint", "No changes recorded yet."));
-    rows2.forEach((l) => {
-      const d = l.data;
-      const dd = new Date(d.at).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-      if (dd !== day) {
-        day = dd;
-        card.append(el("div", "logday", dd));
-      }
-      const r = el("div", "logrow"), b = el("div", "lb");
-      const nm = el("b", "", d.name);
-      b.append(nm, document.createTextNode(" "), el("span", "badge", d.act), document.createTextNode(" " + d.sum));
-      if (done2.has(l.id)) b.append(el("span", "badge undone", "undone"));
-      if (d.rm) b.append(el("div", "hint", d.rm));
-      const tm = el("div", "lt", ago(d.at));
-      tm.title = clock(d.at);
-      r.append(avatarEl(d.av, 34, d.name), b, tm);
-      if (canUndoRow(l, done2)) {
-        const u = el("button", "btn sm undo", "Undo");
-        u.type = "button";
-        u.setAttribute("aria-label", "Undo: " + d.sum);
-        u.addEventListener("click", () => undoFromLog(l));
-        r.append(u);
-      }
-      card.append(r);
-    });
-    if (S.logsMore) {
-      const m = el("button", "btn", S.logsBusy ? "Loading…" : "Load older entries");
-      m.type = "button";
-      m.id = "logmore";
-      m.disabled = S.logsBusy;
-      m.addEventListener("click", loadOlderLogs);
-      card.append(m);
-    } else if (every.length > ACTIVE_LOG_PAGE) card.append(el("div", "hint", "That is everything."));
-    root.append(card);
-  }
-
-  // src/esm/ui/export.js
-  function csvCell(v) {
-    v = String(v == null ? "" : v);
-    if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;
-    return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
-  }
-
-  // src/esm/features/log-tools.js
-  function allLogs() {
-    const seen = /* @__PURE__ */ new Set(), out = [];
-    S.logs.concat(S.logsOld).forEach((l) => {
-      if (!seen.has(l.id)) {
-        seen.add(l.id);
-        out.push(l);
-      }
-    });
-    return out.sort((a, b) => a.data.at < b.data.at ? 1 : -1);
-  }
-  async function loadOlderLogs() {
-    if (S.logsBusy) return;
-    S.logsBusy = true;
-    try {
-      const have = allLogs().length;
-      const r = await sb.from("activity").select("id,data").order("updated_at", { ascending: false }).range(have, have + ACTIVE_LOG_PAGE - 1);
-      if (r.error) throw new Error(r.error.message);
-      const rows2 = (r.data || []).map((x) => ({ id: x.id, data: x.data || {} }));
-      S.logsOld = S.logsOld.concat(rows2);
-      S.logsMore = rows2.length >= ACTIVE_LOG_PAGE;
-    } catch (e) {
-      toast("Could not load older entries. Try again.");
-    }
-    S.logsBusy = false;
-    if (state.page === "log") renderLog();
-  }
-  async function exportLog(rows2) {
-    const lines = [["When", "Who", "Type", "Change", "Roadmap"].map(csvCell).join(",")];
-    rows2.forEach((d) => lines.push([d.at, d.name, d.act, d.sum, d.rm || ""].map(csvCell).join(",")));
-    try {
-      await dl.save({ filename: "ynmo-log-" + todayIso() + ".csv", data: "\uFEFF" + lines.join("\n") });
-    } catch (e) {
-    }
-  }
-  function undoneSet() {
-    const s = /* @__PURE__ */ new Set();
-    allLogs().forEach((l) => {
-      if (l.data.ref) s.add(l.data.ref);
-    });
-    return s;
-  }
-  function canUndoRow(l, done2) {
-    return canWrite() && l.data.u && !done2.has(l.id);
-  }
-  function undoFromLog(l) {
-    const u = l.data.u;
-    if (!u || !canWrite()) return;
-    const cur3 = S.over[u.id], isSame = (a, b) => JSON.stringify(a === void 0 ? null : a) === JSON.stringify(b === void 0 ? null : b);
-    let clash = false;
-    if (u.after) Object.keys(u.after).forEach((k) => {
-      if (!isSame(cur3 && cur3[k], u.after[k])) clash = true;
-    });
-    if (u.whole !== void 0 && u.after === void 0) clash = false;
-    const run = () => {
-      pushHistory();
-      if (u.after) {
-        const o = Object.assign({}, S.over[u.id] || {});
-        Object.keys(u.set || {}).forEach((k) => {
-          o[k] = u.set[k];
-        });
-        (u.unset || []).forEach((k) => {
-          delete o[k];
-        });
-        S.over[u.id] = o;
-        persist(u.id, (u.unset || []).length ? null : u.set);
-      } else if (u.whole) {
-        S.over[u.id] = u.whole;
-        persist(u.id);
-      } else {
-        delete S.over[u.id];
-        persist(u.id);
-      }
-      render();
-      const data = { at: (/* @__PURE__ */ new Date()).toISOString(), uid: S.me.id, name: S.me.name || S.me.email, av: S.me.avatar || "", act: "edit", sum: "undid: " + l.data.sum, rm: l.data.rm, ref: l.id };
-      const id = "l" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-      S.logs.unshift({ id, data });
-      sb.from("activity").insert({ id, data }).then(() => {
-      }, () => {
-      });
-      if (state.page === "log") renderLog();
-      toast("Change undone.");
-    };
-    if (!clash) {
-      run();
-      return;
-    }
-    openDlg("Undo this change?", (b) => {
-      b.append(el("p", "hint", "This bar was changed again after that entry. Undoing will put back the older values and replace what is there now."));
-      const ok = el("button", "btn primary", "Undo anyway");
-      ok.type = "button";
-      const no = el("button", "btn", "Keep current");
-      no.type = "button";
-      ok.addEventListener("click", () => {
-        closeDlg();
-        run();
-      });
-      no.addEventListener("click", closeDlg);
-      const row = el("div", "formrow");
-      row.append(ok, no);
-      b.append(row);
-    });
-  }
-  function rmPicker(after) {
-    const s = selOf(allRoadmaps().map((r) => [r.id, r.n]), state.rm);
-    s.setAttribute("aria-label", "Roadmap");
-    s.addEventListener("change", () => {
-      useRoadmap(s.value);
-      after();
-    });
-    return s;
-  }
-
-  // src/esm/features/baselines.js
-  function snapItems() {
-    return items().map((i) => ({ id: i.id, t: i.t, sq: i.sq, d0: i.d0, d1: i.d1, st: i.st, res: i.res.slice(), ms: !!i.ms, dep: depsOf(i).slice() }));
-  }
-  function saveSnapshot(name, active) {
-    const id = "b" + Date.now().toString(36), rm = state.rm;
-    if (active) Object.keys(S.baselines).forEach((k) => {
-      if (S.baselines[k].rm === rm && S.baselines[k].active) {
-        const d = Object.assign({}, S.baselines[k], { active: false });
-        S.baselines[k] = d;
-        S.db.doc("baselines/" + k).set(d).catch(() => {
-        });
-      }
-    });
-    const data = { rm, rmName: curRm().n, name, at: (/* @__PURE__ */ new Date()).toISOString(), by: S.me.name || S.me.email, active: !!active, items: snapItems() };
-    S.baselines[id] = data;
-    return S.db.doc("baselines/" + id).set(data).then(() => {
-      logAct("roadmap", 'saved snapshot "' + name + '" of ' + curRm().n);
-    });
-  }
-  function setBaseline(id) {
-    const rm = S.baselines[id].rm;
-    Object.keys(S.baselines).forEach((k) => {
-      if (S.baselines[k].rm === rm) {
-        const want = k === id;
-        if (!!S.baselines[k].active !== want) {
-          const d = Object.assign({}, S.baselines[k], { active: want });
-          S.baselines[k] = d;
-          S.db.doc("baselines/" + k).set(d).catch(() => {
-          });
-        }
-      }
-    });
-    logAct("roadmap", 'set "' + S.baselines[id].name + '" as the baseline for ' + S.baselines[id].rmName);
-  }
-  function diffSnap(b) {
-    const now = items(), nm = new Map(now.map((i) => [i.id, i])), om = new Map((b.items || []).map((i) => [i.id, i]));
-    const out = { moved: [], added: [], removed: [], status: [], owners: [] };
-    now.forEach((i) => {
-      const o = om.get(i.id);
-      if (!o) {
-        out.added.push(i);
-        return;
-      }
-      if (o.d0 !== i.d0 || o.d1 !== i.d1) out.moved.push({ it: i, o, ds: i.d0 - o.d0, de: i.d1 - o.d1 });
-      if (o.st !== i.st) out.status.push({ it: i, o });
-      if (JSON.stringify((o.res || []).slice().sort()) !== JSON.stringify(i.res.slice().sort())) out.owners.push({ it: i, o });
-    });
-    (b.items || []).forEach((o) => {
-      if (!nm.has(o.id)) out.removed.push(o);
-    });
-    return out;
-  }
-  var cmpId = null;
-  function renderBaselines() {
-    const root = $("pg-baselines");
-    root.textContent = "";
-    root.append(pageHead("Baselines", 'Save the plan at a point in time, then compare it with today. Snapshots never change after they are saved. Turn on "Plan vs now" on the roadmap to see the old dates as thin amber bars under each bar.', rmPicker(renderBaselines)));
-    const mine = Object.keys(S.baselines).map((id) => Object.assign({ id }, S.baselines[id])).filter((b) => b.rm === state.rm).sort((a, b) => a.at < b.at ? 1 : -1);
-    if (canWrite()) {
-      const c = el("div", "card");
-      c.append(el("h2", "", "Save a snapshot of " + curRm().n));
-      const nm = el("input");
-      nm.type = "text";
-      nm.value = curRm().n + " · " + todayIso();
-      nm.maxLength = 80;
-      nm.setAttribute("aria-label", "Snapshot name");
-      const ck = el("input");
-      ck.type = "checkbox";
-      ck.checked = !mine.some((b) => b.active);
-      ck.id = "snapactive";
-      const cl2 = el("label", "chk");
-      cl2.htmlFor = "snapactive";
-      cl2.append(ck, document.createTextNode(" Use as the baseline to compare against"));
-      const go = el("button", "btn primary", "Save snapshot");
-      go.type = "button";
-      const msg = el("div", "gerr");
-      msg.setAttribute("aria-live", "polite");
-      go.addEventListener("click", async () => {
-        const n = nm.value.trim();
-        if (!n) {
-          msg.textContent = "Give the snapshot a name.";
-          return;
-        }
-        go.disabled = true;
-        try {
-          await saveSnapshot(n, ck.checked);
-          toast("Snapshot saved.");
-        } catch (e) {
-          msg.textContent = "Could not save. If this keeps happening, ask the admin to run setup v4.";
-        }
-        go.disabled = false;
-        renderBaselines();
-      });
-      const row = el("div", "formrow");
-      row.style.alignItems = "center";
-      row.append(nm, cl2, go);
-      nm.style.flex = "1 1 260px";
-      c.append(row, msg);
-      root.append(c);
-    }
-    const lc = el("div", "card");
-    lc.append(el("h2", "", "Checkpoint history"));
-    if (!mine.length) lc.append(el("div", "hint", "No snapshots for this roadmap yet."));
-    mine.forEach((b) => {
-      const r = el("div", "formrow snaprow");
-      r.style.alignItems = "center";
-      const w = el("div");
-      const t = el("b", "", b.name);
-      if (b.active) t.append(el("span", "badge", "baseline"));
-      w.append(t, el("div", "hint", clock(b.at) + " · " + b.by + " · " + (b.items || []).length + " bars"));
-      const cmp = el("button", "btn sm" + (cmpId === b.id ? " primary" : ""), cmpId === b.id ? "Hide comparison" : "Compare with now");
-      cmp.type = "button";
-      cmp.style.marginInlineStart = "auto";
-      cmp.addEventListener("click", () => {
-        cmpId = cmpId === b.id ? null : b.id;
-        renderBaselines();
-      });
-      r.append(w, cmp);
-      if (canWrite() && !b.active) {
-        const mk = el("button", "btn sm", "Make baseline");
-        mk.type = "button";
-        mk.addEventListener("click", () => {
-          setBaseline(b.id);
-          renderBaselines();
-        });
-        r.append(mk);
-      }
-      if (canWrite() && S.me && S.me.is_admin) {
-        const dl2 = el("button", "btn sm danger", "Delete");
-        dl2.type = "button";
-        dl2.addEventListener("click", () => {
-          delete S.baselines[b.id];
-          S.db.doc("baselines/" + b.id).delete().catch(() => {
-          });
-          logAct("roadmap", 'deleted snapshot "' + b.name + '"');
-          renderBaselines();
-        });
-        r.append(dl2);
-      }
-      lc.append(r);
-      if (cmpId === b.id) lc.append(compareView(b));
-    });
-    root.append(lc);
-  }
-  function compareView(b) {
-    const d = diffSnap(b), w = el("div", "cmpbox");
-    const late = d.moved.filter((m) => m.de > 0).length, early = d.moved.filter((m) => m.de < 0).length, avg = d.moved.length ? Math.round(d.moved.reduce((s, m) => s + m.de, 0) / d.moved.length * 10) / 10 : 0;
-    const sm = el("div", "summary");
-    [[d.moved.length, "moved"], [late, "end later"], [early, "end earlier"], [d.added.length, "added"], [d.removed.length, "removed"], [d.status.length, "status changed"]].forEach((p) => {
-      const x = el("div");
-      x.append(el("b", "", String(p[0])), document.createTextNode(" "), el("span", "", p[1]));
-      sm.append(x);
-    });
-    w.append(sm);
-    if (d.moved.length) w.append(el("div", "hint", "Average end-date shift: " + (avg > 0 ? "+" : "") + avg + " days"));
-    const sec = (title, rows2) => {
-      if (!rows2.length) return;
-      const s = el("div", "cmpsec");
-      s.append(el("h3", "", title + " (" + rows2.length + ")"));
-      rows2.forEach((r) => s.append(el("div", "cmprow", r)));
-      w.append(s);
-    };
-    const sh = (n) => (n > 0 ? "+" : "") + n + "d";
-    sec("Moved", d.moved.sort((a, b2) => Math.abs(b2.de) - Math.abs(a.de)).map((m) => m.it.t + ": was " + dlabel(m.o.d0) + " to " + dlabel(m.o.d1) + ", now " + dlabel(m.it.d0) + " to " + dlabel(m.it.d1) + " (start " + sh(m.ds) + ", end " + sh(m.de) + ")"));
-    sec("Added since", d.added.map((i) => i.t + " · " + dlabel(i.d0) + " to " + dlabel(i.d1)));
-    sec("Removed since", d.removed.map((i) => i.t + " · was " + dlabel(i.d0) + " to " + dlabel(i.d1)));
-    sec("Status changed", d.status.map((m) => m.it.t + ": " + STATUS[m.o.st] + " → " + STATUS[m.it.st]));
-    sec("Owners changed", d.owners.map((m) => m.it.t + ": " + ((m.o.res || []).join(", ") || "nobody") + " → " + (m.it.res.join(", ") || "nobody")));
-    if (!d.moved.length && !d.added.length && !d.removed.length && !d.status.length && !d.owners.length) w.append(el("div", "hint", "Nothing has changed since this snapshot."));
-    return w;
-  }
-
   // src/esm/app/extras-wiring.js
   function initExtras() {
-    const anchor = $("exportpdf");
-    if (anchor && !$("ghostbtn")) {
-      const gb = el("button", "btn", "Plan vs now");
-      gb.type = "button";
-      gb.id = "ghostbtn";
-      gb.hidden = true;
-      gb.setAttribute("aria-pressed", String(S.ghostOn));
-      gb.title = "Show where the saved baseline had each bar as a thin amber line";
-      gb.addEventListener("click", () => {
-        S.ghostOn = !S.ghostOn;
-        try {
-          localStorage.setItem("ynmo-ghost", S.ghostOn ? "1" : "0");
-        } catch (e) {
-        }
-        render();
-      });
-      anchor.before(gb);
-    }
     netBar();
     netShow();
   }
   function startExtras() {
     $("shell").classList.toggle("viewer", isViewer());
     if (isViewer()) S.readonly = true;
-    S.db.collection("baselines").onSnapshot((s) => {
-      const n = {};
-      s.docs.forEach((d) => {
-        n[d.id] = d.data();
-      });
-      if (same(n, S.baselines)) return;
-      S.baselines = n;
-      if (state.page === "baselines") renderBaselines();
-      softRender();
-    }, () => {
-    });
     S.db.collection("share_links").onSnapshot((s) => {
       const n = {};
       s.docs.forEach((d) => {
@@ -3505,11 +2958,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
     col.addEventListener("drop", (e) => {
       col.classList.remove("dropcol");
-      const card = e.dataTransfer.getData("text/ideacard"), ck = e.dataTransfer.getData("text/col");
-      if (card && S.ideas[card] && S.ideas[card].pr !== l.k) {
+      const card2 = e.dataTransfer.getData("text/ideacard"), ck = e.dataTransfer.getData("text/col");
+      if (card2 && S.ideas[card2] && S.ideas[card2].pr !== l.k) {
         e.preventDefault();
-        const t = S.ideas[card].t;
-        saveIdea(card, { pr: l.k }, "idea", 'moved idea "' + t + '" to ' + l.n);
+        const t = S.ideas[card2].t;
+        saveIdea(card2, { pr: l.k }, "idea", 'moved idea "' + t + '" to ' + l.n);
         renderIdeas(true);
       } else if (ck && ck !== l.k) {
         e.preventDefault();
@@ -3869,9 +3322,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     r1.append(lab("Impact", im), lab("Effort", ef));
     const score = el("span", "score", "Score " + ideaScore(i));
     const stat = el("span", "badge" + (i.st === "scheduled" ? " ok" : ""), (ISTAT.find((x) => x[0] === (i.st || "idea")) || ISTAT[0])[1]);
-    const save3 = el("button", "btn primary sm", "Save");
-    save3.type = "button";
-    save3.hidden = true;
+    const save2 = el("button", "btn primary sm", "Save");
+    save2.type = "button";
+    save2.hidden = true;
     const saved2 = el("span", "hint", "");
     const r2 = el("div", "row2");
     r2.append(stat, score);
@@ -3880,11 +3333,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       const rr = allRoadmaps().find((x) => x.id === i.rm);
       r3.append(el("span", "badge ok", "On " + (rr ? rr.n : "a roadmap")));
     }
-    r3.append(save3, saved2);
+    r3.append(save2, saved2);
     const dirty = () => t.value.trim() !== i.t || n.value !== (i.n || "") || +im.value !== (i.im || 2) || +ef.value !== (i.ef || 2);
     const mark = () => {
       const dv = dirty();
-      save3.hidden = !dv;
+      save2.hidden = !dv;
       saved2.textContent = "";
       score.textContent = "Score " + ideaScore({ im: +im.value, ef: +ef.value });
     };
@@ -3900,13 +3353,13 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       saveIdea(id, { t: v, n: n.value, im: +im.value, ef: +ef.value }, "idea", 'saved idea "' + v + '"' + (v !== i.t ? ' (was "' + i.t + '")' : ""));
       return true;
     };
-    save3.addEventListener("click", () => {
+    save2.addEventListener("click", () => {
       if (doSave()) renderIdeas(true);
     });
     c.addEventListener("keydown", (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !save3.hidden) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !save2.hidden) {
         e.preventDefault();
-        save3.click();
+        save2.click();
       }
     });
     more.addEventListener("click", (e) => {
@@ -4257,10 +3710,185 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     root.append(g);
   }
 
+  // src/esm/ui/export.js
+  function csvCell(v) {
+    v = String(v == null ? "" : v);
+    if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;
+    return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  }
+
+  // src/esm/features/log-tools.js
+  function allLogs() {
+    const seen = /* @__PURE__ */ new Set(), out = [];
+    S.logs.concat(S.logsOld).forEach((l) => {
+      if (!seen.has(l.id)) {
+        seen.add(l.id);
+        out.push(l);
+      }
+    });
+    return out.sort((a, b) => a.data.at < b.data.at ? 1 : -1);
+  }
+  async function loadOlderLogs() {
+    if (S.logsBusy) return;
+    S.logsBusy = true;
+    try {
+      const have = allLogs().length;
+      const r = await sb.from("activity").select("id,data").order("updated_at", { ascending: false }).range(have, have + ACTIVE_LOG_PAGE - 1);
+      if (r.error) throw new Error(r.error.message);
+      const rows2 = (r.data || []).map((x) => ({ id: x.id, data: x.data || {} }));
+      S.logsOld = S.logsOld.concat(rows2);
+      S.logsMore = rows2.length >= ACTIVE_LOG_PAGE;
+    } catch (e) {
+      toast("Could not load older entries. Try again.");
+    }
+    S.logsBusy = false;
+    if (state.page === "log") renderLog();
+  }
+  async function exportLog(rows2) {
+    const lines = [["When", "Who", "Type", "Change", "Roadmap"].map(csvCell).join(",")];
+    rows2.forEach((d) => lines.push([d.at, d.name, d.act, d.sum, d.rm || ""].map(csvCell).join(",")));
+    try {
+      await dl.save({ filename: "ynmo-log-" + todayIso() + ".csv", data: "\uFEFF" + lines.join("\n") });
+    } catch (e) {
+    }
+  }
+  function undoneSet() {
+    const s = /* @__PURE__ */ new Set();
+    allLogs().forEach((l) => {
+      if (l.data.ref) s.add(l.data.ref);
+    });
+    return s;
+  }
+  function canUndoRow(l, done2) {
+    return canWrite() && l.data.u && !done2.has(l.id);
+  }
+  function undoFromLog(l) {
+    const u = l.data.u;
+    if (!u || !canWrite()) return;
+    const cur2 = S.over[u.id], isSame = (a, b) => JSON.stringify(a === void 0 ? null : a) === JSON.stringify(b === void 0 ? null : b);
+    let clash = false;
+    if (u.after) Object.keys(u.after).forEach((k) => {
+      if (!isSame(cur2 && cur2[k], u.after[k])) clash = true;
+    });
+    if (u.whole !== void 0 && u.after === void 0) clash = false;
+    const run = () => {
+      pushHistory();
+      if (u.after) {
+        const o = Object.assign({}, S.over[u.id] || {});
+        Object.keys(u.set || {}).forEach((k) => {
+          o[k] = u.set[k];
+        });
+        (u.unset || []).forEach((k) => {
+          delete o[k];
+        });
+        S.over[u.id] = o;
+        persist(u.id, (u.unset || []).length ? null : u.set);
+      } else if (u.whole) {
+        S.over[u.id] = u.whole;
+        persist(u.id);
+      } else {
+        delete S.over[u.id];
+        persist(u.id);
+      }
+      render();
+      const data = { at: (/* @__PURE__ */ new Date()).toISOString(), uid: S.me.id, name: S.me.name || S.me.email, av: S.me.avatar || "", act: "edit", sum: "undid: " + l.data.sum, rm: l.data.rm, ref: l.id };
+      const id = "l" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      S.logs.unshift({ id, data });
+      sb.from("activity").insert({ id, data }).then(() => {
+      }, () => {
+      });
+      if (state.page === "log") renderLog();
+      toast("Change undone.");
+    };
+    if (!clash) {
+      run();
+      return;
+    }
+    openDlg("Undo this change?", (b) => {
+      b.append(el("p", "hint", "This bar was changed again after that entry. Undoing will put back the older values and replace what is there now."));
+      const ok = el("button", "btn primary", "Undo anyway");
+      ok.type = "button";
+      const no = el("button", "btn", "Keep current");
+      no.type = "button";
+      ok.addEventListener("click", () => {
+        closeDlg();
+        run();
+      });
+      no.addEventListener("click", closeDlg);
+      const row = el("div", "formrow");
+      row.append(ok, no);
+      b.append(row);
+    });
+  }
+
+  // src/esm/pages/log.js
+  var logUI = { u: "all", a: "all" };
+  function renderLog() {
+    const root = $("pg-log");
+    root.textContent = "";
+    const every = allLogs(), done2 = undoneSet();
+    const users = [...new Set(every.map((l) => l.data.name))].sort();
+    const su = selOf([["all", "Everyone"]].concat(users.map((u) => [u, u])), logUI.u), sa = selOf([["all", "All changes"], ["edit", "Edits"], ["roadmap", "Roadmaps"], ["idea", "Ideas"], ["sprint", "Sprints"], ["report", "Reports"], ["resource", "Resources"], ["vacation", "Vacations"], ["access", "Access"]], logUI.a);
+    su.setAttribute("aria-label", "Filter by person");
+    sa.setAttribute("aria-label", "Filter by type of change");
+    su.addEventListener("change", () => {
+      logUI.u = su.value;
+      renderLog();
+    });
+    sa.addEventListener("change", () => {
+      logUI.a = sa.value;
+      renderLog();
+    });
+    const rows2 = every.filter((l) => (logUI.u === "all" || l.data.name === logUI.u) && (logUI.a === "all" || l.data.act === logUI.a));
+    const ex = el("button", "btn", "Export CSV");
+    ex.type = "button";
+    ex.id = "logexport";
+    ex.addEventListener("click", () => exportLog(rows2.map((l) => l.data)));
+    const tools = el("div", "formrow");
+    tools.append(su, sa, ex);
+    root.append(pageHead("Log", "Who changed what, and when. Newest first. Times show in your time zone." + (canEdit() ? " Undo puts an edit back the way it was." : ""), tools));
+    const card2 = el("div", "card");
+    let day = "";
+    if (!rows2.length) card2.append(el("div", "hint", "No changes recorded yet."));
+    rows2.forEach((l) => {
+      const d = l.data;
+      const dd = new Date(d.at).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+      if (dd !== day) {
+        day = dd;
+        card2.append(el("div", "logday", dd));
+      }
+      const r = el("div", "logrow"), b = el("div", "lb");
+      const nm = el("b", "", d.name);
+      b.append(nm, document.createTextNode(" "), el("span", "badge", d.act), document.createTextNode(" " + d.sum));
+      if (done2.has(l.id)) b.append(el("span", "badge undone", "undone"));
+      if (d.rm) b.append(el("div", "hint", d.rm));
+      const tm = el("div", "lt", ago(d.at));
+      tm.title = clock(d.at);
+      r.append(avatarEl(d.av, 34, d.name), b, tm);
+      if (canUndoRow(l, done2)) {
+        const u = el("button", "btn sm undo", "Undo");
+        u.type = "button";
+        u.setAttribute("aria-label", "Undo: " + d.sum);
+        u.addEventListener("click", () => undoFromLog(l));
+        r.append(u);
+      }
+      card2.append(r);
+    });
+    if (S.logsMore) {
+      const m = el("button", "btn", S.logsBusy ? "Loading…" : "Load older entries");
+      m.type = "button";
+      m.id = "logmore";
+      m.disabled = S.logsBusy;
+      m.addEventListener("click", loadOlderLogs);
+      card2.append(m);
+    } else if (every.length > ACTIVE_LOG_PAGE) card2.append(el("div", "hint", "That is everything."));
+    root.append(card2);
+  }
+
   // src/esm/core/shared.js
   var ideaUI = { st: "open", q: "" };
   var H2 = { id: H2_ID, n: "H2 2026", a: "2026-10-01", b: "2027-01-31", kind: "H2", builtin: true };
-  var PAGES = [["roadmap", "Roadmap"], ["ideas", "Ideas"], ["roadmaps", "Roadmaps"], ["sprints", "Sprints"], ["reports", "Reports"], ["monthly", "Monthly"], ["resources", "Resources"], ["vacations", "Vacations"], ["capacity", "Capacity"], ["baselines", "Baselines"], ["log", "Log"], ["admin", "Approvals"]];
+  var PAGES = [["roadmap", "Roadmap"], ["ideas", "Ideas"], ["roadmaps", "Roadmaps"], ["sprints", "Sprints"], ["reports", "Reports"], ["monthly", "Monthly deliverables"], ["resources", "Resources"], ["vacations", "Vacations"], ["log", "Log"], ["admin", "Approvals"]];
   var DOMAINS = ["PM", "Mobile", "Backend", "Frontend", "Full-stack", "Engineering", "QA", "UX / Design", "AI / ML", "Other"];
   var VTYPES = ["Annual leave", "Training", "Public holiday", "Other"];
   var slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "x";
@@ -4316,11 +3944,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
     return s;
   }
-  function pageHead(t, sub2, extra) {
+  function pageHead(t, sub, extra) {
     const h = el("div", "pghead");
     const d = el("div");
     d.append(el("h1", "", t));
-    if (sub2) d.append(el("p", "sub", sub2));
+    if (sub) d.append(el("p", "sub", sub));
     h.append(d);
     if (extra) h.append(extra);
     return h;
@@ -4420,8 +4048,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   function renderTeamLeave(root) {
     const names = [...new Set(Object.keys(S.vacs).map((id) => S.vacs[id]).filter((v) => v.a0).map((v) => v.p))].sort((x, y) => x.localeCompare(y));
     if (!names.length) return;
-    const card = el("div", "card");
-    card.append(el("h2", "", "Team leave"), el("div", "hint", "Select a person to see their leave stats and calendar."));
+    const card2 = el("div", "card");
+    card2.append(el("h2", "", "Team leave"), el("div", "hint", "Select a person to see their leave stats and calendar."));
     const td = todayIso();
     names.forEach((nm) => {
       const st = personStats(nm), open = vacUI.open.has(nm), row = el("div", "tlrow");
@@ -4470,9 +4098,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         body.append(go);
         row.append(body);
       }
-      card.append(row);
+      card2.append(row);
     });
-    root.append(card);
+    root.append(card2);
   }
   function addVacation(p, a0, a1, type, note) {
     const id = "v" + Date.now().toString(36);
@@ -4565,10 +4193,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       root.append(c);
     }
     renderTeamLeave(root);
-    const card = el("div", "card");
-    card.append(el("h2", "", "All leave"));
+    const card2 = el("div", "card");
+    card2.append(el("h2", "", "All leave"));
     const list = Object.keys(S.vacs).map((id) => Object.assign({ id }, S.vacs[id])).filter((v) => v.a0).sort((x, y) => x.a0 < y.a0 ? -1 : 1);
-    if (!list.length) card.append(el("div", "hint", "No leave added yet."));
+    if (!list.length) card2.append(el("div", "hint", "No leave added yet."));
     else {
       const t = el("table", "tbl"), th = el("thead"), hr = el("tr");
       ["Person", "Dates", "Type", "Working days", "Affects", ""].forEach((x) => {
@@ -4604,9 +4232,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       t.append(tb);
       const sc = el("div", "tscroll");
       sc.append(t);
-      card.append(sc);
+      card2.append(sc);
     }
-    root.append(card);
+    root.append(card2);
   }
 
   // src/esm/features/timeline-notes.js
@@ -4747,8 +4375,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       const msg = el("div", "gerr");
       msg.setAttribute("role", "alert");
       box2.append(msg);
-      const save3 = el("button", "btn primary", "Save"), cancel = el("button", "btn", "Cancel");
-      save3.type = cancel.type = "button";
+      const save2 = el("button", "btn primary", "Save"), cancel = el("button", "btn", "Cancel");
+      save2.type = cancel.type = "button";
       cancel.addEventListener("click", closeDlg);
       const go = () => {
         const t = tx.value.trim().replace(/\s+/g, " ");
@@ -4777,9 +4405,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
           go();
         }
       });
-      save3.addEventListener("click", go);
+      save2.addEventListener("click", go);
       const row = el("div", "formrow");
-      row.append(save3, cancel);
+      row.append(save2, cancel);
       if (editing) {
         const del = el("button", "btn danger", "Delete note");
         del.type = "button";
@@ -4907,6 +4535,153 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       b.title = n.t;
       put(b, fromRow + " / " + toRow, n.d0 + 2 + " / " + (n.d1 + 3));
     });
+  }
+
+  // src/esm/features/dependencies.js
+  function depsOf(it) {
+    return Array.isArray(it.dep) ? it.dep : [];
+  }
+  function dependents(id, all) {
+    const out = /* @__PURE__ */ new Set(), walk = (x) => all.forEach((i) => {
+      if (depsOf(i).includes(x) && !out.has(i.id)) {
+        out.add(i.id);
+        walk(i.id);
+      }
+    });
+    walk(id);
+    return out;
+  }
+  function depIssues(all) {
+    const byId = new Map(all.map((i) => [i.id, i])), out = [];
+    all.forEach((s) => depsOf(s).forEach((pid) => {
+      const p = byId.get(pid);
+      if (!p) return;
+      const gap = s.d0 - p.d1 - 1;
+      out.push({ from: p, to: s, gap, bad: s.d0 <= p.d1 });
+    }));
+    return out;
+  }
+  function openDeps(it) {
+    const all = items(), block = dependents(it.id, all), cur2 = new Set(depsOf(it));
+    const cands = all.filter((i) => i.id !== it.id && !block.has(i.id)).sort((a, b) => a.d0 - b.d0 || a.t.localeCompare(b.t));
+    openDlg("Depends on… " + it.t, (box2) => {
+      box2.append(el("p", "hint", "This bar should start after the ones you tick have finished. An arrow is drawn, and it turns red if the dates clash."));
+      const q = el("input");
+      q.type = "search";
+      q.placeholder = "Search features";
+      q.setAttribute("aria-label", "Search features");
+      q.style.width = "100%";
+      box2.append(q);
+      const list = el("div", "deplist");
+      box2.append(list);
+      const draw = () => {
+        list.textContent = "";
+        const t = q.value.trim().toLowerCase();
+        cands.filter((i) => !t || i.t.toLowerCase().includes(t) || i.res.join(" ").toLowerCase().includes(t) || cur2.has(i.id)).forEach((i) => {
+          const l = el("label", "deprow"), c = el("input");
+          c.type = "checkbox";
+          c.checked = cur2.has(i.id);
+          c.addEventListener("change", () => {
+            if (c.checked) cur2.add(i.id);
+            else cur2.delete(i.id);
+          });
+          l.append(c, el("span", "", (i.ms ? "◆ " : "") + i.t), el("small", "", dlabel(i.d0) + (i.ms ? "" : " to " + dlabel(i.d1)) + (i.res.length ? " · " + i.res.join(", ") : "")));
+          list.append(l);
+        });
+        if (!list.children.length) list.append(el("div", "hint", "Nothing matches."));
+      };
+      q.addEventListener("input", draw);
+      draw();
+      const save2 = el("button", "btn primary", "Save");
+      save2.type = "button";
+      const cancel = el("button", "btn", "Cancel");
+      cancel.type = "button";
+      cancel.addEventListener("click", closeDlg);
+      save2.addEventListener("click", () => {
+        closeDlg();
+        const next = [...cur2];
+        if (JSON.stringify(next.sort()) !== JSON.stringify(depsOf(it).slice().sort())) commit(it.id, { dep: next });
+      });
+      const row = el("div", "formrow");
+      row.append(save2, cancel);
+      box2.append(row);
+    });
+  }
+  function toggleMilestone(it) {
+    if (it.ms) commit(it.id, { ms: false });
+    else commit(it.id, { ms: true, d1: it.d0 });
+  }
+  var SVGNS = "http://www.w3.org/2000/svg";
+  function sv(tag, attrs) {
+    const n = document.createElementNS(SVGNS, tag);
+    Object.keys(attrs || {}).forEach((k) => n.setAttribute(k, attrs[k]));
+    return n;
+  }
+  function drawOverlay() {
+    const g = $("grid");
+    if (!g) return;
+    const old = g.querySelector("svg.ovl");
+    if (old) old.remove();
+    const all = items(), issues = depIssues(all);
+    const sum = $("summary");
+    const oldc = sum && sum.querySelector(".depchip");
+    if (oldc) oldc.remove();
+    const bad = issues.filter((x) => x.bad);
+    if (sum && issues.length) {
+      const c = el("button", "depchip" + (bad.length ? " bad" : ""), bad.length ? "⛓ " + bad.length + (bad.length === 1 ? " dependency clash" : " dependency clashes") : "⛓ " + issues.length + (issues.length === 1 ? " dependency, all fine" : " dependencies, all fine"));
+      c.type = "button";
+      c.title = bad.length ? bad.map((x) => '"' + x.to.t + '" starts before "' + x.from.t + '" ends').join("\n") : "Every dependent bar starts after its predecessor ends";
+      c.addEventListener("click", () => {
+        const x = bad[0];
+        if (!x) return;
+        const b = [...g.querySelectorAll(".bar")].find((y) => y.dataset.id === x.to.id);
+        if (b) {
+          b.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
+          b.classList.add("flash");
+          setTimeout(() => b.classList.remove("flash"), 1600);
+        }
+      });
+      sum.append(c);
+    }
+    if (!issues.length) return;
+    const gr = g.getBoundingClientRect(), first = /* @__PURE__ */ new Map();
+    g.querySelectorAll(".bar").forEach((b) => {
+      if (!first.has(b.dataset.id)) first.set(b.dataset.id, b);
+    });
+    const svg = sv("svg", { class: "ovl", width: g.scrollWidth, height: g.scrollHeight, "aria-hidden": "true" });
+    const defs = sv("defs");
+    ["ok", "bad"].forEach((k) => {
+      const m = sv("marker", { id: "ar-" + k, viewBox: "0 0 8 8", refX: "7", refY: "4", markerWidth: "7", markerHeight: "7", orient: "auto" });
+      m.append(sv("path", { d: "M0 0 8 4 0 8z", fill: k === "bad" ? "#c0392b" : "#55608a" }));
+      defs.append(m);
+    });
+    svg.append(defs);
+    issues.forEach((x) => {
+      const a = first.get(x.from.id), b = first.get(x.to.id);
+      if (!a || !b) return;
+      const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+      const x1 = ra.right - gr.left - 1, y1 = ra.top + ra.height / 2 - gr.top, x2 = rb.left - gr.left, y2 = rb.top + rb.height / 2 - gr.top;
+      let d;
+      if (x2 >= x1 + 14) d = "M" + x1 + " " + y1 + " H" + (x1 + 7) + " V" + y2 + " H" + (x2 - 1);
+      else {
+        const my = y2 > y1 ? Math.max(ra.bottom, rb.top) - gr.top + 2 : Math.min(ra.top, rb.bottom) - gr.top - 2;
+        d = "M" + x1 + " " + y1 + " H" + (x1 + 7) + " V" + my + " H" + (x2 - 7) + " V" + y2 + " H" + (x2 - 1);
+      }
+      const tip2 = '"' + x.from.t + '" → "' + x.to.t + '": ' + (x.bad ? x.gap === -1 ? "starts the same day the first ends" : "starts " + (-x.gap - 1) + " day(s) before the first ends" : x.gap === 0 ? "starts the next day, no buffer" : x.gap + " day(s) of buffer");
+      const p = sv("path", { d, fill: "none", stroke: x.bad ? "#c0392b" : "#55608a", "stroke-width": x.bad ? "2" : "1.5", "marker-end": "url(#ar-" + (x.bad ? "bad" : "ok") + ")", class: "dep" + (x.bad ? " bad" : "") });
+      const t = sv("title");
+      t.textContent = tip2;
+      p.append(t);
+      svg.append(p);
+    });
+    g.append(svg);
+  }
+  function afterRender() {
+    try {
+      drawOverlay();
+      decorateLocks();
+    } catch (e) {
+    }
   }
 
   // src/esm/ui/editing.js
@@ -5536,7 +5311,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     if (state.person === "all" && hid.length) people = people.filter((p) => p.its.length || !hid.includes(p.name));
     people.sort(comparePeople);
     let r = r0;
-    const block = (p, title, sub2, color) => {
+    const block = (p, title, sub, color) => {
       const pk = pack(p.its), n = pk.n, pnotes = p.name === "__none" ? { out: [], lanes: 0 } : personNotes(p.name), nh = pnotes.lanes * NOTE_H, minH = 8 + nh + n * H3 + "px";
       const counts = new Array(NDAYS).fill(0);
       p.its.forEach((it) => {
@@ -5550,7 +5325,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       const nm = el("span");
       nm.append(el("i"), document.createTextNode(title));
       c1.append(nm);
-      if (sub2) c1.append(el("small", "", sub2));
+      if (sub) c1.append(el("small", "", sub));
       if (over) {
         const w = el("small", "warnx", "⚠ " + over + (over === 1 ? " day" : " days") + " overlap");
         w.title = "Days where this person has more than one feature at the same time";
@@ -5612,8 +5387,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     };
     people.forEach((p) => {
       const d = dir.get(p.name);
-      const sub2 = d ? d.domain + " · " + [...d.sqs].map((k) => laneOf(k).n).join(", ") : "";
-      block(p, p.name, sub2, LANES[primaryLane(p.name)].c);
+      const sub = d ? d.domain + " · " + [...d.sqs].map((k) => laneOf(k).n).join(", ") : "";
+      block(p, p.name, sub, LANES[primaryLane(p.name)].c);
     });
     const none = map.get("__none");
     if (none && none.its.length && state.person === "all") block(none, "Unassigned", "Features nobody owns yet", "var(--muted)");
@@ -5736,8 +5511,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     return true;
   }
   function saveLanes(patch, sum, msg) {
-    const cur3 = { names: Object.assign({}, squadNames()), colors: Object.assign({}, squadColors()), extra: extraSquads().slice() };
-    saveIdea("squadnames", Object.assign({ cfg: true }, cur3, patch), "resource", sum);
+    const cur2 = { names: Object.assign({}, squadNames()), colors: Object.assign({}, squadColors()), extra: extraSquads().slice() };
+    saveIdea("squadnames", Object.assign({ cfg: true }, cur2, patch), "resource", sum);
     applySquadNames();
     fillPersons();
     render();
@@ -6077,8 +5852,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       sqCard.append(nf);
     }
     root.append(sqCard);
-    const card = el("div", "card");
-    card.append(el("h2", "", "Team (" + people.length + ")"), el("p", "sub", "Squads: a coloured chip with a ✓ means the person works in that squad. Click a chip to add or remove the squad (saved automatically). They decide whose rows show on each squad's roadmap and who is suggested first on the sprint page."));
+    const card2 = el("div", "card");
+    card2.append(el("h2", "", "Team (" + people.length + ")"), el("p", "sub", "Squads: a coloured chip with a ✓ means the person works in that squad. Click a chip to add or remove the squad (saved automatically). They decide whose rows show on each squad's roadmap and who is suggested first on the sprint page."));
     const t = el("table", "tbl"), th = el("thead"), hr = el("tr");
     ["Name", "Domain", "Squads", ""].forEach((x) => {
       const c = el("th", "", x);
@@ -6166,8 +5941,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     t.append(tb);
     const sc = el("div", "tscroll");
     sc.append(t);
-    card.append(sc);
-    root.append(card);
+    card2.append(sc);
+    root.append(card2);
     const hidden = Object.keys(S.extras).filter((i) => S.extras[i] && S.extras[i].hidden);
     if (hidden.length) {
       const hc = el("div", "card");
@@ -6230,130 +6005,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     renderAccess(root);
   }
 
-  // src/esm/features/capacity.js
-  function weekCols() {
-    const cols = [];
-    for (let k = 0; k < NDAYS; k++) {
-      const w = Math.floor((k + STARTDOW) / 7);
-      if (!cols[w]) cols[w] = { ks: [] };
-      cols[w].ks.push(k);
-    }
-    return cols.filter(Boolean);
-  }
-  function leaveDays(name) {
-    const s = /* @__PURE__ */ new Set();
-    vacsOf(name).forEach((v) => {
-      const a = kOfIso(v.a0), b = kOfIso(v.a1 || v.a0);
-      for (let k = Math.max(0, a); k <= Math.min(NDAYS - 1, b); k++) s.add(k);
-    });
-    return s;
-  }
-  function capacityData() {
-    const all = items().filter((i) => !i.ms), cols = weekCols(), dir = directory(), rows2 = [];
-    const names = new Set(dir.keys());
-    all.forEach((i) => i.res.forEach((n) => names.add(n)));
-    [...names].forEach((name) => {
-      const mine = all.filter((i) => i.res.includes(name));
-      if (!mine.length && !vacsOf(name).length) return;
-      const lv = leaveDays(name);
-      const cells = cols.map((c) => {
-        let avail = 0, sched = 0, leave = 0;
-        const its = /* @__PURE__ */ new Set();
-        c.ks.forEach((k) => {
-          if (DAYS[k].we || offAt(k)) return;
-          const bars = mine.filter((i) => k >= i.d0 && k <= i.d1);
-          sched += bars.length;
-          bars.forEach((b) => its.add(b.t));
-          if (lv.has(k)) leave++;
-          else avail++;
-        });
-        const pct2 = avail > 0 ? Math.round(sched / avail * 100) : sched > 0 ? Infinity : null;
-        return { pct: pct2, avail, sched, leave, its: [...its] };
-      });
-      const peak = Math.max.apply(null, cells.map((c) => c.pct === Infinity ? 999 : c.pct || 0));
-      rows2.push({ name, cells, peak, over: cells.filter((c) => c.pct === Infinity || (c.pct || 0) > 100).length });
-    });
-    rows2.sort((a, b) => b.over - a.over || b.peak - a.peak || a.name.localeCompare(b.name));
-    return { cols, rows: rows2 };
-  }
-  function renderCapacity() {
-    const root = $("pg-capacity");
-    root.textContent = "";
-    const d = capacityData();
-    root.append(pageHead("Capacity", "Load per person per week. Each bar counts as one full working day for every day it runs, so two bars at once is 200%. Leave and company days off are taken out of the week. Working days are Sunday to Thursday.", rmPicker(renderCapacity)));
-    const overP = d.rows.filter((r) => r.over).length;
-    const sm = el("div", "summary");
-    const mk = (n, t2) => {
-      const w = el("div");
-      w.append(el("b", "", String(n)), document.createTextNode(" "), el("span", "", t2));
-      sm.append(w);
-    };
-    mk(d.rows.length, "people with work or leave");
-    mk(overP, "over 100% in at least one week");
-    mk(d.rows.filter((r) => r.cells.some((c) => c.pct === Infinity)).length, "with work while on leave");
-    root.append(sm);
-    const card = el("div", "card capcard");
-    if (!d.rows.length) {
-      card.append(el("div", "hint", "Nobody has work in this roadmap yet."));
-      root.append(card);
-      return;
-    }
-    const wrap = el("div", "capwrap");
-    const t = el("table", "captable");
-    t.setAttribute("aria-label", "Weekly load per person");
-    const th = el("thead"), hr = el("tr");
-    hr.append(el("th", "", "Person"));
-    d.cols.forEach((c) => {
-      const h = el("th", "", DAYS[c.ks[0]].d.getUTCDate() + " " + MN[DAYS[c.ks[0]].d.getUTCMonth()]);
-      h.title = "Week of " + dlabel(c.ks[0]);
-      h.scope = "col";
-      hr.append(h);
-    });
-    th.append(hr);
-    t.append(th);
-    const tb = el("tbody");
-    d.rows.forEach((r) => {
-      const tr = el("tr"), n = el("th", "capname", r.name);
-      n.scope = "row";
-      if (r.over) n.append(el("small", "warnx", " ⚠ " + r.over + (r.over === 1 ? " week" : " weeks")));
-      tr.append(n);
-      r.cells.forEach((c) => {
-        const td = el("td", "capcell");
-        let lab, cls;
-        if (c.pct === null) {
-          lab = c.leave ? "Leave" : "–";
-          cls = c.leave ? "lv" : "none";
-        } else if (c.pct === Infinity) {
-          lab = "Leave!";
-          cls = "x3";
-        } else {
-          lab = c.pct + "%";
-          cls = c.pct === 0 ? "none" : c.pct <= 70 ? "lo" : c.pct <= 100 ? "ok" : c.pct <= 150 ? "x2" : "x3";
-        }
-        const part = c.leave > 0 && c.pct !== null && c.pct !== Infinity;
-        td.classList.add(cls);
-        td.textContent = lab + (part ? " ⚑" : "");
-        td.title = r.name + ": " + c.sched + " bar-days on " + c.avail + " available day(s)" + (c.leave ? ", " + c.leave + " on leave" : "") + (c.its.length ? "\n" + c.its.join("\n") : "");
-        td.setAttribute("aria-label", r.name + " " + lab + (part ? ", " + c.leave + " leave day(s)" : "") + (c.its.length ? ", " + c.its.join(", ") : ""));
-        tr.append(td);
-      });
-      tb.append(tr);
-    });
-    t.append(tb);
-    wrap.append(t);
-    card.append(wrap);
-    const lg = el("div", "caplegend");
-    [["lo", "up to 70%"], ["ok", "71–100%"], ["x2", "101–150%"], ["x3", "over 150%"], ["lv", "on leave"]].forEach((x) => {
-      const s = el("span");
-      s.append(el("i", "capcell " + x[0]), document.createTextNode(x[1]));
-      lg.append(s);
-    });
-    card.append(lg);
-    root.append(card);
-  }
-
   // src/esm/features/month-model.js
-  var WEIGHTS = { 1: "Normal", 2: "High", 3: "Critical" };
   var uid = () => "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   var clampPct = (v) => Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
   var pctBand = (v) => {
@@ -6364,13 +6016,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   var addD = (iso4, n) => new Date(Date.parse(iso4 + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
   var isMonth = (m) => /^\d{4}-(0[1-9]|1[0-2])$/.test(m || "");
   var monthId = (m) => "mo" + m.replace("-", "");
-  var monthOf = (weekStart) => addD(weekStart, 3).slice(0, 7);
   var monthLabel = (m) => isMonth(m) ? (/* @__PURE__ */ new Date(m + "-01T00:00:00Z")).toLocaleString("en", { month: "long", year: "numeric", timeZone: "UTC" }) : "";
-  var prevMonth = (m) => {
-    const d = /* @__PURE__ */ new Date(m + "-01T00:00:00Z");
-    d.setUTCMonth(d.getUTCMonth() - 1);
-    return d.toISOString().slice(0, 7);
-  };
   var nextMonth = (m) => {
     const d = /* @__PURE__ */ new Date(m + "-01T00:00:00Z");
     d.setUTCMonth(d.getUTCMonth() + 1);
@@ -6404,16 +6050,43 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     if (passed <= 0) return 0;
     return Math.min(90, Math.round(100 * passed / len / 5) * 5);
   }
-  function mergeRoad(lines, road, pl, m, today) {
-    const r = monthRange(m), out = lines.map((l) => Object.assign({}, l)), bySrc = new Map(out.filter((l) => l.src).map((l) => [l.src, l]));
-    let added = 0, updated = 0, skipped = 0;
-    road.filter((b) => b.a <= r.b && b.b >= r.a).sort((x, y) => x.a < y.a ? -1 : x.a > y.a ? 1 : String(x.t).localeCompare(String(y.t))).forEach((b) => {
+  var norm = (t) => String(t || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  var lineKey = (k, t) => k + "|" + norm(t);
+  function groupRoad(road, pl) {
+    const g = /* @__PURE__ */ new Map();
+    let skipped = 0;
+    road.forEach((b) => {
       const p = pl.find((q) => (q.squads || []).includes(b.sq));
       if (!p) {
         skipped++;
         return;
       }
-      const pct2 = assumePct(b, today), ex = bySrc.get(b.id);
+      const key = lineKey(p.k, b.t), x = g.get(key);
+      if (!x) g.set(key, { ids: [b.id], t: b.t, k: p.k, a: b.a, b: b.b, st: b.st, ms: !!b.ms });
+      else {
+        x.ids.push(b.id);
+        if (b.a < x.a) x.a = b.a;
+        if (b.b > x.b) x.b = b.b;
+        if (b.st !== "done") x.st = b.st;
+        x.ms = x.ms && !!b.ms;
+      }
+    });
+    return { features: [...g.values()], skipped };
+  }
+  function mergeRoad(lines, road, pl, m, today, others2) {
+    const out = lines.map((l) => Object.assign({}, l)), bySrc = /* @__PURE__ */ new Map(), have = /* @__PURE__ */ new Set(), haveSrc = /* @__PURE__ */ new Set();
+    out.forEach((l) => {
+      if (l.src) bySrc.set(l.src, l);
+      have.add(lineKey(l.k, l.t));
+    });
+    (others2 || []).forEach((l) => {
+      have.add(lineKey(l.k, l.t));
+      if (l.src) haveSrc.add(l.src);
+    });
+    const g = groupRoad(road, pl);
+    let added = 0, updated = 0, dup = 0;
+    g.features.sort((x, y) => x.a < y.a ? -1 : x.a > y.a ? 1 : String(x.t).localeCompare(String(y.t))).forEach((f) => {
+      const pct2 = assumePct(f, today), ex = f.ids.map((i) => bySrc.get(i)).find(Boolean);
       if (ex) {
         if (!ex.pe && clampPct(ex.pct) !== pct2) {
           ex.pct = pct2;
@@ -6421,20 +6094,18 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         }
         return;
       }
-      const n = newLine(p.k, b.t, { src: b.id });
+      if (f.b.slice(0, 7) !== m) return;
+      if (have.has(lineKey(f.k, f.t)) || f.ids.some((i) => haveSrc.has(i))) {
+        dup++;
+        return;
+      }
+      const n = newLine(f.k, f.t, { src: f.ids[0] });
       n.pct = pct2;
       out.push(n);
-      bySrc.set(b.id, n);
+      have.add(lineKey(f.k, f.t));
       added++;
     });
-    return { lines: out, added, updated, skipped };
-  }
-  function carryFromLastMonth(doc2, all) {
-    const pm = prevMonth(doc2.mo), prev = all.find((d) => d.mo === pm);
-    if (!prev) return null;
-    const have = new Set(live(doc2.lines).map((l) => l.t.toLowerCase()));
-    const lines = live(prev.lines).filter((l) => clampPct(l.pct) < 100 && !have.has(l.t.toLowerCase())).map((l) => Object.assign({}, l, { id: uid(), at: "" }));
-    return lines.length ? { from: pm, lines } : null;
+    return { lines: out, added, updated, skipped: g.skipped, dup };
   }
   function monthText(doc2, products, fmt) {
     if (!doc2 || !live(doc2.lines).length) return [];
@@ -6489,14 +6160,14 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       else tops.push(s);
     });
     tops.forEach((s) => {
-      const sub2 = kids[s.id] || [], stt = scopeStatus(sub2, s.st), dns = (sub2.length ? sub2 : [s]).map((x) => x.dn || "").sort(), dn = dns[dns.length - 1];
+      const sub = kids[s.id] || [], stt = scopeStatus(sub, s.st), dns = (sub.length ? sub : [s]).map((x) => x.dn || "").sort(), dn = dns[dns.length - 1];
       let m = ST_OF[stt] || ST_OF.planned;
       if (stt === "done" && dn && a && b) {
         if (dn < a) return;
         if (dn > b) m = ST_OF.progress;
       }
-      const t = sub2.length ? s.t + ": " + sub2.map((x) => x.t).join("; ") : s.t;
-      const h = sub2.length ? "<b>" + esc(s.t) + "</b><ul>" + sub2.map((x) => "<li>" + esc(x.t) + "</li>").join("") + "</ul>" : s.h || "";
+      const t = sub.length ? s.t + ": " + sub.map((x) => x.t).join("; ") : s.t;
+      const h = sub.length ? "<b>" + esc(s.t) + "</b><ul>" + sub.map((x) => "<li>" + esc(x.t) + "</li>").join("") + "</ul>" : s.h || "";
       out.push({ src: "si:" + s.id, g: m[0], st: m[1], t, h, jira: s.jira || "", kind: s.kind || "feature", tg: s.tg || [], ord: s.ord || 0 });
     });
     if (Number.isFinite(ka) && Number.isFinite(kb)) {
@@ -6994,144 +6665,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     b.setAttribute("aria-label", label);
     return b;
   };
-  var sub = (prog, ad) => "complete · " + prog.done + " of " + prog.n + " deliverables done" + (ad.n ? " · " + ad.n + " ad hoc request" + (ad.n === 1 ? "" : "s") + " (" + ad.done + " done)" : "");
-  function overallBar(doc2) {
-    const prog = monthProgress(doc2.lines), ad = adhocStats(doc2.lines);
-    if (prog.pct === null) return null;
-    const o = el("div", "rmall");
-    o.append(bar2(prog.pct, true, "Month progress"), el("b", "rmpct pc-" + pctBand(prog.pct), prog.pct + "%"), el("span", "rmsub", sub(prog, ad)));
-    return o;
-  }
-  function lineRow(it, ctx) {
-    const r = el("div", "mrow" + (it.adhoc ? " adhoc" : ""));
-    r.dataset.id = it.id;
-    const pct2 = clampPct(it.pct);
-    const est = it.src && !it.pe ? el("span", "mest", "estimated") : null;
-    if (est) est.title = "Estimated from the roadmap dates. Change the percentage to set your own.";
-    if (ctx.ro) {
-      r.append(el("span", "mt", it.t));
-      if (it.adhoc && (it.by || it.at)) r.append(el("span", "mby", "requested" + (it.by ? " by " + it.by : "") + (it.at ? " on " + fmtIso(it.at) : "")));
-      if (it.w === 3) r.append(el("span", "chip mcrit", "Critical"));
-      r.append(bar2(pct2, false, "Completion of " + it.t), el("b", "mpv pc-" + pctBand(pct2), pct2 + "%"));
-      return r;
-    }
-    const t = el("input", "mt");
-    t.type = "text";
-    t.value = it.t;
-    t.maxLength = 300;
-    t.setAttribute("aria-label", it.adhoc ? "Ad hoc request" : "Deliverable");
-    t.addEventListener("change", () => {
-      const v = t.value.replace(/\s+/g, " ").trim();
-      if (!v) {
-        t.value = it.t;
-        return;
-      }
-      if (v !== it.t) ctx.put(it, { t: v }, "Rename deliverable");
-    });
-    r.append(t);
-    if (it.adhoc) {
-      const by = el("input", "mbyin");
-      by.type = "text";
-      by.value = it.by || "";
-      by.maxLength = 80;
-      by.placeholder = "Requested by";
-      by.setAttribute("aria-label", "Requested by");
-      by.addEventListener("change", () => ctx.put(it, { by: by.value.replace(/\s+/g, " ").trim() }, "Change requester", true));
-      r.append(by);
-    }
-    const pi = el("input", "mpin");
-    pi.type = "number";
-    pi.min = 0;
-    pi.max = 100;
-    pi.step = 5;
-    pi.value = pct2;
-    pi.setAttribute("aria-label", "Percent complete");
-    pi.classList.add("pc-" + pctBand(pct2));
-    pi.addEventListener("change", () => ctx.put(it, { pct: clampPct(pi.value), pe: true }, "Change completion"));
-    const full = el("button", "btn sm", pct2 >= 100 ? "✓ Done" : "100%");
-    full.type = "button";
-    full.title = "Mark as complete";
-    full.disabled = pct2 >= 100;
-    full.addEventListener("click", () => ctx.put(it, { pct: 100, pe: true }, "Mark deliverable complete"));
-    r.append(bar2(pct2, false, "Completion of " + it.t), pi, full);
-    if (est) r.append(est);
-    if (!it.adhoc) {
-      const w = el("select", "spsel");
-      w.setAttribute("aria-label", "Importance");
-      Object.keys(WEIGHTS).forEach((k) => {
-        const o = el("option", "", WEIGHTS[k]);
-        o.value = k;
-        o.selected = Number(k) === (it.w || 1);
-        w.append(o);
-      });
-      w.addEventListener("change", () => ctx.put(it, { w: Number(w.value) }, "Change importance"));
-      r.append(w);
-    }
-    const x = el("button", "btn sm danger", "✕");
-    x.type = "button";
-    x.setAttribute("aria-label", "Remove");
-    x.addEventListener("click", () => ctx.remove(it));
-    r.append(x);
-    return r;
-  }
-  function addForm(p, ctx, adhoc) {
-    const f = el("form", "spadd madd"), ti = el("input"), go = el("button", "btn sm", adhoc ? "Add request" : "Add deliverable");
-    ti.type = "text";
-    ti.maxLength = 300;
-    go.type = "submit";
-    f.append(ti);
-    ti.placeholder = adhoc ? "Add an ad hoc request for " + p.n : "Add a deliverable for " + p.n;
-    ti.setAttribute("aria-label", ti.placeholder);
-    let by = null;
-    if (adhoc) {
-      by = el("input");
-      by.type = "text";
-      by.maxLength = 80;
-      by.placeholder = "Requested by";
-      by.setAttribute("aria-label", "Requested by for the new request");
-      f.append(by);
-    }
-    f.append(go);
-    f.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const v = ti.value.trim();
-      if (!v) {
-        ti.focus();
-        return;
-      }
-      ctx.add(p.k, v, adhoc ? { adhoc: true, by: by.value, at: todayIso() } : {});
-    });
-    return f;
-  }
-  function monthSheet(doc2, pls, ctx) {
-    const body = el("div", "rbody sdoc mbody"), hero = el("div", "rhero mhero");
-    hero.append(el("small", "", "Ynmo · Monthly deliverables"), el("h2", "rtitle", monthLabel(doc2.mo)));
-    body.append(hero);
-    const ov = overallBar(doc2);
-    if (ov) body.append(ov);
-    else if (ctx.ro) body.append(el("p", "empty", "No deliverables were listed for this month."));
-    pls.forEach((p) => {
-      const its = doc2.lines.filter((i) => i.k === p.k), pl = its.filter((i) => !i.adhoc), adh = its.filter((i) => i.adhoc);
-      if (ctx.ro && !its.length) return;
-      const blk = el("section", "rmp");
-      blk.dataset.k = p.k;
-      blk.style.setProperty("--c", ctx.colOf(p));
-      const pp = monthProgress(pl), ph = el("div", "rmph");
-      ph.append(el("h3", "", p.n));
-      if (pp.pct !== null) ph.append(el("span", "rmpp pc-" + pctBand(pp.pct), pp.pct + "%"));
-      blk.append(ph);
-      if (pp.pct !== null) blk.append(bar2(pp.pct, false, p.n + " progress"));
-      pl.forEach((i) => blk.append(lineRow(i, ctx)));
-      if (!ctx.ro) blk.append(addForm(p, ctx, false));
-      if (adh.length || !ctx.ro) {
-        blk.append(el("h4", "rmadh", "Ad hoc requests"));
-        adh.forEach((i) => blk.append(lineRow(i, ctx)));
-        if (!ctx.ro) blk.append(addForm(p, ctx, true));
-      }
-      body.append(blk);
-    });
-    return body;
-  }
   function progressBlock(title, subText, pls, prods, colOf3) {
     const sec = el("section", "rmonth rprog"), hd = el("div", "rmhead");
     hd.append(el("h2", "", title));
@@ -7541,7 +7074,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     }));
     return b;
   }
-  function lineRow2(rep, d, l, ro) {
+  function lineRow(rep, d, l, ro) {
     if (ro) return viewLine(l);
     const r = el("div", "rline ln-" + l.st + (l.hide ? " hid" : "") + (l.fl ? " oos" : ""));
     r.dataset.id = l.id;
@@ -7661,7 +7194,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       hd.append(rm);
     }
     const ls = d.items.filter((l) => !l.hide), gh = el("div", "rgrp");
-    ls.forEach((l) => gh.append(lineRow2(rep, d, l, ro)));
+    ls.forEach((l) => gh.append(lineRow(rep, d, l, ro)));
     if (!ro) {
       const f = el("form", "spadd"), ta = el("textarea"), go = el("button", "btn sm", "Add items");
       go.type = "submit";
@@ -7813,12 +7346,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     }
     const wrap = el("div", "splist");
     l.forEach((r) => {
-      const st = statsOf(r), sub2 = r.status === "submitted", pct2 = st.avg;
-      const card = el("div", "card spcard rpcard"), info = el("div");
+      const st = statsOf(r), sub = r.status === "submitted", pct2 = st.avg;
+      const card2 = el("div", "card spcard rpcard"), info = el("div");
       const a = el("a", "splink");
       a.href = "#/reports/" + r.id;
       a.append(el("h2", "", "Week of " + fmtIso(r.a) + " – " + fmtIso(r.b)));
-      info.append(a, el("div", "meta", "Sprint " + r.n + " · week " + (r.w || 1) + " of 2 · " + (sub2 ? "saved" + (r.subBy ? " by " + r.subBy : "") + (r.subAt ? " on " + fmtIso(r.subAt.slice(0, 10)) : "") : "last edit " + (r.by || "unknown"))));
+      info.append(a, el("div", "meta", "Sprint " + r.n + " · week " + (r.w || 1) + " of 2 · " + (sub ? "saved" + (r.subBy ? " by " + r.subBy : "") + (r.subAt ? " on " + fmtIso(r.subAt.slice(0, 10)) : "") : "last edit " + (r.by || "unknown"))));
       const pr = el("div", "prods");
       (r.pl || []).filter((p) => r.prods && r.prods[p.k]).forEach((p) => {
         const c = el("span", "pchip", p.n);
@@ -7827,7 +7360,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       });
       info.append(pr);
       const prog = el("div", "spprog"), top = el("div", "rpstat");
-      top.append(el("span", "chip rpst " + (sub2 ? "sub" : "draft"), sub2 ? "Saved" : "Not saved yet"));
+      top.append(el("span", "chip rpst " + (sub ? "sub" : "draft"), sub ? "Saved" : "Not saved yet"));
       prog.append(top, el("div", "meta", st.all ? st.all + " item" + (st.all === 1 ? "" : "s") + " · " + st.done + " done · " + st.avg + "% on average" : "No items yet"));
       const b0 = el("div", "bar0"), i0 = el("i");
       i0.style.width = pct2 + "%";
@@ -7847,20 +7380,20 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         },
         onClose: () => more.focus()
       }));
-      card.append(info, prog, more);
-      wrap.append(card);
+      card2.append(info, prog, more);
+      wrap.append(card2);
     });
     pg.append(wrap);
   }
   function detailView(pg, viewer, rep) {
     if (S.reports[rep.id]) baseline[rep.id] = JSON.stringify(S.reports[rep.id]);
-    const sub2 = rep.status === "submitted", ro = viewer || !canBuild();
+    const sub = rep.status === "submitted", ro = viewer || !canBuild();
     pg.append(crumbs([{ label: "Reports", href: "#/reports" }, { label: "Week of " + fmtIso(rep.a) }]));
     pg.append(pageHead("Weekly report", "Sprint " + rep.n + " · week " + (rep.w || 1) + " of 2" + (viewer ? "" : ro ? ". You can read this report." : ". Edit anything, then press Save to show it to the executives.")));
     const sb0 = viewer ? null : setupBanner();
     if (sb0) pg.append(sb0);
     const srcTxt = rep.srcN ? " · built from " + rep.srcN.si + " sprint items + " + rep.srcN.rf + " roadmap bars" : "";
-    const meta = el("p", "sub rmeta", (sub2 ? "Saved" + (rep.subBy ? " by " + rep.subBy : "") + (rep.subAt ? " on " + fmtIso(rep.subAt.slice(0, 10)) : "") + " · visible to the executives" : "Not saved yet · the executives cannot see it") + (viewer ? "" : " · last edit " + (rep.by || "") + srcTxt));
+    const meta = el("p", "sub rmeta", (sub ? "Saved" + (rep.subBy ? " by " + rep.subBy : "") + (rep.subAt ? " on " + fmtIso(rep.subAt.slice(0, 10)) : "") + " · visible to the executives" : "Not saved yet · the executives cannot see it") + (viewer ? "" : " · last edit " + (rep.by || "") + srcTxt));
     const tools = el("div", "row spbar rtools");
     const btn = (t, cls, fn, dis) => {
       const b = el("button", "btn " + (cls || ""), t);
@@ -7953,7 +7486,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     body.append(progressBlock("Overall progress", fmtIso(rep.a) + " – " + fmtIso(rep.b), pls, rep.prods || {}, colOf));
     pls.forEach((p) => body.append(prodBlock(rep, p, ro)));
     pg.append(meta, tools);
-    if (rUI.note && rUI.noteFor === rep.id && !viewer && !sub2) {
+    if (rUI.note && rUI.noteFor === rep.id && !viewer && !sub) {
       const nt = el("p", "rnote" + (rUI.err ? " bad" : ""), rUI.note);
       nt.setAttribute("role", "status");
       pg.append(nt);
@@ -8503,7 +8036,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     l.forEach((sp) => {
       const t = tree(sp.id), leaf = t.all.filter((i) => !t.kids[i.id]), done2 = leaf.filter((i) => i.st === "done").length, pct2 = leaf.length ? Math.round(100 * done2 / leaf.length) : 0;
       const secs = Object.keys(sp.secs || {}).concat(rows(sp.id).filter((i) => i.k === "h").map((i) => i.sq), t.tops.map((i) => i.squad)).filter((k, i, a2) => k && a2.indexOf(k) === i);
-      const card = el("div", "card spcard"), info = el("div");
+      const card2 = el("div", "card spcard"), info = el("div");
       const a = el("a", "splink");
       a.href = "#/sprints/" + sp.id;
       a.append(el("h2", "", "Sprint " + sp.n));
@@ -8535,8 +8068,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         },
         onClose: () => more.focus()
       }));
-      card.append(info, prog, more);
-      wrap.append(card);
+      card2.append(info, prog, more);
+      wrap.append(card2);
     });
     pg.append(wrap);
   }
@@ -8590,9 +8123,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     saveSprint(sp.id, d);
   }
   function ensureTag(spId, name, color) {
-    const cur3 = tagMap(spId);
-    if (cur3[name] && !color) return cur3[name];
-    const c = color || TAG_COLORS[Object.keys(cur3).length % TAG_COLORS.length], d = base2({ id: spId });
+    const cur2 = tagMap(spId);
+    if (cur2[name] && !color) return cur2[name];
+    const c = color || TAG_COLORS[Object.keys(cur2).length % TAG_COLORS.length], d = base2({ id: spId });
     d.tags = Object.assign({}, d.tags || {}, { [name]: c });
     saveSprint(spId, d);
     return c;
@@ -8778,8 +8311,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       }
     });
     const tagMenu = (b, at) => {
-      const cur3 = tagMap(spId), have = new Set(b.tags || []), used = new Set(list().flatMap((x) => x.tags || []));
-      const items2 = Object.keys(cur3).concat([...used].filter((n) => !cur3[n])).filter((n, i, a) => a.indexOf(n) === i && !have.has(n)).map((n) => ({ label: "#" + n, dot: "var(--tg-" + (cur3[n] || "gray") + ")", value: n }));
+      const cur2 = tagMap(spId), have = new Set(b.tags || []), used = new Set(list().flatMap((x) => x.tags || []));
+      const items2 = Object.keys(cur2).concat([...used].filter((n) => !cur2[n])).filter((n, i, a) => a.indexOf(n) === i && !have.has(n)).map((n) => ({ label: "#" + n, dot: "var(--tg-" + (cur2[n] || "gray") + ")", value: n }));
       openMenu(at, items2, {
         label: "Add a tag",
         placeholder: "Find or create a tag",
@@ -8944,15 +8477,15 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       redraw();
     };
     const handleMenu = (b, x) => {
-      const cur3 = S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, into = b.k === "h" ? [] : ["s", "u", "n"].filter((k) => k !== b.k).map((k) => ({ label: "Turn into " + KIND_NAME[k].toLowerCase(), value: "k:" + k }));
+      const cur2 = S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, into = b.k === "h" ? [] : ["s", "u", "n"].filter((k) => k !== b.k).map((k) => ({ label: "Turn into " + KIND_NAME[k].toLowerCase(), value: "k:" + k }));
       const all = list(), g = groupOf(all, all.findIndex((z) => z.id === b.id));
       setPicked(g.map((z) => z.id));
       openMenu(x, [{ label: "Move up", value: "up" }, { label: "Move down", value: "down" }].concat(into, [{ label: "Delete", value: "del" }]), {
         label: "Line options",
         onPick: (it) => {
-          if (it.value === "up") move(cur3, -1);
-          else if (it.value === "down") move(cur3, 1);
-          else if (it.value === "del") removeGroup(cur3);
+          if (it.value === "up") move(cur2, -1);
+          else if (it.value === "down") move(cur2, 1);
+          else if (it.value === "del") removeGroup(cur2);
           else {
             saveItem(b.id, { k: it.value.slice(2) });
             redraw(b.id);
@@ -9327,7 +8860,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     cp.title = "Copies the plan as formatted text and opens the doc. Press Ctrl/Cmd+V there. Needs no Google sign-in.";
     const plan = () => sprintDoc({ n: sp.n, a: sp.a, b: sp.b }, blocksOf(sp.id), { laneName: (k) => lane(k).n, jiraUrl: (k) => jiraUrl((S.ideas.reportcfg || {}).jira, k), fmt: fmtIso });
     const setLink = (u, id) => {
-      const cur3 = Object.assign({ id: sp.id }, S.sprints[sp.id]), d = Object.assign(base2(cur3), u ? { gdoc: u } : {});
+      const cur2 = Object.assign({ id: sp.id }, S.sprints[sp.id]), d = Object.assign(base2(cur2), u ? { gdoc: u } : {});
       if (id) d.gdocId = id;
       if (!u) {
         delete d.gdoc;
@@ -9409,80 +8942,51 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   });
 
   // src/esm/pages/monthly.js
-  var rUI2 = { last: "" };
-  var routeMo = () => {
-    const m = /^#\/monthly\/(\d{4}-\d{2})/.exec(location.hash);
-    return m ? m[1] : null;
-  };
+  var ui = { q: "", pr: "all", past: false, prod: "" };
   var cfg2 = () => S.ideas.reportcfg || {};
+  var canBuild2 = () => !isViewer() && canWrite();
+  var curMonth = () => todayIso().slice(0, 7);
   var colOf2 = (p) => {
     const l = LANES.concat(EXTRA_SECTIONS).find((x) => (p.squads || []).includes(x.k));
-    return l ? l.c : "var(--brand)";
+    return l ? l.c : "#55608a";
   };
-  var canBuild2 = () => !isViewer() && canWrite();
-  var monthList = () => Object.keys(S.reports).filter((id) => S.reports[id] && S.reports[id].mo).map((id) => Object.assign({ id, lines: [] }, S.reports[id])).filter((d) => !isViewer() || d.status === "submitted").sort((x, y) => x.mo < y.mo ? 1 : -1);
-  var cur2 = () => {
-    const m = routeMo();
-    return m ? monthList().find((d) => d.mo === m) || null : null;
-  };
-  var undoers3 = {};
-  var baseline2 = {};
-  var undoM = (id) => {
-    const k = (S.me && S.me.id || "me") + ":" + id;
-    return undoers3[k] || (undoers3[k] = createUndo(60));
-  };
-  var noStamp2 = (d) => {
-    const c = JSON.parse(JSON.stringify(d));
-    delete c.by;
-    delete c.ts;
-    return JSON.stringify(c);
-  };
-  function save2(doc2, log, label) {
-    const id = doc2.id, d = Object.assign({}, doc2);
-    delete d.id;
+  var docs = () => Object.keys(S.reports).filter((id) => S.reports[id] && S.reports[id].mo).map((id) => Object.assign({ id }, S.reports[id], { lines: S.reports[id].lines || [] }));
+  var docOf = (m) => docs().find((d) => d.mo === m) || { id: monthId(m), mo: m, lines: [] };
+  function boardProducts() {
+    const pl = productsOf(cfg2()).slice();
+    EXTRA_SECTIONS.forEach((x) => {
+      if (!pl.some((q) => q.k === x.k)) pl.push({ k: x.k, n: x.n, squads: [x.k] });
+    });
+    docs().forEach((d) => d.lines.forEach((l) => {
+      if (l.k && !pl.some((q) => q.k === l.k)) pl.push({ k: l.k, n: l.k, squads: [] });
+    }));
+    return pl;
+  }
+  function visibleMonths() {
+    const all = docs().map((d) => d.mo), c = curMonth();
+    let last = nextMonth(c);
+    all.forEach((m) => {
+      if (m > last) last = m;
+    });
+    const first = ui.past ? all.concat([c]).sort()[0] : c, out = [];
+    for (let m = first; m <= last; m = nextMonth(m)) out.push(m);
+    return out;
+  }
+  var pastCount = () => docs().filter((d) => d.mo < curMonth() && d.lines.some((l) => String(l.t || "").trim())).length;
+  function saveMonth(m, mutate, log) {
+    const id = monthId(m), old = S.reports[id], d = old ? JSON.parse(JSON.stringify(old)) : { mo: m, lines: [] };
+    d.lines = d.lines || [];
+    d.pl = d.pl && d.pl.length ? d.pl : productsOf(cfg2());
+    mutate(d);
+    d.status = "submitted";
+    d.subAt = d.subAt || (/* @__PURE__ */ new Date()).toISOString();
+    d.subBy = d.subBy || S.me && (S.me.name || S.me.email) || "";
     d.by = S.me && (S.me.name || S.me.email) || "";
     d.ts = Date.now();
     S.reports[id] = d;
     write("reports/" + id, d);
-    const before = baseline2[id] ? JSON.parse(baseline2[id]) : null, after = JSON.parse(JSON.stringify(d));
-    if (before && before.status !== after.status) undoM(id).clear();
-    else if (before && noStamp2(before) !== noStamp2(after)) {
-      const U = undoM(id);
-      U.mark(label || "Edit");
-      U.rec(id, before, after);
-    }
-    baseline2[id] = JSON.stringify(after);
     if (log) logAct("report", log);
   }
-  var unsubM = null;
-  function monthUndo(dir) {
-    const doc2 = cur2();
-    if (!doc2 || doc2.status === "submitted" || !canBuild2()) return;
-    const r = undoM(doc2.id).step(dir, (id) => S.reports[id], (id, d) => {
-      if (!d) return;
-      S.reports[id] = d;
-      write("reports/" + id, d);
-      baseline2[id] = JSON.stringify(d);
-    }), word = dir === "undo" ? "Undo" : "Redo";
-    if (!r) {
-      notify("Nothing to " + word.toLowerCase(), "info");
-      return;
-    }
-    notify(r.done ? word + ": " + r.label : "Someone else changed this month after you, so nothing was " + (dir === "undo" ? "undone" : "redone"), r.done ? "ok" : "info");
-    renderMonthly();
-  }
-  registerUndo("monthly", { ready: () => {
-    const d = cur2();
-    return !!d && d.status !== "submitted" && canBuild2();
-  }, undo: () => monthUndo("undo"), redo: () => monthUndo("redo") });
-  var productsFor = (doc2) => {
-    const pl = doc2.pl && doc2.pl.length ? doc2.pl.slice() : productsOf(cfg2());
-    EXTRA_SECTIONS.forEach((x) => {
-      if (doc2.lines.some((l) => l.k === x.k) && !pl.some((q) => q.k === x.k)) pl.push({ k: x.k, n: x.n, squads: [x.k] });
-    });
-    return pl;
-  };
-  var allMonthDocs = () => Object.keys(S.reports).filter((id) => S.reports[id] && S.reports[id].mo).map((id) => Object.assign({ id }, S.reports[id]));
   function roadFeatures(m) {
     const r = monthRange(m), out = [];
     allRoadmaps().filter((x) => x.a <= r.b && x.b >= r.a).forEach((rm) => withRm(rm.id, () => items().forEach((i) => {
@@ -9491,209 +8995,336 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     })));
     return out;
   }
-  function newMonth(m) {
-    const id = monthId(m);
-    if (S.reports[id]) {
-      location.hash = "#/monthly/" + m;
-      return;
-    }
-    const doc2 = { id, mo: m, status: "draft", pl: productsOf(cfg2()), lines: [] };
-    location.hash = "#/monthly/" + m;
-    save2(doc2, "created the monthly deliverables for " + monthLabel(m));
-    notify(monthLabel(m) + ` created. Use "Sync from Roadmap" to bring this month's features.`);
+  function syncMonth(m) {
+    const others2 = [];
+    docs().forEach((d) => {
+      if (d.mo !== m) d.lines.forEach((l) => others2.push(l));
+    });
+    let res = null;
+    saveMonth(m, (d) => {
+      res = mergeRoad(d.lines, roadFeatures(m), boardProducts(), m, todayIso(), others2);
+      d.lines = res.lines;
+      d.syncAt = (/* @__PURE__ */ new Date()).toISOString();
+    }, "synced the monthly deliverables for " + monthLabel(m) + " from the roadmap");
+    const parts = [res.added + " added", res.updated + " estimates refreshed"];
+    if (res.dup) parts.push(res.dup + " already on the board");
+    if (res.skipped) parts.push(res.skipped + " not in any product");
+    notify(res.added || res.updated ? "Roadmap sync for " + monthLabel(m) + ": " + parts.join(", ") : res.dup || res.skipped ? "Nothing new for " + monthLabel(m) + ": " + parts.slice(2).join(", ") : "No roadmap feature ends in " + monthLabel(m), res.added || res.updated ? "ok" : "info");
     renderMonthly();
   }
-  function syncRoad(doc2) {
-    doc2.pl = productsFor(doc2);
-    const r = mergeRoad(doc2.lines, roadFeatures(doc2.mo), doc2.pl, doc2.mo, todayIso());
-    doc2.lines = r.lines;
-    doc2.syncAt = (/* @__PURE__ */ new Date()).toISOString();
-    save2(doc2, "synced the monthly deliverables for " + monthLabel(doc2.mo) + " from the roadmap", "Sync from Roadmap");
-    notify(r.added || r.updated ? "Roadmap sync: " + r.added + " added, " + r.updated + " estimates refreshed" + (r.skipped ? ", " + r.skipped + " not in any product" : "") : r.skipped ? r.skipped + " roadmap feature" + (r.skipped === 1 ? "" : "s") + " not in any product (see Report settings)" : "No roadmap feature falls in " + monthLabel(doc2.mo), r.added || r.updated ? "ok" : "info");
-    renderMonthly();
-  }
-  var canDelete2 = (d) => canBuild2() && (d.status !== "submitted" || isAdmin());
-  function deleteMonth(doc2) {
-    confirmDlg("Delete " + monthLabel(doc2.mo) + "?", "The monthly deliverables of " + monthLabel(doc2.mo) + " are deleted for everyone" + (doc2.status === "submitted" ? ", including the executives who can see them" : "") + ".", "Delete month", () => {
-      delete S.reports[doc2.id];
-      delete baseline2[doc2.id];
-      undoM(doc2.id).clear();
-      write("reports/" + doc2.id, null);
-      logAct("report", "deleted the monthly deliverables for " + monthLabel(doc2.mo));
+  function deleteMonth(m) {
+    confirmDlg("Delete " + monthLabel(m) + "?", "Every card of " + monthLabel(m) + " is deleted for everyone, including the executives who can see them.", "Delete month", () => {
+      delete S.reports[monthId(m)];
+      write("reports/" + monthId(m), null);
+      logAct("report", "deleted the monthly deliverables for " + monthLabel(m));
       notify("Month deleted");
-      location.hash = "#/monthly";
       renderMonthly();
     });
   }
-  var copyMonth = (doc2) => {
-    const txt = monthText(doc2, productsFor(doc2), fmtIso).join("\n");
+  var copyMonth = (m) => {
+    const txt = monthText(docOf(m), boardProducts(), fmtIso).join("\n") || monthLabel(m) + "\nNo deliverables yet.";
     (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify("Month text copied to the clipboard"), () => notify("Could not copy. Select the text and copy it manually.", "err"));
   };
-  function listView3(pg, viewer, l) {
-    const acts = el("div", "acts");
-    if (!viewer) {
-      const have = new Set(l.map((d) => d.mo));
-      let m = monthOf(todayIso());
-      if (have.has(m)) m = nextMonth(m);
-      const nb = el("button", "btn primary", "+ New month (" + monthLabel(m) + ")");
-      nb.type = "button";
-      nb.disabled = !canBuild2();
-      nb.addEventListener("click", () => newMonth(m));
-      acts.append(nb);
+  var moveCard = (from, id, to) => {
+    if (from === to) return;
+    let line = null;
+    saveMonth(from, (d) => {
+      line = d.lines.find((l) => l.id === id);
+      d.lines = d.lines.filter((l) => l.id !== id);
+    }, null);
+    if (!line) return;
+    saveMonth(to, (d) => {
+      d.lines.push(line);
+    }, 'moved "' + line.t + '" to the ' + monthLabel(to) + " deliverables");
+    renderMonthly();
+  };
+  var pctSelect = (v, label, onChange) => {
+    const st = el("select", "spsel mpct pc-" + pctBand(v));
+    st.setAttribute("aria-label", label);
+    const steps = [];
+    for (let x = 0; x <= 100; x += 10) steps.push(x);
+    if (!steps.includes(v)) {
+      steps.push(v);
+      steps.sort((a, b) => a - b);
     }
-    pg.append(pageHead("Monthly deliverables", viewer ? "What each product committed to this month and how far it is. Open one to read it." : "What the business expects each month, per product, with the percentage complete. Bring the features from the Roadmap, adjust the percentages, then submit it to the executives.", acts.children.length ? acts : null));
-    const sb0 = viewer ? null : setupBanner();
-    if (sb0) pg.append(sb0);
-    if (!l.length) {
-      pg.append(el("p", "empty", viewer ? "No month has been submitted yet." : 'No month yet. Click "+ New month", then "Sync from Roadmap".'));
-      return;
-    }
-    const wrap = el("div", "splist");
-    l.forEach((d) => {
-      const prog = monthProgress(d.lines), sub2 = d.status === "submitted", card = el("div", "card spcard rpcard"), info = el("div");
-      const a = el("a", "splink");
-      a.href = "#/monthly/" + d.mo;
-      a.append(el("h2", "", monthLabel(d.mo)));
-      info.append(a, el("div", "meta", sub2 ? "submitted" + (d.subBy ? " by " + d.subBy : "") + (d.subAt ? " on " + fmtIso(d.subAt.slice(0, 10)) : "") : "last edit " + (d.by || "unknown")));
-      const pr = el("div", "prods");
-      (d.pl || []).filter((p) => d.lines.some((x) => x.k === p.k)).forEach((p) => {
-        const c = el("span", "pchip", p.n);
-        c.style.setProperty("--c", colOf2(p));
-        pr.append(c);
+    steps.forEach((x) => {
+      const o = el("option", "", x + "%");
+      o.value = String(x);
+      o.selected = x === v;
+      st.append(o);
+    });
+    st.addEventListener("change", () => onChange(Number(st.value)));
+    return st;
+  };
+  function card(m, l, prods, ed) {
+    const p = prods.find((x) => x.k === l.k) || { k: l.k, n: l.k, squads: [] }, c = colOf2(p), pct2 = clampPct(l.pct);
+    const r = el("div", "icard mdcard" + (l.adhoc ? " adhoc" : "") + (pct2 >= 100 ? " fin" : ""));
+    r.style.setProperty("--c", c);
+    r.dataset.id = l.id;
+    const put = (patch, label) => {
+      saveMonth(m, (d) => {
+        const x = d.lines.find((z) => z.id === l.id);
+        if (x) Object.assign(x, patch);
+      }, label);
+      renderMonthly();
+    };
+    const head = el("div", "mdhead");
+    if (ed) {
+      const ps = el("select", "mdprod");
+      ps.setAttribute("aria-label", "Product");
+      prods.forEach((q) => {
+        const o = el("option", "", q.n);
+        o.value = q.k;
+        o.selected = q.k === l.k;
+        ps.append(o);
       });
-      info.append(pr);
-      const pg2 = el("div", "spprog"), top = el("div", "rpstat");
-      top.append(el("span", "chip rpst " + (sub2 ? "sub" : "draft"), sub2 ? "Submitted" : "Draft"));
-      pg2.append(top, el("div", "meta", prog.pct === null ? "No deliverables yet" : prog.pct + "% complete · " + prog.done + " of " + prog.n + " done"));
-      const b0 = el("div", "bar0"), i0 = el("i");
-      i0.style.width = (prog.pct || 0) + "%";
-      b0.append(i0);
-      pg2.append(b0);
-      const more = el("button", "btn sm spmore", "⋯");
+      ps.addEventListener("change", () => put({ k: ps.value }, 'moved "' + l.t + '" to ' + (prods.find((q) => q.k === ps.value) || {}).n));
+      head.append(ps);
+    } else head.append(el("span", "mdprod ro", p.n));
+    const t = ed ? plainBox("mdtext", l.t, "Deliverable", (v) => {
+      if (!v) {
+        t.textContent = l.t;
+        return;
+      }
+      put({ t: v.slice(0, 300) });
+    }) : el("div", "mdtext", l.t);
+    const foot = el("div", "mdfoot");
+    if (ed) {
+      const more = el("button", "kebab", "⋯");
       more.type = "button";
-      more.setAttribute("aria-label", "More actions for " + monthLabel(d.mo));
+      more.setAttribute("aria-label", "More actions for " + l.t);
       more.setAttribute("aria-haspopup", "menu");
-      more.addEventListener("click", () => openMenu(more, [{ label: "Open in new tab", value: "tab" }, { label: "Copy text", value: "copy" }].concat(canDelete2(d) ? [{ label: "Delete month", value: "del" }] : []), {
-        search: false,
-        label: "Month actions",
-        onPick: (it) => {
-          if (it.value === "tab") window.open(location.pathname + location.search + "#/monthly/" + d.mo, "_blank", "noopener");
-          else if (it.value === "del") deleteMonth(d);
-          else copyMonth(d);
-        },
-        onClose: () => more.focus()
-      }));
-      card.append(info, pg2, more);
-      wrap.append(card);
-    });
-    pg.append(wrap);
-  }
-  function detailView3(pg, viewer, doc2) {
-    if (S.reports[doc2.id]) baseline2[doc2.id] = JSON.stringify(S.reports[doc2.id]);
-    const sub2 = doc2.status === "submitted", ro = viewer || sub2 || !canBuild2();
-    pg.append(crumbs([{ label: "Monthly", href: "#/monthly" }, { label: monthLabel(doc2.mo) }]));
-    pg.append(pageHead("Monthly deliverables", monthLabel(doc2.mo) + (viewer ? "" : ro ? ". Submitted months are read-only." : ". Edit anything, then submit it to the executives.")));
-    const sb0 = viewer ? null : setupBanner();
-    if (sb0) pg.append(sb0);
-    pg.append(el("p", "sub rmeta", sub2 ? "Submitted" + (doc2.subBy ? " by " + doc2.subBy : "") + (doc2.subAt ? " on " + fmtIso(doc2.subAt.slice(0, 10)) : "") : "Draft · last edit " + (doc2.by || "") + (doc2.syncAt ? " · roadmap synced " + fmtIso(doc2.syncAt.slice(0, 10)) : "")));
-    const tools = el("div", "row spbar rtools");
-    const btn = (t, cls, fn, dis) => {
-      const b = el("button", "btn " + (cls || ""), t);
-      b.type = "button";
-      b.disabled = !!dis;
-      b.addEventListener("click", fn);
-      tools.append(b);
-      return b;
-    };
-    if (!ro) {
-      btn("Sync from Roadmap", "primary", () => syncRoad(doc2), !canBuild2()).title = "Brings this month's roadmap features into their product with an estimated percentage. Percentages you set are never overwritten.";
-      const U = undoM(doc2.id), ub = btn("↶ Undo", "", () => monthUndo("undo"), true), rb = btn("↷ Redo", "", () => monthUndo("redo"), true);
-      const upd = () => {
-        ub.disabled = !U.canUndo();
-        rb.disabled = !U.canRedo();
-        ub.title = ub.ariaLabel = U.canUndo() ? "Undo: " + U.nextUndo() + " (Ctrl/Cmd+Z)" : "Nothing to undo";
-        rb.title = rb.ariaLabel = U.canRedo() ? "Redo: " + U.nextRedo() + " (Ctrl/Cmd+Shift+Z)" : "Nothing to redo";
-      };
-      if (unsubM) unsubM();
-      unsubM = U.subscribe(upd);
-      upd();
-      if (!doc2.lines.length) {
-        const cf = carryFromLastMonth(doc2, allMonthDocs());
-        if (cf) btn("Copy " + cf.lines.length + " unfinished from " + monthLabel(cf.from), "", () => {
-          doc2.lines = doc2.lines.concat(cf.lines);
-          save2(doc2, "copied " + cf.lines.length + " unfinished deliverables from " + monthLabel(cf.from), "Copy from last month");
-          renderMonthly();
+      head.append(more);
+      more.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const b = more.getBoundingClientRect();
+        openCtx(b.right - 200, b.bottom + 4, (mm) => {
+          mi(mm, l.adhoc ? "Mark as planned" : "Mark as ad hoc request", () => put({ adhoc: !l.adhoc }, l.adhoc ? "marked as planned" : "marked as an ad hoc request"));
+          const others2 = visibleMonths().filter((x) => x !== m);
+          if (others2.length) mm.append(el("div", "mlab", "Move to month"));
+          others2.forEach((x) => mi(mm, monthLabel(x), () => moveCard(m, l.id, x)));
+          mm.append(el("div", "msep"));
+          mi(mm, "Delete card", () => confirmDlg("Delete this card?", '"' + l.t + '" is deleted from ' + monthLabel(m) + ".", "Delete card", () => {
+            saveMonth(m, (d) => {
+              d.lines = d.lines.filter((z) => z.id !== l.id);
+            }, 'removed "' + l.t + '" from the ' + monthLabel(m) + " deliverables");
+            renderMonthly();
+          }), "danger");
         });
-      }
+      });
+      foot.append(pctSelect(pct2, "Percent complete", (v) => put({ pct: v, pe: true }, 'changed "' + l.t + '" to ' + v + "%")));
+    } else foot.append(el("span", "rvp pc-" + pctBand(pct2), pct2 + "%"));
+    if (l.adhoc) foot.append(el("span", "chip mdadhoc", "Ad hoc"));
+    if (l.src) {
+      const b = el("span", "chip mdroad", l.pe ? "Roadmap" : "Roadmap · estimated");
+      b.title = l.pe ? "Came from the roadmap; the percentage was set by a person." : "Came from the roadmap; the percentage is estimated from its dates. Change it to set your own.";
+      foot.append(b);
     }
-    btn("Copy text", "", () => copyMonth(doc2));
-    btn("Print / PDF", "", () => {
-      document.body.classList.add("print-report");
-      const off = () => {
-        document.body.classList.remove("print-report");
-        window.removeEventListener("afterprint", off);
+    r.append(head, t, foot);
+    if (ed) {
+      const g = el("div", "grip", "⋮⋮");
+      g.title = "Drag to another month";
+      g.setAttribute("aria-hidden", "true");
+      r.prepend(g);
+      const on = () => {
+        r.draggable = true;
+      }, off = () => {
+        r.draggable = false;
       };
-      window.addEventListener("afterprint", off);
-      window.print();
-    });
-    if (!viewer && !sub2) btn("Submit to executives", "primary", () => {
-      doc2.status = "submitted";
-      doc2.subAt = (/* @__PURE__ */ new Date()).toISOString();
-      doc2.subBy = S.me.name || S.me.email;
-      save2(doc2, "submitted the monthly deliverables for " + monthLabel(doc2.mo));
-      notify("Month submitted. Executives can now see it.");
-      renderMonthly();
-    }, !canBuild2());
-    if (!viewer && sub2) btn("Reopen as draft", "", () => {
-      doc2.status = "draft";
-      delete doc2.subAt;
-      delete doc2.subBy;
-      save2(doc2, "reopened the monthly deliverables for " + monthLabel(doc2.mo));
-      notify("Month reopened as a draft. Executives no longer see it.", "info");
-      renderMonthly();
-    }, !canBuild2());
-    if (canDelete2(doc2)) btn("Delete month", "danger rdel", () => deleteMonth(doc2));
-    const ctx = {
-      ro,
-      colOf: colOf2,
-      put: (l, patch, label) => {
-        Object.assign(l, patch);
-        save2(doc2, "", label);
-        renderMonthly();
-      },
-      remove: (l) => {
-        doc2.lines = doc2.lines.filter((z) => z.id !== l.id);
-        save2(doc2, 'removed "' + l.t + '" from the monthly deliverables', "Remove deliverable");
-        renderMonthly();
-      },
-      add: (k, t, o) => {
-        doc2.lines.push(newLine(k, t, o));
-        save2(doc2, "added " + (o.adhoc ? "an ad hoc request" : "a deliverable") + " to the monthly deliverables", o.adhoc ? "Add ad hoc request" : "Add deliverable");
-        renderMonthly();
-      }
-    };
-    pg.append(tools, monthSheet(doc2, productsFor(doc2), ctx));
+      g.addEventListener("pointerdown", on);
+      document.addEventListener("pointerup", off, true);
+      r.addEventListener("dragstart", (e) => {
+        if (!r.draggable) return;
+        e.dataTransfer.setData("text/mdcard", m + "|" + l.id);
+        e.dataTransfer.effectAllowed = "move";
+        r.classList.add("dragging");
+      });
+      r.addEventListener("dragend", () => {
+        off();
+        r.classList.remove("dragging");
+        document.querySelectorAll(".dropcol").forEach((x) => x.classList.remove("dropcol"));
+      });
+    }
+    return r;
   }
+  function column(m, prods, ed) {
+    const d = docOf(m), now = m === curMonth(), col = el("div", "col mdcol" + (now ? " now" : ""));
+    col.dataset.mo = m;
+    col.style.setProperty("--c", now ? "var(--brand)" : "#55608a");
+    const fq = ui.q.trim().toLowerCase();
+    const lines = d.lines.filter((l) => String(l.t || "").trim()), shown = lines.filter((l) => (ui.pr === "all" || l.k === ui.pr) && (!fq || String(l.t).toLowerCase().includes(fq)));
+    const h = el("h2");
+    h.append(document.createTextNode(monthLabel(m)), el("span", "badge", String(lines.length)));
+    if (now) h.append(el("span", "chip mdnow", "This month"));
+    if (ed) {
+      const more = el("button", "btn sm colmore", "⋯");
+      more.type = "button";
+      more.setAttribute("aria-label", "Month options for " + monthLabel(m));
+      more.title = "Month options";
+      more.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const b = more.getBoundingClientRect();
+        openCtx(b.right - 190, b.bottom + 4, (mm) => {
+          mi(mm, "Sync from Roadmap", () => syncMonth(m));
+          mi(mm, "Copy text", () => copyMonth(m));
+          if (S.reports[monthId(m)]) {
+            mm.append(el("div", "msep"));
+            mi(mm, "Delete month", () => deleteMonth(m), "danger");
+          }
+        });
+      });
+      h.append(more);
+      h.style.cssText = "display:flex;align-items:center;gap:8px";
+      more.style.marginInlineStart = "auto";
+    }
+    col.append(h);
+    const prog = monthProgress(lines), ad = adhocStats(lines), pv = prog.pct === null ? 0 : prog.pct, pr = el("div", "mdprog pc-" + pctBand(pv));
+    const b0 = el("div", "mbar pc-" + pctBand(pv)), i0 = el("i");
+    i0.style.width = pv + "%";
+    b0.append(i0);
+    b0.setAttribute("aria-label", "Progress of " + monthLabel(m));
+    pr.append(b0, el("b", "mdpct", pv + "%"), el("small", "", prog.pct === null ? "No planned deliverables yet" : prog.done + " of " + prog.n + " done" + (ad.n ? " · " + ad.n + " ad hoc" : "")));
+    col.append(pr);
+    if (ed) {
+      const sy = el("button", "btn sm mdsync", "↻ Sync from Roadmap");
+      sy.type = "button";
+      sy.title = "Brings in the roadmap features that end in " + monthLabel(m) + ", each once. Percentages you set are never overwritten.";
+      sy.addEventListener("click", () => syncMonth(m));
+      col.append(sy);
+      const f = el("form", "mdadd"), ps = el("select", "mdpsel"), ti = el("input");
+      ps.setAttribute("aria-label", "Product for the new card");
+      prods.forEach((q) => {
+        const o = el("option", "", q.n);
+        o.value = q.k;
+        o.selected = q.k === (ui.prod || prods[0].k);
+        ps.append(o);
+      });
+      ps.addEventListener("change", () => {
+        ui.prod = ps.value;
+        ps.style.setProperty("--c", colOf2(prods.find((q) => q.k === ps.value)));
+      });
+      ps.style.setProperty("--c", colOf2(prods.find((q) => q.k === (ui.prod || prods[0].k)) || prods[0]));
+      ti.type = "text";
+      ti.maxLength = 300;
+      ti.placeholder = "Add a deliverable and press Enter";
+      ti.setAttribute("aria-label", "New deliverable for " + monthLabel(m));
+      f.append(ps, ti);
+      f.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const v = ti.value.trim();
+        if (!v) {
+          ti.focus();
+          return;
+        }
+        ui.prod = ps.value;
+        saveMonth(m, (dd) => {
+          dd.lines.push(newLine(ps.value, v, {}));
+        }, "added a deliverable to " + monthLabel(m));
+        renderMonthly();
+        const n = $("pg-monthly").querySelector('.mdcol[data-mo="' + m + '"] .mdadd input');
+        if (n) n.focus();
+      });
+      col.append(f);
+    }
+    shown.forEach((l) => col.append(card(m, l, prods, ed)));
+    if (!shown.length) col.append(el("div", "hint", lines.length ? "Nothing matches the filter." : "Nothing here yet."));
+    if (ed) {
+      const ok = (e) => [...e.dataTransfer ? e.dataTransfer.types : []].includes("text/mdcard");
+      col.addEventListener("dragover", (e) => {
+        if (!ok(e)) return;
+        e.preventDefault();
+        col.classList.add("dropcol");
+      });
+      col.addEventListener("dragleave", (e) => {
+        if (!col.contains(e.relatedTarget)) col.classList.remove("dropcol");
+      });
+      col.addEventListener("drop", (e) => {
+        col.classList.remove("dropcol");
+        const v = e.dataTransfer.getData("text/mdcard");
+        if (!v) return;
+        e.preventDefault();
+        const i = v.indexOf("|");
+        moveCard(v.slice(0, i), v.slice(i + 1), m);
+      });
+    }
+    return col;
+  }
+  var migrated = /* @__PURE__ */ new Set();
   function renderMonthly() {
     const pg = $("pg-monthly");
     if (!pg) return;
-    closeMenu();
-    const m = routeMo(), keepY = m && rUI2.last === m ? window.scrollY : 0;
-    rUI2.last = m || "";
+    const prevBoard = pg.querySelector(".mdboard"), sx = prevBoard ? prevBoard.scrollLeft : 0, sy = window.scrollY;
     pg.textContent = "";
-    const viewer = isViewer(), l = monthList(), doc2 = cur2();
-    pg.classList.toggle("sheet", !!doc2);
-    if (m && !doc2) {
-      pg.append(crumbs([{ label: "Monthly", href: "#/monthly" }, { label: "Not found" }]), pageHead("Month not found", viewer ? "It may not be submitted yet, or it is still loading." : "It may have been removed, or it is still loading."));
-      return;
+    const viewer = isViewer(), ed = !viewer && canBuild2();
+    if (ed) docs().forEach((d) => {
+      if (d.status !== "submitted" && !migrated.has(d.id)) {
+        migrated.add(d.id);
+        S.reports[d.id] = Object.assign({}, S.reports[d.id], { status: "submitted", subAt: d.subAt || (/* @__PURE__ */ new Date()).toISOString() });
+        write("reports/" + d.id, S.reports[d.id]);
+      }
+    });
+    const prods = boardProducts(), tools = el("div", "formrow");
+    const q = el("input");
+    q.type = "search";
+    q.placeholder = "Search deliverables";
+    q.value = ui.q;
+    q.setAttribute("aria-label", "Search deliverables");
+    q.addEventListener("input", () => {
+      ui.q = q.value;
+      renderMonthly();
+      const s = pg.querySelector("input[type=search]");
+      if (s) {
+        s.focus();
+        s.setSelectionRange(s.value.length, s.value.length);
+      }
+    });
+    const fp = el("select");
+    fp.setAttribute("aria-label", "Filter by product");
+    [["all", "All products"]].concat(prods.map((p) => [p.k, p.n])).forEach((x) => {
+      const o = el("option", "", x[1]);
+      o.value = x[0];
+      o.selected = x[0] === ui.pr;
+      fp.append(o);
+    });
+    fp.addEventListener("change", () => {
+      ui.pr = fp.value;
+      renderMonthly();
+    });
+    tools.append(q, fp);
+    const pc = pastCount();
+    if (pc || ui.past) {
+      const pb = el("button", "btn sm", ui.past ? "Hide past months" : "Show past months (" + pc + ")");
+      pb.type = "button";
+      pb.addEventListener("click", () => {
+        ui.past = !ui.past;
+        renderMonthly();
+      });
+      tools.append(pb);
     }
-    if (doc2) detailView3(pg, viewer, doc2);
-    else listView3(pg, viewer, l);
-    if (keepY && Math.abs(window.scrollY - keepY) > 1) window.scrollTo(0, keepY);
+    pg.append(pageHead("Monthly deliverables", viewer ? "What each product committed to deliver every month, coloured by product, and how far each deliverable is." : "What the business expects each month. Add a card for a product, or press Sync from Roadmap in a month to bring the features that end in it. Drag a card to move it to another month.", tools));
+    const sb0 = viewer ? null : setupBanner();
+    if (sb0) pg.append(sb0);
+    const board = el("div", "mdboard");
+    visibleMonths().forEach((m) => board.append(column(m, prods, ed)));
+    if (ed) {
+      const ms = visibleMonths(), nm = nextMonth(ms[ms.length - 1]);
+      const ac = el("button", "addcol mdaddmonth", "+ Add month (" + monthLabel(nm) + ")");
+      ac.type = "button";
+      ac.id = "addmonth";
+      ac.addEventListener("click", () => {
+        saveMonth(nm, () => {
+        }, "added the " + monthLabel(nm) + " column to the monthly deliverables");
+        renderMonthly();
+      });
+      board.append(ac);
+    }
+    pg.append(board);
+    if (sx) {
+      const nb = pg.querySelector(".mdboard");
+      if (nb) nb.scrollLeft = sx;
+    }
+    if (sy && Math.abs(window.scrollY - sy) > 1) window.scrollTo(0, sy);
   }
-  window.addEventListener("hashchange", () => {
-    if (state.page === "monthly") renderMonthly();
-  });
 
   // src/esm/ui/loading.js
   function showLoading(msg) {
@@ -9750,9 +9381,9 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     ({ roadmap: render, ideas: () => renderIdeas(true), roadmaps: renderRoadmaps, resources: renderResources, admin: () => {
       loadMembers();
       renderAdmin();
-    }, vacations: () => renderVacations(true), log: renderLog, capacity: renderCapacity, baselines: renderBaselines, sprints: renderSprints, reports: renderReports, monthly: renderMonthly })[p]();
+    }, vacations: () => renderVacations(true), log: renderLog, sprints: renderSprints, reports: renderReports, monthly: renderMonthly })[p]();
   }
-  var VIEWER_PAGES = ["roadmap", "capacity", "baselines", "log", "reports", "monthly"];
+  var VIEWER_PAGES = ["roadmap", "log", "reports", "monthly"];
   function showPage(p) {
     if (!PAGES.some((x) => x[0] === p) || p === "admin" && !(S.me && S.me.is_admin) || isViewer() && !VIEWER_PAGES.includes(p)) p = "roadmap";
     state.page = p;
@@ -9767,9 +9398,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
     const pt = $("ptitle");
     if (pt) pt.textContent = (PAGES.find((x) => x[0] === p) || [0, ""])[1];
-    if (location.hash !== "#/" + p && !((p === "sprints" || p === "reports" || p === "monthly") && new RegExp("^#/" + p + "/").test(location.hash))) window.history.replaceState(null, "", "#/" + p);
+    if (location.hash !== "#/" + p && !((p === "sprints" || p === "reports") && new RegExp("^#/" + p + "/").test(location.hash))) window.history.replaceState(null, "", "#/" + p);
     renderPage(p);
   }
+  var NAV_LABEL = { monthly: "Monthly" };
   var NAV_ICONS = {
     roadmap: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9M4 12h14M4 18h7" /><path d="M16 6h4M20 18h-6" /></svg>',
     ideas: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2v.1h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z" /></svg>',
@@ -9777,8 +9409,6 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     resources: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 5.2a3.2 3.2 0 0 1 0 5.6M18 14.3c1.8.8 3 2.6 3 4.7" /></svg>',
     vacations: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M8 3v4M16 3v4M3.5 10h17M9 15l2 2 4-4" /></svg>',
     admin: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.4 2.9 8.3 7 10 4.1-1.7 7-5.6 7-10V6l-7-3z" /><path d="m9 12 2 2 4-4" /></svg>',
-    capacity: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>',
-    baselines: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4v16M5 6h11l-2 3.5L16 13H5" /></svg>',
     sprints: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 3-6.2M4 4v4h4" /><path d="M12 8v4l2.5 2" /></svg>',
     monthly: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M8 3v4M16 3v4M3.5 10h17M8 15h3M8 18h6" /></svg>',
     reports: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 13h6M9 17h6M9 9h2" /></svg>',
@@ -9794,7 +9424,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       b.title = x[1];
       b.setAttribute("aria-label", x[1]);
       b.insertAdjacentHTML("beforeend", NAV_ICONS[x[0]] || "");
-      b.append(el("span", "lbl", x[1]));
+      b.append(el("span", "lbl", NAV_LABEL[x[0]] || x[1]));
       if (x[0] === "admin") {
         const d = el("span", "dot", "0");
         d.hidden = true;
@@ -10066,7 +9696,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 
   // src/esm/auth/gate.js
   var JOBS = ["Product Manager", "Engineer", "QA", "UX / Design", "CEO", "CTO", "Executive", "Other"];
-  function gateCard(title, sub2) {
+  function gateCard(title, sub) {
     const g = $("gate");
     g.hidden = false;
     g.textContent = "";
@@ -10076,7 +9706,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     const h = el("div", "ghead");
     h.append(logoEl(), el("h1", "", title));
     c.append(h);
-    if (sub2) c.append(el("div", "meta", sub2));
+    if (sub) c.append(el("div", "meta", sub));
     g.append(c);
     return c;
   }

@@ -11,10 +11,10 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 | Area | State |
 |---|---|
 | Live site | https://ynmo-roadmap.vercel.app (Vercel, auto-deploys `main`) |
-| Repo | `Asmaa-Mabrouk/ynmo-roadmap`, branch `main`; last change: Monthly page (see CHANGELOG) |
+| Repo | `Asmaa-Mabrouk/ynmo-roadmap`, branch `main`; last change: Monthly deliverables board (see CHANGELOG) |
 | Backend | Supabase project **YNMO_PM**; SQL 01 to 07; Edge Functions `notify-approval`, `weekly-draft`, `jira-sync` (code in repo; deployment status per the open items below) |
 | Owner | Asmaa (Senior PM, TrianglZ, Ynmo ecosystem, Riyadh) |
-| Pages | Roadmap, Ideas, Roadmaps, Sprints, Reports, Monthly, Resources, Vacations, Capacity, Baselines, Log, Approvals |
+| Pages | Roadmap, Ideas, Roadmaps, Sprints, Reports, Monthly deliverables, Resources, Vacations, Log, Approvals |
 | Tests | `tests/run_all.sh`: last full run 88/88 scenarios and all feature scripts green (`sprints_reports.py` 94, `monthly_page.py` 43) |
 | Jira | Site `tatralab.atlassian.net`; default projects DYC (Daycare), FAS (Tifli), AU (AI). Plan, Warif and Sharjah project keys not known yet. Rovo was considered; the API route was chosen |
 | Google Drive export | Google Cloud project **YNMO PM** (trianglz.com, Internal consent), Drive API on, Web client created for `https://ynmo-roadmap.vercel.app`. Client ID to be pasted in the tool by an admin; the client secret is not used |
@@ -42,6 +42,22 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+🔄 YNMO LEDGER UPDATE — 2026-10-25
+Request: Remove Capacity and Baselines; new Monthly deliverables module like Ideas, one column per month (October, November, + add month), cards coloured by product, Sync from Roadmap per month, never replicate a feature written on several people
+Surface: cross-cutting (Ynmo Roadmaps internal tool)
+Outcome: Capacity and Baselines pages (and "Plan vs now" ghost bars) removed; Monthly deliverables is a board with a column per month, product-coloured cards, per-month sync, move/drag, ad hoc, search/filter; executives see it read-only.
+New facts / decisions locked:
+  • A roadmap feature is a deliverable of the month it ENDS in, and exists once on the whole board: bars with the same product and title (several people) are one card; a feature already in any month is skipped by sync.
+  • Months live in `reports/mo<yyyymm>` and are always saved as `submitted` (executives see every month); old drafts are switched to submitted when an editor opens the board.
+  • The `baselines` table and its data stay in the database, unused.
+  • Board shows this month, the next, then added months; earlier months are behind "Show past months".
+Corrections to this skill:
+  • Capacity and Baselines no longer exist in the tool.
+Open / flagged:
+  • Should a feature that is not finished stay on its month (current) or carry to the next month?
+  • The board has no undo (like Ideas); say if you want it.
+Changelog: Monthly deliverables board; Capacity and Baselines removed.
+
 🔄 YNMO LEDGER UPDATE — 2026-10-21
 Request: Remove hide/delete duplication on items; out-of-scope flag; rename/remove products (Sara); remove rich text; Submit becomes Save; delete only from the list menu for editors; professional PDF
 Surface: cross-cutting (Ynmo Roadmaps internal tool)
@@ -54,7 +70,7 @@ Corrections to this skill:
   • none
 Open / flagged:
   • Run supabase/sql/07-reports-editor-delete.sql in the Supabase SQL Editor, otherwise deleting a saved report fails for editors.
-  • The Monthly page still has Submit/Reopen and a Delete button inside the page; say if it should follow the same Save / list-only delete rules.
+  • (closed 2026-10-25) The Monthly deliverables board replaced the month sheet: no Submit/Reopen, months are always saved as submitted.
 Changelog: Plain items, out-of-scope flag, renamable sections, Save, list-only delete, professional PDF.
 
 🔄 YNMO LEDGER UPDATE — 2026-10-21

@@ -73,7 +73,7 @@ export function renderAccess(root) {
   if (!(S.me && S.me.is_admin)) return;
   const done = S.members.filter(m => m.approved);
   const c = el('div', 'card'); c.append(el('h2', '', 'Who can edit'));
-  c.append(el('div', 'hint', 'Editors change the plan. Viewers can look at the roadmap, capacity, snapshots and log, but cannot change anything.'));
+  c.append(el('div', 'hint', 'Editors change the plan. Viewers can look at the roadmap, reports and log, but cannot change anything.'));
   done.forEach(m => {
     const row = el('div', 'formrow'); row.style.alignItems = 'center';
     const who = el('div'); who.append(el('b', '', m.name || m.email), el('div', 'hint', (m.role ? m.role + ' · ' : '') + (m.email || '')));

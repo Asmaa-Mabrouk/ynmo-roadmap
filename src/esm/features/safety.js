@@ -9,7 +9,7 @@ import { $, el } from '../core/model.js';
 import { sb } from '../core/supabase.js';
 import { doLogout } from '../auth/gate.js';
 
-/* ================= v4 extras: network banner, session safety, presence, dependencies, capacity, baselines, sharing ================= */
+/* ================= v4 extras: network banner, session safety, presence, dependencies, sharing ================= */
 
 export const ACTIVE_LOG_PAGE = 300;
 export const canWrite = () => !S.readonly && !S.SHARE;

@@ -11,8 +11,7 @@ Shared, editable, real-time **Gantt roadmap and planning workspace** for the Ynm
 | Stack | Vanilla JS (native ES modules, bundled by esbuild) + CSS, no framework, Supabase JS v2 (vendored) |
 
 ## What it does (30 seconds)
-Plan features on a day-level timeline, assign people, track dependencies/milestones, see capacity vs. time-off,
-keep an ideas board (Trello-style), freeze baselines and compare "plan vs now", plan two-week sprints as a document (pull each person's Jira tickets, export to Google Docs), auto-draft a per-product weekly executive report, keep a Notion-style Monthly deliverables page (synced from the roadmap with editable percentages), share a read-only link with
+Plan features on a day-level timeline, assign people, track dependencies/milestones, keep an ideas board (Trello-style), plan a monthly deliverables board (one column per month, cards coloured by product, synced from the roadmap), plan two-week sprints as a document (pull each person's Jira tickets, export to Google Docs), auto-draft a per-product weekly executive report, keep a Notion-style Monthly deliverables page (synced from the roadmap with editable percentages), share a read-only link with
 stakeholders, export the roadmap as a coloured PDF, and audit every change with undo. Access is by **admin approval** with **Editor / Viewer** roles.
 Full product description: [docs/BUSINESS.md](docs/BUSINESS.md).
 

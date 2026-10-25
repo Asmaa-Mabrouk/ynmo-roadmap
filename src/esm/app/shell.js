@@ -12,8 +12,6 @@ import { allRoadmaps, fillRm, renderRoadmaps, useRoadmap } from '../pages/roadma
 import { loadMembers, renderAdmin, renderResources } from '../pages/resources.js';
 import { renderVacations } from '../pages/vacations.js';
 import { renderLog } from '../pages/log.js';
-import { renderCapacity } from '../features/capacity.js';
-import { renderBaselines } from '../features/baselines.js';
 import { renderSprints } from '../pages/sprints.js';
 import { applySquadNames } from '../features/squad-names.js';
 import { renderReports } from '../pages/reports.js';
@@ -32,17 +30,18 @@ import { bootShared } from '../features/sharing.js';
 
 /* ---------- shell: navigation and start ---------- */
 export function refreshPage() { renderPage(state.page); }
-function renderPage(p) { ({ roadmap: render, ideas: () => renderIdeas(true), roadmaps: renderRoadmaps, resources: renderResources, admin: () => { loadMembers(); renderAdmin(); }, vacations: () => renderVacations(true), log: renderLog, capacity: renderCapacity, baselines: renderBaselines, sprints: renderSprints, reports: renderReports, monthly: renderMonthly })[p](); }
-const VIEWER_PAGES = ['roadmap', 'capacity', 'baselines', 'log', 'reports', 'monthly'];
+function renderPage(p) { ({ roadmap: render, ideas: () => renderIdeas(true), roadmaps: renderRoadmaps, resources: renderResources, admin: () => { loadMembers(); renderAdmin(); }, vacations: () => renderVacations(true), log: renderLog, sprints: renderSprints, reports: renderReports, monthly: renderMonthly })[p](); }
+const VIEWER_PAGES = ['roadmap', 'log', 'reports', 'monthly'];
 export function showPage(p) {
   if (!PAGES.some(x => x[0] === p) || (p === 'admin' && !(S.me && S.me.is_admin)) || (isViewer() && !VIEWER_PAGES.includes(p))) p = 'roadmap';
   state.page = p; closeCtx(); closePicker();
   PAGES.forEach(x => { $('pg-' + x[0]).hidden = x[0] !== p; });
   document.querySelectorAll('#nav button').forEach(b => { if (b.dataset.p === p) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   const pt = $('ptitle'); if (pt) pt.textContent = (PAGES.find(x => x[0] === p) || [0, ''])[1];
-  if (location.hash !== '#/' + p && !((p === 'sprints' || p === 'reports' || p === 'monthly') && new RegExp('^#/' + p + '/').test(location.hash))) window.history.replaceState(null, '', '#/' + p);
+  if (location.hash !== '#/' + p && !((p === 'sprints' || p === 'reports') && new RegExp('^#/' + p + '/').test(location.hash))) window.history.replaceState(null, '', '#/' + p);
   renderPage(p);
 }
+const NAV_LABEL = { monthly: 'Monthly' };
 const NAV_ICONS = {
   roadmap: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9M4 12h14M4 18h7" /><path d="M16 6h4M20 18h-6" /></svg>',
   ideas: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2v.1h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z" /></svg>',
@@ -50,8 +49,6 @@ const NAV_ICONS = {
   resources: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 5.2a3.2 3.2 0 0 1 0 5.6M18 14.3c1.8.8 3 2.6 3 4.7" /></svg>',
   vacations: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M8 3v4M16 3v4M3.5 10h17M9 15l2 2 4-4" /></svg>',
   admin: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.4 2.9 8.3 7 10 4.1-1.7 7-5.6 7-10V6l-7-3z" /><path d="m9 12 2 2 4-4" /></svg>',
-  capacity: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>',
-  baselines: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4v16M5 6h11l-2 3.5L16 13H5" /></svg>',
   sprints: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 3-6.2M4 4v4h4" /><path d="M12 8v4l2.5 2" /></svg>',
   monthly: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M8 3v4M16 3v4M3.5 10h17M8 15h3M8 18h6" /></svg>',
   reports: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 13h6M9 17h6M9 9h2" /></svg>',
@@ -59,7 +56,7 @@ const NAV_ICONS = {
 };
 function buildNav() {
   const n = $('nav'); n.textContent = '';
-  PAGES.filter(x => (x[0] !== 'admin' || (S.me && S.me.is_admin)) && (!isViewer() || VIEWER_PAGES.includes(x[0]))).forEach(x => { const b = el('button', ''); b.type = 'button'; b.dataset.p = x[0]; b.title = x[1]; b.setAttribute('aria-label', x[1]); b.insertAdjacentHTML('beforeend', NAV_ICONS[x[0]] || ''); b.append(el('span', 'lbl', x[1])); if (x[0] === 'admin') { const d = el('span', 'dot', '0'); d.hidden = true; b.append(d); } b.addEventListener('click', () => { window.history.replaceState(null, '', '#/' + x[0]); showPage(x[0]); }); n.append(b); });
+  PAGES.filter(x => (x[0] !== 'admin' || (S.me && S.me.is_admin)) && (!isViewer() || VIEWER_PAGES.includes(x[0]))).forEach(x => { const b = el('button', ''); b.type = 'button'; b.dataset.p = x[0]; b.title = x[1]; b.setAttribute('aria-label', x[1]); b.insertAdjacentHTML('beforeend', NAV_ICONS[x[0]] || ''); b.append(el('span', 'lbl', NAV_LABEL[x[0]] || x[1])); if (x[0] === 'admin') { const d = el('span', 'dot', '0'); d.hidden = true; b.append(d); } b.addEventListener('click', () => { window.history.replaceState(null, '', '#/' + x[0]); showPage(x[0]); }); n.append(b); });
 }
 export const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 

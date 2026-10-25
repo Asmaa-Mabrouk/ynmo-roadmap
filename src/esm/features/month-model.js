@@ -1,11 +1,11 @@
 /**
  * @module features/month-model
- * Pure logic of the Monthly deliverables page (no DOM, no network): the month a week belongs to, weighted progress, the estimated percentage
- * of a roadmap feature, merging this month's roadmap features into the page per product (a percentage a person typed always wins),
- * carrying unfinished items into a new month, and the plain-text export.
+ * Pure logic of the Monthly deliverables board (no DOM, no network): the month a week belongs to, progress, the estimated percentage
+ * of a roadmap feature, merging a month's roadmap features into its column without ever repeating a feature (a percentage a person typed always wins),
+ * and the plain-text export.
  * A month is the doc `reports/mo<yyyymm>`: { mo:'2026-10', status:'draft'|'submitted', pl:[{k,n,squads}],
  *   lines:[{ id, k (product key), t, pct (0-100), w (importance 1-3), adhoc, by (who asked), at (date added), src (roadmap bar id), pe (percentage edited by a person) }], by, ts, subAt, subBy, syncAt }.
- * It lives in the `reports` table, so the same rules apply: editors see drafts, executives (viewers) see submitted months only.
+ * It lives in the `reports` table; the board always saves a month as `submitted`, so executives (viewers) see every month.
  */
 export const WEIGHTS = { 1: 'Normal', 2: 'High', 3: 'Critical' };
 export const PCT_STEPS = [0, 25, 50, 75, 100];
@@ -50,28 +50,42 @@ export function assumePct(bar, today) {
   const passed = Math.min(len, dayN(today) - dayN(bar.a) + 1); if (passed <= 0) return 0;
   return Math.min(90, Math.round(100 * passed / len / 5) * 5);
 }
+const norm = t => String(t || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+/** Identity of a deliverable: its product and its title (case, spacing and punctuation do not matter), so the same feature is never listed twice. */
+export const lineKey = (k, t) => k + '|' + norm(t);
 /**
- * Brings the roadmap features of month `m` into the lines, in the product they belong to (`pl[].squads` contains the feature's squad).
- * `road` = [{ id, t, sq, a, b, st, ms }]. New features are added with their estimated percentage; a line already linked to the feature (`src`) gets a new
- * estimate only if nobody edited its percentage. Titles and everything else a person changed are kept. Returns { lines, added, updated, skipped }.
+ * Roadmap bars `road` = [{ id, t, sq, a, b, st, ms }] folded into ONE feature per product and title, however many bars or people it is written on:
+ * { ids, t, k (product), a (first start), b (last end), st ('done' only when every bar is done), ms }. Bars of no product are counted in `skipped`.
  */
-export function mergeRoad(lines, road, pl, m, today) {
-  const r = monthRange(m), out = lines.map(l => Object.assign({}, l)), bySrc = new Map(out.filter(l => l.src).map(l => [l.src, l]));
-  let added = 0, updated = 0, skipped = 0;
-  road.filter(b => b.a <= r.b && b.b >= r.a).sort((x, y) => (x.a < y.a ? -1 : x.a > y.a ? 1 : String(x.t).localeCompare(String(y.t)))).forEach(b => {
+export function groupRoad(road, pl) {
+  const g = new Map(); let skipped = 0;
+  road.forEach(b => {
     const p = pl.find(q => (q.squads || []).includes(b.sq)); if (!p) { skipped++; return; }
-    const pct = assumePct(b, today), ex = bySrc.get(b.id);
-    if (ex) { if (!ex.pe && clampPct(ex.pct) !== pct) { ex.pct = pct; updated++; } return; }
-    const n = newLine(p.k, b.t, { src: b.id }); n.pct = pct; out.push(n); bySrc.set(b.id, n); added++;
+    const key = lineKey(p.k, b.t), x = g.get(key);
+    if (!x) g.set(key, { ids: [b.id], t: b.t, k: p.k, a: b.a, b: b.b, st: b.st, ms: !!b.ms });
+    else { x.ids.push(b.id); if (b.a < x.a) x.a = b.a; if (b.b > x.b) x.b = b.b; if (b.st !== 'done') x.st = b.st; x.ms = x.ms && !!b.ms; }
   });
-  return { lines: out, added: added, updated: updated, skipped: skipped };
+  return { features: [...g.values()], skipped: skipped };
 }
-/** Unfinished lines of the previous month's doc, to start this month from: { from: 'YYYY-MM', lines } or null. `all` = month docs. */
-export function carryFromLastMonth(doc, all) {
-  const pm = prevMonth(doc.mo), prev = all.find(d => d.mo === pm); if (!prev) return null;
-  const have = new Set(live(doc.lines).map(l => l.t.toLowerCase()));
-  const lines = live(prev.lines).filter(l => clampPct(l.pct) < 100 && !have.has(l.t.toLowerCase())).map(l => Object.assign({}, l, { id: uid(), at: '' }));
-  return lines.length ? { from: pm, lines: lines } : null;
+/**
+ * Brings the roadmap features of month `m` into the lines. A feature is a deliverable of the month it ENDS in, so it lands in exactly one month, and it is
+ * never added twice: not when it is written on several bars or people, not when the product already has a card with the same title in this month or in any
+ * other month (`others` = the lines of the other months). New features come with their estimated percentage; a line already linked to the feature (`src`)
+ * gets a new estimate only if nobody edited its percentage. Everything else a person changed is kept. Returns { lines, added, updated, skipped, dup }.
+ */
+export function mergeRoad(lines, road, pl, m, today, others) {
+  const out = lines.map(l => Object.assign({}, l)), bySrc = new Map(), have = new Set(), haveSrc = new Set();
+  out.forEach(l => { if (l.src) bySrc.set(l.src, l); have.add(lineKey(l.k, l.t)); });
+  (others || []).forEach(l => { have.add(lineKey(l.k, l.t)); if (l.src) haveSrc.add(l.src); });
+  const g = groupRoad(road, pl); let added = 0, updated = 0, dup = 0;
+  g.features.sort((x, y) => (x.a < y.a ? -1 : x.a > y.a ? 1 : String(x.t).localeCompare(String(y.t)))).forEach(f => {
+    const pct = assumePct(f, today), ex = f.ids.map(i => bySrc.get(i)).find(Boolean);
+    if (ex) { if (!ex.pe && clampPct(ex.pct) !== pct) { ex.pct = pct; updated++; } return; }
+    if (f.b.slice(0, 7) !== m) return;
+    if (have.has(lineKey(f.k, f.t)) || f.ids.some(i => haveSrc.has(i))) { dup++; return; }
+    const n = newLine(f.k, f.t, { src: f.ids[0] }); n.pct = pct; out.push(n); have.add(lineKey(f.k, f.t)); added++;
+  });
+  return { lines: out, added: added, updated: updated, skipped: g.skipped, dup: dup };
 }
 /** Plain text of a month (for Copy text). `products` = [{k,n}]. Empty when there is nothing to show. */
 export function monthText(doc, products, fmt) {
