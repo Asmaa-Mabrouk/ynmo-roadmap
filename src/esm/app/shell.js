@@ -7,7 +7,6 @@
 import { S } from '../core/state.js';
 import { $, H2_ID, el, state } from '../core/model.js';
 import { render } from '../ui/gantt-render.js';
-import { renderDrawer, renderIdeas } from '../pages/ideas.js';
 import { allRoadmaps, fillRm, renderRoadmaps, useRoadmap } from '../pages/roadmaps.js';
 import { loadMembers, renderAdmin, renderResources } from '../pages/resources.js';
 import { renderVacations } from '../pages/vacations.js';
@@ -30,7 +29,7 @@ import { bootShared } from '../features/sharing.js';
 
 /* ---------- shell: navigation and start ---------- */
 export function refreshPage() { renderPage(state.page); }
-function renderPage(p) { ({ roadmap: render, ideas: () => renderIdeas(true), roadmaps: renderRoadmaps, resources: renderResources, admin: () => { loadMembers(); renderAdmin(); }, vacations: () => renderVacations(true), log: renderLog, sprints: renderSprints, reports: renderReports, monthly: renderMonthly })[p](); }
+function renderPage(p) { ({ roadmap: render, roadmaps: renderRoadmaps, resources: renderResources, admin: () => { loadMembers(); renderAdmin(); }, vacations: () => renderVacations(true), log: renderLog, sprints: renderSprints, reports: renderReports, monthly: renderMonthly })[p](); }
 const VIEWER_PAGES = ['roadmap', 'log', 'reports', 'monthly'];
 export function showPage(p) {
   if (!PAGES.some(x => x[0] === p) || (p === 'admin' && !(S.me && S.me.is_admin)) || (isViewer() && !VIEWER_PAGES.includes(p))) p = 'roadmap';
@@ -44,7 +43,6 @@ export function showPage(p) {
 const NAV_LABEL = { monthly: 'Monthly' };
 const NAV_ICONS = {
   roadmap: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9M4 12h14M4 18h7" /><path d="M16 6h4M20 18h-6" /></svg>',
-  ideas: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2v.1h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z" /></svg>',
   roadmaps: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5-9-5zM3 13l9 5 9-5M3 17.5 12 22l9-4.5" /></svg>',
   resources: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 5.2a3.2 3.2 0 0 1 0 5.6M18 14.3c1.8.8 3 2.6 3 4.7" /></svg>',
   vacations: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M8 3v4M16 3v4M3.5 10h17M9 15l2 2 4-4" /></svg>',
@@ -77,7 +75,7 @@ export function start() {
     else if (!allRoadmaps().some(r => r.id === state.rm)) useRoadmap(H2_ID); else fillRm();
     if (state.page === 'roadmaps') renderRoadmaps();
   }, () => {});
-  S.db.collection('ideas').onSnapshot(s => { const n = snapDocs('ideas', s, S.ideas); if (same(n, S.ideas)) return; const tn = o => Object.keys(o).filter(k => o[k] && o[k].tn).sort().map(k => o[k]), orderChanged = JSON.stringify([n.peopleorder, n.peoplehide, n.squadnames, tn(n)]) !== JSON.stringify([S.ideas.peopleorder, S.ideas.peoplehide, S.ideas.squadnames, tn(S.ideas)]); S.ideas = n; applySquadNames(); if (orderChanged) softRender(); /* shared row order of the by-person view */ renderDrawer(); if (state.page === 'ideas') renderIdeas(); if (state.page === 'roadmaps') renderRoadmaps(); }, () => {});
+  S.db.collection('ideas').onSnapshot(s => { const n = snapDocs('ideas', s, S.ideas); if (same(n, S.ideas)) return; const tn = o => Object.keys(o).filter(k => o[k] && o[k].tn).sort().map(k => o[k]), orderChanged = JSON.stringify([n.peopleorder, n.peoplehide, n.squadnames, tn(n)]) !== JSON.stringify([S.ideas.peopleorder, S.ideas.peoplehide, S.ideas.squadnames, tn(S.ideas)]); S.ideas = n; applySquadNames(); if (orderChanged) softRender(); /* shared row order of the by-person view */ if (state.page === 'roadmaps') renderRoadmaps(); }, () => {});
   S.db.collection('reports').onSnapshot(s => { const n = snapDocs('reports', s, S.reports); if (same(n, S.reports)) return; S.reports = n; if (state.page === 'reports' && !state.edit && !document.activeElement.closest('#pg-reports')) renderReports(); if (state.page === 'monthly' && !state.edit && !document.activeElement.closest('#pg-monthly [contenteditable], #pg-monthly select, #pg-monthly input')) renderMonthly(); }, e => { if (e && e.code === 'missing_table') { S.setup['reports'] = true; if (state.page === 'reports' || state.page === 'sprints') refreshPage(); } });
   if (!isViewer()) {
     S.db.collection('sprints').onSnapshot(s => { const n = snapDocs('sprints', s, S.sprints); if (same(n, S.sprints)) return; S.sprints = n; if (state.page === 'sprints' && !document.activeElement.closest('#pg-sprints')) renderSprints({ keep: true }); if (state.page === 'reports') renderReports(); }, e => { if (e && e.code === 'missing_table') { S.setup['sprints'] = true; if (state.page === 'reports' || state.page === 'sprints') refreshPage(); } });

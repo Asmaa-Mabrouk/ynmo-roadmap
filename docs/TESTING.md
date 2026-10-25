@@ -11,7 +11,7 @@ python3 tests/e2e_qa.py            # only the 88 scenarios; results in tests/out
 Postgres/Auth/Realtime/RPC fake, so **no real project is touched** and multi-user scenarios run with two tabs.
 The fake does not enforce RLS – RLS is verified manually (below).
 
-Areas: Auth · Roadmap editing · Ideas · Resources · Vacations · Monthly deliverables · Log/undo · Sharing/viewer · Multi-user (M*) · Security (S*) · Responsive.
+Areas: Auth · Roadmap editing · Resources · Vacations · Monthly deliverables · Log/undo · Sharing/viewer · Multi-user (M*) · Security (S*) · Responsive.
 All 88 scenarios are expected to pass.
 
 ## Test handles

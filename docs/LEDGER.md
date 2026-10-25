@@ -14,7 +14,7 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 | Repo | `Asmaa-Mabrouk/ynmo-roadmap`, branch `main`; last change: Monthly deliverables board (see CHANGELOG) |
 | Backend | Supabase project **YNMO_PM**; SQL 01 to 07; Edge Functions `notify-approval`, `weekly-draft`, `jira-sync` (code in repo; deployment status per the open items below) |
 | Owner | Asmaa (Senior PM, TrianglZ, Ynmo ecosystem, Riyadh) |
-| Pages | Roadmap, Ideas, Roadmaps, Sprints, Reports, Monthly deliverables, Resources, Vacations, Log, Approvals |
+| Pages | Roadmap, Roadmaps, Sprints, Reports, Monthly deliverables, Resources, Vacations, Log, Approvals |
 | Tests | `tests/run_all.sh`: last full run 88/88 scenarios and all feature scripts green (`sprints_reports.py` 94, `monthly_page.py` 79) |
 | Jira | Site `tatralab.atlassian.net`; default projects DYC (Daycare), FAS (Tifli), AU (AI). Plan, Warif and Sharjah project keys not known yet. Rovo was considered; the API route was chosen |
 | Google Drive export | Google Cloud project **YNMO PM** (trianglz.com, Internal consent), Drive API on, Web client created for `https://ynmo-roadmap.vercel.app`. Client ID to be pasted in the tool by an admin; the client secret is not used |
@@ -41,6 +41,20 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 8. Not yet tested against the real services: Jira, Google sign-in and Drive.
 
 ## Ledger updates
+
+🔄 YNMO LEDGER UPDATE — 2026-10-25
+Request: Remove the Ideas module; typed "delete" and undo for deleting a month; notes as a comment list (author, date); backlog button above the months; notes on a month column.
+Surface: cross-cutting (Roadmaps tool)
+Outcome: Ideas page/nav/drawer removed (collection kept as settings store; start-up code moved to app/start.js); month delete needs "delete" and is undoable; card and month notes are threads {id,t,by,at}; Backlog is a bar above the board.
+New facts / decisions locked:
+  • Ideas module is retired; the Monthly Backlog is the place for unplanned ideas. Old idea cards are still in the `ideas` collection but no longer shown.
+  • Notes: card.notes / monthDoc.notes = [{id,t,by,at}]; an old `note` string is read as the first entry.
+Corrections to this skill:
+  • Pages list no longer includes Ideas.
+Open / flagged:
+  • Existing idea data is not migrated into the Backlog (say if you want it copied over).
+  • Undo restores whole month docs, so it can revert a colleague's edit to that month.
+Changelog: Ideas removed; safe month delete; note threads; backlog bar; month notes.
 
 🔄 YNMO LEDGER UPDATE — 2026-10-25
 Request: Simplify the UI; add a collapsed Backlog in the Monthly module that the business can drag from, or choose an action on the card, to plan a specific month.

@@ -53,10 +53,10 @@ with sync_playwright() as p:
     @T('Auth','A4','Sign-up: first user becomes approved admin and lands in app')
     def _():
         A.locator('input[type=email]').fill('asmaa@x.com'); A.click('button:text-is("Create account")'); A.wait_for_timeout(900)
-        return (A.locator('#nav button').count()==10, 'nav items %d'%A.locator('#nav button').count())
+        return (A.locator('#nav button').count()==9, 'nav items %d'%A.locator('#nav button').count())
     @T('Auth','A5','Session survives reload')
     def _():
-        A.reload(); A.wait_for_timeout(900); return (A.locator('#nav button').count()==10,'')
+        A.reload(); A.wait_for_timeout(900); return (A.locator('#nav button').count()==9,'')
     B=newpage(); B.goto(URL); B.wait_for_timeout(400)
     @T('Auth','A6','Sign-up: duplicate email shows error')
     def _():
@@ -78,7 +78,7 @@ with sync_playwright() as p:
         return (ok, 'Approve button present' if ok else 'no Approve button')
     @T('Auth','A10','Approved user gets in via "Check again" without re-login')
     def _():
-        B.click('button:has-text("Check again")'); B.wait_for_timeout(800); return (B.locator('#nav button').count()==9, 'editor sees 9 pages')
+        B.click('button:has-text("Check again")'); B.wait_for_timeout(800); return (B.locator('#nav button').count()==8, 'editor sees 8 pages')
     @T('Auth','A11','Login: wrong password message generic (no user enumeration)')
     def _():
         C=newpage(); C.goto(URL); C.wait_for_timeout(300); login(C,'asmaa@x.com','wrong'); m=gerr(C); C.close(); return ('not right' in m, m)
@@ -194,41 +194,6 @@ with sync_playwright() as p:
     @T('Roadmap','R16','Restore roadmap button removed from home')
     def _(): return (A.locator('#reset').count()==0 and 'Restore roadmap' not in A.locator('.toolbar').inner_text(),'')
     json.dump(R,open(HERE+'/out/qa_partial.json','w'))
-    # ---------- IDEAS ----------
-    nav(A,'ideas')
-    @T('Ideas','I1','Empty / whitespace idea is not created')
-    def _():
-        inp=A.locator('input[aria-label="New idea for Tifli"]'); inp.fill('   '); A.keyboard.press('Enter'); A.wait_for_timeout(200); return (A.locator('.icard').count()==0,'')
-    @T('Ideas','I2','Create idea; Save button appears only after edit; Save persists')
-    def _():
-        inp=A.locator('input[aria-label="New idea for Tifli"]'); inp.fill('Voice notes'); A.keyboard.press('Enter'); A.wait_for_timeout(300)
-        c=A.locator('.icard').first; h0=c.locator('button:text-is("Save")').is_hidden(); c.locator('textarea').fill('why'); v=c.locator('button:text-is("Save")').is_visible(); c.locator('button:text-is("Save")').click(); A.wait_for_timeout(300)
-        A.reload(); A.wait_for_timeout(900); nav(A,'ideas'); return (h0 and v and A.locator('.icard textarea').first.input_value()=='why','hidden=%s visible=%s'%(h0,v))
-    @T('Ideas','I3','Unsaved edits are not silently lost on Add to roadmap (saved first)')
-    def _():
-        c=A.locator('.icard').first; c.locator('input.ititle').fill('Voice notes v2'); c.locator('.kebab').click(); A.click('#ctx >> text=Add to roadmap'); A.wait_for_timeout(300)
-        A.click('#pop button:text-is("Cancel")'); A.wait_for_timeout(200); return (A.locator('.icard input.ititle').first.input_value()=='Voice notes v2','')
-    @T('Ideas','I4','Add to roadmap creates bar on selected roadmap and marks idea scheduled')
-    def _():
-        A.locator('.icard').first.locator('.kebab').click(); A.click('#ctx >> text=Add to roadmap'); A.wait_for_timeout(200)
-        A.locator('#pop select').select_option('Emad'); A.click('#pop button:text-is("Add to roadmap")'); A.wait_for_timeout(500)
-        has=A.evaluate("__ynmo.items().some(i=>i.t==='Voice notes v2')"); return (has,'bar created=%s'%has)
-    @T('Ideas','I5','Scheduled idea leaves "Open" list and shows in "On a roadmap"')
-    def _():
-        n=A.locator('.icard').count(); A.select_option('#pg-ideas select','scheduled'); A.wait_for_timeout(300); m=A.locator('.icard').count(); A.select_option('#pg-ideas select','open'); return (n==0 and m==1,'open=%d sched=%d'%(n,m))
-    @T('Ideas','I6','Scheduling with duration 0 / negative / non-numeric is sanitised')
-    def _():
-        A.locator('input[aria-label="New idea for AI"]').fill('Dur test'); A.keyboard.press('Enter'); A.wait_for_timeout(300)
-        A.locator('.icard').first.locator('.kebab').click(); A.click('#ctx >> text=Add to roadmap'); A.wait_for_timeout(200)
-        A.locator('#pop input[type=number]').fill('-5'); A.click('#pop button:text-is("Add to roadmap")'); A.wait_for_timeout(400)
-        it=A.evaluate("__ynmo.items().find(i=>i.t==='Dur test')"); return (it is not None and it['d1']>=it['d0'],'d0=%s d1=%s'%(it and it['d0'], it and it['d1']))
-    @T('Ideas','I7','Ideas drawer on roadmap opens and lists open ideas')
-    def _():
-        A.locator('input[aria-label="New idea for Daycare"]').fill('Drawer idea'); A.keyboard.press('Enter'); A.wait_for_timeout(300)
-        nav(A,'roadmap'); A.click('#ideasbtn'); A.wait_for_timeout(300); t=A.locator('#drawer').inner_text(); A.click('#drawer button:text-is("Close")'); return ('Drawer idea' in t, t[:50].replace('\n',' '))
-    @T('Ideas','I8','Delete idea asks confirmation and removes it')
-    def _():
-        nav(A,'ideas'); n=A.locator('.icard').count(); A.locator('.icard').first.locator('.kebab').click(); A.click('#ctx >> text=Delete idea'); A.wait_for_timeout(400); return (A.locator('.icard').count()==n-1,'')
     # ---------- ROADMAPS ----------
     nav(A,'roadmaps')
     def createrm(name,year,kind,frm=None,to=None,copy=None):
@@ -339,9 +304,6 @@ with sync_playwright() as p:
     def _():
         bar=A.locator('.pb').nth(5); id0=bar.get_attribute('data-id'); bar.dblclick(position={'x':150,'y':15}); A.keyboard.press('Control+a'); A.keyboard.type('Changed by A'); A.keyboard.press('Enter'); A.wait_for_timeout(300)
         B.wait_for_timeout(1500); t=B.locator(f'.pb[data-id="{id0}"]').first.inner_text(); return ('Changed by A' in t, t[:30])
-    @T('Realtime','M2','A adds idea → B ideas page updates live')
-    def _():
-        nav(B,'ideas'); nav(A,'ideas'); A.locator('input[aria-label="New idea for Tifli"]').fill('Live idea'); A.keyboard.press('Enter'); A.wait_for_timeout(300); B.wait_for_timeout(1500); return (B.evaluate("Object.values(__ynmo.S.ideas).some(i=>i.t==='Live idea')") and B.locator('.icard input.ititle').evaluate_all("els=>els.some(e=>e.value==='Live idea')"),'')
     @T('Realtime','M3','A adds vacation → B roadmap shows flag live')
     def _():
         nav(B,'roadmap'); before=B.locator('.vflag').count(); nav(A,'vacations'); addv('Mona','2026-11-15','2026-11-19'); B.wait_for_timeout(1500); after=B.locator('.vflag').count(); return (after>before,'flags %d->%d'%(before,after))
@@ -406,14 +368,14 @@ with sync_playwright() as p:
         @T('Responsive','Z-'+name,'No horizontal page scroll on all pages at %dpx'%w)
         def _(w=w,h=h):
             C=newpage(w,h); C.goto(URL); C.wait_for_timeout(300); login(C,'asmaa@x.com'); bad=[]
-            for pgn in ['roadmap','ideas','roadmaps','resources','vacations','log']:
+            for pgn in ['roadmap','monthly','roadmaps','resources','vacations','log']:
                 C.click(f'#nav button[data-p="{pgn}"]'); C.wait_for_timeout(300)
                 if C.evaluate('document.documentElement.scrollWidth>innerWidth+1'): bad.append(pgn)
             C.close(); return (not bad,'overflow on %s'%bad)
     @T('A11y','Y1','All buttons/inputs have accessible names; images have alt')
     def _():
         A.reload(); A.wait_for_timeout(900); res=[]
-        for pgn in ['roadmap','ideas','roadmaps','resources','vacations','log']:
+        for pgn in ['roadmap','monthly','roadmaps','resources','vacations','log']:
             nav(A,pgn); r=A.evaluate("""(()=>{const bad=[];document.querySelectorAll('#shell button,#shell input,#shell select,#shell textarea').forEach(e=>{if(e.offsetParent===null)return;const n=(e.getAttribute('aria-label')||e.textContent||e.title||'').trim();const lab=e.labels&&e.labels.length;const ph=e.placeholder;if(!n&&!lab&&!ph&&e.type!=='hidden')bad.push(e.tagName+'.'+e.className)});document.querySelectorAll('img:not([alt])').forEach(e=>bad.push('img'));return bad.slice(0,6)})()""")
             if r: res.append((pgn,r))
         return (not res,str(res)[:200])

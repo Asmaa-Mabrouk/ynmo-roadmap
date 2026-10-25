@@ -7,7 +7,6 @@ import { S } from './core/state.js';
 import * as model from './core/model.js';
 import { commit, removeItem } from './core/saving.js';
 import { render } from './ui/gantt-render.js';
-import { scheduleIdea } from './pages/ideas.js';
 import { allRoadmaps } from './pages/roadmaps.js';
 import './core/saving.js';
 import './ui/people-picker.js';
@@ -21,7 +20,6 @@ import './auth/gate.js';
 import './auth/profile.js';
 import './core/shared.js';
 import './pages/roadmaps.js';
-import './pages/ideas.js';
 import './pages/resources.js';
 import './pages/vacations.js';
 import './pages/log.js';
@@ -34,12 +32,12 @@ import './features/sharing.js';
 import './app/extras-wiring.js';
 import './ui/dropdowns.js';
 import './ui/loading.js';
-import { init } from './pages/ideas-columns.js';
+import { init } from './app/start.js';
 import { renderSprints } from './pages/sprints.js';
 
 /** Handles for automated tests and console debugging (the app itself never reads window.__ynmo). */
 window.__ynmo = {
-  S, LANES: model.LANES, state: model.state, items: model.items, directory: model.directory, allRoadmaps, commit, removeItem, render, renderSprints, scheduleIdea,
+  S, LANES: model.LANES, state: model.state, items: model.items, directory: model.directory, allRoadmaps, commit, removeItem, render, renderSprints,
   get NDAYS() { return model.NDAYS; },
   get vacs() { return S.vacs; },
 };

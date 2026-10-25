@@ -18,7 +18,7 @@ import { openCtx, mi, primarySq } from '../ui/editing.js';
 import { confirmDlg } from '../ui/confirm.js';
 import { plainBox } from '../features/rich-text.js';
 import { openDlg, closeDlg } from '../features/safety.js';
-import { adhocStats, cardId, clampPct, monthId, monthLabel, monthProgress, monthRange, monthText, newLine, nextMonth, pctBand, SIZES, TAGS, legacyTag } from '../features/month-model.js';
+import { adhocStats, cardId, notesOf, clampPct, monthId, monthLabel, monthProgress, monthRange, monthText, newLine, nextMonth, pctBand, SIZES, TAGS, legacyTag } from '../features/month-model.js';
 import { NOTE_ICON, setupBanner } from './reports.js';
 
 const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9 6.8 19.6l1-5.8-4.3-4.1 5.9-.8z"/></svg>';
@@ -91,7 +91,7 @@ function addToRoadmap(m, l, tag) {
       if (k1 < k0) { err.textContent = 'The end must be on or after the start.'; return; }
       pushHistory();
       const nid = 'c' + Date.now().toString(36), none = who.value === '__none', all = items().filter(x => x.sq === sq.value);
-      S.over[nid] = { custom: true, rm: state.rm, t: l.t, n: l.note || '', sq: sq.value, pr: sq.value === 'ai' ? ['tifli'] : [sq.value], d0: Math.max(0, k0), d1: Math.min(NDAYS - 1, k1), st: 'planned', res: none ? [] : [who.value], ord: all.length ? Math.max.apply(null, all.map(x => x.ord)) + 1 : 0, card: l.id };
+      S.over[nid] = { custom: true, rm: state.rm, t: l.t, n: notesOf(l).map(q => q.t).join(' | '), sq: sq.value, pr: sq.value === 'ai' ? ['tifli'] : [sq.value], d0: Math.max(0, k0), d1: Math.min(NDAYS - 1, k1), st: 'planned', res: none ? [] : [who.value], ord: all.length ? Math.max.apply(null, all.map(x => x.ord)) + 1 : 0, card: l.id };
       persist(nid);
       saveMonth(m, d => { const x = d.lines.find(z => z.id === l.id); if (x) { x.rid = nid; x.rm = state.rm; } }, null, true);
       logAct('roadmap', 'added "' + l.t + '" (' + cardId(l) + ') to ' + r.n + ' from ' + d0.value + ' to ' + d1.value + (none ? '' : ' for ' + who.value));
@@ -101,8 +101,13 @@ function addToRoadmap(m, l, tag) {
   });
 }
 function deleteMonth(m) {
-  confirmDlg('Delete ' + lab(m) + '?', 'Every card of ' + lab(m) + ' is deleted for everyone, including the executives who can see them.', 'Delete month', () => {
-    delete S.reports[monthId(m)]; write('reports/' + monthId(m), null); logAct('report', 'deleted the monthly deliverables for ' + lab(m)); notify('Month deleted'); renderMonthly();
+  openDlg('Delete ' + lab(m) + '?', box => {
+    box.append(el('p', '', 'Every card of ' + lab(m) + ' is deleted for everyone, including the executives who can see them. You can bring it back with Undo.'));
+    const inp = el('input'); inp.type = 'text'; inp.autocomplete = 'off'; inp.placeholder = 'Type delete to confirm'; inp.setAttribute('aria-label', 'Type delete to confirm');
+    const ok = el('button', 'btn danger', 'Delete month'), no = el('button', 'btn', 'Cancel'); ok.type = no.type = 'button'; ok.disabled = true; no.addEventListener('click', closeDlg);
+    const go = () => { if (inp.value.trim().toLowerCase() !== 'delete') return; const id = monthId(m); remember(id, S.reports[id]); delete S.reports[id]; write('reports/' + id, null); logAct('report', 'deleted the monthly deliverables for ' + lab(m)); closeDlg(); notify('Month deleted. Press Undo to bring it back.'); renderMonthly(); };
+    inp.addEventListener('input', () => { ok.disabled = inp.value.trim().toLowerCase() !== 'delete'; }); inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+    ok.addEventListener('click', go); const row = el('div', 'row'); row.append(ok, no); box.append(inp, row); setTimeout(() => inp.focus(), 0);
   });
 }
 const copyMonth = m => { const txt = monthText(docOf(m), boardProducts(), fmtIso).join('\n') || lab(m) + '\nNo deliverables yet.'; (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify('Month text copied to the clipboard'), () => notify('Could not copy. Select the text and copy it manually.', 'err')); };
@@ -135,18 +140,39 @@ const pctSelect = (v, label, onChange) => {
   st.addEventListener('change', () => onChange(Number(st.value))); return st;
 };
 /** Note icon of a card: green when it has a note; hover (or focus) shows the note as a tooltip; editors click it to write or change the note. */
-function noteBtn(m, l, ed) {
-  const b = el('button', 'nbtn mdnote' + (l.note ? ' has' : '') + (ed ? '' : ' ro')); b.type = 'button'; b.innerHTML = NOTE_ICON;
-  if (l.note) b.dataset.tip = l.note;
-  if (!ed) { b.tabIndex = l.note ? 0 : -1; b.hidden = !l.note; b.setAttribute('aria-label', 'Note: ' + (l.note || '')); return b; }
-  b.setAttribute('aria-label', l.note ? 'Edit note: ' + l.note : 'Add a note'); if (!l.note) b.title = 'Add a note';
-  b.addEventListener('click', () => openDlg('Note for this card', box => {
-    const ta = el('textarea'); ta.rows = 4; ta.maxLength = 1000; ta.value = l.note || ''; ta.setAttribute('aria-label', 'Note'); ta.placeholder = 'A short note. It appears when someone hovers the note icon.';
-    const ok = el('button', 'btn primary', 'Save'), no = el('button', 'btn', 'Cancel'), rm = el('button', 'btn', 'Remove note'); ok.type = no.type = rm.type = 'button'; rm.hidden = !l.note;
-    const put = v => { saveMonth(m, d => { const x = d.lines.find(z => z.id === l.id); if (x) x.note = v; }, v ? 'edited the note of "' + l.t + '"' : 'removed the note of "' + l.t + '"'); closeDlg(); renderMonthly(); };
-    ok.addEventListener('click', () => put(ta.value.trim())); rm.addEventListener('click', () => put('')); no.addEventListener('click', closeDlg);
-    const row = el('div', 'row'); row.append(ok, rm, no); box.append(ta, row);
-  }));
+const stamp = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); };
+/** The notes of a card, like a comment thread: who wrote each one and when. A single older `note` string counts as the first comment. */
+function openNotes(m, id, ed) {
+  const cur = () => id ? docOf(m).lines.find(z => z.id === id) : docOf(m), tgt = d => id ? d.lines.find(q => q.id === id) : d, nm = () => id ? '"' + cur().t + '"' : lab(m); if (!cur()) return;
+  openDlg('Notes · ' + (id ? (cardId(cur()) ? cardId(cur()) + ' · ' : '') + cur().t : lab(m)), box => {
+    const list = el('div', 'mdthread'); list.setAttribute('aria-label', id ? 'Notes on this card' : 'Notes on this month');
+    const ns = notesOf(cur());
+    if (!ns.length) list.append(el('div', 'hint', 'No notes yet.'));
+    ns.forEach(n => {
+      const it = el('div', 'mdnitem'), top = el('div', 'mdnhead');
+      top.append(el('b', '', n.by || 'Earlier note'), el('span', 'mdnwhen', n.at ? stamp(n.at) : ''));
+      if (ed) { const x = el('button', 'mdnx', 'Delete'); x.type = 'button'; x.setAttribute('aria-label', 'Delete this note'); x.addEventListener('click', () => { saveMonth(m, d => { const z = tgt(d); if (z) { z.notes = notesOf(z).filter(q => q.id !== n.id); delete z.note; } }, 'deleted a note of ' + nm()); closeDlg(); renderMonthly(); openNotes(m, id, ed); }); top.append(x); }
+      it.append(top, el('div', 'mdntext', n.t)); list.append(it);
+    });
+    box.append(list);
+    if (ed) {
+      const ta = el('textarea'); ta.rows = 3; ta.maxLength = 1000; ta.setAttribute('aria-label', 'New note'); ta.placeholder = 'Write a note. Ctrl+Enter adds it.';
+      const ok = el('button', 'btn primary', 'Add note'), no = el('button', 'btn', 'Close'); ok.type = no.type = 'button'; no.addEventListener('click', closeDlg);
+      const add = () => { const v = ta.value.trim(); if (!v) { ta.focus(); return; } const who = (S.me && (S.me.name || S.me.email)) || '';
+        saveMonth(m, d => { const z = tgt(d); if (z) { z.notes = notesOf(z).concat([{ id: 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), t: v.slice(0, 1000), by: who, at: new Date().toISOString() }]); delete z.note; } }, 'added a note to ' + nm());
+        closeDlg(); renderMonthly(); openNotes(m, id, ed); };
+      ok.addEventListener('click', add); ta.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); add(); } });
+      const row = el('div', 'row'); row.append(ok, no); box.append(ta, row); setTimeout(() => ta.focus(), 0);
+    } else { const no = el('button', 'btn', 'Close'); no.type = 'button'; no.addEventListener('click', closeDlg); const row = el('div', 'row'); row.append(no); box.append(row); }
+  });
+}
+/** Note icon of a card: green with a red bubble when it has notes; hover (or focus) shows the latest; click opens the thread. */
+function noteBtn(m, l, ed, month) {
+  const ns = notesOf(l), last = ns[ns.length - 1], has = ns.length > 0, b = el('button', 'nbtn mdnote' + (month ? ' mdmnote' : '') + (has ? ' has' : '') + (ed ? '' : ' ro')); b.type = 'button'; b.innerHTML = NOTE_ICON;
+  if (has) b.dataset.tip = ns.length === 1 ? last.t : last.t + '  (' + ns.length + ' notes, latest by ' + (last.by || 'someone') + ')';
+  if (!ed && !has) { b.hidden = true; b.tabIndex = -1; return b; }
+  b.setAttribute('aria-label', (month ? 'Month ' : '') + (has ? ns.length + (ns.length === 1 ? ' note' : ' notes') + ', open' : 'Add a note')); if (!has) b.title = month ? 'Add a note for this month' : 'Add a note';
+  b.addEventListener('click', () => openNotes(m, month ? null : l.id, ed));
   return b;
 }
 function card(m, l, prods, ed) {
@@ -231,6 +257,7 @@ function column(m, prods, ed) {
   const lines = d.lines.filter(l => String(l.t || '').trim()), shown = lines.filter(l => (ui.pr === 'all' || l.k === ui.pr) && (ui.fl === 'all' || (ui.fl === 'hp' ? l.hp : l.sz === ui.fl)) && (!fq || (String(l.t) + ' ' + cardId(l)).toLowerCase().includes(fq)));
   const h = el('h2'); h.append(document.createTextNode(lab(m)), el('span', 'badge', String(lines.length)));
   if (now) h.append(el('span', 'chip mdnow', 'This month'));
+  { const nb = noteBtn(m, d, ed, true); if (!nb.hidden) h.append(nb); }
   if (ed && !isBl) {
     const more = el('button', 'btn sm colmore', '⋯'); more.type = 'button'; more.setAttribute('aria-label', 'Month options for ' + lab(m)); more.title = 'Month options';
     more.addEventListener('click', e => { e.stopPropagation(); const b = more.getBoundingClientRect(); openCtx(b.right - 190, b.bottom + 4, mm => { mi(mm, 'Copy text', () => copyMonth(m)); if (S.reports[monthId(m)]) { mm.append(el('div', 'msep')); mi(mm, 'Delete month', () => deleteMonth(m), 'danger'); } }); });
@@ -278,11 +305,13 @@ export function renderMonthly() {
   const ff = el('select'); ff.setAttribute('aria-label', 'Filter by flag'); [['all', 'All cards'], ['hp', 'Business priority'], ['quick', 'Quick wins'], ['enh', 'Small enhancements']].forEach(x => { const o = el('option', '', x[1]); o.value = x[0]; o.selected = x[0] === ui.fl; ff.append(o); });
   ff.addEventListener('change', () => { ui.fl = ff.value; renderMonthly(); });
   tools.append(q, fp, ff);
-  { const n = docOf(BL).lines.filter(l => String(l.t || '').trim()).length, bb = el('button', 'btn sm mdbltoggle' + (blOpen ? ' on' : ''), (blOpen ? 'Hide backlog' : 'Backlog') + (n ? ' (' + n + ')' : '')); bb.type = 'button'; bb.id = 'mdbltoggle'; bb.setAttribute('aria-expanded', String(blOpen)); bb.setAttribute('aria-controls', 'mdbacklog'); bb.title = 'Ideas and requests not planned yet'; bb.addEventListener('click', () => { setBl(!blOpen); renderMonthly(); }); tools.append(bb); }
   if (ed) { const ub = el('button', 'btn sm mdundo', '↶ Undo'); ub.type = 'button'; ub.id = 'mdundo'; ub.disabled = !undoStack.length; ub.title = 'Undo the last change on this board (Ctrl+Z)'; ub.addEventListener('click', undoMonthly); tools.append(ub); }
   const pc = pastCount(); if (pc || ui.past) { const pb = el('button', 'btn sm', ui.past ? 'Hide past months' : 'Show past months (' + pc + ')'); pb.type = 'button'; pb.addEventListener('click', () => { ui.past = !ui.past; renderMonthly(); }); tools.append(pb); }
   pg.append(pageHead('Monthly deliverables', viewer ? 'What the business expects every month, tagged and coloured by Daycare, Tifli, Plan, AI, Finance or New initiative, and how far each deliverable is.' : 'What the business expects each month. Add a card with a tag. Use the ⋯ menu of a card to put it on the roadmap with a start, an end and an assignee. Drag a card to move it to another month.', tools));
   const sb0 = viewer ? null : setupBanner(); if (sb0) pg.append(sb0);
+  { const n = docOf(BL).lines.filter(l => String(l.t || '').trim()).length, bb = el('button', 'mdblbar' + (blOpen ? ' on' : '')); bb.type = 'button'; bb.id = 'mdbltoggle'; bb.setAttribute('aria-expanded', String(blOpen)); bb.setAttribute('aria-controls', 'mdbacklog');
+    bb.append(el('span', 'mdblcaret', blOpen ? '▾' : '▸'), el('b', '', blOpen ? 'Hide backlog' : 'Backlog'), el('span', 'badge', String(n)), el('span', 'mdblsub', blOpen ? 'Drag a card into a month, or use ⋯ → Plan in month' : 'Ideas and requests not planned yet. Open to plan them into a month.'));
+    bb.addEventListener('click', () => { setBl(!blOpen); renderMonthly(); }); pg.append(bb); }
   const board = el('div', 'mdboard'); if (blOpen) board.append(column(BL, prods, ed)); visibleMonths().forEach(m => board.append(column(m, prods, ed)));
   if (ed) { const ms = visibleMonths(), nm = nextMonth(ms[ms.length - 1]); const ac = el('button', 'addcol mdaddmonth', '+ Add month (' + lab(nm) + ')'); ac.type = 'button'; ac.id = 'addmonth'; ac.addEventListener('click', () => { saveMonth(nm, () => {}, 'added the ' + lab(nm) + ' column to the monthly deliverables'); renderMonthly(); }); board.append(ac); }
   pg.append(board);

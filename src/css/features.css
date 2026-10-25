@@ -732,3 +732,21 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
 .mdcol.mdbl { position: sticky; inset-inline-start: 0; z-index: 3; background: color-mix(in srgb, #8a6d3b 7%, var(--bg, #fff)); border: 1.5px dashed #b89a5e; box-shadow: 6px 0 14px -10px rgba(0, 0, 0, .35); }
 .mdblhint { margin: 0 0 8px; font-size: .78rem; }
 .mdbltoggle.on { background: #8a6d3b; color: #fff; border-color: #8a6d3b; }
+
+/* Notes as a comment thread */
+.mdthread { display: grid; gap: 8px; max-height: 46vh; overflow: auto; margin-bottom: 10px; }
+.mdnitem { border: 1px solid var(--line, #e3e6f0); border-radius: 10px; padding: 8px 10px; background: var(--card, #fff); }
+.mdnhead { display: flex; align-items: baseline; gap: 8px; font-size: .78rem; }
+.mdnwhen { color: var(--mut, #6b7390); }
+.mdnx { margin-inline-start: auto; border: 0; background: transparent; color: #b4232a; font-size: .74rem; cursor: pointer; padding: 2px 4px; border-radius: 6px; }
+.mdnx:hover, .mdnx:focus-visible { background: rgba(180, 35, 42, .1); }
+.mdntext { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 3px; font-size: .88rem; }
+
+/* Backlog bar above the months */
+.mdblbar { display: flex; align-items: center; gap: 10px; width: 100%; text-align: start; margin: 0 0 12px; padding: 10px 14px; border: 1.5px dashed #b89a5e; border-radius: 12px; background: color-mix(in srgb, #8a6d3b 8%, transparent); color: inherit; font: inherit; cursor: pointer; }
+.mdblbar:hover, .mdblbar:focus-visible { background: color-mix(in srgb, #8a6d3b 15%, transparent); }
+.mdblbar.on { border-style: solid; background: color-mix(in srgb, #8a6d3b 14%, transparent); }
+.mdblbar b { font-size: .95rem; }
+.mdblcaret { font-size: .85rem; width: 1em; }
+.mdblsub { color: var(--mut, #6b7390); font-size: .8rem; margin-inline-start: auto; text-align: end; }
+.mdmnote { flex: none; }

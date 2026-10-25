@@ -1155,6 +1155,24 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
 .mdcol.mdbl { position: sticky; inset-inline-start: 0; z-index: 3; background: color-mix(in srgb, #8a6d3b 7%, var(--bg, #fff)); border: 1.5px dashed #b89a5e; box-shadow: 6px 0 14px -10px rgba(0, 0, 0, .35); }
 .mdblhint { margin: 0 0 8px; font-size: .78rem; }
 .mdbltoggle.on { background: #8a6d3b; color: #fff; border-color: #8a6d3b; }
+
+/* Notes as a comment thread */
+.mdthread { display: grid; gap: 8px; max-height: 46vh; overflow: auto; margin-bottom: 10px; }
+.mdnitem { border: 1px solid var(--line, #e3e6f0); border-radius: 10px; padding: 8px 10px; background: var(--card, #fff); }
+.mdnhead { display: flex; align-items: baseline; gap: 8px; font-size: .78rem; }
+.mdnwhen { color: var(--mut, #6b7390); }
+.mdnx { margin-inline-start: auto; border: 0; background: transparent; color: #b4232a; font-size: .74rem; cursor: pointer; padding: 2px 4px; border-radius: 6px; }
+.mdnx:hover, .mdnx:focus-visible { background: rgba(180, 35, 42, .1); }
+.mdntext { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 3px; font-size: .88rem; }
+
+/* Backlog bar above the months */
+.mdblbar { display: flex; align-items: center; gap: 10px; width: 100%; text-align: start; margin: 0 0 12px; padding: 10px 14px; border: 1.5px dashed #b89a5e; border-radius: 12px; background: color-mix(in srgb, #8a6d3b 8%, transparent); color: inherit; font: inherit; cursor: pointer; }
+.mdblbar:hover, .mdblbar:focus-visible { background: color-mix(in srgb, #8a6d3b 15%, transparent); }
+.mdblbar.on { border-style: solid; background: color-mix(in srgb, #8a6d3b 14%, transparent); }
+.mdblbar b { font-size: .95rem; }
+.mdblcaret { font-size: .85rem; width: 1em; }
+.mdblsub { color: var(--mut, #6b7390); font-size: .8rem; margin-inline-start: auto; text-align: end; }
+.mdmnote { flex: none; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -1203,7 +1221,6 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     <button class="btn" id="undo" type="button" disabled>Undo</button>
     <button class="btn" id="addnote" type="button" title="Add a note to the timeline, such as leave or full-stack focus">Add note</button>
     <button class="btn" id="daysoff" type="button">Days off</button>
-    <button class="btn" id="ideasbtn" type="button">Ideas</button>
     <label class="sr" for="zoom">Zoom</label>
     <select id="zoom"><option value="day">Day</option><option value="week">Week</option><option value="month">Month</option></select>
     <button class="btn" id="exportpdf" type="button" title="A coloured, full-timeline PDF to send to executives">Export PDF</button>
@@ -1219,7 +1236,6 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
 
   <div class="chartwrap" id="wrap"><div class="grid" id="grid"></div></div>
 </section>
-<section class="pg page" id="pg-ideas" hidden></section>
 <section class="pg page" id="pg-roadmaps" hidden></section>
 <section class="pg page" id="pg-sprints" hidden></section>
 <section class="pg page" id="pg-reports" hidden></section>
@@ -1229,7 +1245,6 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
 <section class="pg page" id="pg-log" hidden></section>
 <section class="pg page" id="pg-admin" hidden></section>
 </main>
-<aside class="drawer" id="drawer" hidden aria-label="Ideas backlog"></aside>
 </div>
 
 <div class="ctx" id="ctx" role="menu" hidden></div>
@@ -1884,6 +1899,1190 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     root.append(c);
   }
 
+  // src/esm/pages/ideas.js
+  function saveIdea(id, patch, act, sum) {
+    S.ideas[id] = Object.assign({}, S.ideas[id] || {}, patch);
+    write("ideas/" + id, S.ideas[id]);
+    if (act) logAct(act, sum);
+  }
+
+  // src/esm/pages/roadmaps.js
+  function allRoadmaps() {
+    return [H2].concat(Object.keys(S.roadmaps).map((id) => Object.assign({ id }, S.roadmaps[id])).filter((r) => r.a && r.b).sort((x, y) => x.a < y.a ? -1 : 1));
+  }
+  function curRm() {
+    return allRoadmaps().find((r) => r.id === state.rm) || H2;
+  }
+  function withRm(id, fn) {
+    const keep = state.rm, r = allRoadmaps().find((x) => x.id === id) || H2;
+    state.rm = r.id;
+    setRange(r.a, r.b);
+    try {
+      return fn();
+    } finally {
+      const k = allRoadmaps().find((x) => x.id === keep) || H2;
+      state.rm = k.id;
+      setRange(k.a, k.b);
+    }
+  }
+  function useRoadmap(id) {
+    const r = allRoadmaps().find((x) => x.id === id) || H2;
+    state.rm = r.id;
+    setRange(r.a, r.b);
+    state.open = null;
+    try {
+      localStorage.setItem("ynmo-rm", r.id);
+    } catch (e) {
+    }
+    fillRm();
+    render();
+  }
+  function fillRm() {
+    const s = $("rmsel");
+    s.textContent = "";
+    allRoadmaps().forEach((r) => {
+      const o = el("option", "", r.n);
+      o.value = r.id;
+      if (r.id === state.rm) o.selected = true;
+      s.append(o);
+    });
+    $("rmtitle").textContent = curRm().n + " roadmap";
+    const rs = $("reset");
+    if (rs) rs.textContent = state.rm === H2_ID ? "Restore roadmap" : "Clear roadmap";
+  }
+  function rangeFor(kind, year) {
+    const m = { Q1: [0, 2], Q2: [3, 5], Q3: [6, 8], Q4: [9, 11], H1: [0, 5], H2: [6, 11], Year: [0, 11] }[kind] || [0, 11], y = +year;
+    return [new Date(Date.UTC(y, m[0], 1)).toISOString().slice(0, 10), new Date(Date.UTC(y, m[1] + 1, 0)).toISOString().slice(0, 10)];
+  }
+  var KIND_LABEL = { Q1: "Q1", Q2: "Q2", Q3: "Q3", Q4: "Q4", H1: "H1", H2: "H2", Year: "Full year", Custom: "Custom" };
+  function createRoadmap(name, kind, a, b, copyFrom) {
+    const id = "r" + Date.now().toString(36);
+    let copies = [];
+    if (copyFrom) copies = withRm(copyFrom, () => items());
+    S.roadmaps[id] = { n: name, kind, a, b, by: S.me ? S.me.name : "" };
+    write("roadmaps/" + id, S.roadmaps[id]);
+    const nd = Math.round((parseIso(b) - parseIso(a)) / DAY) + 1;
+    copies.forEach((it, n) => {
+      if (it.d0 >= nd) return;
+      const nid = "c" + Date.now().toString(36) + n;
+      S.over[nid] = { custom: true, rm: id, t: it.t, n: it.n || "", sq: it.sq, pr: it.pr.slice(), d0: it.d0, d1: Math.min(it.d1, nd - 1), st: it.st === "done" ? "planned" : it.st, res: it.res.slice(), c: it.c || null, ord: it.ord };
+      persist(nid);
+    });
+    logAct("roadmap", 'created roadmap "' + name + '" (' + fmtIso(a) + " to " + fmtIso(b) + ")" + (copies.length ? " with " + copies.length + " features copied" : ""));
+    return id;
+  }
+  function deleteRoadmap(id) {
+    const r = S.roadmaps[id];
+    if (!r) return;
+    Object.keys(S.over).forEach((k) => {
+      if (!base.has(k) && S.over[k].rm === id) {
+        delete S.over[k];
+        persist(k);
+      }
+    });
+    Object.keys(S.ideas).forEach((iid) => {
+      const i = S.ideas[iid];
+      if (i && i.tn && i.rm === id) {
+        delete S.ideas[iid];
+        write("ideas/" + iid, null);
+      }
+    });
+    delete S.roadmaps[id];
+    write("roadmaps/" + id, null);
+    logAct("roadmap", 'deleted roadmap "' + r.n + '"');
+    if (state.rm === id) useRoadmap(H2_ID);
+  }
+  function renderRoadmaps() {
+    const root = $("pg-roadmaps");
+    root.textContent = "";
+    root.append(pageHead("Roadmaps", "Create a roadmap for a quarter, half year or the whole year (choose Scope > Custom for your own dates). Each roadmap has its own timeline; people, ideas and leave are shared."));
+    const f = el("form", "card");
+    f.append(el("h2", "", "New roadmap"));
+    const yr = selOf([2026, 2027, 2028, 2029], 2027), kd = selOf(Object.keys(KIND_LABEL).map((k) => [k, KIND_LABEL[k]]), "Q1");
+    const nm = el("input");
+    nm.type = "text";
+    nm.maxLength = 60;
+    nm.required = true;
+    const da = el("input");
+    da.type = "date";
+    const db2 = el("input");
+    db2.type = "date";
+    const cp = selOf([["", "Start empty"]].concat(allRoadmaps().map((r) => [r.id, "Copy features from " + r.n])), "");
+    const auto = () => {
+      if (nm.dataset.touched) return;
+      nm.value = kd.value === "Custom" ? "" : kd.value === "Year" ? "Full year " + yr.value : kd.value + " " + yr.value;
+    };
+    const sync2 = () => {
+      const cu = kd.value === "Custom";
+      da.parentElement.hidden = db2.parentElement.hidden = !cu;
+      if (!cu) {
+        const r = rangeFor(kd.value, yr.value);
+        da.value = r[0];
+        db2.value = r[1];
+      }
+      auto();
+    };
+    nm.addEventListener("input", () => {
+      nm.dataset.touched = "1";
+    });
+    yr.addEventListener("change", sync2);
+    kd.addEventListener("change", sync2);
+    const row = el("div", "formrow");
+    row.append(fld("Name", nm), fld("Year", yr), fld("Scope", kd), fld("From", da), fld("To", db2), fld("Features", cp));
+    const go = el("button", "btn primary", "Create roadmap");
+    go.type = "submit";
+    go.disabled = !canEdit();
+    const msg = el("div", "gerr");
+    f.append(row, msg, go);
+    sync2();
+    f.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const a = da.value, b = db2.value;
+      if (parseIso(a) === null || parseIso(b) === null || parseIso(b) < parseIso(a)) {
+        msg.textContent = "Pick a valid date range.";
+        return;
+      }
+      if ((parseIso(b) - parseIso(a)) / DAY > 730) {
+        msg.textContent = "Keep a roadmap within two years.";
+        return;
+      }
+      const nmv = nm.value.trim();
+      if (!nmv) {
+        msg.textContent = "Give the roadmap a name.";
+        return;
+      }
+      if (allRoadmaps().some((r) => r.n.trim().toLowerCase() === nmv.toLowerCase())) {
+        msg.textContent = 'A roadmap called "' + nmv + '" already exists. Choose another name.';
+        return;
+      }
+      const id = createRoadmap(nmv, kd.value, a, b, cp.value);
+      useRoadmap(id);
+      showPage("roadmap");
+    });
+    root.append(f);
+    const g = el("div", "rmgrid");
+    allRoadmaps().forEach((r) => {
+      const c = el("div", "card rmcard" + (r.id === state.rm ? " on" : ""));
+      const n = withRm(r.id, () => items().length);
+      c.append(el("h3", "", r.n), el("div", "meta", fmtIso(r.a) + " to " + fmtIso(r.b)), el("div", "meta", n + " features"));
+      const act = el("div", "actions");
+      const open = el("button", "btn primary sm", r.id === state.rm ? "Open (current)" : "Open");
+      open.type = "button";
+      open.addEventListener("click", () => {
+        useRoadmap(r.id);
+        showPage("roadmap");
+      });
+      act.append(open);
+      if (canWrite()) {
+        const sh = el("button", "btn sm", "Share");
+        sh.type = "button";
+        sh.id = "sharebtn-" + r.id;
+        sh.title = "Read-only link for people without an account";
+        sh.addEventListener("click", () => openShare(r.id));
+        act.append(sh);
+      }
+      if (!r.builtin && canEdit()) {
+        let armed = false;
+        const del = el("button", "btn danger sm", "Delete");
+        del.type = "button";
+        del.addEventListener("click", () => {
+          if (armed) {
+            deleteRoadmap(r.id);
+            renderRoadmaps();
+            return;
+          }
+          armed = true;
+          del.textContent = "Click again to delete";
+          setTimeout(() => {
+            armed = false;
+            del.textContent = "Delete";
+          }, 3500);
+        });
+        act.append(del);
+      }
+      c.append(act);
+      g.append(c);
+    });
+    root.append(g);
+  }
+
+  // src/esm/ui/export.js
+  function csvCell(v) {
+    v = String(v == null ? "" : v);
+    if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;
+    return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  }
+
+  // src/esm/features/log-tools.js
+  function allLogs() {
+    const seen = /* @__PURE__ */ new Set(), out = [];
+    S.logs.concat(S.logsOld).forEach((l) => {
+      if (!seen.has(l.id)) {
+        seen.add(l.id);
+        out.push(l);
+      }
+    });
+    return out.sort((a, b) => a.data.at < b.data.at ? 1 : -1);
+  }
+  async function loadOlderLogs() {
+    if (S.logsBusy) return;
+    S.logsBusy = true;
+    try {
+      const have = allLogs().length;
+      const r = await sb.from("activity").select("id,data").order("updated_at", { ascending: false }).range(have, have + ACTIVE_LOG_PAGE - 1);
+      if (r.error) throw new Error(r.error.message);
+      const rows2 = (r.data || []).map((x) => ({ id: x.id, data: x.data || {} }));
+      S.logsOld = S.logsOld.concat(rows2);
+      S.logsMore = rows2.length >= ACTIVE_LOG_PAGE;
+    } catch (e) {
+      toast("Could not load older entries. Try again.");
+    }
+    S.logsBusy = false;
+    if (state.page === "log") renderLog();
+  }
+  async function exportLog(rows2) {
+    const lines = [["When", "Who", "Type", "Change", "Roadmap"].map(csvCell).join(",")];
+    rows2.forEach((d) => lines.push([d.at, d.name, d.act, d.sum, d.rm || ""].map(csvCell).join(",")));
+    try {
+      await dl.save({ filename: "ynmo-log-" + todayIso() + ".csv", data: "\uFEFF" + lines.join("\n") });
+    } catch (e) {
+    }
+  }
+  function undoneSet() {
+    const s = /* @__PURE__ */ new Set();
+    allLogs().forEach((l) => {
+      if (l.data.ref) s.add(l.data.ref);
+    });
+    return s;
+  }
+  function canUndoRow(l, done2) {
+    return canWrite() && l.data.u && !done2.has(l.id);
+  }
+  function undoFromLog(l) {
+    const u = l.data.u;
+    if (!u || !canWrite()) return;
+    const cur2 = S.over[u.id], isSame = (a, b) => JSON.stringify(a === void 0 ? null : a) === JSON.stringify(b === void 0 ? null : b);
+    let clash = false;
+    if (u.after) Object.keys(u.after).forEach((k) => {
+      if (!isSame(cur2 && cur2[k], u.after[k])) clash = true;
+    });
+    if (u.whole !== void 0 && u.after === void 0) clash = false;
+    const run = () => {
+      pushHistory();
+      if (u.after) {
+        const o = Object.assign({}, S.over[u.id] || {});
+        Object.keys(u.set || {}).forEach((k) => {
+          o[k] = u.set[k];
+        });
+        (u.unset || []).forEach((k) => {
+          delete o[k];
+        });
+        S.over[u.id] = o;
+        persist(u.id, (u.unset || []).length ? null : u.set);
+      } else if (u.whole) {
+        S.over[u.id] = u.whole;
+        persist(u.id);
+      } else {
+        delete S.over[u.id];
+        persist(u.id);
+      }
+      render();
+      const data = { at: (/* @__PURE__ */ new Date()).toISOString(), uid: S.me.id, name: S.me.name || S.me.email, av: S.me.avatar || "", act: "edit", sum: "undid: " + l.data.sum, rm: l.data.rm, ref: l.id };
+      const id = "l" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      S.logs.unshift({ id, data });
+      sb.from("activity").insert({ id, data }).then(() => {
+      }, () => {
+      });
+      if (state.page === "log") renderLog();
+      toast("Change undone.");
+    };
+    if (!clash) {
+      run();
+      return;
+    }
+    openDlg("Undo this change?", (b) => {
+      b.append(el("p", "hint", "This bar was changed again after that entry. Undoing will put back the older values and replace what is there now."));
+      const ok = el("button", "btn primary", "Undo anyway");
+      ok.type = "button";
+      const no = el("button", "btn", "Keep current");
+      no.type = "button";
+      ok.addEventListener("click", () => {
+        closeDlg();
+        run();
+      });
+      no.addEventListener("click", closeDlg);
+      const row = el("div", "formrow");
+      row.append(ok, no);
+      b.append(row);
+    });
+  }
+
+  // src/esm/pages/log.js
+  var logUI = { u: "all", a: "all" };
+  function renderLog() {
+    const root = $("pg-log");
+    root.textContent = "";
+    const every = allLogs(), done2 = undoneSet();
+    const users = [...new Set(every.map((l) => l.data.name))].sort();
+    const su = selOf([["all", "Everyone"]].concat(users.map((u) => [u, u])), logUI.u), sa = selOf([["all", "All changes"], ["edit", "Edits"], ["roadmap", "Roadmaps"], ["idea", "Ideas"], ["sprint", "Sprints"], ["report", "Reports"], ["resource", "Resources"], ["vacation", "Vacations"], ["access", "Access"]], logUI.a);
+    su.setAttribute("aria-label", "Filter by person");
+    sa.setAttribute("aria-label", "Filter by type of change");
+    su.addEventListener("change", () => {
+      logUI.u = su.value;
+      renderLog();
+    });
+    sa.addEventListener("change", () => {
+      logUI.a = sa.value;
+      renderLog();
+    });
+    const rows2 = every.filter((l) => (logUI.u === "all" || l.data.name === logUI.u) && (logUI.a === "all" || l.data.act === logUI.a));
+    const ex = el("button", "btn", "Export CSV");
+    ex.type = "button";
+    ex.id = "logexport";
+    ex.addEventListener("click", () => exportLog(rows2.map((l) => l.data)));
+    const tools = el("div", "formrow");
+    tools.append(su, sa, ex);
+    root.append(pageHead("Log", "Who changed what, and when. Newest first. Times show in your time zone." + (canEdit() ? " Undo puts an edit back the way it was." : ""), tools));
+    const card2 = el("div", "card");
+    let day = "";
+    if (!rows2.length) card2.append(el("div", "hint", "No changes recorded yet."));
+    rows2.forEach((l) => {
+      const d = l.data;
+      const dd = new Date(d.at).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+      if (dd !== day) {
+        day = dd;
+        card2.append(el("div", "logday", dd));
+      }
+      const r = el("div", "logrow"), b = el("div", "lb");
+      const nm = el("b", "", d.name);
+      b.append(nm, document.createTextNode(" "), el("span", "badge", d.act), document.createTextNode(" " + d.sum));
+      if (done2.has(l.id)) b.append(el("span", "badge undone", "undone"));
+      if (d.rm) b.append(el("div", "hint", d.rm));
+      const tm = el("div", "lt", ago(d.at));
+      tm.title = clock(d.at);
+      r.append(avatarEl(d.av, 34, d.name), b, tm);
+      if (canUndoRow(l, done2)) {
+        const u = el("button", "btn sm undo", "Undo");
+        u.type = "button";
+        u.setAttribute("aria-label", "Undo: " + d.sum);
+        u.addEventListener("click", () => undoFromLog(l));
+        r.append(u);
+      }
+      card2.append(r);
+    });
+    if (S.logsMore) {
+      const m = el("button", "btn", S.logsBusy ? "Loading…" : "Load older entries");
+      m.type = "button";
+      m.id = "logmore";
+      m.disabled = S.logsBusy;
+      m.addEventListener("click", loadOlderLogs);
+      card2.append(m);
+    } else if (every.length > ACTIVE_LOG_PAGE) card2.append(el("div", "hint", "That is everything."));
+    root.append(card2);
+  }
+
+  // src/esm/core/shared.js
+  var H2 = { id: H2_ID, n: "H2 2026", a: "2026-10-01", b: "2027-01-31", kind: "H2", builtin: true };
+  var PAGES = [["roadmap", "Roadmap"], ["roadmaps", "Roadmaps"], ["sprints", "Sprints"], ["reports", "Reports"], ["monthly", "Monthly deliverables"], ["resources", "Resources"], ["vacations", "Vacations"], ["log", "Log"], ["admin", "Approvals"]];
+  var DOMAINS = ["PM", "Mobile", "Backend", "Frontend", "Full-stack", "Engineering", "QA", "UX / Design", "AI / ML", "Other"];
+  var VTYPES = ["Annual leave", "Training", "Public holiday", "Other"];
+  var slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "x";
+  var fmtIso = (s) => {
+    const t = parseIso(s);
+    if (t === null) return s || "";
+    const d = new Date(t);
+    return DN[d.getUTCDay()] + " " + d.getUTCDate() + " " + MN[d.getUTCMonth()] + " " + d.getUTCFullYear();
+  };
+  function todayIso() {
+    const n = /* @__PURE__ */ new Date(), z = (v) => (v < 10 ? "0" : "") + v;
+    return n.getFullYear() + "-" + z(n.getMonth() + 1) + "-" + z(n.getDate());
+  }
+  function wdays(a, b) {
+    let n = 0;
+    for (let t = parseIso(a); t !== null && t <= parseIso(b); t += DAY) {
+      const w = new Date(t).getUTCDay();
+      if (w !== 5 && w !== 6) n++;
+    }
+    return n;
+  }
+  function kOfIso(s) {
+    const t = parseIso(s);
+    return t === null ? NaN : Math.round((t - START) / DAY);
+  }
+  function ago(iso4) {
+    const s = Math.max(0, (Date.now() - new Date(iso4).getTime()) / 1e3);
+    if (s < 60) return "just now";
+    if (s < 3600) return Math.floor(s / 60) + " min ago";
+    if (s < 86400) return Math.floor(s / 3600) + " h ago";
+    return Math.floor(s / 86400) + " d ago";
+  }
+  function clock(iso4) {
+    try {
+      return new Date(iso4).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
+    } catch (e) {
+      return iso4;
+    }
+  }
+  function fld(label, ctl) {
+    const l = el("label");
+    l.append(el("span", "", label), ctl);
+    return l;
+  }
+  function selOf(opts, val, cls) {
+    const s = el("select", cls || "");
+    opts.forEach((o) => {
+      const v = Array.isArray(o) ? o[0] : o, t = Array.isArray(o) ? o[1] : o;
+      const x = el("option", "", t);
+      x.value = v;
+      if (String(v) === String(val)) x.selected = true;
+      s.append(x);
+    });
+    return s;
+  }
+  function pageHead(t, sub, extra) {
+    const h = el("div", "pghead");
+    const d = el("div");
+    d.append(el("h1", "", t));
+    if (sub) d.append(el("p", "sub", sub));
+    h.append(d);
+    if (extra) h.append(extra);
+    return h;
+  }
+  function toast(t) {
+    $("save").textContent = t;
+  }
+  function logAct(act, sum, undo2) {
+    if (!S.me || !sum) return;
+    const id = "l" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const data = { at: (/* @__PURE__ */ new Date()).toISOString(), uid: S.me.id, name: S.me.name || S.me.email, av: S.me.avatar || "", act, sum, rm: curRm().n };
+    if (undo2) data.u = undo2;
+    S.logs.unshift({ id, data });
+    if (state.page === "log") renderLog();
+    sb.from("activity").insert({ id, data }).then(() => {
+    }, () => {
+    });
+  }
+  function describe(prev, f) {
+    if (!prev) return "";
+    const parts = [];
+    if (f.t !== void 0 && f.t !== prev.t) parts.push('renamed to "' + f.t + '"');
+    if (f.st !== void 0 && f.st !== prev.st) parts.push("status: " + STATUS[f.st]);
+    if (f.d0 !== void 0 && f.d0 !== prev.d0 || f.d1 !== void 0 && f.d1 !== prev.d1) parts.push("dates " + dlabel(f.d0 !== void 0 ? f.d0 : prev.d0) + " to " + dlabel(f.d1 !== void 0 ? f.d1 : prev.d1));
+    if (f.res) {
+      const a = f.res.filter((n) => !prev.res.includes(n)), r = prev.res.filter((n) => !f.res.includes(n));
+      if (a.length) parts.push("added " + a.join(", "));
+      if (r.length) parts.push("removed " + r.join(", "));
+    }
+    if (f.c !== void 0 && f.c !== (prev.c || null)) parts.push("color changed");
+    if (f.n !== void 0 && f.n !== (prev.n || "")) parts.push("notes edited");
+    if (f.sq && f.sq !== prev.sq) parts.push("product: " + laneOf(f.sq).n);
+    if (f.dep) parts.push("depends on " + (f.dep.length ? f.dep.length + " bar" + (f.dep.length === 1 ? "" : "s") : "nothing"));
+    if (f.ms !== void 0 && !!f.ms !== !!prev.ms) parts.push(f.ms ? "made a milestone" : "made a regular bar");
+    return parts.join("; ");
+  }
+
+  // src/esm/pages/vacations.js
+  var vacsOf = (name) => Object.keys(S.vacs).map((id) => Object.assign({ id }, S.vacs[id])).filter((v) => v.p === name && v.a0);
+  function affectedBy(v) {
+    const ka = kOfIso(v.a0), kb = kOfIso(v.a1 || v.a0);
+    return items().filter((it) => it.res.includes(v.p) && it.d1 >= ka && it.d0 <= kb).map((it) => ({ it, lost: Math.min(it.d1, kb) - Math.max(it.d0, ka) + 1 }));
+  }
+  var vacUI = { open: /* @__PURE__ */ new Set() };
+  var VT_CLASS = (t) => "t" + Math.max(0, VTYPES.indexOf(t));
+  function personStats(name) {
+    const list = vacsOf(name).sort((x, y) => x.a0 < y.a0 ? -1 : 1), td = todayIso();
+    let cal = 0, work = 0, taken = 0, upcoming = null;
+    const byType = {};
+    list.forEach((v) => {
+      const a1 = v.a1 || v.a0, w = wdays(v.a0, a1);
+      cal += Math.round((parseIso(a1) - parseIso(v.a0)) / DAY) + 1;
+      work += w;
+      byType[v.t] = (byType[v.t] || 0) + w;
+      if (a1 < td) taken += w;
+      else if (!upcoming) upcoming = v;
+    });
+    return { list, cal, work, taken, byType, upcoming };
+  }
+  function leaveCalendar(list) {
+    const r = curRm();
+    let a = r.a, b = r.b;
+    list.forEach((v) => {
+      if (v.a0 < a) a = v.a0;
+      if ((v.a1 || v.a0) > b) b = v.a1 || v.a0;
+    });
+    const map = {};
+    list.forEach((v) => {
+      for (let t = parseIso(v.a0); t <= parseIso(v.a1 || v.a0); t += DAY) map[new Date(t).toISOString().slice(0, 10)] = v;
+    });
+    const wrap = el("div", "mcals"), td = todayIso(), pad = (n) => (n < 10 ? "0" : "") + n;
+    let y = +a.slice(0, 4), m = +a.slice(5, 7) - 1;
+    const ey = +b.slice(0, 4), em = +b.slice(5, 7) - 1;
+    for (let n = 0; n < 14 && y * 12 + m <= ey * 12 + em; n++) {
+      const box2 = el("div", "mcal");
+      box2.append(el("h4", "", MN[m] + " " + y));
+      const g = el("div", "mgrid");
+      ["S", "M", "T", "W", "T", "F", "S"].forEach((x) => g.append(el("span", "dh", x)));
+      const first = new Date(Date.UTC(y, m, 1)).getUTCDay(), dim = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+      for (let i = 0; i < first; i++) g.append(el("span", "blank"));
+      for (let d = 1; d <= dim; d++) {
+        const key = y + "-" + pad(m + 1) + "-" + pad(d), dow = (first + d - 1) % 7, v = map[key];
+        const c = el("span", "day" + (dow === 5 || dow === 6 ? " we" : "") + (key < r.a || key > r.b ? " out" : "") + (key === td ? " today" : "") + (v ? " lv " + VT_CLASS(v.t) : ""), String(d));
+        if (v) c.title = v.t + (v.n ? " · " + v.n : "") + " · " + fmtIso(v.a0) + (v.a1 > v.a0 ? " to " + fmtIso(v.a1) : "");
+        g.append(c);
+      }
+      box2.append(g);
+      wrap.append(box2);
+      m++;
+      if (m > 11) {
+        m = 0;
+        y++;
+      }
+    }
+    return wrap;
+  }
+  function renderTeamLeave(root) {
+    const names = [...new Set(Object.keys(S.vacs).map((id) => S.vacs[id]).filter((v) => v.a0).map((v) => v.p))].sort((x, y) => x.localeCompare(y));
+    if (!names.length) return;
+    const card2 = el("div", "card");
+    card2.append(el("h2", "", "Team leave"), el("div", "hint", "Select a person to see their leave stats and calendar."));
+    const td = todayIso();
+    names.forEach((nm) => {
+      const st = personStats(nm), open = vacUI.open.has(nm), row = el("div", "tlrow");
+      const hb = el("button", "tlhead");
+      hb.type = "button";
+      hb.setAttribute("aria-expanded", String(open));
+      const onLeave = st.list.some((v) => v.a0 <= td && (v.a1 || v.a0) >= td);
+      hb.append(
+        el("span", "chev", open ? "▾" : "▸"),
+        el("strong", "", nm),
+        el("span", "hint", st.list.length + " period" + (st.list.length > 1 ? "s" : "") + " · " + st.work + " working days"),
+        st.upcoming ? el("span", "badge", st.upcoming.a0 <= td ? "Now until " + fmtIso(st.upcoming.a1 || st.upcoming.a0) : "Next " + fmtIso(st.upcoming.a0)) : el("span", "hint", "none upcoming")
+      );
+      if (onLeave) hb.append(el("span", "badge warn", "On leave today"));
+      hb.addEventListener("click", () => {
+        if (vacUI.open.has(nm)) vacUI.open.delete(nm);
+        else vacUI.open.add(nm);
+        renderVacations(true);
+      });
+      row.append(hb);
+      if (open) {
+        const body = el("div", "tlbody"), tiles = el("div", "tltiles");
+        const tile = (n, l) => {
+          const t = el("div", "tltile");
+          t.append(el("b", "", String(n)), el("span", "", l));
+          return t;
+        };
+        tiles.append(tile(st.work, "working days off"), tile(st.cal, "calendar days"), tile(st.taken, "already taken"), tile(Math.max(0, st.work - st.taken), "still ahead"));
+        Object.keys(st.byType).forEach((k) => tiles.append(tile(st.byType[k], k)));
+        const aff = /* @__PURE__ */ new Set();
+        st.list.forEach((v) => affectedBy(v).forEach((x) => aff.add(x.it.id)));
+        tiles.append(tile(aff.size, "features on " + curRm().n + " overlap"));
+        body.append(tiles, leaveCalendar(st.list));
+        const leg = el("div", "legend2");
+        VTYPES.forEach((t) => {
+          const i = el("i", VT_CLASS(t));
+          leg.append(i, document.createTextNode(t + "  "));
+        });
+        body.append(leg);
+        const ul = el("ul", "tlist");
+        st.list.forEach((v) => ul.append(el("li", "", fmtIso(v.a0) + (v.a1 > v.a0 ? " to " + fmtIso(v.a1) : "") + " · " + v.t + (v.n ? " · " + v.n : "") + " · " + wdays(v.a0, v.a1 || v.a0) + " working days")));
+        body.append(ul);
+        const go = el("button", "btn sm", "Show on roadmap");
+        go.type = "button";
+        go.addEventListener("click", () => showPage("roadmap"));
+        body.append(go);
+        row.append(body);
+      }
+      card2.append(row);
+    });
+    root.append(card2);
+  }
+  function addVacation(p, a0, a1, type, note) {
+    const id = "v" + Date.now().toString(36);
+    S.vacs[id] = { p, a0, a1, t: type, n: note, by: S.me ? S.me.name : "" };
+    write("vacations/" + id, S.vacs[id]);
+    logAct("vacation", p + ": " + type + " " + fmtIso(a0) + (a1 > a0 ? " to " + fmtIso(a1) : ""));
+    const aff = affectedBy(S.vacs[id]);
+    S.vacNotice = { id, p, a0, a1, ty: type, aff: aff.map((x) => ({ id: x.it.id, t: x.it.t, lost: x.lost })) };
+    render();
+    renderVacations(true);
+  }
+  function renderVacations(force) {
+    const root = $("pg-vacations"), ae = document.activeElement;
+    if (!force && ae && root.contains(ae) && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) return;
+    root.textContent = "";
+    root.append(pageHead("Vacations", "Leave shows on the person's row in every roadmap with a ⚑ flag. Features that overlap the leave get a flag too, so you can move them or extend them."));
+    const f = el("form", "card");
+    f.append(el("h2", "", "Add leave"));
+    const names = [...directory().keys()].sort((x, y) => x.localeCompare(y));
+    const who = selOf([["", "Choose a person…"]].concat(names.map((n) => [n, n])), ""), a = el("input"), b = el("input"), ty = selOf(VTYPES, "Annual leave"), nt = el("input");
+    who.required = true;
+    who.setAttribute("aria-label", "Person");
+    a.type = b.type = "date";
+    a.required = true;
+    nt.type = "text";
+    nt.maxLength = 80;
+    nt.placeholder = "Optional note";
+    const td = todayIso();
+    a.value = td;
+    const r1 = el("div", "formrow");
+    r1.append(fld("Person", who), fld("From", a), fld("To", b), fld("Type", ty), fld("Note", nt));
+    const msg = el("div", "gerr"), go = el("button", "btn primary", "Add leave");
+    go.type = "submit";
+    go.disabled = !canEdit();
+    f.append(r1, msg, go);
+    f.addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (!who.value) {
+        msg.textContent = "Choose a person first.";
+        who.focus();
+        return;
+      }
+      const x0 = a.value, x1 = b.value || a.value;
+      if (parseIso(x0) === null || parseIso(x1) < parseIso(x0)) {
+        msg.textContent = "Pick a valid date range.";
+        return;
+      }
+      const clash = vacsOf(who.value).find((v) => x0 <= (v.a1 || v.a0) && x1 >= v.a0);
+      if (clash) {
+        msg.textContent = who.value + " already has leave on " + fmtIso(clash.a0) + (clash.a1 > clash.a0 ? " to " + fmtIso(clash.a1) : "") + ". Remove it first or pick other dates.";
+        return;
+      }
+      addVacation(who.value, x0, x1, ty.value, nt.value.trim());
+    });
+    root.append(f);
+    if (S.vacNotice) {
+      const c = el("div", "card");
+      c.style.borderColor = "var(--brand-2)";
+      const hd = el("div", "vhead");
+      hd.append(el("strong", "", S.vacNotice.p), el("span", "", fmtIso(S.vacNotice.a0) + (S.vacNotice.a1 > S.vacNotice.a0 ? " to " + fmtIso(S.vacNotice.a1) : "")), el("span", "badge", S.vacNotice.ty || "Leave"));
+      c.append(hd);
+      c.append(el("h3", "", S.vacNotice.aff.length ? S.vacNotice.aff.length + " feature" + (S.vacNotice.aff.length > 1 ? "s" : "") + " on " + curRm().n + " overlap this leave" : "No features on " + curRm().n + " overlap this leave"));
+      if (S.vacNotice.aff.length) {
+        const ul = el("ul");
+        S.vacNotice.aff.forEach((x) => ul.append(el("li", "", x.t + " (" + x.lost + " day" + (x.lost > 1 ? "s" : "") + " inside the leave)")));
+        c.append(ul);
+        const act = el("div", "actions");
+        const ext = el("button", "btn primary sm", "Extend each feature by its lost days");
+        ext.type = "button";
+        ext.disabled = !canEdit();
+        ext.addEventListener("click", () => {
+          const n = S.vacNotice;
+          S.vacNotice = null;
+          n.aff.forEach((x) => {
+            const it = items().find((i) => i.id === x.id);
+            if (it) commit(it.id, { d1: Math.min(NDAYS - 1, it.d1 + x.lost) });
+          });
+          logAct("vacation", "extended " + n.aff.length + " feature(s) for " + n.p + "'s leave");
+          renderVacations(true);
+        });
+        const keep = el("button", "btn sm", "Keep dates, just flag them");
+        keep.type = "button";
+        keep.addEventListener("click", () => {
+          S.vacNotice = null;
+          renderVacations(true);
+        });
+        act.append(ext, keep);
+        c.append(act);
+      }
+      root.append(c);
+    }
+    renderTeamLeave(root);
+    const card2 = el("div", "card");
+    card2.append(el("h2", "", "All leave"));
+    const list = Object.keys(S.vacs).map((id) => Object.assign({ id }, S.vacs[id])).filter((v) => v.a0).sort((x, y) => x.a0 < y.a0 ? -1 : 1);
+    if (!list.length) card2.append(el("div", "hint", "No leave added yet."));
+    else {
+      const t = el("table", "tbl"), th = el("thead"), hr = el("tr");
+      ["Person", "Dates", "Type", "Working days", "Affects", ""].forEach((x) => {
+        const c = el("th", "", x);
+        if (!x) c.append(el("span", "sr", "Actions"));
+        hr.append(c);
+      });
+      th.append(hr);
+      t.append(th);
+      const tb = el("tbody");
+      list.forEach((v) => {
+        const aff = affectedBy(v), tr = el("tr");
+        tr.append(el("td", "", v.p), el("td", "", fmtIso(v.a0) + (v.a1 > v.a0 ? " to " + fmtIso(v.a1) : "")), el("td", "", v.t + (v.n ? " · " + v.n : "")), el("td", "", String(wdays(v.a0, v.a1 || v.a0))));
+        const c = el("td");
+        c.append(aff.length ? el("span", "badge warn", "⚑ " + aff.length + " on " + curRm().n) : el("span", "hint", "none"));
+        const x = el("td");
+        if (canEdit()) {
+          const rm = el("button", "btn danger sm", "Remove");
+          rm.type = "button";
+          rm.addEventListener("click", () => {
+            delete S.vacs[v.id];
+            if (S.vacNotice && S.vacNotice.id === v.id) S.vacNotice = null;
+            write("vacations/" + v.id, null);
+            logAct("vacation", "removed leave of " + v.p + " (" + fmtIso(v.a0) + ")");
+            render();
+            renderVacations(true);
+          });
+          x.append(rm);
+        }
+        tr.append(c, x);
+        tb.append(tr);
+      });
+      t.append(tb);
+      const sc = el("div", "tscroll");
+      sc.append(t);
+      card2.append(sc);
+    }
+    root.append(card2);
+  }
+
+  // src/esm/ui/notify.js
+  var box = null;
+  function host() {
+    if (box && document.body.contains(box)) return box;
+    box = document.createElement("div");
+    box.id = "toasts";
+    box.setAttribute("aria-live", "polite");
+    document.body.append(box);
+    return box;
+  }
+  function notify(msg, kind, ms) {
+    kind = kind || "ok";
+    const t = document.createElement("div");
+    t.className = "toast " + kind;
+    t.setAttribute("role", kind === "err" ? "alert" : "status");
+    const ic = document.createElement("span");
+    ic.className = "ti";
+    ic.textContent = kind === "err" ? "!" : kind === "ok" ? "✓" : "i";
+    ic.setAttribute("aria-hidden", "true");
+    const tx = document.createElement("span");
+    tx.className = "tt";
+    tx.textContent = msg;
+    const x = document.createElement("button");
+    x.type = "button";
+    x.className = "tx";
+    x.textContent = "×";
+    x.setAttribute("aria-label", "Dismiss");
+    const gone = () => {
+      t.classList.add("out");
+      setTimeout(() => t.remove(), 200);
+    };
+    x.addEventListener("click", gone);
+    t.append(ic, tx, x);
+    const h = host();
+    h.append(t);
+    while (h.children.length > 3) h.firstChild.remove();
+    setTimeout(gone, ms || (kind === "err" ? 7e3 : 3500));
+  }
+  var lastFail = 0;
+  function notifyFailOnce(msg) {
+    const n = Date.now();
+    if (n - lastFail < 8e3) return;
+    lastFail = n;
+    notify(msg, "err");
+  }
+
+  // src/esm/features/timeline-notes.js
+  var NOTE_H = 20;
+  var QUICK = ["#0891b2", "#7c3aed", "#16a34a", "#ea580c", "#dc2626", "#ca8a04", "#374151", "#c2257f"];
+  var DEFAULT_COLOR = { person: "#0891b2", period: "#ea580c" };
+  function notesHere(kind) {
+    return Object.keys(S.ideas).map((id) => Object.assign({ id }, S.ideas[id])).filter((n) => n.tn && n.rm === state.rm && (!kind || n.k === kind)).map((n) => {
+      const a = kOfIso(n.a0), b = kOfIso(n.a1 || n.a0);
+      return Object.assign(n, { d0: Math.max(0, a), d1: Math.min(NDAYS - 1, b), inside: Number.isFinite(a) && Number.isFinite(b) && b >= 0 && a <= NDAYS - 1 });
+    }).filter((n) => n.inside).sort((x, y) => x.d0 - y.d0 || x.d1 - y.d1 || (x.id < y.id ? -1 : 1));
+  }
+  function packNotes(list) {
+    const lanes = [], out = [];
+    list.forEach((n) => {
+      let i = lanes.findIndex((l) => l.every((o) => o.d1 < n.d0 || o.d0 > n.d1));
+      if (i < 0) {
+        i = lanes.length;
+        lanes.push([]);
+      }
+      lanes[i].push(n);
+      out.push({ n, lane: i });
+    });
+    return { out, lanes: lanes.length };
+  }
+  var personNotes = (name) => packNotes(notesHere("person").filter((n) => n.p === name));
+  var hasPersonNotes = (name) => notesHere("person").some((n) => n.p === name);
+  function leaveByDay() {
+    const counts = new Array(NDAYS).fill(0), who = Array.from({ length: NDAYS }, () => []);
+    const names = state.person === "all" ? [...directory().keys()] : [state.person];
+    names.forEach((n) => vacsOf(n).forEach((v) => {
+      const a = Math.max(0, kOfIso(v.a0)), b = Math.min(NDAYS - 1, kOfIso(v.a1 || v.a0));
+      for (let k = a; k <= b; k++) if (!who[k].includes(n)) {
+        who[k].push(n);
+        counts[k]++;
+      }
+    }));
+    return { counts, who };
+  }
+  function leaveRuns() {
+    const { counts, who } = leaveByDay(), runs = [];
+    let k = 0;
+    while (k < NDAYS) {
+      if (!counts[k]) {
+        k++;
+        continue;
+      }
+      let e = k;
+      while (e + 1 < NDAYS && counts[e + 1] === counts[k]) e++;
+      runs.push({ d0: k, d1: e, n: counts[k], who: who[k] });
+      k = e + 1;
+    }
+    return runs;
+  }
+  var stripNeeded = () => notesHere("period").length > 0 || leaveRuns().length > 0;
+  function saveNote(id, patch, sum) {
+    const nid = id || "tn-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 4);
+    saveIdea(nid, Object.assign({ cfg: true, tn: true, rm: state.rm, by: S.me ? S.me.name : "" }, patch), "roadmap", sum);
+    render();
+    return nid;
+  }
+  function deleteNote(id) {
+    const n = S.ideas[id];
+    if (!n) return;
+    delete S.ideas[id];
+    write("ideas/" + id, null);
+    logAct("roadmap", 'deleted the note "' + n.t + '"');
+    render();
+  }
+  function openNoteDialog(note) {
+    if (!canEdit()) return;
+    const k = note.k, editing = !!note.id;
+    openDlg((editing ? "Edit " : "Add ") + (k === "person" ? "note for " + (note.p || "a person") : "period note"), (box2) => {
+      box2.append(el("p", "sub", k === "person" ? `A note on one person's row, for example "Full stack: backend + frontend". It is not a feature, so it is never counted.` : 'A note across every row for some dates, for example "Eid: many vacations". It is not a feature, so it is never counted.'));
+      const tx = el("input");
+      tx.type = "text";
+      tx.maxLength = 120;
+      tx.value = note.t || "";
+      tx.placeholder = k === "person" ? "Full stack: backend + frontend" : "Eid: many vacations";
+      tx.setAttribute("aria-label", "Note text");
+      const fld2 = (l, c) => {
+        const w = el("label", "fld");
+        w.append(el("span", "", l), c);
+        return w;
+      };
+      box2.append(fld2("Text", tx));
+      let who = null;
+      if (k === "person") {
+        who = el("select");
+        who.setAttribute("aria-label", "Person");
+        [...directory().keys()].sort((a, b) => a.localeCompare(b)).forEach((n) => {
+          const o = el("option", "", n);
+          o.value = n;
+          if (n === note.p) o.selected = true;
+          who.append(o);
+        });
+        box2.append(fld2("Person", who));
+      }
+      const d0 = el("input"), d1 = el("input");
+      d0.type = d1.type = "date";
+      d0.min = d1.min = iso(0);
+      d0.max = d1.max = iso(NDAYS - 1);
+      d0.value = note.a0;
+      d1.value = note.a1 || note.a0;
+      d0.setAttribute("aria-label", "From");
+      d1.setAttribute("aria-label", "To");
+      const dr = el("div", "formrow");
+      dr.append(fld2("From", d0), fld2("To", d1));
+      box2.append(dr);
+      let col = isHex(note.c) ? note.c : DEFAULT_COLOR[k];
+      const sw = el("div", "swatches");
+      const pick = (c) => {
+        col = c;
+        sw.querySelectorAll(".swatch").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.c === c)));
+        any.classList.toggle("on", !QUICK.includes(c));
+      };
+      QUICK.forEach((c) => {
+        const b = el("button", "swatch");
+        b.type = "button";
+        b.dataset.c = c;
+        b.style.setProperty("--c", c);
+        b.setAttribute("aria-label", "Colour " + c);
+        b.setAttribute("aria-pressed", String(c === col));
+        b.addEventListener("click", () => pick(c));
+        sw.append(b);
+      });
+      const any = el("label", "swatch any");
+      any.title = "Pick any colour";
+      const ci = el("input");
+      ci.type = "color";
+      ci.value = col;
+      ci.setAttribute("aria-label", "Pick any colour");
+      ci.addEventListener("input", () => pick(ci.value.toLowerCase()));
+      any.append(ci);
+      sw.append(any);
+      pick(col);
+      box2.append(fld2("Colour", sw));
+      const msg = el("div", "gerr");
+      msg.setAttribute("role", "alert");
+      box2.append(msg);
+      const save2 = el("button", "btn primary", "Save"), cancel = el("button", "btn", "Cancel");
+      save2.type = cancel.type = "button";
+      cancel.addEventListener("click", closeDlg);
+      const go = () => {
+        const t = tx.value.trim().replace(/\s+/g, " ");
+        if (!t) {
+          msg.textContent = "Write the note text.";
+          tx.focus();
+          return;
+        }
+        if (!d0.value || !d1.value) {
+          msg.textContent = "Pick the dates.";
+          return;
+        }
+        if (d1.value < d0.value) {
+          msg.textContent = "The end date is before the start date.";
+          return;
+        }
+        const patch = { k, t, a0: d0.value, a1: d1.value, c: col };
+        if (k === "person") patch.p = who.value;
+        closeDlg();
+        saveNote(note.id, patch, (editing ? "edited" : "added") + " the " + (k === "person" ? "note for " + patch.p : "period note") + ' "' + t + '"');
+        notify("Note saved");
+      };
+      tx.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          go();
+        }
+      });
+      save2.addEventListener("click", go);
+      const row = el("div", "formrow");
+      row.append(save2, cancel);
+      if (editing) {
+        const del = el("button", "btn danger", "Delete note");
+        del.type = "button";
+        del.addEventListener("click", () => {
+          closeDlg();
+          deleteNote(note.id);
+          notify("Note deleted");
+        });
+        row.append(del);
+      }
+      box2.append(row);
+    });
+  }
+  function noteMenu(n, x, y) {
+    if (!canEdit()) return;
+    openCtx(x, y, (c) => {
+      mi(c, "Edit note…", () => openNoteDialog(n));
+      mi(c, "Delete note", () => {
+        deleteNote(n.id);
+        notify("Note deleted");
+      }, "danger");
+    });
+  }
+  function periodMenu(x, y, dayK) {
+    if (!canEdit()) return;
+    openCtx(x, y, (c) => {
+      mi(c, "Add period note…", () => openNoteDialog({ k: "period", a0: iso(dayK), a1: iso(Math.min(NDAYS - 1, dayK + 6)) }));
+    });
+  }
+  function bindDrag(node, n) {
+    node.addEventListener("contextmenu", (e) => {
+      if (!canEdit()) return;
+      e.preventDefault();
+      e.stopPropagation();
+      noteMenu(n, e.clientX, e.clientY);
+    });
+    if (!canEdit()) return;
+    node.addEventListener("pointerdown", (e) => {
+      if (e.button != null && e.button !== 0) return;
+      e.stopPropagation();
+      const g = document.getElementById("grid"), wk = g.querySelector(".wk"), mw = wk ? wk.getBoundingClientRect().width : 26;
+      const mode = e.target.classList.contains("hl") ? "l" : e.target.classList.contains("hr") ? "r" : "move", x0 = e.clientX;
+      let a = n.d0, b = n.d1, moved = false;
+      node.setPointerCapture(e.pointerId);
+      const mv = (ev) => {
+        const dm = Math.round((ev.clientX - x0) / mw);
+        if (!moved && Math.abs(ev.clientX - x0) < 4) return;
+        moved = true;
+        if (mode === "move") {
+          const len = n.d1 - n.d0;
+          a = Math.max(0, Math.min(NDAYS - 1 - len, n.d0 + dm));
+          b = a + len;
+        } else if (mode === "l") {
+          a = Math.max(0, Math.min(n.d1, n.d0 + dm));
+          b = n.d1;
+        } else {
+          b = Math.min(NDAYS - 1, Math.max(n.d0, n.d1 + dm));
+          a = n.d0;
+        }
+        node.style.gridColumn = a + 2 + " / " + (b + 3);
+      };
+      const up = () => {
+        node.removeEventListener("pointermove", mv);
+        node.removeEventListener("pointerup", up);
+        node.removeEventListener("pointercancel", up);
+        if (!moved) {
+          openNoteDialog(n);
+          return;
+        }
+        if (a !== n.d0 || b !== n.d1) saveNote(n.id, { a0: iso(a), a1: iso(b) }, 'moved the note "' + n.t + '" to ' + fmtIso(iso(a)) + " – " + fmtIso(iso(b)));
+        else render();
+      };
+      node.addEventListener("pointermove", mv);
+      node.addEventListener("pointerup", up);
+      node.addEventListener("pointercancel", up);
+    });
+  }
+  var tip = (n) => n.t + " · " + fmtIso(n.a0) + (n.a1 && n.a1 !== n.a0 ? " to " + fmtIso(n.a1) : "") + (n.by ? " · " + n.by : "");
+  function noteNode(n, laneIdx, kind) {
+    const c = isHex(n.c) ? n.c : DEFAULT_COLOR[n.k], b = el("div", kind === "chip" ? "tnote tchip" : "tnote tribbon");
+    b.dataset.note = n.id;
+    b.style.setProperty("--c", c);
+    b.style.marginTop = (kind === "chip" ? 4 + laneIdx * NOTE_H : 2 + laneIdx * NOTE_H) + "px";
+    b.title = tip(n);
+    b.tabIndex = 0;
+    b.setAttribute("role", "button");
+    b.setAttribute("aria-label", "Note: " + tip(n));
+    b.append(el("span", "nt", n.t));
+    if (canEdit()) b.append(el("span", "hd l"), el("span", "hd r"));
+    b.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === "F2") {
+        e.preventDefault();
+        openNoteDialog(n);
+      } else if (e.key === "Delete" && canEdit()) {
+        e.preventDefault();
+        deleteNote(n.id);
+      }
+    });
+    bindDrag(b, n);
+    return b;
+  }
+  function drawNotesRow(put, row) {
+    const periods = packNotes(notesHere("period")), runs = leaveRuns();
+    const h = 10 + Math.max(1, periods.lanes) * NOTE_H + 12;
+    const c1 = el("div", "c1 notesrow");
+    c1.style.minHeight = h + "px";
+    c1.append(el("span", "", "Notes"), el("small", "", "leave and periods"));
+    put(c1, row, 1);
+    const bg = el("div", "rowbg tstrip");
+    bg.style.minHeight = h + "px";
+    put(bg, row, null);
+    runs.forEach((r) => {
+      const d = el("div", "vheat");
+      d.style.setProperty("--n", String(Math.min(1, r.n / 4)));
+      d.title = r.n + (r.n === 1 ? " person" : " people") + " on leave: " + r.who.join(", ");
+      if (r.d1 - r.d0 >= 1) d.append(el("span", "", String(r.n)));
+      put(d, row, r.d0 + 2 + " / " + (r.d1 + 3));
+    });
+    periods.out.forEach((x) => put(noteNode(x.n, x.lane, "chip"), row, x.n.d0 + 2 + " / " + (x.n.d1 + 3)));
+  }
+  function drawBands(put, fromRow, toRow) {
+    notesHere("period").forEach((n) => {
+      const b = el("div", "tband");
+      b.style.setProperty("--c", isHex(n.c) ? n.c : DEFAULT_COLOR.period);
+      b.title = n.t;
+      put(b, fromRow + " / " + toRow, n.d0 + 2 + " / " + (n.d1 + 3));
+    });
+  }
+
+  // src/esm/features/presence.js
+  var presT = 0;
+  var lockOverride = null;
+  var lockAt = 0;
+  function myPres() {
+    return { uid: S.me.id, name: S.me.name || S.me.email, av: S.me.avatar || "", page: state.page, rm: state.rm, edit: state.edit ? state.edit.split("|")[0] : null };
+  }
+  function trackPres() {
+    clearTimeout(presT);
+    presT = setTimeout(() => {
+      if (S.presCh && S.me) {
+        try {
+          S.presCh.track(myPres());
+        } catch (e) {
+        }
+      }
+    }, 120);
+  }
+  function startPresence() {
+    if (S.presCh || !sb.channel) return;
+    try {
+      S.presCh = sb.channel("ynmo-presence", { config: { private: true, presence: { key: S.me.id } } });
+      S.presCh.on("presence", { event: "sync" }, () => {
+        try {
+          S.pres = S.presCh.presenceState() || {};
+        } catch (e) {
+          S.pres = {};
+        }
+        drawPresence();
+        decorateLocks();
+      });
+      S.presCh.subscribe((s) => {
+        if (s === "SUBSCRIBED") trackPres();
+      });
+    } catch (e) {
+      S.presCh = null;
+    }
+  }
+  function others() {
+    const out = [];
+    Object.keys(S.pres).forEach((k) => {
+      if (k === (S.me && S.me.id)) return;
+      const m = (S.pres[k] || [])[0];
+      if (m) out.push(m);
+    });
+    return out;
+  }
+  function editorOf(id) {
+    const o = others().find((m) => m.edit === id);
+    return o || null;
+  }
+  function drawPresence() {
+    let box2 = $("presence");
+    if (!box2) {
+      box2 = el("div", "presence");
+      box2.id = "presence";
+      box2.setAttribute("aria-label", "People online");
+      const av = $("avbtn");
+      av.parentNode.insertBefore(box2, av);
+    }
+    box2.textContent = "";
+    const o = others();
+    box2.hidden = !o.length;
+    o.slice(0, 4).forEach((m) => {
+      const a = avatarEl(m.av, 28, m.name);
+      a.title = m.name + (m.edit ? " · editing" : " · online") + " · " + (m.page || "");
+      a.classList.add("pav");
+      box2.append(a);
+    });
+    if (o.length > 4) box2.append(el("span", "pmore", "+" + (o.length - 4)));
+    box2.setAttribute("role", "group");
+    box2.setAttribute("aria-label", o.length + (o.length === 1 ? " other person online: " : " others online: ") + o.map((m) => m.name).join(", "));
+  }
+  function decorateLocks() {
+    const g = $("grid");
+    if (!g) return;
+    g.querySelectorAll(".bar.locked").forEach((b) => {
+      b.classList.remove("locked");
+      const t = b.querySelector(".lockchip");
+      if (t) t.remove();
+    });
+    others().forEach((m) => {
+      if (!m.edit) return;
+      g.querySelectorAll(".bar").forEach((b) => {
+        if (b.dataset.id === m.edit && !b.classList.contains("editing")) {
+          b.classList.add("locked");
+          b.append(el("span", "lockchip", "✎ " + String(m.name).split(" ")[0]));
+          b.title += " · " + m.name + " is editing";
+        }
+      });
+    });
+  }
+  function lockCheck(it) {
+    const o = editorOf(it.id);
+    if (!o) return true;
+    if (lockOverride === it.id && Date.now() - lockAt < 6e3) {
+      lockOverride = null;
+      return true;
+    }
+    lockOverride = it.id;
+    lockAt = Date.now();
+    toast(o.name + ' is editing "' + it.t + '" right now. Try again within 6 seconds to edit anyway.');
+    return false;
+  }
+
   // src/esm/ui/dropdowns.js
   var cpop = null;
   var cpopSel = null;
@@ -2279,2318 +3478,6 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     const p = $("pop");
     if (!p.contains(e.target) && !(e.target.closest && (e.target.closest(".res") || e.target.closest("#ed-res") || e.target.closest("#daysoff")))) closePicker();
   });
-
-  // src/esm/features/people-rows.js
-  var savedOrder = () => S.ideas.peopleorder && S.ideas.peopleorder.ord || [];
-  function primaryLane(name) {
-    const d = directory().get(name);
-    const idx = d ? [...d.sqs].map((k) => LANES.findIndex((l) => l.k === k)).filter((i) => i >= 0) : [];
-    return idx.length ? Math.min.apply(null, idx) : 0;
-  }
-  function comparePeople(a, b) {
-    const ord = savedOrder(), ia = ord.indexOf(a.name), ib = ord.indexOf(b.name);
-    if (ia >= 0 || ib >= 0) return (ia < 0 ? 1e6 : ia) - (ib < 0 ? 1e6 : ib) || a.name.localeCompare(b.name);
-    return primaryLane(a.name) - primaryLane(b.name) || a.name.localeCompare(b.name);
-  }
-  function allNamesInOrder() {
-    return [...directory().keys()].map((name) => ({ name })).sort(comparePeople).map((p) => p.name);
-  }
-  function movePerson(name, target, after) {
-    if (!canEdit() || name === target) return;
-    const list = allNamesInOrder().filter((n) => n !== name), at = list.indexOf(target);
-    if (at < 0) return;
-    list.splice(at + (after ? 1 : 0), 0, name);
-    saveIdea("peopleorder", { cfg: true, ord: list }, "resource", "reordered team rows (" + name + ")");
-    render();
-  }
-  function step(name, delta) {
-    const list = allNamesInOrder(), i = list.indexOf(name), t = list[i + delta];
-    if (t) movePerson(name, t, delta > 0);
-  }
-  function hiddenHere() {
-    const h = S.ideas.peoplehide;
-    return h && h.byRm && h.byRm[state.rm] || [];
-  }
-  var featureCount = (name) => items().filter((i) => i.res.includes(name)).length;
-  function setHidden(names, sum) {
-    const old = S.ideas.peoplehide && S.ideas.peoplehide.byRm || {}, byRm = Object.assign({}, old);
-    byRm[state.rm] = names;
-    if (!names.length) delete byRm[state.rm];
-    saveIdea("peoplehide", { cfg: true, byRm }, "resource", sum);
-    render();
-  }
-  function hideHere(name) {
-    const n = featureCount(name);
-    if (n) {
-      toast(name + " has " + n + " feature" + (n === 1 ? "" : "s") + " on this roadmap. Reassign " + (n === 1 ? "it" : "them") + " first, then hide the row.");
-      return;
-    }
-    setHidden(hiddenHere().concat(name), "hid " + name + " from " + curRm().n);
-    toast(name + " hidden on " + curRm().n + '. Use "Show hidden" under the table to bring the row back.');
-  }
-  function openHiddenDialog() {
-    openDlg("Hidden on " + curRm().n, (box2) => {
-      const names = hiddenHere().filter((n) => directory().has(n));
-      box2.append(el("p", "sub", "These people are still on the team and on other roadmaps. They only have no row here."));
-      names.forEach((n) => {
-        const row2 = el("div", "formrow"), b = el("button", "btn sm", "Show");
-        b.type = "button";
-        b.addEventListener("click", () => {
-          setHidden(hiddenHere().filter((x) => x !== n), "showed " + n + " on " + curRm().n);
-          closeDlg();
-          if (hiddenHere().some((x) => directory().has(x))) openHiddenDialog();
-        });
-        row2.append(el("strong", "", n), b);
-        box2.append(row2);
-      });
-      const all = el("button", "btn primary", "Show all");
-      all.type = "button";
-      all.addEventListener("click", () => {
-        setHidden([], "showed all hidden people on " + curRm().n);
-        closeDlg();
-      });
-      const no = el("button", "btn", "Close");
-      no.type = "button";
-      no.addEventListener("click", closeDlg);
-      const row = el("div", "formrow");
-      row.append(all, no);
-      box2.append(row);
-    });
-  }
-  function decoratePersonRow(c1, name) {
-    if (!canEdit()) return;
-    c1.classList.add("hasgrip");
-    const grip = el("span", "pgrip", "⋮⋮");
-    grip.draggable = true;
-    grip.title = "Drag to reorder";
-    grip.setAttribute("aria-label", "Drag to reorder " + name);
-    grip.addEventListener("dragstart", (e) => {
-      e.dataTransfer.setData("text/person", name);
-      e.dataTransfer.effectAllowed = "move";
-      c1.classList.add("dragging");
-    });
-    grip.addEventListener("dragend", () => document.querySelectorAll(".pn.dragging,.pn.dropbefore,.pn.dropafter").forEach((x) => x.classList.remove("dragging", "dropbefore", "dropafter")));
-    const more = el("button", "pmore", "⋯");
-    more.type = "button";
-    more.title = "Row options";
-    more.setAttribute("aria-label", "Options for " + name);
-    more.setAttribute("aria-haspopup", "menu");
-    more.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const r = more.getBoundingClientRect(), list = allNamesInOrder(), i = list.indexOf(name);
-      openCtx(r.right - 200, r.bottom + 4, (m) => {
-        if (i > 0) mi(m, "Move up", () => step(name, -1));
-        if (i < list.length - 1) mi(m, "Move down", () => step(name, 1));
-        m.append(el("div", "msep"));
-        mi(m, "Hide " + name + " from this roadmap", () => hideHere(name), "danger");
-      });
-    });
-    const side = (e) => {
-      const r = c1.getBoundingClientRect();
-      return e.clientY > r.top + r.height / 2;
-    };
-    c1.addEventListener("dragover", (e) => {
-      if (![...e.dataTransfer.types].includes("text/person")) return;
-      e.preventDefault();
-      const after = side(e);
-      c1.classList.toggle("dropafter", after);
-      c1.classList.toggle("dropbefore", !after);
-    });
-    c1.addEventListener("dragleave", (e) => {
-      if (!c1.contains(e.relatedTarget)) c1.classList.remove("dropbefore", "dropafter");
-    });
-    c1.addEventListener("drop", (e) => {
-      const who = e.dataTransfer.getData("text/person");
-      if (!who) return;
-      e.preventDefault();
-      c1.classList.remove("dropbefore", "dropafter");
-      movePerson(who, name, side(e));
-    });
-    c1.append(grip, more);
-  }
-
-  // src/esm/ui/notify.js
-  var box = null;
-  function host() {
-    if (box && document.body.contains(box)) return box;
-    box = document.createElement("div");
-    box.id = "toasts";
-    box.setAttribute("aria-live", "polite");
-    document.body.append(box);
-    return box;
-  }
-  function notify(msg, kind, ms) {
-    kind = kind || "ok";
-    const t = document.createElement("div");
-    t.className = "toast " + kind;
-    t.setAttribute("role", kind === "err" ? "alert" : "status");
-    const ic = document.createElement("span");
-    ic.className = "ti";
-    ic.textContent = kind === "err" ? "!" : kind === "ok" ? "✓" : "i";
-    ic.setAttribute("aria-hidden", "true");
-    const tx = document.createElement("span");
-    tx.className = "tt";
-    tx.textContent = msg;
-    const x = document.createElement("button");
-    x.type = "button";
-    x.className = "tx";
-    x.textContent = "×";
-    x.setAttribute("aria-label", "Dismiss");
-    const gone = () => {
-      t.classList.add("out");
-      setTimeout(() => t.remove(), 200);
-    };
-    x.addEventListener("click", gone);
-    t.append(ic, tx, x);
-    const h = host();
-    h.append(t);
-    while (h.children.length > 3) h.firstChild.remove();
-    setTimeout(gone, ms || (kind === "err" ? 7e3 : 3500));
-  }
-  var lastFail = 0;
-  function notifyFailOnce(msg) {
-    const n = Date.now();
-    if (n - lastFail < 8e3) return;
-    lastFail = n;
-    notify(msg, "err");
-  }
-
-  // src/esm/ui/export-pdf.js
-  var H = 30;
-  var NH = 17;
-  var pct = (n) => (n / NDAYS * 100).toFixed(3) + "%";
-  function legend(list) {
-    const lg = el("div", "prm-legend");
-    const used = new Set(list.map((i) => i.sq));
-    LANES.filter((l) => used.has(l.k)).forEach((l) => {
-      const s = el("span");
-      const i = el("i", "prm-dot");
-      i.style.background = l.c;
-      s.append(i, document.createTextNode(l.n));
-      lg.append(s);
-    });
-    [["planned", "Planned"], ["decide", "Needs decision"], ["contract", "Waiting on contract"], ["done", "Done"]].forEach((x) => {
-      const s = el("span");
-      const i = el("i", "prm-sw prm-st-" + x[0]);
-      i.style.setProperty("--c", "#5a6180");
-      s.append(i, document.createTextNode(STATUS[x[0]] || x[1]));
-      lg.append(s);
-    });
-    return lg;
-  }
-  function noteEl(n, laneIdx, chip) {
-    const b = el("div", "prm-note " + (chip ? "prm-chip" : "prm-rib"));
-    b.style.left = pct(n.d0);
-    b.style.width = pct(n.d1 - n.d0 + 1);
-    b.style.top = laneIdx * NH + 2 + "px";
-    b.style.setProperty("--c", /^#[0-9a-f]{6}$/i.test(n.c || "") ? n.c : DEFAULT_COLOR[n.k]);
-    b.append(el("span", "prm-t", n.t));
-    return b;
-  }
-  function bar(it, laneIdx, top0) {
-    const l = LANES.find((x) => x.k === it.sq) || LANES[0], col = l.c, b = el("div", "prm-bar prm-st-" + it.st + (it.ms ? " prm-ms" : ""));
-    b.style.left = pct(it.d0);
-    b.style.width = pct(it.d1 - it.d0 + 1);
-    b.style.top = (top0 || 0) + laneIdx * H + 3 + "px";
-    b.style.height = H - 6 + "px";
-    b.style.setProperty("--c", col);
-    const t = (it.st === "done" ? "✓ " : "") + it.t;
-    b.append(el("span", "prm-t", t));
-    return b;
-  }
-  function buildPrintView() {
-    const list = visible(), root = el("div");
-    root.id = "printrm";
-    const rm = curRm();
-    const head = el("div", "prm-head"), ttl = el("div");
-    ttl.append(el("h1", "", "Ynmo roadmap · " + rm.n), el("p", "", fmtIso(rm.a) + " to " + fmtIso(rm.b) + " · prepared " + (/* @__PURE__ */ new Date()).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })));
-    head.append(ttl);
-    const cnt = (k) => list.filter((i) => i.st === k).length, tiles = el("div", "prm-tiles");
-    [[list.length, "features"], [cnt("planned"), "planned"], [cnt("decide"), "need a decision"], [cnt("contract"), "wait on contract"], [cnt("done"), "done"]].forEach((p) => {
-      const t = el("div", "prm-tile");
-      t.append(el("b", "", String(p[0])), el("span", "", p[1]));
-      tiles.append(t);
-    });
-    head.append(tiles);
-    root.append(head);
-    const sq = LANES.filter((l) => !state.sq.has(l.k)).map((l) => l.n);
-    const notes = [state.person !== "all" ? "Person: " + state.person : "", state.status !== "all" ? "Status: " + (STATUS[state.status] || state.status) : "", state.q.trim() ? "Search: " + state.q.trim() : "", sq.length ? "Hidden products: " + sq.join(", ") : ""].filter(Boolean);
-    if (notes.length) root.append(el("p", "prm-filter", "Filtered view · " + notes.join(" · ")));
-    root.append(legend(list));
-    const dir = directory(), map = /* @__PURE__ */ new Map();
-    list.forEach((it) => {
-      if (!it.res.length) {
-        if (!map.has("__none")) map.set("__none", { name: "__none", its: [] });
-        map.get("__none").its.push(it);
-      } else it.res.forEach((n) => {
-        if (!map.has(n)) map.set(n, { name: n, its: [] });
-        map.get(n).its.push(eff(it, n));
-      });
-    });
-    const hid = hiddenHere();
-    let people = [...map.values()].filter((p) => p.name !== "__none" && (!hid.includes(p.name) || p.its.length));
-    people.sort(comparePeople);
-    if (map.has("__none")) people.push(map.get("__none"));
-    const tb = el("table", "prm"), th = el("thead"), r1 = el("tr"), n1 = el("th", "prm-name", "Team member"), t1 = el("th", "prm-tl");
-    const months = el("div", "prm-months"), weeks = el("div", "prm-weeks");
-    MGROUPS.forEach((m) => {
-      const d = el("div", "prm-mo");
-      d.style.left = pct(m.from);
-      d.style.width = pct(m.to - m.from + 1);
-      d.append(el("span", "", m.n));
-      months.append(d);
-    });
-    DAYS.forEach((x) => {
-      if (x.dow === 0) {
-        const w = el("div", "prm-wk", String(x.d.getUTCDate()));
-        w.style.left = pct(x.k);
-        weeks.append(w);
-      }
-    });
-    t1.append(months, weeks);
-    r1.append(n1, t1);
-    th.append(r1);
-    tb.append(th);
-    const body = el("tbody"), periods = packNotes(notesHere("period")), bands = periods.out.map((x) => x.n);
-    const addBands = (cell) => bands.forEach((n) => {
-      const d = el("i", "prm-band");
-      d.style.left = pct(n.d0);
-      d.style.width = pct(n.d1 - n.d0 + 1);
-      d.style.setProperty("--c", /^#[0-9a-f]{6}$/i.test(n.c || "") ? n.c : DEFAULT_COLOR.period);
-      cell.append(d);
-    });
-    if (stripNeeded()) {
-      const tr = el("tr"), td1 = el("td", "prm-name"), td2 = el("td", "prm-tl"), cell = el("div", "prm-cell");
-      td1.append(el("b", "", "Notes"), el("small", "", "periods and leave"));
-      cell.style.height = Math.max(1, periods.lanes) * NH + 16 + "px";
-      leaveRuns().forEach((r) => {
-        const d = el("i", "prm-heat");
-        d.style.left = pct(r.d0);
-        d.style.width = pct(r.d1 - r.d0 + 1);
-        d.style.opacity = String(0.35 + 0.65 * Math.min(1, r.n / 4));
-        d.title = r.who.join(", ");
-        if (r.d1 > r.d0) d.textContent = String(r.n);
-        cell.append(d);
-      });
-      periods.out.forEach((x) => cell.append(noteEl(x.n, x.lane, true)));
-      td2.append(cell);
-      tr.append(td1, td2);
-      body.append(tr);
-    }
-    people.forEach((p) => {
-      const pk = pack(p.its), pn = p.name === "__none" ? { out: [], lanes: 0 } : personNotes(p.name), nh = pn.lanes * NH, tr = el("tr"), td1 = el("td", "prm-name"), d = dir.get(p.name);
-      td1.append(el("b", "", p.name === "__none" ? "Unassigned" : p.name));
-      if (d) td1.append(el("small", "", d.domain));
-      const td2 = el("td", "prm-tl"), cell = el("div", "prm-cell");
-      cell.style.height = nh + pk.n * H + 4 + "px";
-      addBands(cell);
-      DAYS.forEach((x) => {
-        if (x.dow === 0) {
-          const g = el("i", "prm-grid");
-          g.style.left = pct(x.k);
-          cell.append(g);
-        }
-      });
-      if (todayK >= 0) {
-        const t = el("i", "prm-today");
-        t.style.left = pct(todayK);
-        cell.append(t);
-      }
-      pn.out.forEach((x) => cell.append(noteEl(x.n, x.lane, false)));
-      pk.out.forEach((x) => cell.append(bar(x.it, x.lane, nh)));
-      td2.append(cell);
-      tr.append(td1, td2);
-      body.append(tr);
-    });
-    if (!people.length) {
-      const tr = el("tr"), td = el("td");
-      td.colSpan = 2;
-      td.textContent = "No features match the current filters.";
-      tr.append(td);
-      body.append(tr);
-    }
-    tb.append(body);
-    root.append(tb);
-    root.append(el("p", "prm-foot", "Ynmo Roadmaps · bars are coloured by product · " + (todayK >= 0 ? "the red line is " + dlabel(todayK) : "today is outside this roadmap")));
-    return root;
-  }
-  function exportPdf() {
-    if (document.getElementById("printrm")) return;
-    const view = buildPrintView();
-    document.body.append(view);
-    document.body.classList.add("print-roadmap");
-    const done2 = () => {
-      document.body.classList.remove("print-roadmap");
-      view.remove();
-      window.removeEventListener("afterprint", done2);
-    };
-    window.addEventListener("afterprint", done2);
-    notify('In the print window choose "Save as PDF" (landscape). Colours are kept automatically.');
-    setTimeout(() => {
-      try {
-        window.print();
-      } catch (e) {
-        done2();
-      }
-      if (!("onafterprint" in window)) setTimeout(done2, 1500);
-    }, 150);
-  }
-
-  // src/esm/features/presence.js
-  var presT = 0;
-  var lockOverride = null;
-  var lockAt = 0;
-  function myPres() {
-    return { uid: S.me.id, name: S.me.name || S.me.email, av: S.me.avatar || "", page: state.page, rm: state.rm, edit: state.edit ? state.edit.split("|")[0] : null };
-  }
-  function trackPres() {
-    clearTimeout(presT);
-    presT = setTimeout(() => {
-      if (S.presCh && S.me) {
-        try {
-          S.presCh.track(myPres());
-        } catch (e) {
-        }
-      }
-    }, 120);
-  }
-  function startPresence() {
-    if (S.presCh || !sb.channel) return;
-    try {
-      S.presCh = sb.channel("ynmo-presence", { config: { private: true, presence: { key: S.me.id } } });
-      S.presCh.on("presence", { event: "sync" }, () => {
-        try {
-          S.pres = S.presCh.presenceState() || {};
-        } catch (e) {
-          S.pres = {};
-        }
-        drawPresence();
-        decorateLocks();
-      });
-      S.presCh.subscribe((s) => {
-        if (s === "SUBSCRIBED") trackPres();
-      });
-    } catch (e) {
-      S.presCh = null;
-    }
-  }
-  function others() {
-    const out = [];
-    Object.keys(S.pres).forEach((k) => {
-      if (k === (S.me && S.me.id)) return;
-      const m = (S.pres[k] || [])[0];
-      if (m) out.push(m);
-    });
-    return out;
-  }
-  function editorOf(id) {
-    const o = others().find((m) => m.edit === id);
-    return o || null;
-  }
-  function drawPresence() {
-    let box2 = $("presence");
-    if (!box2) {
-      box2 = el("div", "presence");
-      box2.id = "presence";
-      box2.setAttribute("aria-label", "People online");
-      const av = $("avbtn");
-      av.parentNode.insertBefore(box2, av);
-    }
-    box2.textContent = "";
-    const o = others();
-    box2.hidden = !o.length;
-    o.slice(0, 4).forEach((m) => {
-      const a = avatarEl(m.av, 28, m.name);
-      a.title = m.name + (m.edit ? " · editing" : " · online") + " · " + (m.page || "");
-      a.classList.add("pav");
-      box2.append(a);
-    });
-    if (o.length > 4) box2.append(el("span", "pmore", "+" + (o.length - 4)));
-    box2.setAttribute("role", "group");
-    box2.setAttribute("aria-label", o.length + (o.length === 1 ? " other person online: " : " others online: ") + o.map((m) => m.name).join(", "));
-  }
-  function decorateLocks() {
-    const g = $("grid");
-    if (!g) return;
-    g.querySelectorAll(".bar.locked").forEach((b) => {
-      b.classList.remove("locked");
-      const t = b.querySelector(".lockchip");
-      if (t) t.remove();
-    });
-    others().forEach((m) => {
-      if (!m.edit) return;
-      g.querySelectorAll(".bar").forEach((b) => {
-        if (b.dataset.id === m.edit && !b.classList.contains("editing")) {
-          b.classList.add("locked");
-          b.append(el("span", "lockchip", "✎ " + String(m.name).split(" ")[0]));
-          b.title += " · " + m.name + " is editing";
-        }
-      });
-    });
-  }
-  function lockCheck(it) {
-    const o = editorOf(it.id);
-    if (!o) return true;
-    if (lockOverride === it.id && Date.now() - lockAt < 6e3) {
-      lockOverride = null;
-      return true;
-    }
-    lockOverride = it.id;
-    lockAt = Date.now();
-    toast(o.name + ' is editing "' + it.t + '" right now. Try again within 6 seconds to edit anyway.');
-    return false;
-  }
-
-  // src/esm/app/extras-wiring.js
-  function initExtras() {
-    netBar();
-    netShow();
-  }
-  function startExtras() {
-    $("shell").classList.toggle("viewer", isViewer());
-    if (isViewer()) S.readonly = true;
-    S.db.collection("share_links").onSnapshot((s) => {
-      const n = {};
-      s.docs.forEach((d) => {
-        n[d.id] = d.data();
-      });
-      S.shares = n;
-    }, () => {
-    });
-    startPresence();
-    startIdle();
-  }
-
-  // src/esm/features/undo-router.js
-  var handlers = {};
-  function registerUndo(page, h) {
-    handlers[page] = h;
-  }
-  document.addEventListener("keydown", (e) => {
-    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.defaultPrevented) return;
-    const k = e.key.toLowerCase();
-    if (k !== "z" && k !== "y") return;
-    const h = handlers[state.page];
-    if (!h || $("xdlg")) return;
-    const t = e.target;
-    if (t && t.tagName && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
-    if (t && t.isContentEditable && !h.inEditable) return;
-    const redo = k === "y" || e.shiftKey;
-    if (redo && !h.redo) return;
-    if (h.ready && !h.ready()) return;
-    e.preventDefault();
-    if (redo) h.redo();
-    else h.undo();
-  }, true);
-
-  // src/esm/features/squad-names.js
-  var original = LANES.map((l) => ({ k: l.k, n: l.n, c: l.c }));
-  var BASE = original.length;
-  var known = new Set(LANES.map((l) => l.k));
-  var listeners = [];
-  var isBaseSquad = (k) => original.some((o) => o.k === k);
-  var defaultSquadName = (k) => (original.find((o) => o.k === k) || {}).n || k;
-  var defaultSquadColor = (k) => (original.find((o) => o.k === k) || {}).c || "";
-  var doc = () => S.ideas.squadnames || {};
-  var squadNames = () => doc().names || {};
-  var squadColors = () => doc().colors || {};
-  var extraSquads = () => (Array.isArray(doc().extra) ? doc().extra : []).filter((e) => e && e.k && e.n);
-  var hex = (c) => /^#[0-9a-f]{6}$/i.test(String(c || ""));
-  var onLanesChanged = (fn) => {
-    listeners.push(fn);
-  };
-  function applySquadNames() {
-    const nm = squadNames(), co = squadColors(), ex = extraSquads();
-    LANES.length = BASE;
-    ex.forEach((e) => {
-      if (!LANES.some((l) => l.k === e.k)) {
-        LANES.push({ k: e.k, n: e.n, c: hex(e.c) ? e.c : "#6b7280" });
-        if (!TEAMS[e.k]) TEAMS[e.k] = { pm: [], dev: [], qa: [], ux: [] };
-      }
-    });
-    LANES.forEach((l) => {
-      const e = ex.find((x) => x.k === l.k), v = nm[l.k] && String(nm[l.k]).trim();
-      l.n = v || (e ? e.n : defaultSquadName(l.k));
-      l.c = hex(co[l.k]) ? co[l.k] : e ? hex(e.c) ? e.c : "#6b7280" : defaultSquadColor(l.k);
-    });
-    LANES.forEach((l) => {
-      if (!known.has(l.k)) {
-        known.add(l.k);
-        state.sq.add(l.k);
-      }
-    });
-    [...state.sq].forEach((k) => {
-      if (!LANES.some((l) => l.k === k)) state.sq.delete(k);
-    });
-    listeners.forEach((f) => f());
-  }
-
-  // src/esm/pages/ideas-columns.js
-  var COL_COLORS = ["#0d8560", "#6d48a8", "#c04a17", "#5a6db5", "#b8860b", "#c2185b", "#00838f", "#55608a"];
-  var isMeta = (i) => !!(i && (i.col || i.cfg));
-  function ideaCols(withHidden) {
-    const built = LANES.map((l) => {
-      const o = S.ideas["cfg_" + l.k] || {};
-      return { k: l.k, n: o.n || l.n, c: /^#[0-9a-f]{6}$/i.test(o.c || "") ? o.c : l.c, hidden: !!o.hidden, builtin: true };
-    });
-    const custom = Object.keys(S.ideas).filter((id) => S.ideas[id] && S.ideas[id].col).sort((a, b) => (S.ideas[a].ts || 0) - (S.ideas[b].ts || 0)).map((id) => ({ k: id, n: S.ideas[id].n || "Untitled", c: /^#[0-9a-f]{6}$/i.test(S.ideas[id].c || "") ? S.ideas[id].c : "#55608a", custom: true }));
-    const ord = S.ideas.colorder && S.ideas.colorder.ord || [], all = built.concat(custom);
-    all.forEach((c, n) => {
-      const p = ord.indexOf(c.k);
-      c.o = p >= 0 ? p : 1e3 + n;
-    });
-    all.sort((a, b) => a.o - b.o);
-    return withHidden ? all : all.filter((c) => !c.hidden);
-  }
-  function ideaColName(k) {
-    const c = ideaCols(true).find((x) => x.k === k);
-    return c ? c.n : laneOf(k).n;
-  }
-  function colCount(k) {
-    return Object.keys(S.ideas).filter((id) => !isMeta(S.ideas[id]) && S.ideas[id].pr === k).length;
-  }
-  function colDialog(col) {
-    openDlg(col ? "Edit column" : "Add a product column", (box2) => {
-      const nm = el("input");
-      nm.type = "text";
-      nm.maxLength = 40;
-      nm.placeholder = "Product name";
-      nm.setAttribute("aria-label", "Product name");
-      nm.style.width = "100%";
-      nm.value = col ? col.n : "";
-      const sel = { v: col ? col.c : COL_COLORS[ideaCols(true).length % COL_COLORS.length] };
-      const hex2 = (v) => /^#[0-9a-f]{6}$/i.test(v) ? v : "#55608a";
-      const sw = el("div", "mrow");
-      sw.setAttribute("role", "radiogroup");
-      sw.setAttribute("aria-label", "Color");
-      const paint = () => sw.querySelectorAll(".swatch").forEach((x) => {
-        const on = x.dataset.c === sel.v;
-        x.setAttribute("aria-pressed", String(on));
-        x.setAttribute("aria-checked", String(on));
-      });
-      COL_COLORS.forEach((c) => {
-        const b = el("button", "swatch");
-        b.type = "button";
-        b.dataset.c = c;
-        b.style.setProperty("--c", c);
-        b.setAttribute("role", "radio");
-        b.setAttribute("aria-label", "Color " + c);
-        b.addEventListener("click", () => {
-          sel.v = c;
-          cp.value = c;
-          paint();
-        });
-        sw.append(b);
-      });
-      const cp = el("input");
-      cp.type = "color";
-      cp.value = hex2(sel.v);
-      cp.setAttribute("aria-label", "Custom color");
-      cp.style.cssText = "width:34px;height:34px;padding:0;border:0;background:none;cursor:pointer";
-      cp.addEventListener("input", () => {
-        sel.v = cp.value;
-        paint();
-      });
-      sw.append(cp);
-      paint();
-      const msg = el("div", "gerr");
-      msg.setAttribute("aria-live", "polite");
-      const go = el("button", "btn primary", col ? "Save" : "Add column");
-      go.type = "button";
-      const no = el("button", "btn", "Cancel");
-      no.type = "button";
-      no.addEventListener("click", closeDlg);
-      const submit = () => {
-        const n = nm.value.trim();
-        if (!n) {
-          msg.textContent = "Type a name.";
-          return;
-        }
-        if (ideaCols(true).some((c) => c.n.toLowerCase() === n.toLowerCase() && (!col || c.k !== col.k))) {
-          msg.textContent = "A column with this name already exists.";
-          return;
-        }
-        if (col && col.custom) saveIdea(col.k, { n, c: sel.v }, "idea", 'edited product column "' + col.n + '"' + (n !== col.n ? ' (now "' + n + '")' : ""));
-        else if (col) saveIdea("cfg_" + col.k, { cfg: true, k: col.k, n, c: sel.v, hidden: false }, "idea", 'edited product column "' + col.n + '"' + (n !== col.n ? ' (now "' + n + '")' : ""));
-        else {
-          const id = "col" + Date.now().toString(36);
-          saveIdea(id, { col: true, n, c: sel.v, ts: Date.now() }, "idea", 'added product column "' + n + '"');
-        }
-        closeDlg();
-        renderIdeas(true);
-        renderDrawer();
-      };
-      nm.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          submit();
-        }
-      });
-      go.addEventListener("click", submit);
-      const row = el("div", "formrow");
-      row.append(go, no);
-      box2.append(nm, el("span", "lab", "Color"), sw, msg, row);
-    });
-  }
-  function removeCol(c) {
-    const n = colCount(c.k);
-    if (n) {
-      toast('"' + c.n + '" still has ' + n + " idea" + (n === 1 ? "" : "s") + ". Move or delete them first.");
-      return;
-    }
-    if (c.builtin) {
-      saveIdea("cfg_" + c.k, { cfg: true, k: c.k, n: c.n, c: c.c, hidden: true }, "idea", 'hid product column "' + c.n + '"');
-    } else {
-      logAct("idea", 'removed product column "' + c.n + '"');
-      delete S.ideas[c.k];
-      write("ideas/" + c.k, null);
-      toast('Removed column "' + c.n + '".');
-    }
-    renderIdeas(true);
-    renderDrawer();
-  }
-  function saveOrder(keys) {
-    saveIdea("colorder", { cfg: true, ord: keys }, null);
-  }
-  function moveCol(k, to) {
-    const keys = ideaCols(true).map((c) => c.k), from = keys.indexOf(k);
-    if (from < 0) return;
-    keys.splice(from, 1);
-    keys.splice(Math.max(0, Math.min(keys.length, to)), 0, k);
-    saveOrder(keys);
-    renderIdeas(true);
-    renderDrawer();
-  }
-  function decorateCol(col, h, l) {
-    if (!canEdit()) {
-      col.append(h);
-      return;
-    }
-    const more = el("button", "btn sm colmore", "⋯");
-    more.type = "button";
-    more.setAttribute("aria-label", "Column options for " + l.n);
-    more.title = "Column options";
-    more.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const r = more.getBoundingClientRect(), vis = ideaCols(true), pos = vis.findIndex((x) => x.k === l.k);
-      openCtx(r.right - 190, r.bottom + 4, (m) => {
-        mi(m, "Rename and color…", () => colDialog(l));
-        if (pos > 0) mi(m, "Move left", () => moveCol(l.k, pos - 1));
-        if (pos < vis.length - 1) mi(m, "Move right", () => moveCol(l.k, pos + 1));
-        m.append(el("div", "msep"));
-        mi(m, l.builtin ? "Hide column" : "Remove column", () => removeCol(l), "danger");
-      });
-    });
-    h.append(more);
-    h.style.cssText = "display:flex;align-items:center;gap:8px";
-    more.style.marginInlineStart = "auto";
-    h.draggable = true;
-    h.style.cursor = "grab";
-    h.title = "Drag to reorder columns";
-    h.addEventListener("dragstart", (e) => {
-      e.dataTransfer.setData("text/col", l.k);
-      e.dataTransfer.effectAllowed = "move";
-      col.classList.add("dragcol");
-    });
-    h.addEventListener("dragend", () => {
-      document.querySelectorAll(".dragcol,.dropcol").forEach((x) => x.classList.remove("dragcol", "dropcol"));
-    });
-    col.append(h);
-  }
-  function wireCol(col, l) {
-    if (!canEdit()) return;
-    const ok = (e) => {
-      const t = [...e.dataTransfer ? e.dataTransfer.types : []];
-      return t.includes("text/ideacard") || t.includes("text/col");
-    };
-    col.addEventListener("dragover", (e) => {
-      if (!ok(e)) return;
-      e.preventDefault();
-      col.classList.add("dropcol");
-    });
-    col.addEventListener("dragleave", (e) => {
-      if (!col.contains(e.relatedTarget)) col.classList.remove("dropcol");
-    });
-    col.addEventListener("drop", (e) => {
-      col.classList.remove("dropcol");
-      const card2 = e.dataTransfer.getData("text/ideacard"), ck = e.dataTransfer.getData("text/col");
-      if (card2 && S.ideas[card2] && S.ideas[card2].pr !== l.k) {
-        e.preventDefault();
-        const t = S.ideas[card2].t;
-        saveIdea(card2, { pr: l.k }, "idea", 'moved idea "' + t + '" to ' + l.n);
-        renderIdeas(true);
-      } else if (ck && ck !== l.k) {
-        e.preventDefault();
-        const keys = ideaCols(true).map((c) => c.k);
-        moveCol(ck, keys.indexOf(l.k));
-      }
-    });
-  }
-  function dragCard(id, c) {
-    if (!canEdit()) return c;
-    const g = el("div", "grip", "⋮⋮");
-    g.title = "Drag to another product";
-    g.setAttribute("aria-hidden", "true");
-    c.prepend(g);
-    const on = () => {
-      c.draggable = true;
-    }, off = () => {
-      c.draggable = false;
-    };
-    g.addEventListener("pointerdown", on);
-    document.addEventListener("pointerup", off, true);
-    c.addEventListener("dragstart", (e) => {
-      if (!c.draggable) return;
-      e.dataTransfer.setData("text/ideacard", id);
-      e.dataTransfer.effectAllowed = "move";
-      c.classList.add("dragging");
-    });
-    c.addEventListener("dragend", () => {
-      off();
-      c.classList.remove("dragging");
-      document.querySelectorAll(".dropcol").forEach((x) => x.classList.remove("dropcol"));
-    });
-    return c;
-  }
-  function boardExtras(board) {
-    if (!canEdit()) return;
-    const ac = el("button", "addcol", "+ Add product");
-    ac.type = "button";
-    ac.id = "addcol";
-    ac.addEventListener("click", () => colDialog(null));
-    board.append(ac);
-    const hid = ideaCols(true).filter((c) => c.hidden);
-    if (hid.length) {
-      const b = el("button", "btn sm", "Show hidden columns (" + hid.length + ")");
-      b.type = "button";
-      b.id = "showhid";
-      b.style.alignSelf = "start";
-      b.addEventListener("click", () => {
-        hid.forEach((c) => saveIdea("cfg_" + c.k, { cfg: true, k: c.k, n: c.n, c: c.c, hidden: false }, null));
-        logAct("idea", "showed hidden product columns");
-        renderIdeas(true);
-        renderDrawer();
-      });
-      board.append(b);
-    }
-  }
-  function moveMenu(m, id, i) {
-    if (!canEdit()) return;
-    m.append(el("div", "mlab", "Move to product"));
-    ideaCols().forEach((c) => {
-      if (c.k === i.pr) return;
-      mi(m, c.n, () => {
-        saveIdea(id, { pr: c.k }, "idea", 'moved idea "' + i.t + '" to ' + c.n);
-        renderIdeas(true);
-      });
-    });
-  }
-  function drawChips() {
-    const chips = $("chips");
-    if (!chips) return;
-    chips.textContent = "";
-    LANES.forEach((l) => {
-      const b = el("button", "chip");
-      b.type = "button";
-      b.style.setProperty("--c", l.c);
-      b.append(el("i"), document.createTextNode(l.n));
-      b.setAttribute("aria-pressed", String(state.sq.has(l.k)));
-      b.addEventListener("click", () => {
-        state.sq.has(l.k) ? state.sq.delete(l.k) : state.sq.add(l.k);
-        b.setAttribute("aria-pressed", String(state.sq.has(l.k)));
-        render();
-      });
-      chips.append(b);
-    });
-  }
-  onLanesChanged(drawChips);
-  function init() {
-    const chips = $("chips");
-    drawChips();
-    fillPersons();
-    $("person").addEventListener("change", (e) => {
-      state.person = e.target.value;
-      render();
-    });
-    $("status").addEventListener("change", (e) => {
-      state.status = e.target.value;
-      render();
-    });
-    $("q").addEventListener("input", (e) => {
-      state.q = e.target.value;
-      render();
-    });
-    $("clear").addEventListener("click", () => {
-      state.sq = new Set(LANES.map((l) => l.k));
-      state.status = "all";
-      state.person = "all";
-      state.q = "";
-      $("status").value = "all";
-      $("person").value = "all";
-      $("q").value = "";
-      chips.querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", "true"));
-      render();
-    });
-    const gr = $("grid");
-    gr.addEventListener("contextmenu", (e) => {
-      if (!canEdit()) return;
-      if (e.target.closest(".hc, .mh, .wk, .notesrow, .tstrip") && !e.target.closest(".tnote")) {
-        e.preventDefault();
-        periodMenu(e.clientX, e.clientY, Math.max(0, Math.min(NDAYS - 1, dayAt(e.clientX))));
-        return;
-      }
-      const bar4 = e.target.closest(".bar");
-      if (bar4) {
-        const it = items().find((i) => i.id === bar4.dataset.id);
-        if (it) {
-          e.preventDefault();
-          barMenu(it, bar4.dataset.person, e.clientX, e.clientY);
-        }
-        return;
-      }
-      const row = e.target.closest(".rowbg[data-person], .c1.pn");
-      if (row) {
-        e.preventDefault();
-        rowMenu(row.dataset.person, e.clientX, e.clientY, row.classList.contains("rowbg") ? dayAt(e.clientX) : todayK >= 0 ? todayK : 0);
-      }
-    });
-    gr.addEventListener("dblclick", (e) => {
-      if (!canEdit() || e.target.tagName === "INPUT") return;
-      const bar4 = e.target.closest(".bar");
-      if (bar4) {
-        const it = items().find((i) => i.id === bar4.dataset.id);
-        if (it) startEdit(it, bar4.dataset.person);
-        return;
-      }
-      const row = e.target.closest(".rowbg[data-person]");
-      if (row) addAt(row.dataset.person, dayAt(e.clientX));
-    });
-    $("wrap").addEventListener("scroll", closeCtx);
-    window.addEventListener("resize", closeCtx);
-    document.addEventListener("pointerdown", (e) => {
-      const c = $("ctx");
-      if (!c.hidden && !c.contains(e.target)) closeCtx();
-    }, true);
-    $("add").addEventListener("click", () => {
-      if (canEdit()) addItem();
-    });
-    $("undo").addEventListener("click", undo);
-    registerUndo("roadmap", { ready: () => canEdit(), undo: () => undo() });
-    $("daysoff").addEventListener("click", (e) => openOff(e.currentTarget));
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        closeCtx();
-        if (S.picker || S.offOpen) closePicker();
-      }
-    });
-    let armed = false, t2 = 0;
-    const rb = $("reset") || document.createElement("button");
-    rb.addEventListener("click", () => {
-      if (!canEdit()) return;
-      if (armed) {
-        armed = false;
-        rb.textContent = "Restore roadmap";
-        restoreAll();
-        return;
-      }
-      armed = true;
-      rb.textContent = "Click again to restore";
-      clearTimeout(t2);
-      t2 = setTimeout(() => {
-        armed = false;
-        rb.textContent = "Restore roadmap";
-      }, 3500);
-    });
-    render();
-    $("addnote").addEventListener("click", () => {
-      const t = Math.max(0, Math.min(NDAYS - 1, todayK));
-      openNoteDialog({ k: "period", a0: iso(t), a1: iso(Math.min(NDAYS - 1, t + 6)) });
-    });
-    $("exportpdf").addEventListener("click", exportPdf);
-    initExtras();
-    $("toplogo").src = LOGO;
-    const av = $("avbtn"), um = $("umenu");
-    av.addEventListener("click", (e) => {
-      e.stopPropagation();
-      um.hidden = !um.hidden;
-      av.setAttribute("aria-expanded", String(!um.hidden));
-    });
-    document.addEventListener("pointerdown", (e) => {
-      if (!um.hidden && !um.contains(e.target) && !av.contains(e.target)) {
-        um.hidden = true;
-        av.setAttribute("aria-expanded", "false");
-      }
-    });
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && !um.hidden) {
-        um.hidden = true;
-        av.setAttribute("aria-expanded", "false");
-        av.focus();
-      }
-    });
-    $("rmsel").addEventListener("change", (e) => useRoadmap(e.target.value));
-    try {
-      const z = localStorage.getItem("ynmo-zoom");
-      if (ZOOM[z]) {
-        state.zoom = z;
-        $("zoom").value = z;
-      }
-    } catch (e) {
-    }
-    $("zoom").addEventListener("change", (e) => {
-      state.zoom = e.target.value;
-      try {
-        localStorage.setItem("ynmo-zoom", state.zoom);
-      } catch (x) {
-      }
-      render();
-    });
-    $("ideasbtn").addEventListener("click", () => {
-      S.drawerOpen = !S.drawerOpen;
-      renderDrawer();
-    });
-    const rowAt = (e) => document.elementsFromPoint(e.clientX, e.clientY).find((x) => x.matches && x.matches(".rowbg[data-person]")) || null;
-    const clearDrop = () => gr.querySelectorAll(".drop").forEach((x) => x.classList.remove("drop"));
-    gr.addEventListener("dragover", (e) => {
-      if (!e.dataTransfer || ![...e.dataTransfer.types].includes("text/idea")) return;
-      clearDrop();
-      const r = rowAt(e);
-      if (r) {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "copy";
-        r.classList.add("drop");
-      }
-    });
-    gr.addEventListener("dragleave", (e) => {
-      if (!gr.contains(e.relatedTarget)) clearDrop();
-    });
-    gr.addEventListener("drop", (e) => {
-      const id = e.dataTransfer && e.dataTransfer.getData("text/idea");
-      const r = rowAt(e);
-      clearDrop();
-      if (!id || !r) return;
-      e.preventDefault();
-      scheduleIdea(id, r.dataset.person, dayAt(e.clientX), 14);
-    });
-    boot();
-  }
-
-  // src/esm/pages/ideas.js
-  var LMH = [[1, "Low"], [2, "Medium"], [3, "High"]];
-  var ISTAT = [["idea", "Idea"], ["shortlisted", "Shortlisted"], ["scheduled", "On a roadmap"], ["dropped", "Dropped"]];
-  var ideaScore = (i) => Math.round((i.im || 2) / (i.ef || 2) * 10) / 10;
-  function saveIdea(id, patch, act, sum) {
-    S.ideas[id] = Object.assign({}, S.ideas[id] || {}, patch);
-    write("ideas/" + id, S.ideas[id]);
-    if (act) logAct(act, sum);
-    renderDrawer();
-  }
-  function addIdea(pr, title) {
-    const id = "i" + Date.now().toString(36) + Math.random().toString(36).slice(2, 4);
-    saveIdea(id, { t: title, n: "", pr, im: 2, ef: 2, st: "idea", by: S.me ? S.me.name : "", ts: Date.now() }, "idea", 'added idea "' + title + '" to ' + ideaColName(pr));
-  }
-  function scheduleIdea(id, person, k, days) {
-    const i = S.ideas[id];
-    if (!i || !canEdit()) return;
-    pushHistory();
-    const nid = "c" + Date.now().toString(36), sq = LANES.some((l) => l.k === i.pr) ? i.pr : person && person !== "__none" ? primarySq(person) : "tifli", none = !person || person === "__none";
-    k = Math.max(0, Math.min(NDAYS - 1, k));
-    const all = items().filter((x) => x.sq === sq);
-    S.over[nid] = { custom: true, rm: state.rm, t: i.t, n: i.n || "", sq, pr: sq === "ai" ? ["tifli"] : [sq], d0: k, d1: Math.min(NDAYS - 1, k + Math.max(1, days) - 1), st: "planned", res: none ? [] : [person], ord: all.length ? Math.max.apply(null, all.map((x) => x.ord)) + 1 : 0, idea: id };
-    persist(nid);
-    saveIdea(id, { st: "scheduled", rm: state.rm, itemId: nid }, "roadmap", 'scheduled idea "' + i.t + '" on ' + curRm().n + (none ? "" : " for " + person));
-    render();
-    if (state.page === "ideas") renderIdeas(true);
-    toast('Scheduled "' + i.t + '" on ' + curRm().n + ".");
-  }
-  function openSchedule(id, anchor) {
-    const i = S.ideas[id];
-    if (!i || !canEdit()) return;
-    S.offOpen = false;
-    S.picker = { add: true };
-    const p = $("pop");
-    p.hidden = false;
-    p.textContent = "";
-    const r = curRm();
-    p.append(el("h3", "", "Add to " + r.n), el("div", "sub2", i.t));
-    const names = [...directory().keys()].sort((x, y) => x.localeCompare(y));
-    const who = selOf([["__none", "Unassigned"]].concat(names.map((n2) => [n2, n2])), "__none");
-    const d = el("input");
-    d.type = "date";
-    d.min = r.a;
-    d.max = r.b;
-    const td = todayIso();
-    d.value = td >= r.a && td <= r.b ? td : r.a;
-    const n = el("input");
-    n.type = "number";
-    n.min = 1;
-    n.max = 365;
-    n.value = 14;
-    const box2 = el("div", "padd");
-    box2.style.gridTemplateColumns = "1fr";
-    box2.append(fld("Person", who), fld("Starts", d), fld("Duration in days", n));
-    const ok = el("button", "btn primary", "Add to roadmap");
-    ok.type = "button";
-    ok.addEventListener("click", () => {
-      const k = kOfIso(d.value);
-      if (isNaN(k)) return;
-      closePicker();
-      scheduleIdea(id, who.value, k, +n.value || 14);
-    });
-    const cx = el("button", "btn", "Cancel");
-    cx.type = "button";
-    cx.addEventListener("click", closePicker);
-    box2.append(ok, cx);
-    p.append(box2);
-    placePop(anchor);
-  }
-  function ideaCard(id, i) {
-    const c = el("div", "icard" + (i.st === "dropped" || i.st === "scheduled" ? " done" : ""));
-    const ed = canEdit();
-    const d = { t: i.t, n: i.n || "", im: i.im || 2, ef: i.ef || 2 };
-    const head = el("div", "ihead");
-    const t = el("input", "ititle");
-    t.value = d.t;
-    t.maxLength = 140;
-    t.disabled = !ed;
-    t.setAttribute("aria-label", "Idea title");
-    const more = el("button", "kebab", "⋯");
-    more.type = "button";
-    more.setAttribute("aria-label", "More actions for " + i.t);
-    more.setAttribute("aria-haspopup", "menu");
-    more.disabled = !ed;
-    head.append(t, more);
-    const n = el("textarea");
-    n.value = d.n;
-    n.placeholder = "Notes: why it matters, who asked, links";
-    n.disabled = !ed;
-    const im = selOf(LMH, d.im), ef = selOf(LMH, d.ef);
-    im.disabled = ef.disabled = !ed;
-    im.setAttribute("aria-label", "Impact");
-    ef.setAttribute("aria-label", "Effort");
-    const lab2 = (x, sel) => {
-      const w = el("label", "hint");
-      w.append(document.createTextNode(x + " "), sel);
-      return w;
-    };
-    const r1 = el("div", "row2");
-    r1.append(lab2("Impact", im), lab2("Effort", ef));
-    const score = el("span", "score", "Score " + ideaScore(i));
-    const stat = el("span", "badge" + (i.st === "scheduled" ? " ok" : ""), (ISTAT.find((x) => x[0] === (i.st || "idea")) || ISTAT[0])[1]);
-    const save2 = el("button", "btn primary sm", "Save");
-    save2.type = "button";
-    save2.hidden = true;
-    const saved2 = el("span", "hint", "");
-    const r2 = el("div", "row2");
-    r2.append(stat, score);
-    const r3 = el("div", "row2");
-    if (i.st === "scheduled") {
-      const rr = allRoadmaps().find((x) => x.id === i.rm);
-      r3.append(el("span", "badge ok", "On " + (rr ? rr.n : "a roadmap")));
-    }
-    r3.append(save2, saved2);
-    const dirty = () => t.value.trim() !== i.t || n.value !== (i.n || "") || +im.value !== (i.im || 2) || +ef.value !== (i.ef || 2);
-    const mark = () => {
-      const dv = dirty();
-      save2.hidden = !dv;
-      saved2.textContent = "";
-      score.textContent = "Score " + ideaScore({ im: +im.value, ef: +ef.value });
-    };
-    [t, n].forEach((x) => x.addEventListener("input", mark));
-    [im, ef].forEach((x) => x.addEventListener("change", mark));
-    const doSave = () => {
-      const v = t.value.trim();
-      if (!v) {
-        t.focus();
-        return false;
-      }
-      if (!dirty()) return true;
-      saveIdea(id, { t: v, n: n.value, im: +im.value, ef: +ef.value }, "idea", 'saved idea "' + v + '"' + (v !== i.t ? ' (was "' + i.t + '")' : ""));
-      return true;
-    };
-    save2.addEventListener("click", () => {
-      if (doSave()) renderIdeas(true);
-    });
-    c.addEventListener("keydown", (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !save2.hidden) {
-        e.preventDefault();
-        save2.click();
-      }
-    });
-    more.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const r = more.getBoundingClientRect();
-      openCtx(r.right - 190, r.bottom + 4, (m) => {
-        if (i.st !== "scheduled") mi(m, "Add to roadmap…", (b) => {
-          if (!doSave()) return;
-          openSchedule(id, more);
-        });
-        else mi(m, "Show on roadmap", () => {
-          if (i.rm) useRoadmap(i.rm);
-          showPage("roadmap");
-        });
-        if (i.st !== "scheduled") {
-          mi(m, (i.st === "shortlisted" ? "✓ " : "") + "Shortlist", () => {
-            saveIdea(id, { st: i.st === "shortlisted" ? "idea" : "shortlisted" }, "idea", (i.st === "shortlisted" ? 'unshortlisted "' : 'shortlisted "') + i.t + '"');
-            renderIdeas(true);
-          });
-          mi(m, i.st === "dropped" ? "Reopen idea" : "Drop idea", () => {
-            saveIdea(id, { st: i.st === "dropped" ? "idea" : "dropped" }, "idea", (i.st === "dropped" ? 'reopened "' : 'dropped "') + i.t + '"');
-            renderIdeas(true);
-          });
-        }
-        moveMenu(m, id, i);
-        m.append(el("div", "msep"));
-        mi(m, "Delete idea", () => {
-          if (!window.confirm('Delete "' + i.t + '"?')) return;
-          logAct("idea", 'deleted idea "' + i.t + '"');
-          delete S.ideas[id];
-          write("ideas/" + id, null);
-          renderIdeas(true);
-          renderDrawer();
-        }, "danger");
-      });
-    });
-    c.append(head, n, r1, r2, r3);
-    return c;
-  }
-  function renderIdeas(force) {
-    const root = $("pg-ideas"), ae = document.activeElement;
-    if (!force && ae && root.contains(ae) && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) return;
-    root.textContent = "";
-    const tools = el("div", "formrow");
-    const q = el("input");
-    q.type = "search";
-    q.placeholder = "Search ideas";
-    q.value = ideaUI.q;
-    q.addEventListener("input", () => {
-      ideaUI.q = q.value;
-      renderIdeas(true);
-      const s = root.querySelector("input[type=search]");
-      if (s) {
-        s.focus();
-        s.setSelectionRange(s.value.length, s.value.length);
-      }
-    });
-    const fs = selOf([["open", "Open ideas"], ["scheduled", "On a roadmap"], ["dropped", "Dropped"], ["all", "All"]], ideaUI.st);
-    fs.setAttribute("aria-label", "Show ideas by status");
-    fs.addEventListener("change", () => {
-      ideaUI.st = fs.value;
-      renderIdeas(true);
-    });
-    tools.append(q, fs);
-    root.append(pageHead("Ideas", "Capture thoughts per product first. When one is ready, press Add to roadmap here, or drag it from the Ideas drawer onto a person on the roadmap.", tools));
-    const board = el("div", "board");
-    ideaCols().forEach((l) => {
-      const col = el("div", "col");
-      col.style.setProperty("--c", l.c);
-      const all = Object.keys(S.ideas).filter((id) => S.ideas[id].pr === l.k);
-      const fq = ideaUI.q.trim().toLowerCase();
-      const list = all.filter((id) => {
-        const i = S.ideas[id], s = i.st || "idea";
-        const okS = ideaUI.st === "all" || (ideaUI.st === "open" ? s === "idea" || s === "shortlisted" : s === ideaUI.st);
-        return okS && (!fq || (i.t + " " + (i.n || "")).toLowerCase().includes(fq));
-      }).sort((a, b) => ideaScore(S.ideas[b]) - ideaScore(S.ideas[a]) || (S.ideas[b].ts || 0) - (S.ideas[a].ts || 0));
-      const h = el("h2");
-      h.append(document.createTextNode(l.n), el("span", "badge", String(list.length)));
-      decorateCol(col, h, l);
-      wireCol(col, l);
-      if (canEdit()) {
-        const inp = el("input");
-        inp.type = "text";
-        inp.placeholder = "Add an idea and press Enter";
-        inp.maxLength = 140;
-        inp.setAttribute("aria-label", "New idea for " + l.n);
-        inp.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            const v = inp.value.trim();
-            if (v) {
-              addIdea(l.k, v);
-              renderIdeas(true);
-              const n = root.querySelectorAll(".col input[type=text]")[ideaCols().findIndex((x) => x.k === l.k)];
-              if (n) n.focus();
-            }
-          }
-        });
-        col.append(inp);
-      }
-      list.forEach((id) => col.append(dragCard(id, ideaCard(id, S.ideas[id]))));
-      if (!list.length) col.append(el("div", "hint", "Nothing here yet."));
-      board.append(col);
-    });
-    boardExtras(board);
-    root.append(board);
-  }
-  function renderDrawer() {
-    const d = $("drawer");
-    d.hidden = !S.drawerOpen;
-    if (!S.drawerOpen) return;
-    d.textContent = "";
-    const h = el("div", "formrow");
-    h.append(el("h3", "", "Ideas backlog"));
-    const x = el("button", "btn sm", "Close");
-    x.type = "button";
-    x.style.marginInlineStart = "auto";
-    x.addEventListener("click", () => {
-      S.drawerOpen = false;
-      renderDrawer();
-    });
-    h.append(x);
-    d.append(h, el("div", "hint", "Drag an idea onto a person and a day. It becomes a bar and stays linked."));
-    const list = el("div", "dl");
-    const open = Object.keys(S.ideas).filter((id) => !isMeta(S.ideas[id]) && (S.ideas[id].st || "idea") === "idea" || S.ideas[id].st === "shortlisted");
-    ideaCols().forEach((l) => {
-      const mine = open.filter((id) => S.ideas[id].pr === l.k).sort((a, b) => ideaScore(S.ideas[b]) - ideaScore(S.ideas[a]));
-      if (!mine.length) return;
-      list.append(el("div", "lab", l.n));
-      mine.forEach((id) => {
-        const i = S.ideas[id], c = el("div", "dcard");
-        c.draggable = canEdit();
-        c.style.setProperty("--c", l.c);
-        c.append(el("b", "", i.t), el("small", "", "Score " + ideaScore(i) + (i.st === "shortlisted" ? " · Shortlisted" : "")));
-        c.addEventListener("dragstart", (e) => {
-          e.dataTransfer.setData("text/idea", id);
-          e.dataTransfer.effectAllowed = "copy";
-        });
-        list.append(c);
-      });
-    });
-    if (!open.length) list.append(el("div", "hint", "No open ideas. Add some on the Ideas page."));
-    d.append(list);
-  }
-
-  // src/esm/pages/roadmaps.js
-  function allRoadmaps() {
-    return [H2].concat(Object.keys(S.roadmaps).map((id) => Object.assign({ id }, S.roadmaps[id])).filter((r) => r.a && r.b).sort((x, y) => x.a < y.a ? -1 : 1));
-  }
-  function curRm() {
-    return allRoadmaps().find((r) => r.id === state.rm) || H2;
-  }
-  function withRm(id, fn) {
-    const keep = state.rm, r = allRoadmaps().find((x) => x.id === id) || H2;
-    state.rm = r.id;
-    setRange(r.a, r.b);
-    try {
-      return fn();
-    } finally {
-      const k = allRoadmaps().find((x) => x.id === keep) || H2;
-      state.rm = k.id;
-      setRange(k.a, k.b);
-    }
-  }
-  function useRoadmap(id) {
-    const r = allRoadmaps().find((x) => x.id === id) || H2;
-    state.rm = r.id;
-    setRange(r.a, r.b);
-    state.open = null;
-    try {
-      localStorage.setItem("ynmo-rm", r.id);
-    } catch (e) {
-    }
-    fillRm();
-    render();
-  }
-  function fillRm() {
-    const s = $("rmsel");
-    s.textContent = "";
-    allRoadmaps().forEach((r) => {
-      const o = el("option", "", r.n);
-      o.value = r.id;
-      if (r.id === state.rm) o.selected = true;
-      s.append(o);
-    });
-    $("rmtitle").textContent = curRm().n + " roadmap";
-    const rs = $("reset");
-    if (rs) rs.textContent = state.rm === H2_ID ? "Restore roadmap" : "Clear roadmap";
-  }
-  function rangeFor(kind, year) {
-    const m = { Q1: [0, 2], Q2: [3, 5], Q3: [6, 8], Q4: [9, 11], H1: [0, 5], H2: [6, 11], Year: [0, 11] }[kind] || [0, 11], y = +year;
-    return [new Date(Date.UTC(y, m[0], 1)).toISOString().slice(0, 10), new Date(Date.UTC(y, m[1] + 1, 0)).toISOString().slice(0, 10)];
-  }
-  var KIND_LABEL = { Q1: "Q1", Q2: "Q2", Q3: "Q3", Q4: "Q4", H1: "H1", H2: "H2", Year: "Full year", Custom: "Custom" };
-  function createRoadmap(name, kind, a, b, copyFrom) {
-    const id = "r" + Date.now().toString(36);
-    let copies = [];
-    if (copyFrom) copies = withRm(copyFrom, () => items());
-    S.roadmaps[id] = { n: name, kind, a, b, by: S.me ? S.me.name : "" };
-    write("roadmaps/" + id, S.roadmaps[id]);
-    const nd = Math.round((parseIso(b) - parseIso(a)) / DAY) + 1;
-    copies.forEach((it, n) => {
-      if (it.d0 >= nd) return;
-      const nid = "c" + Date.now().toString(36) + n;
-      S.over[nid] = { custom: true, rm: id, t: it.t, n: it.n || "", sq: it.sq, pr: it.pr.slice(), d0: it.d0, d1: Math.min(it.d1, nd - 1), st: it.st === "done" ? "planned" : it.st, res: it.res.slice(), c: it.c || null, ord: it.ord };
-      persist(nid);
-    });
-    logAct("roadmap", 'created roadmap "' + name + '" (' + fmtIso(a) + " to " + fmtIso(b) + ")" + (copies.length ? " with " + copies.length + " features copied" : ""));
-    return id;
-  }
-  function deleteRoadmap(id) {
-    const r = S.roadmaps[id];
-    if (!r) return;
-    Object.keys(S.over).forEach((k) => {
-      if (!base.has(k) && S.over[k].rm === id) {
-        delete S.over[k];
-        persist(k);
-      }
-    });
-    Object.keys(S.ideas).forEach((iid) => {
-      const i = S.ideas[iid];
-      if (i && !i.col && !i.cfg && i.rm === id && i.st === "scheduled") saveIdea(iid, { st: "idea", rm: null, itemId: null }, null);
-    });
-    Object.keys(S.ideas).forEach((iid) => {
-      const i = S.ideas[iid];
-      if (i && i.tn && i.rm === id) {
-        delete S.ideas[iid];
-        write("ideas/" + iid, null);
-      }
-    });
-    delete S.roadmaps[id];
-    write("roadmaps/" + id, null);
-    logAct("roadmap", 'deleted roadmap "' + r.n + '"');
-    if (state.rm === id) useRoadmap(H2_ID);
-  }
-  function renderRoadmaps() {
-    const root = $("pg-roadmaps");
-    root.textContent = "";
-    root.append(pageHead("Roadmaps", "Create a roadmap for a quarter, half year or the whole year (choose Scope > Custom for your own dates). Each roadmap has its own timeline; people, ideas and leave are shared."));
-    const f = el("form", "card");
-    f.append(el("h2", "", "New roadmap"));
-    const yr = selOf([2026, 2027, 2028, 2029], 2027), kd = selOf(Object.keys(KIND_LABEL).map((k) => [k, KIND_LABEL[k]]), "Q1");
-    const nm = el("input");
-    nm.type = "text";
-    nm.maxLength = 60;
-    nm.required = true;
-    const da = el("input");
-    da.type = "date";
-    const db2 = el("input");
-    db2.type = "date";
-    const cp = selOf([["", "Start empty"]].concat(allRoadmaps().map((r) => [r.id, "Copy features from " + r.n])), "");
-    const auto = () => {
-      if (nm.dataset.touched) return;
-      nm.value = kd.value === "Custom" ? "" : kd.value === "Year" ? "Full year " + yr.value : kd.value + " " + yr.value;
-    };
-    const sync2 = () => {
-      const cu = kd.value === "Custom";
-      da.parentElement.hidden = db2.parentElement.hidden = !cu;
-      if (!cu) {
-        const r = rangeFor(kd.value, yr.value);
-        da.value = r[0];
-        db2.value = r[1];
-      }
-      auto();
-    };
-    nm.addEventListener("input", () => {
-      nm.dataset.touched = "1";
-    });
-    yr.addEventListener("change", sync2);
-    kd.addEventListener("change", sync2);
-    const row = el("div", "formrow");
-    row.append(fld("Name", nm), fld("Year", yr), fld("Scope", kd), fld("From", da), fld("To", db2), fld("Features", cp));
-    const go = el("button", "btn primary", "Create roadmap");
-    go.type = "submit";
-    go.disabled = !canEdit();
-    const msg = el("div", "gerr");
-    f.append(row, msg, go);
-    sync2();
-    f.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const a = da.value, b = db2.value;
-      if (parseIso(a) === null || parseIso(b) === null || parseIso(b) < parseIso(a)) {
-        msg.textContent = "Pick a valid date range.";
-        return;
-      }
-      if ((parseIso(b) - parseIso(a)) / DAY > 730) {
-        msg.textContent = "Keep a roadmap within two years.";
-        return;
-      }
-      const nmv = nm.value.trim();
-      if (!nmv) {
-        msg.textContent = "Give the roadmap a name.";
-        return;
-      }
-      if (allRoadmaps().some((r) => r.n.trim().toLowerCase() === nmv.toLowerCase())) {
-        msg.textContent = 'A roadmap called "' + nmv + '" already exists. Choose another name.';
-        return;
-      }
-      const id = createRoadmap(nmv, kd.value, a, b, cp.value);
-      useRoadmap(id);
-      showPage("roadmap");
-    });
-    root.append(f);
-    const g = el("div", "rmgrid");
-    allRoadmaps().forEach((r) => {
-      const c = el("div", "card rmcard" + (r.id === state.rm ? " on" : ""));
-      const n = withRm(r.id, () => items().length);
-      const linked = Object.values(S.ideas).filter((i) => i.rm === r.id && i.st === "scheduled").length;
-      c.append(el("h3", "", r.n), el("div", "meta", fmtIso(r.a) + " to " + fmtIso(r.b)), el("div", "meta", n + " features · " + linked + " from ideas"));
-      const act = el("div", "actions");
-      const open = el("button", "btn primary sm", r.id === state.rm ? "Open (current)" : "Open");
-      open.type = "button";
-      open.addEventListener("click", () => {
-        useRoadmap(r.id);
-        showPage("roadmap");
-      });
-      act.append(open);
-      if (canWrite()) {
-        const sh = el("button", "btn sm", "Share");
-        sh.type = "button";
-        sh.id = "sharebtn-" + r.id;
-        sh.title = "Read-only link for people without an account";
-        sh.addEventListener("click", () => openShare(r.id));
-        act.append(sh);
-      }
-      if (!r.builtin && canEdit()) {
-        let armed = false;
-        const del = el("button", "btn danger sm", "Delete");
-        del.type = "button";
-        del.addEventListener("click", () => {
-          if (armed) {
-            deleteRoadmap(r.id);
-            renderRoadmaps();
-            return;
-          }
-          armed = true;
-          del.textContent = "Click again to delete";
-          setTimeout(() => {
-            armed = false;
-            del.textContent = "Delete";
-          }, 3500);
-        });
-        act.append(del);
-      }
-      c.append(act);
-      g.append(c);
-    });
-    root.append(g);
-  }
-
-  // src/esm/ui/export.js
-  function csvCell(v) {
-    v = String(v == null ? "" : v);
-    if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;
-    return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
-  }
-
-  // src/esm/features/log-tools.js
-  function allLogs() {
-    const seen = /* @__PURE__ */ new Set(), out = [];
-    S.logs.concat(S.logsOld).forEach((l) => {
-      if (!seen.has(l.id)) {
-        seen.add(l.id);
-        out.push(l);
-      }
-    });
-    return out.sort((a, b) => a.data.at < b.data.at ? 1 : -1);
-  }
-  async function loadOlderLogs() {
-    if (S.logsBusy) return;
-    S.logsBusy = true;
-    try {
-      const have = allLogs().length;
-      const r = await sb.from("activity").select("id,data").order("updated_at", { ascending: false }).range(have, have + ACTIVE_LOG_PAGE - 1);
-      if (r.error) throw new Error(r.error.message);
-      const rows2 = (r.data || []).map((x) => ({ id: x.id, data: x.data || {} }));
-      S.logsOld = S.logsOld.concat(rows2);
-      S.logsMore = rows2.length >= ACTIVE_LOG_PAGE;
-    } catch (e) {
-      toast("Could not load older entries. Try again.");
-    }
-    S.logsBusy = false;
-    if (state.page === "log") renderLog();
-  }
-  async function exportLog(rows2) {
-    const lines = [["When", "Who", "Type", "Change", "Roadmap"].map(csvCell).join(",")];
-    rows2.forEach((d) => lines.push([d.at, d.name, d.act, d.sum, d.rm || ""].map(csvCell).join(",")));
-    try {
-      await dl.save({ filename: "ynmo-log-" + todayIso() + ".csv", data: "\uFEFF" + lines.join("\n") });
-    } catch (e) {
-    }
-  }
-  function undoneSet() {
-    const s = /* @__PURE__ */ new Set();
-    allLogs().forEach((l) => {
-      if (l.data.ref) s.add(l.data.ref);
-    });
-    return s;
-  }
-  function canUndoRow(l, done2) {
-    return canWrite() && l.data.u && !done2.has(l.id);
-  }
-  function undoFromLog(l) {
-    const u = l.data.u;
-    if (!u || !canWrite()) return;
-    const cur2 = S.over[u.id], isSame = (a, b) => JSON.stringify(a === void 0 ? null : a) === JSON.stringify(b === void 0 ? null : b);
-    let clash = false;
-    if (u.after) Object.keys(u.after).forEach((k) => {
-      if (!isSame(cur2 && cur2[k], u.after[k])) clash = true;
-    });
-    if (u.whole !== void 0 && u.after === void 0) clash = false;
-    const run = () => {
-      pushHistory();
-      if (u.after) {
-        const o = Object.assign({}, S.over[u.id] || {});
-        Object.keys(u.set || {}).forEach((k) => {
-          o[k] = u.set[k];
-        });
-        (u.unset || []).forEach((k) => {
-          delete o[k];
-        });
-        S.over[u.id] = o;
-        persist(u.id, (u.unset || []).length ? null : u.set);
-      } else if (u.whole) {
-        S.over[u.id] = u.whole;
-        persist(u.id);
-      } else {
-        delete S.over[u.id];
-        persist(u.id);
-      }
-      render();
-      const data = { at: (/* @__PURE__ */ new Date()).toISOString(), uid: S.me.id, name: S.me.name || S.me.email, av: S.me.avatar || "", act: "edit", sum: "undid: " + l.data.sum, rm: l.data.rm, ref: l.id };
-      const id = "l" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-      S.logs.unshift({ id, data });
-      sb.from("activity").insert({ id, data }).then(() => {
-      }, () => {
-      });
-      if (state.page === "log") renderLog();
-      toast("Change undone.");
-    };
-    if (!clash) {
-      run();
-      return;
-    }
-    openDlg("Undo this change?", (b) => {
-      b.append(el("p", "hint", "This bar was changed again after that entry. Undoing will put back the older values and replace what is there now."));
-      const ok = el("button", "btn primary", "Undo anyway");
-      ok.type = "button";
-      const no = el("button", "btn", "Keep current");
-      no.type = "button";
-      ok.addEventListener("click", () => {
-        closeDlg();
-        run();
-      });
-      no.addEventListener("click", closeDlg);
-      const row = el("div", "formrow");
-      row.append(ok, no);
-      b.append(row);
-    });
-  }
-
-  // src/esm/pages/log.js
-  var logUI = { u: "all", a: "all" };
-  function renderLog() {
-    const root = $("pg-log");
-    root.textContent = "";
-    const every = allLogs(), done2 = undoneSet();
-    const users = [...new Set(every.map((l) => l.data.name))].sort();
-    const su = selOf([["all", "Everyone"]].concat(users.map((u) => [u, u])), logUI.u), sa = selOf([["all", "All changes"], ["edit", "Edits"], ["roadmap", "Roadmaps"], ["idea", "Ideas"], ["sprint", "Sprints"], ["report", "Reports"], ["resource", "Resources"], ["vacation", "Vacations"], ["access", "Access"]], logUI.a);
-    su.setAttribute("aria-label", "Filter by person");
-    sa.setAttribute("aria-label", "Filter by type of change");
-    su.addEventListener("change", () => {
-      logUI.u = su.value;
-      renderLog();
-    });
-    sa.addEventListener("change", () => {
-      logUI.a = sa.value;
-      renderLog();
-    });
-    const rows2 = every.filter((l) => (logUI.u === "all" || l.data.name === logUI.u) && (logUI.a === "all" || l.data.act === logUI.a));
-    const ex = el("button", "btn", "Export CSV");
-    ex.type = "button";
-    ex.id = "logexport";
-    ex.addEventListener("click", () => exportLog(rows2.map((l) => l.data)));
-    const tools = el("div", "formrow");
-    tools.append(su, sa, ex);
-    root.append(pageHead("Log", "Who changed what, and when. Newest first. Times show in your time zone." + (canEdit() ? " Undo puts an edit back the way it was." : ""), tools));
-    const card2 = el("div", "card");
-    let day = "";
-    if (!rows2.length) card2.append(el("div", "hint", "No changes recorded yet."));
-    rows2.forEach((l) => {
-      const d = l.data;
-      const dd = new Date(d.at).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-      if (dd !== day) {
-        day = dd;
-        card2.append(el("div", "logday", dd));
-      }
-      const r = el("div", "logrow"), b = el("div", "lb");
-      const nm = el("b", "", d.name);
-      b.append(nm, document.createTextNode(" "), el("span", "badge", d.act), document.createTextNode(" " + d.sum));
-      if (done2.has(l.id)) b.append(el("span", "badge undone", "undone"));
-      if (d.rm) b.append(el("div", "hint", d.rm));
-      const tm = el("div", "lt", ago(d.at));
-      tm.title = clock(d.at);
-      r.append(avatarEl(d.av, 34, d.name), b, tm);
-      if (canUndoRow(l, done2)) {
-        const u = el("button", "btn sm undo", "Undo");
-        u.type = "button";
-        u.setAttribute("aria-label", "Undo: " + d.sum);
-        u.addEventListener("click", () => undoFromLog(l));
-        r.append(u);
-      }
-      card2.append(r);
-    });
-    if (S.logsMore) {
-      const m = el("button", "btn", S.logsBusy ? "Loading…" : "Load older entries");
-      m.type = "button";
-      m.id = "logmore";
-      m.disabled = S.logsBusy;
-      m.addEventListener("click", loadOlderLogs);
-      card2.append(m);
-    } else if (every.length > ACTIVE_LOG_PAGE) card2.append(el("div", "hint", "That is everything."));
-    root.append(card2);
-  }
-
-  // src/esm/core/shared.js
-  var ideaUI = { st: "open", q: "" };
-  var H2 = { id: H2_ID, n: "H2 2026", a: "2026-10-01", b: "2027-01-31", kind: "H2", builtin: true };
-  var PAGES = [["roadmap", "Roadmap"], ["ideas", "Ideas"], ["roadmaps", "Roadmaps"], ["sprints", "Sprints"], ["reports", "Reports"], ["monthly", "Monthly deliverables"], ["resources", "Resources"], ["vacations", "Vacations"], ["log", "Log"], ["admin", "Approvals"]];
-  var DOMAINS = ["PM", "Mobile", "Backend", "Frontend", "Full-stack", "Engineering", "QA", "UX / Design", "AI / ML", "Other"];
-  var VTYPES = ["Annual leave", "Training", "Public holiday", "Other"];
-  var slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "x";
-  var fmtIso = (s) => {
-    const t = parseIso(s);
-    if (t === null) return s || "";
-    const d = new Date(t);
-    return DN[d.getUTCDay()] + " " + d.getUTCDate() + " " + MN[d.getUTCMonth()] + " " + d.getUTCFullYear();
-  };
-  function todayIso() {
-    const n = /* @__PURE__ */ new Date(), z = (v) => (v < 10 ? "0" : "") + v;
-    return n.getFullYear() + "-" + z(n.getMonth() + 1) + "-" + z(n.getDate());
-  }
-  function wdays(a, b) {
-    let n = 0;
-    for (let t = parseIso(a); t !== null && t <= parseIso(b); t += DAY) {
-      const w = new Date(t).getUTCDay();
-      if (w !== 5 && w !== 6) n++;
-    }
-    return n;
-  }
-  function kOfIso(s) {
-    const t = parseIso(s);
-    return t === null ? NaN : Math.round((t - START) / DAY);
-  }
-  function ago(iso4) {
-    const s = Math.max(0, (Date.now() - new Date(iso4).getTime()) / 1e3);
-    if (s < 60) return "just now";
-    if (s < 3600) return Math.floor(s / 60) + " min ago";
-    if (s < 86400) return Math.floor(s / 3600) + " h ago";
-    return Math.floor(s / 86400) + " d ago";
-  }
-  function clock(iso4) {
-    try {
-      return new Date(iso4).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
-    } catch (e) {
-      return iso4;
-    }
-  }
-  function fld(label, ctl) {
-    const l = el("label");
-    l.append(el("span", "", label), ctl);
-    return l;
-  }
-  function selOf(opts, val, cls) {
-    const s = el("select", cls || "");
-    opts.forEach((o) => {
-      const v = Array.isArray(o) ? o[0] : o, t = Array.isArray(o) ? o[1] : o;
-      const x = el("option", "", t);
-      x.value = v;
-      if (String(v) === String(val)) x.selected = true;
-      s.append(x);
-    });
-    return s;
-  }
-  function pageHead(t, sub, extra) {
-    const h = el("div", "pghead");
-    const d = el("div");
-    d.append(el("h1", "", t));
-    if (sub) d.append(el("p", "sub", sub));
-    h.append(d);
-    if (extra) h.append(extra);
-    return h;
-  }
-  function toast(t) {
-    $("save").textContent = t;
-  }
-  function logAct(act, sum, undo2) {
-    if (!S.me || !sum) return;
-    const id = "l" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-    const data = { at: (/* @__PURE__ */ new Date()).toISOString(), uid: S.me.id, name: S.me.name || S.me.email, av: S.me.avatar || "", act, sum, rm: curRm().n };
-    if (undo2) data.u = undo2;
-    S.logs.unshift({ id, data });
-    if (state.page === "log") renderLog();
-    sb.from("activity").insert({ id, data }).then(() => {
-    }, () => {
-    });
-  }
-  function describe(prev, f) {
-    if (!prev) return "";
-    const parts = [];
-    if (f.t !== void 0 && f.t !== prev.t) parts.push('renamed to "' + f.t + '"');
-    if (f.st !== void 0 && f.st !== prev.st) parts.push("status: " + STATUS[f.st]);
-    if (f.d0 !== void 0 && f.d0 !== prev.d0 || f.d1 !== void 0 && f.d1 !== prev.d1) parts.push("dates " + dlabel(f.d0 !== void 0 ? f.d0 : prev.d0) + " to " + dlabel(f.d1 !== void 0 ? f.d1 : prev.d1));
-    if (f.res) {
-      const a = f.res.filter((n) => !prev.res.includes(n)), r = prev.res.filter((n) => !f.res.includes(n));
-      if (a.length) parts.push("added " + a.join(", "));
-      if (r.length) parts.push("removed " + r.join(", "));
-    }
-    if (f.c !== void 0 && f.c !== (prev.c || null)) parts.push("color changed");
-    if (f.n !== void 0 && f.n !== (prev.n || "")) parts.push("notes edited");
-    if (f.sq && f.sq !== prev.sq) parts.push("product: " + laneOf(f.sq).n);
-    if (f.dep) parts.push("depends on " + (f.dep.length ? f.dep.length + " bar" + (f.dep.length === 1 ? "" : "s") : "nothing"));
-    if (f.ms !== void 0 && !!f.ms !== !!prev.ms) parts.push(f.ms ? "made a milestone" : "made a regular bar");
-    return parts.join("; ");
-  }
-
-  // src/esm/pages/vacations.js
-  var vacsOf = (name) => Object.keys(S.vacs).map((id) => Object.assign({ id }, S.vacs[id])).filter((v) => v.p === name && v.a0);
-  function affectedBy(v) {
-    const ka = kOfIso(v.a0), kb = kOfIso(v.a1 || v.a0);
-    return items().filter((it) => it.res.includes(v.p) && it.d1 >= ka && it.d0 <= kb).map((it) => ({ it, lost: Math.min(it.d1, kb) - Math.max(it.d0, ka) + 1 }));
-  }
-  var vacUI = { open: /* @__PURE__ */ new Set() };
-  var VT_CLASS = (t) => "t" + Math.max(0, VTYPES.indexOf(t));
-  function personStats(name) {
-    const list = vacsOf(name).sort((x, y) => x.a0 < y.a0 ? -1 : 1), td = todayIso();
-    let cal = 0, work = 0, taken = 0, upcoming = null;
-    const byType = {};
-    list.forEach((v) => {
-      const a1 = v.a1 || v.a0, w = wdays(v.a0, a1);
-      cal += Math.round((parseIso(a1) - parseIso(v.a0)) / DAY) + 1;
-      work += w;
-      byType[v.t] = (byType[v.t] || 0) + w;
-      if (a1 < td) taken += w;
-      else if (!upcoming) upcoming = v;
-    });
-    return { list, cal, work, taken, byType, upcoming };
-  }
-  function leaveCalendar(list) {
-    const r = curRm();
-    let a = r.a, b = r.b;
-    list.forEach((v) => {
-      if (v.a0 < a) a = v.a0;
-      if ((v.a1 || v.a0) > b) b = v.a1 || v.a0;
-    });
-    const map = {};
-    list.forEach((v) => {
-      for (let t = parseIso(v.a0); t <= parseIso(v.a1 || v.a0); t += DAY) map[new Date(t).toISOString().slice(0, 10)] = v;
-    });
-    const wrap = el("div", "mcals"), td = todayIso(), pad = (n) => (n < 10 ? "0" : "") + n;
-    let y = +a.slice(0, 4), m = +a.slice(5, 7) - 1;
-    const ey = +b.slice(0, 4), em = +b.slice(5, 7) - 1;
-    for (let n = 0; n < 14 && y * 12 + m <= ey * 12 + em; n++) {
-      const box2 = el("div", "mcal");
-      box2.append(el("h4", "", MN[m] + " " + y));
-      const g = el("div", "mgrid");
-      ["S", "M", "T", "W", "T", "F", "S"].forEach((x) => g.append(el("span", "dh", x)));
-      const first = new Date(Date.UTC(y, m, 1)).getUTCDay(), dim = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
-      for (let i = 0; i < first; i++) g.append(el("span", "blank"));
-      for (let d = 1; d <= dim; d++) {
-        const key = y + "-" + pad(m + 1) + "-" + pad(d), dow = (first + d - 1) % 7, v = map[key];
-        const c = el("span", "day" + (dow === 5 || dow === 6 ? " we" : "") + (key < r.a || key > r.b ? " out" : "") + (key === td ? " today" : "") + (v ? " lv " + VT_CLASS(v.t) : ""), String(d));
-        if (v) c.title = v.t + (v.n ? " · " + v.n : "") + " · " + fmtIso(v.a0) + (v.a1 > v.a0 ? " to " + fmtIso(v.a1) : "");
-        g.append(c);
-      }
-      box2.append(g);
-      wrap.append(box2);
-      m++;
-      if (m > 11) {
-        m = 0;
-        y++;
-      }
-    }
-    return wrap;
-  }
-  function renderTeamLeave(root) {
-    const names = [...new Set(Object.keys(S.vacs).map((id) => S.vacs[id]).filter((v) => v.a0).map((v) => v.p))].sort((x, y) => x.localeCompare(y));
-    if (!names.length) return;
-    const card2 = el("div", "card");
-    card2.append(el("h2", "", "Team leave"), el("div", "hint", "Select a person to see their leave stats and calendar."));
-    const td = todayIso();
-    names.forEach((nm) => {
-      const st = personStats(nm), open = vacUI.open.has(nm), row = el("div", "tlrow");
-      const hb = el("button", "tlhead");
-      hb.type = "button";
-      hb.setAttribute("aria-expanded", String(open));
-      const onLeave = st.list.some((v) => v.a0 <= td && (v.a1 || v.a0) >= td);
-      hb.append(
-        el("span", "chev", open ? "▾" : "▸"),
-        el("strong", "", nm),
-        el("span", "hint", st.list.length + " period" + (st.list.length > 1 ? "s" : "") + " · " + st.work + " working days"),
-        st.upcoming ? el("span", "badge", st.upcoming.a0 <= td ? "Now until " + fmtIso(st.upcoming.a1 || st.upcoming.a0) : "Next " + fmtIso(st.upcoming.a0)) : el("span", "hint", "none upcoming")
-      );
-      if (onLeave) hb.append(el("span", "badge warn", "On leave today"));
-      hb.addEventListener("click", () => {
-        if (vacUI.open.has(nm)) vacUI.open.delete(nm);
-        else vacUI.open.add(nm);
-        renderVacations(true);
-      });
-      row.append(hb);
-      if (open) {
-        const body = el("div", "tlbody"), tiles = el("div", "tltiles");
-        const tile = (n, l) => {
-          const t = el("div", "tltile");
-          t.append(el("b", "", String(n)), el("span", "", l));
-          return t;
-        };
-        tiles.append(tile(st.work, "working days off"), tile(st.cal, "calendar days"), tile(st.taken, "already taken"), tile(Math.max(0, st.work - st.taken), "still ahead"));
-        Object.keys(st.byType).forEach((k) => tiles.append(tile(st.byType[k], k)));
-        const aff = /* @__PURE__ */ new Set();
-        st.list.forEach((v) => affectedBy(v).forEach((x) => aff.add(x.it.id)));
-        tiles.append(tile(aff.size, "features on " + curRm().n + " overlap"));
-        body.append(tiles, leaveCalendar(st.list));
-        const leg = el("div", "legend2");
-        VTYPES.forEach((t) => {
-          const i = el("i", VT_CLASS(t));
-          leg.append(i, document.createTextNode(t + "  "));
-        });
-        body.append(leg);
-        const ul = el("ul", "tlist");
-        st.list.forEach((v) => ul.append(el("li", "", fmtIso(v.a0) + (v.a1 > v.a0 ? " to " + fmtIso(v.a1) : "") + " · " + v.t + (v.n ? " · " + v.n : "") + " · " + wdays(v.a0, v.a1 || v.a0) + " working days")));
-        body.append(ul);
-        const go = el("button", "btn sm", "Show on roadmap");
-        go.type = "button";
-        go.addEventListener("click", () => showPage("roadmap"));
-        body.append(go);
-        row.append(body);
-      }
-      card2.append(row);
-    });
-    root.append(card2);
-  }
-  function addVacation(p, a0, a1, type, note) {
-    const id = "v" + Date.now().toString(36);
-    S.vacs[id] = { p, a0, a1, t: type, n: note, by: S.me ? S.me.name : "" };
-    write("vacations/" + id, S.vacs[id]);
-    logAct("vacation", p + ": " + type + " " + fmtIso(a0) + (a1 > a0 ? " to " + fmtIso(a1) : ""));
-    const aff = affectedBy(S.vacs[id]);
-    S.vacNotice = { id, p, a0, a1, ty: type, aff: aff.map((x) => ({ id: x.it.id, t: x.it.t, lost: x.lost })) };
-    render();
-    renderVacations(true);
-  }
-  function renderVacations(force) {
-    const root = $("pg-vacations"), ae = document.activeElement;
-    if (!force && ae && root.contains(ae) && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) return;
-    root.textContent = "";
-    root.append(pageHead("Vacations", "Leave shows on the person's row in every roadmap with a ⚑ flag. Features that overlap the leave get a flag too, so you can move them or extend them."));
-    const f = el("form", "card");
-    f.append(el("h2", "", "Add leave"));
-    const names = [...directory().keys()].sort((x, y) => x.localeCompare(y));
-    const who = selOf([["", "Choose a person…"]].concat(names.map((n) => [n, n])), ""), a = el("input"), b = el("input"), ty = selOf(VTYPES, "Annual leave"), nt = el("input");
-    who.required = true;
-    who.setAttribute("aria-label", "Person");
-    a.type = b.type = "date";
-    a.required = true;
-    nt.type = "text";
-    nt.maxLength = 80;
-    nt.placeholder = "Optional note";
-    const td = todayIso();
-    a.value = td;
-    const r1 = el("div", "formrow");
-    r1.append(fld("Person", who), fld("From", a), fld("To", b), fld("Type", ty), fld("Note", nt));
-    const msg = el("div", "gerr"), go = el("button", "btn primary", "Add leave");
-    go.type = "submit";
-    go.disabled = !canEdit();
-    f.append(r1, msg, go);
-    f.addEventListener("submit", (e) => {
-      e.preventDefault();
-      if (!who.value) {
-        msg.textContent = "Choose a person first.";
-        who.focus();
-        return;
-      }
-      const x0 = a.value, x1 = b.value || a.value;
-      if (parseIso(x0) === null || parseIso(x1) < parseIso(x0)) {
-        msg.textContent = "Pick a valid date range.";
-        return;
-      }
-      const clash = vacsOf(who.value).find((v) => x0 <= (v.a1 || v.a0) && x1 >= v.a0);
-      if (clash) {
-        msg.textContent = who.value + " already has leave on " + fmtIso(clash.a0) + (clash.a1 > clash.a0 ? " to " + fmtIso(clash.a1) : "") + ". Remove it first or pick other dates.";
-        return;
-      }
-      addVacation(who.value, x0, x1, ty.value, nt.value.trim());
-    });
-    root.append(f);
-    if (S.vacNotice) {
-      const c = el("div", "card");
-      c.style.borderColor = "var(--brand-2)";
-      const hd = el("div", "vhead");
-      hd.append(el("strong", "", S.vacNotice.p), el("span", "", fmtIso(S.vacNotice.a0) + (S.vacNotice.a1 > S.vacNotice.a0 ? " to " + fmtIso(S.vacNotice.a1) : "")), el("span", "badge", S.vacNotice.ty || "Leave"));
-      c.append(hd);
-      c.append(el("h3", "", S.vacNotice.aff.length ? S.vacNotice.aff.length + " feature" + (S.vacNotice.aff.length > 1 ? "s" : "") + " on " + curRm().n + " overlap this leave" : "No features on " + curRm().n + " overlap this leave"));
-      if (S.vacNotice.aff.length) {
-        const ul = el("ul");
-        S.vacNotice.aff.forEach((x) => ul.append(el("li", "", x.t + " (" + x.lost + " day" + (x.lost > 1 ? "s" : "") + " inside the leave)")));
-        c.append(ul);
-        const act = el("div", "actions");
-        const ext = el("button", "btn primary sm", "Extend each feature by its lost days");
-        ext.type = "button";
-        ext.disabled = !canEdit();
-        ext.addEventListener("click", () => {
-          const n = S.vacNotice;
-          S.vacNotice = null;
-          n.aff.forEach((x) => {
-            const it = items().find((i) => i.id === x.id);
-            if (it) commit(it.id, { d1: Math.min(NDAYS - 1, it.d1 + x.lost) });
-          });
-          logAct("vacation", "extended " + n.aff.length + " feature(s) for " + n.p + "'s leave");
-          renderVacations(true);
-        });
-        const keep = el("button", "btn sm", "Keep dates, just flag them");
-        keep.type = "button";
-        keep.addEventListener("click", () => {
-          S.vacNotice = null;
-          renderVacations(true);
-        });
-        act.append(ext, keep);
-        c.append(act);
-      }
-      root.append(c);
-    }
-    renderTeamLeave(root);
-    const card2 = el("div", "card");
-    card2.append(el("h2", "", "All leave"));
-    const list = Object.keys(S.vacs).map((id) => Object.assign({ id }, S.vacs[id])).filter((v) => v.a0).sort((x, y) => x.a0 < y.a0 ? -1 : 1);
-    if (!list.length) card2.append(el("div", "hint", "No leave added yet."));
-    else {
-      const t = el("table", "tbl"), th = el("thead"), hr = el("tr");
-      ["Person", "Dates", "Type", "Working days", "Affects", ""].forEach((x) => {
-        const c = el("th", "", x);
-        if (!x) c.append(el("span", "sr", "Actions"));
-        hr.append(c);
-      });
-      th.append(hr);
-      t.append(th);
-      const tb = el("tbody");
-      list.forEach((v) => {
-        const aff = affectedBy(v), tr = el("tr");
-        tr.append(el("td", "", v.p), el("td", "", fmtIso(v.a0) + (v.a1 > v.a0 ? " to " + fmtIso(v.a1) : "")), el("td", "", v.t + (v.n ? " · " + v.n : "")), el("td", "", String(wdays(v.a0, v.a1 || v.a0))));
-        const c = el("td");
-        c.append(aff.length ? el("span", "badge warn", "⚑ " + aff.length + " on " + curRm().n) : el("span", "hint", "none"));
-        const x = el("td");
-        if (canEdit()) {
-          const rm = el("button", "btn danger sm", "Remove");
-          rm.type = "button";
-          rm.addEventListener("click", () => {
-            delete S.vacs[v.id];
-            if (S.vacNotice && S.vacNotice.id === v.id) S.vacNotice = null;
-            write("vacations/" + v.id, null);
-            logAct("vacation", "removed leave of " + v.p + " (" + fmtIso(v.a0) + ")");
-            render();
-            renderVacations(true);
-          });
-          x.append(rm);
-        }
-        tr.append(c, x);
-        tb.append(tr);
-      });
-      t.append(tb);
-      const sc = el("div", "tscroll");
-      sc.append(t);
-      card2.append(sc);
-    }
-    root.append(card2);
-  }
-
-  // src/esm/features/timeline-notes.js
-  var NOTE_H = 20;
-  var QUICK = ["#0891b2", "#7c3aed", "#16a34a", "#ea580c", "#dc2626", "#ca8a04", "#374151", "#c2257f"];
-  var DEFAULT_COLOR = { person: "#0891b2", period: "#ea580c" };
-  function notesHere(kind) {
-    return Object.keys(S.ideas).map((id) => Object.assign({ id }, S.ideas[id])).filter((n) => n.tn && n.rm === state.rm && (!kind || n.k === kind)).map((n) => {
-      const a = kOfIso(n.a0), b = kOfIso(n.a1 || n.a0);
-      return Object.assign(n, { d0: Math.max(0, a), d1: Math.min(NDAYS - 1, b), inside: Number.isFinite(a) && Number.isFinite(b) && b >= 0 && a <= NDAYS - 1 });
-    }).filter((n) => n.inside).sort((x, y) => x.d0 - y.d0 || x.d1 - y.d1 || (x.id < y.id ? -1 : 1));
-  }
-  function packNotes(list) {
-    const lanes = [], out = [];
-    list.forEach((n) => {
-      let i = lanes.findIndex((l) => l.every((o) => o.d1 < n.d0 || o.d0 > n.d1));
-      if (i < 0) {
-        i = lanes.length;
-        lanes.push([]);
-      }
-      lanes[i].push(n);
-      out.push({ n, lane: i });
-    });
-    return { out, lanes: lanes.length };
-  }
-  var personNotes = (name) => packNotes(notesHere("person").filter((n) => n.p === name));
-  var hasPersonNotes = (name) => notesHere("person").some((n) => n.p === name);
-  function leaveByDay() {
-    const counts = new Array(NDAYS).fill(0), who = Array.from({ length: NDAYS }, () => []);
-    const names = state.person === "all" ? [...directory().keys()] : [state.person];
-    names.forEach((n) => vacsOf(n).forEach((v) => {
-      const a = Math.max(0, kOfIso(v.a0)), b = Math.min(NDAYS - 1, kOfIso(v.a1 || v.a0));
-      for (let k = a; k <= b; k++) if (!who[k].includes(n)) {
-        who[k].push(n);
-        counts[k]++;
-      }
-    }));
-    return { counts, who };
-  }
-  function leaveRuns() {
-    const { counts, who } = leaveByDay(), runs = [];
-    let k = 0;
-    while (k < NDAYS) {
-      if (!counts[k]) {
-        k++;
-        continue;
-      }
-      let e = k;
-      while (e + 1 < NDAYS && counts[e + 1] === counts[k]) e++;
-      runs.push({ d0: k, d1: e, n: counts[k], who: who[k] });
-      k = e + 1;
-    }
-    return runs;
-  }
-  var stripNeeded = () => notesHere("period").length > 0 || leaveRuns().length > 0;
-  function saveNote(id, patch, sum) {
-    const nid = id || "tn-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 4);
-    saveIdea(nid, Object.assign({ cfg: true, tn: true, rm: state.rm, by: S.me ? S.me.name : "" }, patch), "roadmap", sum);
-    render();
-    return nid;
-  }
-  function deleteNote(id) {
-    const n = S.ideas[id];
-    if (!n) return;
-    delete S.ideas[id];
-    write("ideas/" + id, null);
-    logAct("roadmap", 'deleted the note "' + n.t + '"');
-    render();
-  }
-  function openNoteDialog(note) {
-    if (!canEdit()) return;
-    const k = note.k, editing = !!note.id;
-    openDlg((editing ? "Edit " : "Add ") + (k === "person" ? "note for " + (note.p || "a person") : "period note"), (box2) => {
-      box2.append(el("p", "sub", k === "person" ? `A note on one person's row, for example "Full stack: backend + frontend". It is not a feature, so it is never counted.` : 'A note across every row for some dates, for example "Eid: many vacations". It is not a feature, so it is never counted.'));
-      const tx = el("input");
-      tx.type = "text";
-      tx.maxLength = 120;
-      tx.value = note.t || "";
-      tx.placeholder = k === "person" ? "Full stack: backend + frontend" : "Eid: many vacations";
-      tx.setAttribute("aria-label", "Note text");
-      const fld2 = (l, c) => {
-        const w = el("label", "fld");
-        w.append(el("span", "", l), c);
-        return w;
-      };
-      box2.append(fld2("Text", tx));
-      let who = null;
-      if (k === "person") {
-        who = el("select");
-        who.setAttribute("aria-label", "Person");
-        [...directory().keys()].sort((a, b) => a.localeCompare(b)).forEach((n) => {
-          const o = el("option", "", n);
-          o.value = n;
-          if (n === note.p) o.selected = true;
-          who.append(o);
-        });
-        box2.append(fld2("Person", who));
-      }
-      const d0 = el("input"), d1 = el("input");
-      d0.type = d1.type = "date";
-      d0.min = d1.min = iso(0);
-      d0.max = d1.max = iso(NDAYS - 1);
-      d0.value = note.a0;
-      d1.value = note.a1 || note.a0;
-      d0.setAttribute("aria-label", "From");
-      d1.setAttribute("aria-label", "To");
-      const dr = el("div", "formrow");
-      dr.append(fld2("From", d0), fld2("To", d1));
-      box2.append(dr);
-      let col = isHex(note.c) ? note.c : DEFAULT_COLOR[k];
-      const sw = el("div", "swatches");
-      const pick = (c) => {
-        col = c;
-        sw.querySelectorAll(".swatch").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.c === c)));
-        any.classList.toggle("on", !QUICK.includes(c));
-      };
-      QUICK.forEach((c) => {
-        const b = el("button", "swatch");
-        b.type = "button";
-        b.dataset.c = c;
-        b.style.setProperty("--c", c);
-        b.setAttribute("aria-label", "Colour " + c);
-        b.setAttribute("aria-pressed", String(c === col));
-        b.addEventListener("click", () => pick(c));
-        sw.append(b);
-      });
-      const any = el("label", "swatch any");
-      any.title = "Pick any colour";
-      const ci = el("input");
-      ci.type = "color";
-      ci.value = col;
-      ci.setAttribute("aria-label", "Pick any colour");
-      ci.addEventListener("input", () => pick(ci.value.toLowerCase()));
-      any.append(ci);
-      sw.append(any);
-      pick(col);
-      box2.append(fld2("Colour", sw));
-      const msg = el("div", "gerr");
-      msg.setAttribute("role", "alert");
-      box2.append(msg);
-      const save2 = el("button", "btn primary", "Save"), cancel = el("button", "btn", "Cancel");
-      save2.type = cancel.type = "button";
-      cancel.addEventListener("click", closeDlg);
-      const go = () => {
-        const t = tx.value.trim().replace(/\s+/g, " ");
-        if (!t) {
-          msg.textContent = "Write the note text.";
-          tx.focus();
-          return;
-        }
-        if (!d0.value || !d1.value) {
-          msg.textContent = "Pick the dates.";
-          return;
-        }
-        if (d1.value < d0.value) {
-          msg.textContent = "The end date is before the start date.";
-          return;
-        }
-        const patch = { k, t, a0: d0.value, a1: d1.value, c: col };
-        if (k === "person") patch.p = who.value;
-        closeDlg();
-        saveNote(note.id, patch, (editing ? "edited" : "added") + " the " + (k === "person" ? "note for " + patch.p : "period note") + ' "' + t + '"');
-        notify("Note saved");
-      };
-      tx.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          go();
-        }
-      });
-      save2.addEventListener("click", go);
-      const row = el("div", "formrow");
-      row.append(save2, cancel);
-      if (editing) {
-        const del = el("button", "btn danger", "Delete note");
-        del.type = "button";
-        del.addEventListener("click", () => {
-          closeDlg();
-          deleteNote(note.id);
-          notify("Note deleted");
-        });
-        row.append(del);
-      }
-      box2.append(row);
-    });
-  }
-  function noteMenu(n, x, y) {
-    if (!canEdit()) return;
-    openCtx(x, y, (c) => {
-      mi(c, "Edit note…", () => openNoteDialog(n));
-      mi(c, "Delete note", () => {
-        deleteNote(n.id);
-        notify("Note deleted");
-      }, "danger");
-    });
-  }
-  function periodMenu(x, y, dayK) {
-    if (!canEdit()) return;
-    openCtx(x, y, (c) => {
-      mi(c, "Add period note…", () => openNoteDialog({ k: "period", a0: iso(dayK), a1: iso(Math.min(NDAYS - 1, dayK + 6)) }));
-    });
-  }
-  function bindDrag(node, n) {
-    node.addEventListener("contextmenu", (e) => {
-      if (!canEdit()) return;
-      e.preventDefault();
-      e.stopPropagation();
-      noteMenu(n, e.clientX, e.clientY);
-    });
-    if (!canEdit()) return;
-    node.addEventListener("pointerdown", (e) => {
-      if (e.button != null && e.button !== 0) return;
-      e.stopPropagation();
-      const g = document.getElementById("grid"), wk = g.querySelector(".wk"), mw = wk ? wk.getBoundingClientRect().width : 26;
-      const mode = e.target.classList.contains("hl") ? "l" : e.target.classList.contains("hr") ? "r" : "move", x0 = e.clientX;
-      let a = n.d0, b = n.d1, moved = false;
-      node.setPointerCapture(e.pointerId);
-      const mv = (ev) => {
-        const dm = Math.round((ev.clientX - x0) / mw);
-        if (!moved && Math.abs(ev.clientX - x0) < 4) return;
-        moved = true;
-        if (mode === "move") {
-          const len = n.d1 - n.d0;
-          a = Math.max(0, Math.min(NDAYS - 1 - len, n.d0 + dm));
-          b = a + len;
-        } else if (mode === "l") {
-          a = Math.max(0, Math.min(n.d1, n.d0 + dm));
-          b = n.d1;
-        } else {
-          b = Math.min(NDAYS - 1, Math.max(n.d0, n.d1 + dm));
-          a = n.d0;
-        }
-        node.style.gridColumn = a + 2 + " / " + (b + 3);
-      };
-      const up = () => {
-        node.removeEventListener("pointermove", mv);
-        node.removeEventListener("pointerup", up);
-        node.removeEventListener("pointercancel", up);
-        if (!moved) {
-          openNoteDialog(n);
-          return;
-        }
-        if (a !== n.d0 || b !== n.d1) saveNote(n.id, { a0: iso(a), a1: iso(b) }, 'moved the note "' + n.t + '" to ' + fmtIso(iso(a)) + " – " + fmtIso(iso(b)));
-        else render();
-      };
-      node.addEventListener("pointermove", mv);
-      node.addEventListener("pointerup", up);
-      node.addEventListener("pointercancel", up);
-    });
-  }
-  var tip = (n) => n.t + " · " + fmtIso(n.a0) + (n.a1 && n.a1 !== n.a0 ? " to " + fmtIso(n.a1) : "") + (n.by ? " · " + n.by : "");
-  function noteNode(n, laneIdx, kind) {
-    const c = isHex(n.c) ? n.c : DEFAULT_COLOR[n.k], b = el("div", kind === "chip" ? "tnote tchip" : "tnote tribbon");
-    b.dataset.note = n.id;
-    b.style.setProperty("--c", c);
-    b.style.marginTop = (kind === "chip" ? 4 + laneIdx * NOTE_H : 2 + laneIdx * NOTE_H) + "px";
-    b.title = tip(n);
-    b.tabIndex = 0;
-    b.setAttribute("role", "button");
-    b.setAttribute("aria-label", "Note: " + tip(n));
-    b.append(el("span", "nt", n.t));
-    if (canEdit()) b.append(el("span", "hd l"), el("span", "hd r"));
-    b.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === "F2") {
-        e.preventDefault();
-        openNoteDialog(n);
-      } else if (e.key === "Delete" && canEdit()) {
-        e.preventDefault();
-        deleteNote(n.id);
-      }
-    });
-    bindDrag(b, n);
-    return b;
-  }
-  function drawNotesRow(put, row) {
-    const periods = packNotes(notesHere("period")), runs = leaveRuns();
-    const h = 10 + Math.max(1, periods.lanes) * NOTE_H + 12;
-    const c1 = el("div", "c1 notesrow");
-    c1.style.minHeight = h + "px";
-    c1.append(el("span", "", "Notes"), el("small", "", "leave and periods"));
-    put(c1, row, 1);
-    const bg = el("div", "rowbg tstrip");
-    bg.style.minHeight = h + "px";
-    put(bg, row, null);
-    runs.forEach((r) => {
-      const d = el("div", "vheat");
-      d.style.setProperty("--n", String(Math.min(1, r.n / 4)));
-      d.title = r.n + (r.n === 1 ? " person" : " people") + " on leave: " + r.who.join(", ");
-      if (r.d1 - r.d0 >= 1) d.append(el("span", "", String(r.n)));
-      put(d, row, r.d0 + 2 + " / " + (r.d1 + 3));
-    });
-    periods.out.forEach((x) => put(noteNode(x.n, x.lane, "chip"), row, x.n.d0 + 2 + " / " + (x.n.d1 + 3)));
-  }
-  function drawBands(put, fromRow, toRow) {
-    notesHere("period").forEach((n) => {
-      const b = el("div", "tband");
-      b.style.setProperty("--c", isHex(n.c) ? n.c : DEFAULT_COLOR.period);
-      b.title = n.t;
-      put(b, fromRow + " / " + toRow, n.d0 + 2 + " / " + (n.d1 + 3));
-    });
-  }
 
   // src/esm/features/dependencies.js
   function depsOf(it) {
@@ -5139,6 +4026,135 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     bar4.addEventListener("pointercancel", up);
   }
 
+  // src/esm/features/people-rows.js
+  var savedOrder = () => S.ideas.peopleorder && S.ideas.peopleorder.ord || [];
+  function primaryLane(name) {
+    const d = directory().get(name);
+    const idx = d ? [...d.sqs].map((k) => LANES.findIndex((l) => l.k === k)).filter((i) => i >= 0) : [];
+    return idx.length ? Math.min.apply(null, idx) : 0;
+  }
+  function comparePeople(a, b) {
+    const ord = savedOrder(), ia = ord.indexOf(a.name), ib = ord.indexOf(b.name);
+    if (ia >= 0 || ib >= 0) return (ia < 0 ? 1e6 : ia) - (ib < 0 ? 1e6 : ib) || a.name.localeCompare(b.name);
+    return primaryLane(a.name) - primaryLane(b.name) || a.name.localeCompare(b.name);
+  }
+  function allNamesInOrder() {
+    return [...directory().keys()].map((name) => ({ name })).sort(comparePeople).map((p) => p.name);
+  }
+  function movePerson(name, target, after) {
+    if (!canEdit() || name === target) return;
+    const list = allNamesInOrder().filter((n) => n !== name), at = list.indexOf(target);
+    if (at < 0) return;
+    list.splice(at + (after ? 1 : 0), 0, name);
+    saveIdea("peopleorder", { cfg: true, ord: list }, "resource", "reordered team rows (" + name + ")");
+    render();
+  }
+  function step(name, delta) {
+    const list = allNamesInOrder(), i = list.indexOf(name), t = list[i + delta];
+    if (t) movePerson(name, t, delta > 0);
+  }
+  function hiddenHere() {
+    const h = S.ideas.peoplehide;
+    return h && h.byRm && h.byRm[state.rm] || [];
+  }
+  var featureCount = (name) => items().filter((i) => i.res.includes(name)).length;
+  function setHidden(names, sum) {
+    const old = S.ideas.peoplehide && S.ideas.peoplehide.byRm || {}, byRm = Object.assign({}, old);
+    byRm[state.rm] = names;
+    if (!names.length) delete byRm[state.rm];
+    saveIdea("peoplehide", { cfg: true, byRm }, "resource", sum);
+    render();
+  }
+  function hideHere(name) {
+    const n = featureCount(name);
+    if (n) {
+      toast(name + " has " + n + " feature" + (n === 1 ? "" : "s") + " on this roadmap. Reassign " + (n === 1 ? "it" : "them") + " first, then hide the row.");
+      return;
+    }
+    setHidden(hiddenHere().concat(name), "hid " + name + " from " + curRm().n);
+    toast(name + " hidden on " + curRm().n + '. Use "Show hidden" under the table to bring the row back.');
+  }
+  function openHiddenDialog() {
+    openDlg("Hidden on " + curRm().n, (box2) => {
+      const names = hiddenHere().filter((n) => directory().has(n));
+      box2.append(el("p", "sub", "These people are still on the team and on other roadmaps. They only have no row here."));
+      names.forEach((n) => {
+        const row2 = el("div", "formrow"), b = el("button", "btn sm", "Show");
+        b.type = "button";
+        b.addEventListener("click", () => {
+          setHidden(hiddenHere().filter((x) => x !== n), "showed " + n + " on " + curRm().n);
+          closeDlg();
+          if (hiddenHere().some((x) => directory().has(x))) openHiddenDialog();
+        });
+        row2.append(el("strong", "", n), b);
+        box2.append(row2);
+      });
+      const all = el("button", "btn primary", "Show all");
+      all.type = "button";
+      all.addEventListener("click", () => {
+        setHidden([], "showed all hidden people on " + curRm().n);
+        closeDlg();
+      });
+      const no = el("button", "btn", "Close");
+      no.type = "button";
+      no.addEventListener("click", closeDlg);
+      const row = el("div", "formrow");
+      row.append(all, no);
+      box2.append(row);
+    });
+  }
+  function decoratePersonRow(c1, name) {
+    if (!canEdit()) return;
+    c1.classList.add("hasgrip");
+    const grip = el("span", "pgrip", "⋮⋮");
+    grip.draggable = true;
+    grip.title = "Drag to reorder";
+    grip.setAttribute("aria-label", "Drag to reorder " + name);
+    grip.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("text/person", name);
+      e.dataTransfer.effectAllowed = "move";
+      c1.classList.add("dragging");
+    });
+    grip.addEventListener("dragend", () => document.querySelectorAll(".pn.dragging,.pn.dropbefore,.pn.dropafter").forEach((x) => x.classList.remove("dragging", "dropbefore", "dropafter")));
+    const more = el("button", "pmore", "⋯");
+    more.type = "button";
+    more.title = "Row options";
+    more.setAttribute("aria-label", "Options for " + name);
+    more.setAttribute("aria-haspopup", "menu");
+    more.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const r = more.getBoundingClientRect(), list = allNamesInOrder(), i = list.indexOf(name);
+      openCtx(r.right - 200, r.bottom + 4, (m) => {
+        if (i > 0) mi(m, "Move up", () => step(name, -1));
+        if (i < list.length - 1) mi(m, "Move down", () => step(name, 1));
+        m.append(el("div", "msep"));
+        mi(m, "Hide " + name + " from this roadmap", () => hideHere(name), "danger");
+      });
+    });
+    const side = (e) => {
+      const r = c1.getBoundingClientRect();
+      return e.clientY > r.top + r.height / 2;
+    };
+    c1.addEventListener("dragover", (e) => {
+      if (![...e.dataTransfer.types].includes("text/person")) return;
+      e.preventDefault();
+      const after = side(e);
+      c1.classList.toggle("dropafter", after);
+      c1.classList.toggle("dropbefore", !after);
+    });
+    c1.addEventListener("dragleave", (e) => {
+      if (!c1.contains(e.relatedTarget)) c1.classList.remove("dropbefore", "dropafter");
+    });
+    c1.addEventListener("drop", (e) => {
+      const who = e.dataTransfer.getData("text/person");
+      if (!who) return;
+      e.preventDefault();
+      c1.classList.remove("dropbefore", "dropafter");
+      movePerson(who, name, side(e));
+    });
+    c1.append(grip, more);
+  }
+
   // src/esm/ui/gantt-render.js
   function renderSummary(list) {
     const s = $("summary");
@@ -5472,6 +4488,48 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       put(el("div", "rowbg"), r, null).style.minHeight = "44px";
     }
     return r;
+  }
+
+  // src/esm/features/squad-names.js
+  var original = LANES.map((l) => ({ k: l.k, n: l.n, c: l.c }));
+  var BASE = original.length;
+  var known = new Set(LANES.map((l) => l.k));
+  var listeners = [];
+  var isBaseSquad = (k) => original.some((o) => o.k === k);
+  var defaultSquadName = (k) => (original.find((o) => o.k === k) || {}).n || k;
+  var defaultSquadColor = (k) => (original.find((o) => o.k === k) || {}).c || "";
+  var doc = () => S.ideas.squadnames || {};
+  var squadNames = () => doc().names || {};
+  var squadColors = () => doc().colors || {};
+  var extraSquads = () => (Array.isArray(doc().extra) ? doc().extra : []).filter((e) => e && e.k && e.n);
+  var hex = (c) => /^#[0-9a-f]{6}$/i.test(String(c || ""));
+  var onLanesChanged = (fn) => {
+    listeners.push(fn);
+  };
+  function applySquadNames() {
+    const nm = squadNames(), co = squadColors(), ex = extraSquads();
+    LANES.length = BASE;
+    ex.forEach((e) => {
+      if (!LANES.some((l) => l.k === e.k)) {
+        LANES.push({ k: e.k, n: e.n, c: hex(e.c) ? e.c : "#6b7280" });
+        if (!TEAMS[e.k]) TEAMS[e.k] = { pm: [], dev: [], qa: [], ux: [] };
+      }
+    });
+    LANES.forEach((l) => {
+      const e = ex.find((x) => x.k === l.k), v = nm[l.k] && String(nm[l.k]).trim();
+      l.n = v || (e ? e.n : defaultSquadName(l.k));
+      l.c = hex(co[l.k]) ? co[l.k] : e ? hex(e.c) ? e.c : "#6b7280" : defaultSquadColor(l.k);
+    });
+    LANES.forEach((l) => {
+      if (!known.has(l.k)) {
+        known.add(l.k);
+        state.sq.add(l.k);
+      }
+    });
+    [...state.sq].forEach((k) => {
+      if (!LANES.some((l) => l.k === k)) state.sq.delete(k);
+    });
+    listeners.forEach((f) => f());
   }
 
   // src/esm/pages/resources.js
@@ -6114,11 +5172,14 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     const t = TAGS.find((x) => x.k === l.k);
     return (t ? t.ab : String(l.k || "??").slice(0, 2).toUpperCase()) + "#" + l.no;
   };
+  var notesOf = (l) => l && Array.isArray(l.notes) ? l.notes : l && l.note ? [{ id: "n0", t: String(l.note), by: "", at: "" }] : [];
   var SIZES = { quick: "Quick win", enh: "Small enhancement" };
   var tagsOf = (l) => (l.hp ? " [BUSINESS PRIORITY]" : "") + (SIZES[l.sz] ? " [" + SIZES[l.sz].toUpperCase() + "]" : "");
   function monthText(doc2, products, fmt) {
     if (!doc2 || !live(doc2.lines).length) return [];
     const prog = monthProgress(doc2.lines), out = ["MONTHLY DELIVERABLES - " + monthLabel(doc2.mo) + (prog.pct === null ? "" : " - " + prog.pct + "% complete (" + prog.done + " of " + prog.n + " done)"), ""];
+    notesOf(doc2).forEach((n) => out.push("Month note" + (n.by ? " (" + n.by + ")" : "") + ": " + String(n.t).replace(/\s+/g, " ")));
+    if (notesOf(doc2).length) out.push("");
     (products || doc2.pl || []).forEach((p) => {
       const its = live(doc2.lines).filter((l) => l.k === p.k);
       if (!its.length) return;
@@ -6126,7 +5187,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       out.push(p.n + (pp.pct === null ? "" : " - " + pp.pct + "%"));
       pl.forEach((l) => {
         out.push("- " + (cardId(l) ? cardId(l) + " " : "") + l.t + ": " + clampPct(l.pct) + "%" + tagsOf(l));
-        if (l.note) out.push("  Note: " + String(l.note).replace(/\s+/g, " "));
+        notesOf(l).forEach((n) => out.push("  Note" + (n.by ? " (" + n.by + ")" : "") + ": " + String(n.t).replace(/\s+/g, " ")));
       });
       if (ad.length) {
         out.push("Ad hoc requests:");
@@ -6532,7 +5593,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
   }
 
   // src/esm/features/undo-stack.js
-  var same2 = (a, b) => JSON.stringify(a === void 0 ? null : a) === JSON.stringify(b === void 0 ? null : b);
+  var same = (a, b) => JSON.stringify(a === void 0 ? null : a) === JSON.stringify(b === void 0 ? null : b);
   var canon = (d) => d ? Object.keys(d).sort().reduce((o, k) => (o[k] = d[k], o), {}) : null;
   function createUndo(limit) {
     const max = limit || 100;
@@ -6566,7 +5627,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       },
       /** Record one change: `before` / `after` are the whole doc (null = did not exist / was deleted). */
       rec(id, before, after) {
-        if (same2(canon(before), canon(after))) return;
+        if (same(canon(before), canon(after))) return;
         const o = begin(), prev = o.ops.find((x) => x.id === id);
         if (prev) prev.after = after;
         else o.ops.push({ id, before, after });
@@ -6603,7 +5664,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
         let done2 = 0, skipped = 0;
         (dir === "undo" ? s.ops.slice().reverse() : s.ops).forEach((o) => {
           const want = dir === "undo" ? o.after : o.before, then = dir === "undo" ? o.before : o.after;
-          if (!same2(canon(current(o.id) || null), canon(want))) {
+          if (!same(canon(current(o.id) || null), canon(want))) {
             skipped++;
             return;
           }
@@ -6616,6 +5677,28 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       }
     };
   }
+
+  // src/esm/features/undo-router.js
+  var handlers = {};
+  function registerUndo(page, h) {
+    handlers[page] = h;
+  }
+  document.addEventListener("keydown", (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.defaultPrevented) return;
+    const k = e.key.toLowerCase();
+    if (k !== "z" && k !== "y") return;
+    const h = handlers[state.page];
+    if (!h || $("xdlg")) return;
+    const t = e.target;
+    if (t && t.tagName && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+    if (t && t.isContentEditable && !h.inEditable) return;
+    const redo = k === "y" || e.shiftKey;
+    if (redo && !h.redo) return;
+    if (h.ready && !h.ready()) return;
+    e.preventDefault();
+    if (redo) h.redo();
+    else h.undo();
+  }, true);
 
   // src/esm/features/rich-text.js
   function autoGrow(ta) {
@@ -6666,7 +5749,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
   }
 
   // src/esm/features/month-view.js
-  var bar2 = (pct2, big, label) => {
+  var bar = (pct2, big, label) => {
     const b = el("div", "mbar pc-" + pctBand(pct2) + (big ? " big" : "")), f = el("i");
     f.style.width = pct2 + "%";
     b.append(f);
@@ -6685,20 +5768,20 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     const itemsOf2 = (p) => ((prods[p.k] || {}).items || []).filter((l) => !l.hide && String(l.t || "").trim());
     const all = pls.reduce((a, p) => a.concat(itemsOf2(p)), []), ov = avgPct(all) || 0, done2 = all.filter((l) => linePct(l) >= 100).length;
     const o = el("div", "rmall");
-    o.append(bar2(ov, true, "Overall progress"), el("b", "rmpct pc-" + pctBand(ov), ov + "%"), el("span", "rmsub", "complete · " + done2 + " of " + all.length + " item" + (all.length === 1 ? "" : "s") + " done"));
+    o.append(bar(ov, true, "Overall progress"), el("b", "rmpct pc-" + pctBand(ov), ov + "%"), el("span", "rmsub", "complete · " + done2 + " of " + all.length + " item" + (all.length === 1 ? "" : "s") + " done"));
     sec.append(o);
     pls.forEach((p) => {
       const its = itemsOf2(p), pp = avgPct(its) || 0, r = el("div", "rmsum");
       r.dataset.k = p.k;
       r.style.setProperty("--c", colOf3(p));
-      r.append(el("b", "", p.n), bar2(pp, false, p.n + " progress"), el("span", "rmpp pc-" + pctBand(pp), pp + "%"));
+      r.append(el("b", "", p.n), bar(pp, false, p.n + " progress"), el("span", "rmpp pc-" + pctBand(pp), pp + "%"));
       sec.append(r);
     });
     return sec;
   }
 
   // src/esm/features/report-print.js
-  var bar3 = (pct2) => {
+  var bar2 = (pct2) => {
     const b = el("span", "pr-bar pc-" + pctBand(pct2)), f = el("i");
     f.style.width = pct2 + "%";
     b.append(f);
@@ -6714,12 +5797,12 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     head.append(left, right);
     root.append(head);
     const sum = el("section", "pr-sum"), big = el("div", "pr-big pc-" + pctBand(ov));
-    big.append(el("b", "", ov + "%"), el("span", "", "overall progress"), bar3(ov), el("small", "", done2 + " of " + all.length + " item" + (all.length === 1 ? "" : "s") + " complete" + (risk ? " · " + risk + " at risk" : "") + (scope ? " · " + scope + " out of scope" : "")));
+    big.append(el("b", "", ov + "%"), el("span", "", "overall progress"), bar2(ov), el("small", "", done2 + " of " + all.length + " item" + (all.length === 1 ? "" : "s") + " complete" + (risk ? " · " + risk + " at risk" : "") + (scope ? " · " + scope + " out of scope" : "")));
     const cards = el("div", "pr-cards");
     pls.forEach((p) => {
       const its = items2(p), ap = avgPct(its) || 0, c = el("div", "pr-card pc-" + pctBand(ap));
       c.style.setProperty("--c", o.colOf(p));
-      c.append(el("b", "", p.n), el("span", "pr-pct", ap + "%"), bar3(ap), el("small", "", its.length + " item" + (its.length === 1 ? "" : "s")));
+      c.append(el("b", "", p.n), el("span", "pr-pct", ap + "%"), bar2(ap), el("small", "", its.length + " item" + (its.length === 1 ? "" : "s")));
       cards.append(c);
     });
     sum.append(big, cards);
@@ -6739,7 +5822,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
         body.append(t);
         if (l.note) body.append(el("div", "pr-note", l.note));
         const pc = el("div", "pr-prog pc-" + pctBand(v));
-        pc.append(bar3(v), el("b", "", v + "%"));
+        pc.append(bar2(v), el("b", "", v + "%"));
         r.append(body, pc);
         sec.append(r);
       });
@@ -9105,7 +8188,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
         }
         pushHistory();
         const nid = "c" + Date.now().toString(36), none = who.value === "__none", all = items().filter((x) => x.sq === sq.value);
-        S.over[nid] = { custom: true, rm: state.rm, t: l.t, n: l.note || "", sq: sq.value, pr: sq.value === "ai" ? ["tifli"] : [sq.value], d0: Math.max(0, k0), d1: Math.min(NDAYS - 1, k1), st: "planned", res: none ? [] : [who.value], ord: all.length ? Math.max.apply(null, all.map((x) => x.ord)) + 1 : 0, card: l.id };
+        S.over[nid] = { custom: true, rm: state.rm, t: l.t, n: notesOf(l).map((q) => q.t).join(" | "), sq: sq.value, pr: sq.value === "ai" ? ["tifli"] : [sq.value], d0: Math.max(0, k0), d1: Math.min(NDAYS - 1, k1), st: "planned", res: none ? [] : [who.value], ord: all.length ? Math.max.apply(null, all.map((x) => x.ord)) + 1 : 0, card: l.id };
         persist(nid);
         saveMonth(m, (d) => {
           const x = d.lines.find((z) => z.id === l.id);
@@ -9126,12 +8209,42 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     });
   }
   function deleteMonth(m) {
-    confirmDlg("Delete " + lab(m) + "?", "Every card of " + lab(m) + " is deleted for everyone, including the executives who can see them.", "Delete month", () => {
-      delete S.reports[monthId(m)];
-      write("reports/" + monthId(m), null);
-      logAct("report", "deleted the monthly deliverables for " + lab(m));
-      notify("Month deleted");
-      renderMonthly();
+    openDlg("Delete " + lab(m) + "?", (box2) => {
+      box2.append(el("p", "", "Every card of " + lab(m) + " is deleted for everyone, including the executives who can see them. You can bring it back with Undo."));
+      const inp = el("input");
+      inp.type = "text";
+      inp.autocomplete = "off";
+      inp.placeholder = "Type delete to confirm";
+      inp.setAttribute("aria-label", "Type delete to confirm");
+      const ok = el("button", "btn danger", "Delete month"), no = el("button", "btn", "Cancel");
+      ok.type = no.type = "button";
+      ok.disabled = true;
+      no.addEventListener("click", closeDlg);
+      const go = () => {
+        if (inp.value.trim().toLowerCase() !== "delete") return;
+        const id = monthId(m);
+        remember2(id, S.reports[id]);
+        delete S.reports[id];
+        write("reports/" + id, null);
+        logAct("report", "deleted the monthly deliverables for " + lab(m));
+        closeDlg();
+        notify("Month deleted. Press Undo to bring it back.");
+        renderMonthly();
+      };
+      inp.addEventListener("input", () => {
+        ok.disabled = inp.value.trim().toLowerCase() !== "delete";
+      });
+      inp.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          go();
+        }
+      });
+      ok.addEventListener("click", go);
+      const row = el("div", "row");
+      row.append(ok, no);
+      box2.append(inp, row);
+      setTimeout(() => inp.focus(), 0);
     });
   }
   var copyMonth = (m) => {
@@ -9210,44 +8323,104 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     st.addEventListener("change", () => onChange(Number(st.value)));
     return st;
   };
-  function noteBtn2(m, l, ed) {
-    const b = el("button", "nbtn mdnote" + (l.note ? " has" : "") + (ed ? "" : " ro"));
+  var stamp = (iso4) => {
+    const d = new Date(iso4);
+    return isNaN(d) ? "" : d.toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  };
+  function openNotes(m, id, ed) {
+    const cur2 = () => id ? docOf(m).lines.find((z) => z.id === id) : docOf(m), tgt = (d) => id ? d.lines.find((q) => q.id === id) : d, nm = () => id ? '"' + cur2().t + '"' : lab(m);
+    if (!cur2()) return;
+    openDlg("Notes · " + (id ? (cardId(cur2()) ? cardId(cur2()) + " · " : "") + cur2().t : lab(m)), (box2) => {
+      const list = el("div", "mdthread");
+      list.setAttribute("aria-label", id ? "Notes on this card" : "Notes on this month");
+      const ns = notesOf(cur2());
+      if (!ns.length) list.append(el("div", "hint", "No notes yet."));
+      ns.forEach((n) => {
+        const it = el("div", "mdnitem"), top = el("div", "mdnhead");
+        top.append(el("b", "", n.by || "Earlier note"), el("span", "mdnwhen", n.at ? stamp(n.at) : ""));
+        if (ed) {
+          const x = el("button", "mdnx", "Delete");
+          x.type = "button";
+          x.setAttribute("aria-label", "Delete this note");
+          x.addEventListener("click", () => {
+            saveMonth(m, (d) => {
+              const z = tgt(d);
+              if (z) {
+                z.notes = notesOf(z).filter((q) => q.id !== n.id);
+                delete z.note;
+              }
+            }, "deleted a note of " + nm());
+            closeDlg();
+            renderMonthly();
+            openNotes(m, id, ed);
+          });
+          top.append(x);
+        }
+        it.append(top, el("div", "mdntext", n.t));
+        list.append(it);
+      });
+      box2.append(list);
+      if (ed) {
+        const ta = el("textarea");
+        ta.rows = 3;
+        ta.maxLength = 1e3;
+        ta.setAttribute("aria-label", "New note");
+        ta.placeholder = "Write a note. Ctrl+Enter adds it.";
+        const ok = el("button", "btn primary", "Add note"), no = el("button", "btn", "Close");
+        ok.type = no.type = "button";
+        no.addEventListener("click", closeDlg);
+        const add = () => {
+          const v = ta.value.trim();
+          if (!v) {
+            ta.focus();
+            return;
+          }
+          const who = S.me && (S.me.name || S.me.email) || "";
+          saveMonth(m, (d) => {
+            const z = tgt(d);
+            if (z) {
+              z.notes = notesOf(z).concat([{ id: "n" + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), t: v.slice(0, 1e3), by: who, at: (/* @__PURE__ */ new Date()).toISOString() }]);
+              delete z.note;
+            }
+          }, "added a note to " + nm());
+          closeDlg();
+          renderMonthly();
+          openNotes(m, id, ed);
+        };
+        ok.addEventListener("click", add);
+        ta.addEventListener("keydown", (e) => {
+          if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+            e.preventDefault();
+            add();
+          }
+        });
+        const row = el("div", "row");
+        row.append(ok, no);
+        box2.append(ta, row);
+        setTimeout(() => ta.focus(), 0);
+      } else {
+        const no = el("button", "btn", "Close");
+        no.type = "button";
+        no.addEventListener("click", closeDlg);
+        const row = el("div", "row");
+        row.append(no);
+        box2.append(row);
+      }
+    });
+  }
+  function noteBtn2(m, l, ed, month) {
+    const ns = notesOf(l), last = ns[ns.length - 1], has = ns.length > 0, b = el("button", "nbtn mdnote" + (month ? " mdmnote" : "") + (has ? " has" : "") + (ed ? "" : " ro"));
     b.type = "button";
     b.innerHTML = NOTE_ICON;
-    if (l.note) b.dataset.tip = l.note;
-    if (!ed) {
-      b.tabIndex = l.note ? 0 : -1;
-      b.hidden = !l.note;
-      b.setAttribute("aria-label", "Note: " + (l.note || ""));
+    if (has) b.dataset.tip = ns.length === 1 ? last.t : last.t + "  (" + ns.length + " notes, latest by " + (last.by || "someone") + ")";
+    if (!ed && !has) {
+      b.hidden = true;
+      b.tabIndex = -1;
       return b;
     }
-    b.setAttribute("aria-label", l.note ? "Edit note: " + l.note : "Add a note");
-    if (!l.note) b.title = "Add a note";
-    b.addEventListener("click", () => openDlg("Note for this card", (box2) => {
-      const ta = el("textarea");
-      ta.rows = 4;
-      ta.maxLength = 1e3;
-      ta.value = l.note || "";
-      ta.setAttribute("aria-label", "Note");
-      ta.placeholder = "A short note. It appears when someone hovers the note icon.";
-      const ok = el("button", "btn primary", "Save"), no = el("button", "btn", "Cancel"), rm = el("button", "btn", "Remove note");
-      ok.type = no.type = rm.type = "button";
-      rm.hidden = !l.note;
-      const put = (v) => {
-        saveMonth(m, (d) => {
-          const x = d.lines.find((z) => z.id === l.id);
-          if (x) x.note = v;
-        }, v ? 'edited the note of "' + l.t + '"' : 'removed the note of "' + l.t + '"');
-        closeDlg();
-        renderMonthly();
-      };
-      ok.addEventListener("click", () => put(ta.value.trim()));
-      rm.addEventListener("click", () => put(""));
-      no.addEventListener("click", closeDlg);
-      const row = el("div", "row");
-      row.append(ok, rm, no);
-      box2.append(ta, row);
-    }));
+    b.setAttribute("aria-label", (month ? "Month " : "") + (has ? ns.length + (ns.length === 1 ? " note" : " notes") + ", open" : "Add a note"));
+    if (!has) b.title = month ? "Add a note for this month" : "Add a note";
+    b.addEventListener("click", () => openNotes(m, month ? null : l.id, ed));
     return b;
   }
   function card(m, l, prods, ed) {
@@ -9493,6 +8666,10 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     const h = el("h2");
     h.append(document.createTextNode(lab(m)), el("span", "badge", String(lines.length)));
     if (now) h.append(el("span", "chip mdnow", "This month"));
+    {
+      const nb = noteBtn2(m, d, ed, true);
+      if (!nb.hidden) h.append(nb);
+    }
     if (ed && !isBl) {
       const more = el("button", "btn sm colmore", "⋯");
       more.type = "button";
@@ -9646,19 +8823,6 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       renderMonthly();
     });
     tools.append(q, fp, ff);
-    {
-      const n = docOf(BL).lines.filter((l) => String(l.t || "").trim()).length, bb = el("button", "btn sm mdbltoggle" + (blOpen ? " on" : ""), (blOpen ? "Hide backlog" : "Backlog") + (n ? " (" + n + ")" : ""));
-      bb.type = "button";
-      bb.id = "mdbltoggle";
-      bb.setAttribute("aria-expanded", String(blOpen));
-      bb.setAttribute("aria-controls", "mdbacklog");
-      bb.title = "Ideas and requests not planned yet";
-      bb.addEventListener("click", () => {
-        setBl(!blOpen);
-        renderMonthly();
-      });
-      tools.append(bb);
-    }
     if (ed) {
       const ub = el("button", "btn sm mdundo", "↶ Undo");
       ub.type = "button";
@@ -9681,6 +8845,19 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     pg.append(pageHead("Monthly deliverables", viewer ? "What the business expects every month, tagged and coloured by Daycare, Tifli, Plan, AI, Finance or New initiative, and how far each deliverable is." : "What the business expects each month. Add a card with a tag. Use the ⋯ menu of a card to put it on the roadmap with a start, an end and an assignee. Drag a card to move it to another month.", tools));
     const sb0 = viewer ? null : setupBanner();
     if (sb0) pg.append(sb0);
+    {
+      const n = docOf(BL).lines.filter((l) => String(l.t || "").trim()).length, bb = el("button", "mdblbar" + (blOpen ? " on" : ""));
+      bb.type = "button";
+      bb.id = "mdbltoggle";
+      bb.setAttribute("aria-expanded", String(blOpen));
+      bb.setAttribute("aria-controls", "mdbacklog");
+      bb.append(el("span", "mdblcaret", blOpen ? "▾" : "▸"), el("b", "", blOpen ? "Hide backlog" : "Backlog"), el("span", "badge", String(n)), el("span", "mdblsub", blOpen ? "Drag a card into a month, or use ⋯ → Plan in month" : "Ideas and requests not planned yet. Open to plan them into a month."));
+      bb.addEventListener("click", () => {
+        setBl(!blOpen);
+        renderMonthly();
+      });
+      pg.append(bb);
+    }
     const board = el("div", "mdboard");
     if (blOpen) board.append(column(BL, prods, ed));
     visibleMonths().forEach((m) => board.append(column(m, prods, ed)));
@@ -9771,12 +8948,32 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     else if (h === "login") showLogin();
   });
 
+  // src/esm/app/extras-wiring.js
+  function initExtras() {
+    netBar();
+    netShow();
+  }
+  function startExtras() {
+    $("shell").classList.toggle("viewer", isViewer());
+    if (isViewer()) S.readonly = true;
+    S.db.collection("share_links").onSnapshot((s) => {
+      const n = {};
+      s.docs.forEach((d) => {
+        n[d.id] = d.data();
+      });
+      S.shares = n;
+    }, () => {
+    });
+    startPresence();
+    startIdle();
+  }
+
   // src/esm/app/shell.js
   function refreshPage() {
     renderPage(state.page);
   }
   function renderPage(p) {
-    ({ roadmap: render, ideas: () => renderIdeas(true), roadmaps: renderRoadmaps, resources: renderResources, admin: () => {
+    ({ roadmap: render, roadmaps: renderRoadmaps, resources: renderResources, admin: () => {
       loadMembers();
       renderAdmin();
     }, vacations: () => renderVacations(true), log: renderLog, sprints: renderSprints, reports: renderReports, monthly: renderMonthly })[p]();
@@ -9802,7 +8999,6 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
   var NAV_LABEL = { monthly: "Monthly" };
   var NAV_ICONS = {
     roadmap: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9M4 12h14M4 18h7" /><path d="M16 6h4M20 18h-6" /></svg>',
-    ideas: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2v.1h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z" /></svg>',
     roadmaps: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5-9-5zM3 13l9 5 9-5M3 17.5 12 22l9-4.5" /></svg>',
     resources: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 5.2a3.2 3.2 0 0 1 0 5.6M18 14.3c1.8.8 3 2.6 3 4.7" /></svg>',
     vacations: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M8 3v4M16 3v4M3.5 10h17M9 15l2 2 4-4" /></svg>',
@@ -9835,7 +9031,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       n.append(b);
     });
   }
-  var same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  var same2 = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   function softRender() {
     if (state.edit || S.dragging) {
       S.needRender = true;
@@ -9868,7 +9064,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     });
     S.db.collection("daysoff").onSnapshot((s) => {
       const n = snapDocs("daysoff", s, S.daysoff);
-      if (same(n, S.daysoff)) return;
+      if (same2(n, S.daysoff)) return;
       S.daysoff = n;
       softRender();
       if (S.offOpen && !state.edit) buildOff();
@@ -9876,7 +9072,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     });
     S.db.collection("people").onSnapshot((s) => {
       const n = snapDocs("people", s, S.extras);
-      if (same(n, S.extras)) return;
+      if (same2(n, S.extras)) return;
       S.extras = n;
       fillPersons();
       if (S.picker && S.picker.id) buildPicker();
@@ -9887,7 +9083,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     });
     S.db.collection("roadmaps").onSnapshot((s) => {
       const n = snapDocs("roadmaps", s, S.roadmaps);
-      if (same(n, S.roadmaps)) return;
+      if (same2(n, S.roadmaps)) return;
       S.roadmaps = n;
       if (S.wantRm && allRoadmaps().some((r) => r.id === S.wantRm)) {
         const w = S.wantRm;
@@ -9900,19 +9096,17 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     });
     S.db.collection("ideas").onSnapshot((s) => {
       const n = snapDocs("ideas", s, S.ideas);
-      if (same(n, S.ideas)) return;
+      if (same2(n, S.ideas)) return;
       const tn = (o) => Object.keys(o).filter((k) => o[k] && o[k].tn).sort().map((k) => o[k]), orderChanged = JSON.stringify([n.peopleorder, n.peoplehide, n.squadnames, tn(n)]) !== JSON.stringify([S.ideas.peopleorder, S.ideas.peoplehide, S.ideas.squadnames, tn(S.ideas)]);
       S.ideas = n;
       applySquadNames();
       if (orderChanged) softRender();
-      renderDrawer();
-      if (state.page === "ideas") renderIdeas();
       if (state.page === "roadmaps") renderRoadmaps();
     }, () => {
     });
     S.db.collection("reports").onSnapshot((s) => {
       const n = snapDocs("reports", s, S.reports);
-      if (same(n, S.reports)) return;
+      if (same2(n, S.reports)) return;
       S.reports = n;
       if (state.page === "reports" && !state.edit && !document.activeElement.closest("#pg-reports")) renderReports();
       if (state.page === "monthly" && !state.edit && !document.activeElement.closest("#pg-monthly [contenteditable], #pg-monthly select, #pg-monthly input")) renderMonthly();
@@ -9925,7 +9119,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     if (!isViewer()) {
       S.db.collection("sprints").onSnapshot((s) => {
         const n = snapDocs("sprints", s, S.sprints);
-        if (same(n, S.sprints)) return;
+        if (same2(n, S.sprints)) return;
         S.sprints = n;
         if (state.page === "sprints" && !document.activeElement.closest("#pg-sprints")) renderSprints({ keep: true });
         if (state.page === "reports") renderReports();
@@ -9937,7 +9131,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       });
       S.db.collection("sprint_items").onSnapshot((s) => {
         const n = snapDocs("sprint_items", s, S.sitems);
-        if (same(n, S.sitems)) return;
+        if (same2(n, S.sitems)) return;
         S.sitems = n;
         if (state.page === "sprints" && !document.activeElement.closest("#pg-sprints")) renderSprints({ keep: true });
       }, (e) => {
@@ -9949,7 +9143,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     }
     S.db.collection("vacations").onSnapshot((s) => {
       const n = snapDocs("vacations", s, S.vacs);
-      if (same(n, S.vacs)) return;
+      if (same2(n, S.vacs)) return;
       S.vacs = n;
       softRender();
       if (state.page === "vacations") renderVacations();
@@ -10786,6 +9980,351 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     return { sq, pr };
   }
 
+  // src/esm/ui/export-pdf.js
+  var H = 30;
+  var NH = 17;
+  var pct = (n) => (n / NDAYS * 100).toFixed(3) + "%";
+  function legend(list) {
+    const lg = el("div", "prm-legend");
+    const used = new Set(list.map((i) => i.sq));
+    LANES.filter((l) => used.has(l.k)).forEach((l) => {
+      const s = el("span");
+      const i = el("i", "prm-dot");
+      i.style.background = l.c;
+      s.append(i, document.createTextNode(l.n));
+      lg.append(s);
+    });
+    [["planned", "Planned"], ["decide", "Needs decision"], ["contract", "Waiting on contract"], ["done", "Done"]].forEach((x) => {
+      const s = el("span");
+      const i = el("i", "prm-sw prm-st-" + x[0]);
+      i.style.setProperty("--c", "#5a6180");
+      s.append(i, document.createTextNode(STATUS[x[0]] || x[1]));
+      lg.append(s);
+    });
+    return lg;
+  }
+  function noteEl(n, laneIdx, chip) {
+    const b = el("div", "prm-note " + (chip ? "prm-chip" : "prm-rib"));
+    b.style.left = pct(n.d0);
+    b.style.width = pct(n.d1 - n.d0 + 1);
+    b.style.top = laneIdx * NH + 2 + "px";
+    b.style.setProperty("--c", /^#[0-9a-f]{6}$/i.test(n.c || "") ? n.c : DEFAULT_COLOR[n.k]);
+    b.append(el("span", "prm-t", n.t));
+    return b;
+  }
+  function bar3(it, laneIdx, top0) {
+    const l = LANES.find((x) => x.k === it.sq) || LANES[0], col = l.c, b = el("div", "prm-bar prm-st-" + it.st + (it.ms ? " prm-ms" : ""));
+    b.style.left = pct(it.d0);
+    b.style.width = pct(it.d1 - it.d0 + 1);
+    b.style.top = (top0 || 0) + laneIdx * H + 3 + "px";
+    b.style.height = H - 6 + "px";
+    b.style.setProperty("--c", col);
+    const t = (it.st === "done" ? "✓ " : "") + it.t;
+    b.append(el("span", "prm-t", t));
+    return b;
+  }
+  function buildPrintView() {
+    const list = visible(), root = el("div");
+    root.id = "printrm";
+    const rm = curRm();
+    const head = el("div", "prm-head"), ttl = el("div");
+    ttl.append(el("h1", "", "Ynmo roadmap · " + rm.n), el("p", "", fmtIso(rm.a) + " to " + fmtIso(rm.b) + " · prepared " + (/* @__PURE__ */ new Date()).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })));
+    head.append(ttl);
+    const cnt = (k) => list.filter((i) => i.st === k).length, tiles = el("div", "prm-tiles");
+    [[list.length, "features"], [cnt("planned"), "planned"], [cnt("decide"), "need a decision"], [cnt("contract"), "wait on contract"], [cnt("done"), "done"]].forEach((p) => {
+      const t = el("div", "prm-tile");
+      t.append(el("b", "", String(p[0])), el("span", "", p[1]));
+      tiles.append(t);
+    });
+    head.append(tiles);
+    root.append(head);
+    const sq = LANES.filter((l) => !state.sq.has(l.k)).map((l) => l.n);
+    const notes = [state.person !== "all" ? "Person: " + state.person : "", state.status !== "all" ? "Status: " + (STATUS[state.status] || state.status) : "", state.q.trim() ? "Search: " + state.q.trim() : "", sq.length ? "Hidden products: " + sq.join(", ") : ""].filter(Boolean);
+    if (notes.length) root.append(el("p", "prm-filter", "Filtered view · " + notes.join(" · ")));
+    root.append(legend(list));
+    const dir = directory(), map = /* @__PURE__ */ new Map();
+    list.forEach((it) => {
+      if (!it.res.length) {
+        if (!map.has("__none")) map.set("__none", { name: "__none", its: [] });
+        map.get("__none").its.push(it);
+      } else it.res.forEach((n) => {
+        if (!map.has(n)) map.set(n, { name: n, its: [] });
+        map.get(n).its.push(eff(it, n));
+      });
+    });
+    const hid = hiddenHere();
+    let people = [...map.values()].filter((p) => p.name !== "__none" && (!hid.includes(p.name) || p.its.length));
+    people.sort(comparePeople);
+    if (map.has("__none")) people.push(map.get("__none"));
+    const tb = el("table", "prm"), th = el("thead"), r1 = el("tr"), n1 = el("th", "prm-name", "Team member"), t1 = el("th", "prm-tl");
+    const months = el("div", "prm-months"), weeks = el("div", "prm-weeks");
+    MGROUPS.forEach((m) => {
+      const d = el("div", "prm-mo");
+      d.style.left = pct(m.from);
+      d.style.width = pct(m.to - m.from + 1);
+      d.append(el("span", "", m.n));
+      months.append(d);
+    });
+    DAYS.forEach((x) => {
+      if (x.dow === 0) {
+        const w = el("div", "prm-wk", String(x.d.getUTCDate()));
+        w.style.left = pct(x.k);
+        weeks.append(w);
+      }
+    });
+    t1.append(months, weeks);
+    r1.append(n1, t1);
+    th.append(r1);
+    tb.append(th);
+    const body = el("tbody"), periods = packNotes(notesHere("period")), bands = periods.out.map((x) => x.n);
+    const addBands = (cell) => bands.forEach((n) => {
+      const d = el("i", "prm-band");
+      d.style.left = pct(n.d0);
+      d.style.width = pct(n.d1 - n.d0 + 1);
+      d.style.setProperty("--c", /^#[0-9a-f]{6}$/i.test(n.c || "") ? n.c : DEFAULT_COLOR.period);
+      cell.append(d);
+    });
+    if (stripNeeded()) {
+      const tr = el("tr"), td1 = el("td", "prm-name"), td2 = el("td", "prm-tl"), cell = el("div", "prm-cell");
+      td1.append(el("b", "", "Notes"), el("small", "", "periods and leave"));
+      cell.style.height = Math.max(1, periods.lanes) * NH + 16 + "px";
+      leaveRuns().forEach((r) => {
+        const d = el("i", "prm-heat");
+        d.style.left = pct(r.d0);
+        d.style.width = pct(r.d1 - r.d0 + 1);
+        d.style.opacity = String(0.35 + 0.65 * Math.min(1, r.n / 4));
+        d.title = r.who.join(", ");
+        if (r.d1 > r.d0) d.textContent = String(r.n);
+        cell.append(d);
+      });
+      periods.out.forEach((x) => cell.append(noteEl(x.n, x.lane, true)));
+      td2.append(cell);
+      tr.append(td1, td2);
+      body.append(tr);
+    }
+    people.forEach((p) => {
+      const pk = pack(p.its), pn = p.name === "__none" ? { out: [], lanes: 0 } : personNotes(p.name), nh = pn.lanes * NH, tr = el("tr"), td1 = el("td", "prm-name"), d = dir.get(p.name);
+      td1.append(el("b", "", p.name === "__none" ? "Unassigned" : p.name));
+      if (d) td1.append(el("small", "", d.domain));
+      const td2 = el("td", "prm-tl"), cell = el("div", "prm-cell");
+      cell.style.height = nh + pk.n * H + 4 + "px";
+      addBands(cell);
+      DAYS.forEach((x) => {
+        if (x.dow === 0) {
+          const g = el("i", "prm-grid");
+          g.style.left = pct(x.k);
+          cell.append(g);
+        }
+      });
+      if (todayK >= 0) {
+        const t = el("i", "prm-today");
+        t.style.left = pct(todayK);
+        cell.append(t);
+      }
+      pn.out.forEach((x) => cell.append(noteEl(x.n, x.lane, false)));
+      pk.out.forEach((x) => cell.append(bar3(x.it, x.lane, nh)));
+      td2.append(cell);
+      tr.append(td1, td2);
+      body.append(tr);
+    });
+    if (!people.length) {
+      const tr = el("tr"), td = el("td");
+      td.colSpan = 2;
+      td.textContent = "No features match the current filters.";
+      tr.append(td);
+      body.append(tr);
+    }
+    tb.append(body);
+    root.append(tb);
+    root.append(el("p", "prm-foot", "Ynmo Roadmaps · bars are coloured by product · " + (todayK >= 0 ? "the red line is " + dlabel(todayK) : "today is outside this roadmap")));
+    return root;
+  }
+  function exportPdf() {
+    if (document.getElementById("printrm")) return;
+    const view = buildPrintView();
+    document.body.append(view);
+    document.body.classList.add("print-roadmap");
+    const done2 = () => {
+      document.body.classList.remove("print-roadmap");
+      view.remove();
+      window.removeEventListener("afterprint", done2);
+    };
+    window.addEventListener("afterprint", done2);
+    notify('In the print window choose "Save as PDF" (landscape). Colours are kept automatically.');
+    setTimeout(() => {
+      try {
+        window.print();
+      } catch (e) {
+        done2();
+      }
+      if (!("onafterprint" in window)) setTimeout(done2, 1500);
+    }, 150);
+  }
+
+  // src/esm/app/start.js
+  function drawChips() {
+    const chips = $("chips");
+    if (!chips) return;
+    chips.textContent = "";
+    LANES.forEach((l) => {
+      const b = el("button", "chip");
+      b.type = "button";
+      b.style.setProperty("--c", l.c);
+      b.append(el("i"), document.createTextNode(l.n));
+      b.setAttribute("aria-pressed", String(state.sq.has(l.k)));
+      b.addEventListener("click", () => {
+        state.sq.has(l.k) ? state.sq.delete(l.k) : state.sq.add(l.k);
+        b.setAttribute("aria-pressed", String(state.sq.has(l.k)));
+        render();
+      });
+      chips.append(b);
+    });
+  }
+  onLanesChanged(drawChips);
+  function init() {
+    const chips = $("chips");
+    drawChips();
+    fillPersons();
+    $("person").addEventListener("change", (e) => {
+      state.person = e.target.value;
+      render();
+    });
+    $("status").addEventListener("change", (e) => {
+      state.status = e.target.value;
+      render();
+    });
+    $("q").addEventListener("input", (e) => {
+      state.q = e.target.value;
+      render();
+    });
+    $("clear").addEventListener("click", () => {
+      state.sq = new Set(LANES.map((l) => l.k));
+      state.status = "all";
+      state.person = "all";
+      state.q = "";
+      $("status").value = "all";
+      $("person").value = "all";
+      $("q").value = "";
+      chips.querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", "true"));
+      render();
+    });
+    const gr = $("grid");
+    gr.addEventListener("contextmenu", (e) => {
+      if (!canEdit()) return;
+      if (e.target.closest(".hc, .mh, .wk, .notesrow, .tstrip") && !e.target.closest(".tnote")) {
+        e.preventDefault();
+        periodMenu(e.clientX, e.clientY, Math.max(0, Math.min(NDAYS - 1, dayAt(e.clientX))));
+        return;
+      }
+      const bar4 = e.target.closest(".bar");
+      if (bar4) {
+        const it = items().find((i) => i.id === bar4.dataset.id);
+        if (it) {
+          e.preventDefault();
+          barMenu(it, bar4.dataset.person, e.clientX, e.clientY);
+        }
+        return;
+      }
+      const row = e.target.closest(".rowbg[data-person], .c1.pn");
+      if (row) {
+        e.preventDefault();
+        rowMenu(row.dataset.person, e.clientX, e.clientY, row.classList.contains("rowbg") ? dayAt(e.clientX) : todayK >= 0 ? todayK : 0);
+      }
+    });
+    gr.addEventListener("dblclick", (e) => {
+      if (!canEdit() || e.target.tagName === "INPUT") return;
+      const bar4 = e.target.closest(".bar");
+      if (bar4) {
+        const it = items().find((i) => i.id === bar4.dataset.id);
+        if (it) startEdit(it, bar4.dataset.person);
+        return;
+      }
+      const row = e.target.closest(".rowbg[data-person]");
+      if (row) addAt(row.dataset.person, dayAt(e.clientX));
+    });
+    $("wrap").addEventListener("scroll", closeCtx);
+    window.addEventListener("resize", closeCtx);
+    document.addEventListener("pointerdown", (e) => {
+      const c = $("ctx");
+      if (!c.hidden && !c.contains(e.target)) closeCtx();
+    }, true);
+    $("add").addEventListener("click", () => {
+      if (canEdit()) addItem();
+    });
+    $("undo").addEventListener("click", undo);
+    registerUndo("roadmap", { ready: () => canEdit(), undo: () => undo() });
+    $("daysoff").addEventListener("click", (e) => openOff(e.currentTarget));
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        closeCtx();
+        if (S.picker || S.offOpen) closePicker();
+      }
+    });
+    let armed = false, t2 = 0;
+    const rb = $("reset") || document.createElement("button");
+    rb.addEventListener("click", () => {
+      if (!canEdit()) return;
+      if (armed) {
+        armed = false;
+        rb.textContent = "Restore roadmap";
+        restoreAll();
+        return;
+      }
+      armed = true;
+      rb.textContent = "Click again to restore";
+      clearTimeout(t2);
+      t2 = setTimeout(() => {
+        armed = false;
+        rb.textContent = "Restore roadmap";
+      }, 3500);
+    });
+    render();
+    $("addnote").addEventListener("click", () => {
+      const t = Math.max(0, Math.min(NDAYS - 1, todayK));
+      openNoteDialog({ k: "period", a0: iso(t), a1: iso(Math.min(NDAYS - 1, t + 6)) });
+    });
+    $("exportpdf").addEventListener("click", exportPdf);
+    initExtras();
+    $("toplogo").src = LOGO;
+    const av = $("avbtn"), um = $("umenu");
+    av.addEventListener("click", (e) => {
+      e.stopPropagation();
+      um.hidden = !um.hidden;
+      av.setAttribute("aria-expanded", String(!um.hidden));
+    });
+    document.addEventListener("pointerdown", (e) => {
+      if (!um.hidden && !um.contains(e.target) && !av.contains(e.target)) {
+        um.hidden = true;
+        av.setAttribute("aria-expanded", "false");
+      }
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !um.hidden) {
+        um.hidden = true;
+        av.setAttribute("aria-expanded", "false");
+        av.focus();
+      }
+    });
+    $("rmsel").addEventListener("change", (e) => useRoadmap(e.target.value));
+    try {
+      const z = localStorage.getItem("ynmo-zoom");
+      if (ZOOM[z]) {
+        state.zoom = z;
+        $("zoom").value = z;
+      }
+    } catch (e) {
+    }
+    $("zoom").addEventListener("change", (e) => {
+      state.zoom = e.target.value;
+      try {
+        localStorage.setItem("ynmo-zoom", state.zoom);
+      } catch (x) {
+      }
+      render();
+    });
+    boot();
+  }
+
   // src/esm/main.js
   window.__ynmo = {
     S,
@@ -10798,7 +10337,6 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     removeItem,
     render,
     renderSprints,
-    scheduleIdea,
     get NDAYS() {
       return NDAYS;
     },

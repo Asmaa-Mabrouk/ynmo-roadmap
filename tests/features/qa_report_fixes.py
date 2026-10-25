@@ -1,31 +1,12 @@
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__)))); os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))+"/out")
 from h18 import *
-"""Regression tests for bugs found by the Chrome-extension QA run: orphan ideas, column order race, hash after dead share link,
+"""Regression tests for bugs found by the Chrome-extension QA run: hash after dead share link,
 stale vacation banner, plural wording, partial-leave capacity flag, hidden edit hint for viewers/shared."""
 R=[]
 def ok(n,c): R.append((n,bool(c))); print(('PASS ' if c else 'FAIL ')+n)
 with sync_playwright() as pw:
     b=pw.chromium.launch(); ctx=mkctx(b); errs=[]
     A=newpage(ctx,errs); signup(A,'Admin','adm@x.com')
-    # 1. deleting a roadmap returns its scheduled ideas to the backlog
-    A.click('#nav button[data-p="roadmaps"]'); f=A.locator('#pg-roadmaps form'); s=f.locator('select')
-    s.nth(0).select_option('2027'); s.nth(1).select_option('Q1'); f.locator('input[type=text]').fill('QA-TEST'); f.locator('button:text-is("Create roadmap")').click(); A.wait_for_timeout(600)
-    A.click('#nav button[data-p="ideas"]'); A.wait_for_timeout(300)
-    A.locator('.col').first.locator('input[type=text]').fill('Orphan idea'); A.keyboard.press('Enter'); A.wait_for_timeout(500)
-    iid=A.evaluate("Object.keys(__ynmo.S.ideas).find(k=>__ynmo.S.ideas[k].t==='Orphan idea')")
-    A.evaluate("id=>__ynmo.scheduleIdea(id,'',3,5)",iid); A.wait_for_timeout(400)
-    ok('idea scheduled', A.evaluate("id=>__ynmo.S.ideas[id].st",iid)=='scheduled')
-    A.click('#nav button[data-p="roadmaps"]'); A.wait_for_timeout(300)
-    card=A.locator('.rmcard:has-text("QA-TEST")'); card.locator('button.danger').click(); A.wait_for_timeout(150); card.locator('button.danger').click(); A.wait_for_timeout(700)
-    ok('roadmap deleted', A.locator('.rmcard:has-text("QA-TEST")').count()==0)
-    ok('scheduled idea back in backlog', A.evaluate("id=>[__ynmo.S.ideas[id].st,__ynmo.S.ideas[id].rm]",iid)==['idea',None])
-    # 2. column "Move left" survives a slow save
-    A.click('#nav button[data-p="ideas"]'); A.wait_for_timeout(300)
-    A.click('#addcol'); A.locator('#xdlg input').first.fill('QAcol'); A.keyboard.press('Enter'); A.wait_for_timeout(500)
-    A.evaluate("localStorage.setItem('dly','1200')")
-    A.locator('.col').last.locator('.colmore').click(); A.click('#ctx :text("Move left")'); A.wait_for_timeout(2500)
-    order=lambda: A.evaluate("[...document.querySelectorAll('.col .colmore')].map(b=>b.getAttribute('aria-label'))")
-    o=order(); ok('column moved left and stayed', o[-2].endswith('QAcol') and o[-1].endswith('Daycare')); A.evaluate("localStorage.removeItem('dly')")
     # 3. plural wording + partial leave flag
     A.click('#nav button[data-p="roadmap"]'); A.wait_for_timeout(300)
     ok('no "1 dependencies"', '1 dependencies' not in A.locator('body').inner_text())

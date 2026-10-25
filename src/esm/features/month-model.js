@@ -3,7 +3,7 @@
  * Pure logic of the Monthly deliverables board (no DOM, no network): the month a week belongs to, progress, the tags with their colours and
  * abbreviations, the tracking id of a card (DC#12) and the plain-text export.
  * A month is the doc `reports/mo<yyyymm>`: { mo:'2026-10', status:'submitted', pl:[{k,n,squads}],
- *   lines:[{ id, no (card number), k (tag key), t, pct (0-100), hp (business priority), sz ('quick'|'enh'), note, rid + rm (the roadmap bar made from the card), adhoc, w, src (older cards synced from the roadmap) }], by, ts, subAt, subBy } }.
+ *   lines:[{ id, no (card number), k (tag key), t, pct (0-100), hp (business priority), sz ('quick'|'enh'), notes ([{id,t,by,at}]; older cards have one `note` string), rid + rm (the roadmap bar made from the card), adhoc, w, src (older cards synced from the roadmap) }], by, ts, subAt, subBy } }.
  * It lives in the `reports` table; the board always saves a month as `submitted`, so executives (viewers) see every month.
  */
 export const WEIGHTS = { 1: 'Normal', 2: 'High', 3: 'Critical' };
@@ -51,6 +51,8 @@ export const TAGS = [
 export const legacyTag = (k, squad) => { const t = TAGS.find(x => squad && x.squads.includes(squad)); return t ? t.k : k === 'plan_daycare' ? 'plan' : TAGS.some(x => x.k === k) ? k : 'initiative'; };
 /** Tracking id of a card: the abbreviation of its tag and its number, e.g. DC#12 (the number never changes, the abbreviation follows the tag). '' for a card without a number yet. */
 export const cardId = l => { if (!l || !l.no) return ''; const t = TAGS.find(x => x.k === l.k); return (t ? t.ab : String(l.k || '??').slice(0, 2).toUpperCase()) + '#' + l.no; };
+/** Notes of a card as a thread [{id, t, by, at}]; an older single `note` string is the first entry. */
+export const notesOf = l => (l && Array.isArray(l.notes) ? l.notes : l && l.note ? [{ id: 'n0', t: String(l.note), by: '', at: '' }] : []);
 export const SIZES = { quick: 'Quick win', enh: 'Small enhancement' };
 /** Flags of a card as text: business priority, and a small piece of work (quick win / enhancement). */
 const tagsOf = l => (l.hp ? ' [BUSINESS PRIORITY]' : '') + (SIZES[l.sz] ? ' [' + SIZES[l.sz].toUpperCase() + ']' : '');
@@ -58,11 +60,12 @@ const tagsOf = l => (l.hp ? ' [BUSINESS PRIORITY]' : '') + (SIZES[l.sz] ? ' [' +
 export function monthText(doc, products, fmt) {
   if (!doc || !live(doc.lines).length) return [];
   const prog = monthProgress(doc.lines), out = ['MONTHLY DELIVERABLES - ' + monthLabel(doc.mo) + (prog.pct === null ? '' : ' - ' + prog.pct + '% complete (' + prog.done + ' of ' + prog.n + ' done)'), ''];
+  notesOf(doc).forEach(n => out.push('Month note' + (n.by ? ' (' + n.by + ')' : '') + ': ' + String(n.t).replace(/\s+/g, ' '))); if (notesOf(doc).length) out.push('');
   (products || doc.pl || []).forEach(p => {
     const its = live(doc.lines).filter(l => l.k === p.k); if (!its.length) return;
     const pl = its.filter(l => !l.adhoc), ad = its.filter(l => l.adhoc), pp = monthProgress(pl);
     out.push(p.n + (pp.pct === null ? '' : ' - ' + pp.pct + '%'));
-    pl.forEach(l => { out.push('- ' + (cardId(l) ? cardId(l) + ' ' : '') + l.t + ': ' + clampPct(l.pct) + '%' + tagsOf(l)); if (l.note) out.push('  Note: ' + String(l.note).replace(/\s+/g, ' ')); });
+    pl.forEach(l => { out.push('- ' + (cardId(l) ? cardId(l) + ' ' : '') + l.t + ': ' + clampPct(l.pct) + '%' + tagsOf(l)); notesOf(l).forEach(n => out.push('  Note' + (n.by ? ' (' + n.by + ')' : '') + ': ' + String(n.t).replace(/\s+/g, ' '))); });
     if (ad.length) { out.push('Ad hoc requests:'); ad.forEach(l => out.push('- ' + l.t + (l.by ? ' (requested by ' + l.by + (l.at && fmt ? ', ' + fmt(l.at) : '') + ')' : '') + ': ' + clampPct(l.pct) + '%')); }
     out.push('');
   });
