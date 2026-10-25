@@ -43,6 +43,18 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 ## Ledger updates
 
 🔄 YNMO LEDGER UPDATE — 2026-10-25
+Request: Make sure every user working on the Monthly module sees the others' changes
+Surface: cross-cutting (Ynmo Roadmaps internal tool)
+Outcome: Tested two editors and an executive on the board at once. Changes reached everyone, but a user with the "Add a card" box open did not see others' cards until closing it; fixed (live refresh, draft text kept).
+New facts / decisions locked:
+  • A month is one document, so two people saving the same month within the same split second can overwrite one card (last write wins, same as weekly reports). Different months never clash.
+Corrections to this skill:
+  • none
+Open / flagged:
+  • Decide whether to store each card as its own document to remove the same-month overwrite risk (a bigger change).
+Changelog: Monthly board refreshes live while typing in the composer.
+
+🔄 YNMO LEDGER UPDATE — 2026-10-25
 Request: Make the Monthly board more like Trello: change a card's product colour, insert a new card smoothly
 Surface: cross-cutting (Ynmo Roadmaps internal tool)
 Outcome: "+ Add a card" composer at the bottom of each column (product colour chips, Enter adds and stays open, pasted list = cards, Esc closes); product label on a card opens a product menu and repaints the card; drag cards to re-order or into another month with a drop line.

@@ -9240,6 +9240,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         ta.focus();
         return;
       }
+      ta.value = "";
       saveMonth(m, (d) => {
         ts.forEach((t) => d.lines.push(newLine(ui.prod, t, {})));
       }, "added " + (ts.length === 1 ? "a deliverable" : ts.length + " deliverables") + " to " + monthLabel(m));
@@ -9340,6 +9341,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   function renderMonthly() {
     const pg = $("pg-monthly");
     if (!pg) return;
+    const act = document.activeElement, ta0 = act && act.matches && act.matches(".mdcomp textarea") ? act : null, draft = ta0 ? { v: ta0.value, s: ta0.selectionStart, m: ta0.closest(".mdcol").dataset.mo } : null;
     const prevBoard = pg.querySelector(".mdboard"), sx = prevBoard ? prevBoard.scrollLeft : 0, sy = window.scrollY;
     pg.textContent = "";
     const viewer = isViewer(), ed = !viewer && canBuild2();
@@ -9407,7 +9409,11 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     }
     pg.append(board);
     const cta = pg.querySelector(".mdcomp textarea");
-    if (cta && ui.focusComp) {
+    if (cta && draft && draft.v && ui.open === draft.m) {
+      cta.value = draft.v;
+      cta.setSelectionRange(draft.s, draft.s);
+      cta.focus({ preventScroll: true });
+    } else if (cta && ui.focusComp) {
       ui.focusComp = false;
       cta.focus({ preventScroll: true });
       cta.scrollIntoView({ block: "nearest" });
@@ -9610,7 +9616,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       if (same(n, S.reports)) return;
       S.reports = n;
       if (state.page === "reports" && !state.edit && !document.activeElement.closest("#pg-reports")) renderReports();
-      if (state.page === "monthly" && !state.edit && !document.activeElement.closest("#pg-monthly")) renderMonthly();
+      if (state.page === "monthly" && !state.edit && !document.activeElement.closest("#pg-monthly [contenteditable], #pg-monthly select, #pg-monthly input")) renderMonthly();
     }, (e) => {
       if (e && e.code === "missing_table") {
         S.setup["reports"] = true;

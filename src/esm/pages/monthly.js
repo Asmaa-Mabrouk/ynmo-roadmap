@@ -146,7 +146,7 @@ function composer(m, prods) {
   ta.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); f.requestSubmit(); } else if (e.key === 'Escape') { e.preventDefault(); close(); } });
   f.addEventListener('submit', e => {
     e.preventDefault(); const ts = ta.value.split('\n').map(x => x.replace(/^\s*[-*•\d.)]+\s+/, '').trim()).filter(Boolean); if (!ts.length) { ta.focus(); return; }
-    saveMonth(m, d => { ts.forEach(t => d.lines.push(newLine(ui.prod, t, {}))); }, 'added ' + (ts.length === 1 ? 'a deliverable' : ts.length + ' deliverables') + ' to ' + monthLabel(m)); ui.focusComp = true; renderMonthly();
+    ta.value = ''; saveMonth(m, d => { ts.forEach(t => d.lines.push(newLine(ui.prod, t, {}))); }, 'added ' + (ts.length === 1 ? 'a deliverable' : ts.length + ' deliverables') + ' to ' + monthLabel(m)); ui.focusComp = true; renderMonthly();
   });
   const row = el('div', 'mdcrow'); row.append(go, no); f.append(ta, chips, row); wrap.append(f); return wrap;
 }
@@ -183,6 +183,7 @@ function column(m, prods, ed) {
 const migrated = new Set();
 export function renderMonthly() {
   const pg = $('pg-monthly'); if (!pg) return;
+  const act = document.activeElement, ta0 = act && act.matches && act.matches('.mdcomp textarea') ? act : null, draft = ta0 ? { v: ta0.value, s: ta0.selectionStart, m: ta0.closest('.mdcol').dataset.mo } : null;
   const prevBoard = pg.querySelector('.mdboard'), sx = prevBoard ? prevBoard.scrollLeft : 0, sy = window.scrollY;
   pg.textContent = '';
   const viewer = isViewer(), ed = !viewer && canBuild();
@@ -199,6 +200,8 @@ export function renderMonthly() {
   const board = el('div', 'mdboard'); visibleMonths().forEach(m => board.append(column(m, prods, ed)));
   if (ed) { const ms = visibleMonths(), nm = nextMonth(ms[ms.length - 1]); const ac = el('button', 'addcol mdaddmonth', '+ Add month (' + monthLabel(nm) + ')'); ac.type = 'button'; ac.id = 'addmonth'; ac.addEventListener('click', () => { saveMonth(nm, () => {}, 'added the ' + monthLabel(nm) + ' column to the monthly deliverables'); renderMonthly(); }); board.append(ac); }
   pg.append(board);
-  const cta = pg.querySelector('.mdcomp textarea'); if (cta && ui.focusComp) { ui.focusComp = false; cta.focus({ preventScroll: true }); cta.scrollIntoView({ block: 'nearest' }); }
+  const cta = pg.querySelector('.mdcomp textarea');
+  if (cta && draft && draft.v && ui.open === draft.m) { cta.value = draft.v; cta.setSelectionRange(draft.s, draft.s); cta.focus({ preventScroll: true }); }
+  else if (cta && ui.focusComp) { ui.focusComp = false; cta.focus({ preventScroll: true }); cta.scrollIntoView({ block: 'nearest' }); }
   if (sx) { const nb = pg.querySelector('.mdboard'); if (nb) nb.scrollLeft = sx; } if (sy && Math.abs(window.scrollY - sy) > 1) window.scrollTo(0, sy);
 }
