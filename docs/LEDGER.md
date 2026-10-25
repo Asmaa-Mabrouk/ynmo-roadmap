@@ -14,7 +14,7 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 | Repo | `Asmaa-Mabrouk/ynmo-roadmap`, branch `main`; last change: Monthly deliverables board (see CHANGELOG) |
 | Backend | Supabase project **YNMO_PM**; SQL 01 to 07; Edge Functions `notify-approval`, `weekly-draft`, `jira-sync` (code in repo; deployment status per the open items below) |
 | Owner | Asmaa (Senior PM, TrianglZ, Ynmo ecosystem, Riyadh) |
-| Pages | Roadmap, Roadmaps, Sprints, Reports, Monthly deliverables, Resources, Vacations, Log, Approvals |
+| Pages | Roadmap, Roadmaps, Sprints, Reports, Monthly deliverables, Resources, Vacations, Log, Users & permissions |
 | Tests | `tests/run_all.sh`: last full run 88/88 scenarios and all feature scripts green (`sprints_reports.py` 94, `monthly_page.py` 79) |
 | Jira | Site `tatralab.atlassian.net`; default projects DYC (Daycare), FAS (Tifli), AU (AI). Plan, Warif and Sharjah project keys not known yet. Rovo was considered; the API route was chosen |
 | Google Drive export | Google Cloud project **YNMO PM** (trianglz.com, Internal consent), Drive API on, Web client created for `https://ynmo-roadmap.vercel.app`. Client ID to be pasted in the tool by an admin; the client secret is not used |
@@ -41,6 +41,21 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 8. Not yet tested against the real services: Jira, Google sign-in and Drive.
 
 ## Ledger updates
+
+🔄 YNMO LEDGER UPDATE — 2026-10-25
+Request: Permission module (per user, per module View / Edit / Delete switches; admins can grant admin to approve users and manage permissions); Monthly Undo only for the user's own actions; remove the Monthly subtitle.
+Surface: cross-cutting (Roadmaps tool)
+Outcome: Users & permissions page; profiles.perms + core/permissions.js levels enforced in the app and in SQL 08 (tested on a local Postgres); Undo is per-user and change-based; subtitle removed.
+New facts / decisions locked:
+  • Levels: 0 none, 1 view, 2 edit, 3 delete per module; no perms = the older Editor / Viewer rule; admin = everything. Log is view-only.
+  • A person waiting for approval defaults to Viewer in the permissions screen.
+  • Last admin cannot be removed (UI and database trigger).
+Corrections to this skill:
+  • Admin page is "Users & permissions"; Approvals is a card inside it.
+Open / flagged:
+  • RUN supabase/sql/08-permissions.sql (after 07) in the Supabase SQL editor to enforce levels in the database; until then they are enforced in the app only.
+  • Roadmap editors who add a team member need Resources Edit (people table maps to Resources).
+Changelog: Users & permissions, per-user Monthly undo, subtitle removed.
 
 🔄 YNMO LEDGER UPDATE — 2026-10-25
 Request: Remove the Ideas module; typed "delete" and undo for deleting a month; notes as a comment list (author, date); backlog button above the months; notes on a month column.

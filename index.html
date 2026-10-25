@@ -1173,6 +1173,39 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
 .mdblcaret { font-size: .85rem; width: 1em; }
 .mdblsub { color: var(--mut, #6b7390); font-size: .8rem; margin-inline-start: auto; text-align: end; }
 .mdmnote { flex: none; }
+
+/* Users & permissions */
+.permlay { display: grid; grid-template-columns: minmax(220px, 280px) 1fr; gap: 18px; align-items: start; }
+.permusers { display: grid; gap: 6px; max-height: 70vh; overflow: auto; }
+.permuser { display: flex; align-items: center; gap: 10px; width: 100%; text-align: start; padding: 8px 10px; border: 1px solid var(--line, #e3e6f0); border-radius: 12px; background: var(--card, #fff); color: inherit; font: inherit; cursor: pointer; }
+.permuser:hover, .permuser:focus-visible { border-color: var(--brand, #18b087); }
+.permuser.on { border-color: var(--brand, #18b087); background: color-mix(in srgb, var(--brand, #18b087) 9%, var(--card, #fff)); box-shadow: inset 3px 0 0 var(--brand, #18b087); }
+.permwho { display: grid; min-width: 0; flex: 1; }
+.permwho b, .permwho small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.permwho small { color: var(--mut, #6b7390); font-size: .74rem; }
+.permdetail { display: grid; gap: 14px; min-width: 0; }
+.permhead { display: flex; align-items: center; gap: 12px; }
+.permhead h3 { margin: 0; }
+.permadmin { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--line, #e3e6f0); border-radius: 12px; }
+.permgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.permmod { border: 1px solid var(--line, #e3e6f0); border-radius: 14px; padding: 12px; display: grid; gap: 8px; background: var(--card, #fff); align-content: start; }
+.permmod.off { opacity: .8; }
+.permtop { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.permbadge { font-size: .7rem; padding: 2px 8px; border-radius: 999px; background: #eceef5; color: #4a5272; }
+.permbadge.lv1 { background: #e3effd; color: #1d4f9a; }
+.permbadge.lv2 { background: #e2f5ec; color: #14724a; }
+.permbadge.lv3 { background: #fde7e7; color: #a12830; }
+.permsws { display: flex; flex-wrap: wrap; gap: 8px 12px; }
+.permsw { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; padding: 2px; font: inherit; color: inherit; cursor: pointer; }
+.permsw[disabled] { cursor: default; opacity: .55; }
+.permknob { position: relative; width: 34px; height: 20px; border-radius: 999px; background: #c5cadb; transition: background .15s; flex: none; }
+.permknob::after { content: ''; position: absolute; top: 2px; inset-inline-start: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .3); transition: inset-inline-start .15s; }
+.permsw.on .permknob { background: var(--brand, #18b087); }
+.permsw.on .permknob::after { inset-inline-start: 16px; }
+.permsw:focus-visible .permknob { outline: 2px solid var(--brand, #18b087); outline-offset: 2px; }
+.permfoot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+@media (max-width: 760px) { .permlay { grid-template-columns: 1fr; } .permusers { max-height: 240px; } }
+@media (prefers-reduced-motion: reduce) { .permknob, .permknob::after { transition: none; } }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -1286,6 +1319,54 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     reports: {},
     setup: {}
   };
+
+  // src/esm/core/permissions.js
+  var MODULES = [
+    { k: "roadmap", n: "Roadmap", d: "Features and bars on the timeline, days off, timeline notes", max: 3 },
+    { k: "roadmaps", n: "Roadmaps", d: "Create and change roadmaps (quarters, half years)", max: 3 },
+    { k: "sprints", n: "Sprints", d: "Sprint planning and the sprint page", max: 3 },
+    { k: "reports", n: "Reports", d: "Weekly executive reports", max: 3 },
+    { k: "monthly", n: "Monthly deliverables", d: "The monthly board and the backlog", max: 3 },
+    { k: "resources", n: "Resources", d: "Team members and products", max: 3 },
+    { k: "vacations", n: "Vacations", d: "Leave of the team", max: 3 },
+    { k: "log", n: "Log", d: "The activity log", max: 1 }
+  ];
+  var LEVELS = ["No access", "View", "Edit", "Delete"];
+  var VIEW_ONLY = ["roadmap", "log", "reports", "monthly"];
+  var clampLv = (v, max) => Math.max(0, Math.min(max, v | 0));
+  function presetPerms(access) {
+    const o = {};
+    MODULES.forEach((m) => {
+      o[m.k] = access === "viewer" ? VIEW_ONLY.includes(m.k) ? 1 : 0 : m.max;
+    });
+    return o;
+  }
+  function permsOf(me) {
+    const base3 = presetPerms(me && me.access === "viewer" ? "viewer" : "editor"), out = {};
+    MODULES.forEach((m) => {
+      if (me && me.is_admin) {
+        out[m.k] = m.max;
+        return;
+      }
+      const v = me && me.perms && typeof me.perms === "object" ? me.perms[m.k] : void 0;
+      out[m.k] = Number.isInteger(v) ? clampLv(v, m.max) : base3[m.k];
+    });
+    return out;
+  }
+  var levelOf = (me, mod) => me ? permsOf(me)[mod] || 0 : 0;
+  function setSwitch(level, which, on, max) {
+    const need = { view: 1, edit: 2, del: 3 }[which];
+    let v = level;
+    if (on) v = Math.max(level, need);
+    else v = Math.min(level, need - 1);
+    return clampLv(v, max);
+  }
+  function presetName(perms) {
+    const same4 = (p) => MODULES.every((m) => (perms[m.k] | 0) === p[m.k]);
+    return same4(presetPerms("editor")) ? "editor" : same4(presetPerms("viewer")) ? "viewer" : "custom";
+  }
+  var accessFor = (perms) => MODULES.some((m) => (perms[m.k] | 0) >= 2) ? "editor" : "viewer";
+  var pageModule = (p) => MODULES.some((m) => m.k === p) ? p : null;
 
   // src/esm/core/model.js
   var DAY = 864e5;
@@ -1486,8 +1567,16 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
   function clone(o) {
     return JSON.parse(JSON.stringify(o));
   }
+  var modLevel = (mod) => S.SHARE ? 1 : S.me ? S.denied && S.denied[mod] ? Math.min(1, levelOf(S.me, mod)) : levelOf(S.me, mod) : 3;
   function canEdit() {
-    return !S.readonly;
+    if (S.readonly) return false;
+    const m = pageModule(state.page);
+    return !m || modLevel(m) >= 2;
+  }
+  function canDelete(mod) {
+    if (S.readonly) return false;
+    const m = mod || pageModule(state.page);
+    return !m || modLevel(m) >= 3;
   }
   var byOrd = (a, b) => a.ord - b.ord || (a.id < b.id ? -1 : 1);
   function finish(it) {
@@ -1861,43 +1950,6 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       }
     }, window.__sharePoll || 6e4);
   }
-  function renderAccess(root) {
-    if (!(S.me && S.me.is_admin)) return;
-    const done2 = S.members.filter((m) => m.approved);
-    const c = el("div", "card");
-    c.append(el("h2", "", "Who can edit"));
-    c.append(el("div", "hint", "Editors change the plan. Viewers can look at the roadmap, reports and log, but cannot change anything."));
-    done2.forEach((m) => {
-      const row = el("div", "formrow");
-      row.style.alignItems = "center";
-      const who = el("div");
-      who.append(el("b", "", m.name || m.email), el("div", "hint", (m.role ? m.role + " · " : "") + (m.email || "")));
-      row.append(avatarEl(m.avatar, 34, m.name), who);
-      if (m.is_admin) {
-        const a = el("span", "badge", "Admin");
-        a.style.marginInlineStart = "auto";
-        row.append(a);
-      } else {
-        const s = selOf([["editor", "Editor"], ["viewer", "Viewer"]], m.access === "viewer" ? "viewer" : "editor");
-        s.style.marginInlineStart = "auto";
-        s.setAttribute("aria-label", "Access for " + (m.name || m.email));
-        s.addEventListener("change", async () => {
-          const r = await sb.from("profiles").update({ access: s.value }).eq("id", m.id);
-          if (r.error) {
-            s.value = m.access === "viewer" ? "viewer" : "editor";
-            toast("Could not change access. Ask the admin to run setup v4.");
-            return;
-          }
-          m.access = s.value;
-          logAct("access", "set " + (m.name || m.email) + " as " + s.value);
-          toast((m.name || m.email) + " is now a " + s.value + ".");
-        });
-        row.append(s);
-      }
-      c.append(row);
-    });
-    root.append(c);
-  }
 
   // src/esm/pages/ideas.js
   function saveIdea(id, patch, act, sum) {
@@ -2081,7 +2133,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
         sh.addEventListener("click", () => openShare(r.id));
         act.append(sh);
       }
-      if (!r.builtin && canEdit()) {
+      if (!r.builtin && canDelete()) {
         let armed = false;
         const del = el("button", "btn danger sm", "Delete");
         del.type = "button";
@@ -2283,7 +2335,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
 
   // src/esm/core/shared.js
   var H2 = { id: H2_ID, n: "H2 2026", a: "2026-10-01", b: "2027-01-31", kind: "H2", builtin: true };
-  var PAGES = [["roadmap", "Roadmap"], ["roadmaps", "Roadmaps"], ["sprints", "Sprints"], ["reports", "Reports"], ["monthly", "Monthly deliverables"], ["resources", "Resources"], ["vacations", "Vacations"], ["log", "Log"], ["admin", "Approvals"]];
+  var PAGES = [["roadmap", "Roadmap"], ["roadmaps", "Roadmaps"], ["sprints", "Sprints"], ["reports", "Reports"], ["monthly", "Monthly deliverables"], ["resources", "Resources"], ["vacations", "Vacations"], ["log", "Log"], ["admin", "Users & permissions"]];
   var DOMAINS = ["PM", "Mobile", "Backend", "Frontend", "Full-stack", "Engineering", "QA", "UX / Design", "AI / ML", "Other"];
   var VTYPES = ["Annual leave", "Training", "Public holiday", "Other"];
   var slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "x";
@@ -2608,7 +2660,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
         const c = el("td");
         c.append(aff.length ? el("span", "badge warn", "⚑ " + aff.length + " on " + curRm().n) : el("span", "hint", "none"));
         const x = el("td");
-        if (canEdit()) {
+        if (canDelete()) {
           const rm = el("button", "btn danger sm", "Remove");
           rm.type = "button";
           rm.addEventListener("click", () => {
@@ -2786,10 +2838,10 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       dr.append(fld2("From", d0), fld2("To", d1));
       box2.append(dr);
       let col = isHex(note.c) ? note.c : DEFAULT_COLOR[k];
-      const sw = el("div", "swatches");
-      const pick = (c) => {
+      const sw2 = el("div", "swatches");
+      const pick2 = (c) => {
         col = c;
-        sw.querySelectorAll(".swatch").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.c === c)));
+        sw2.querySelectorAll(".swatch").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.c === c)));
         any.classList.toggle("on", !QUICK.includes(c));
       };
       QUICK.forEach((c) => {
@@ -2799,8 +2851,8 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
         b.style.setProperty("--c", c);
         b.setAttribute("aria-label", "Colour " + c);
         b.setAttribute("aria-pressed", String(c === col));
-        b.addEventListener("click", () => pick(c));
-        sw.append(b);
+        b.addEventListener("click", () => pick2(c));
+        sw2.append(b);
       });
       const any = el("label", "swatch any");
       any.title = "Pick any colour";
@@ -2808,11 +2860,11 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       ci.type = "color";
       ci.value = col;
       ci.setAttribute("aria-label", "Pick any colour");
-      ci.addEventListener("input", () => pick(ci.value.toLowerCase()));
+      ci.addEventListener("input", () => pick2(ci.value.toLowerCase()));
       any.append(ci);
-      sw.append(any);
-      pick(col);
-      box2.append(fld2("Colour", sw));
+      sw2.append(any);
+      pick2(col);
+      box2.append(fld2("Colour", sw2));
       const msg = el("div", "gerr");
       msg.setAttribute("role", "alert");
       box2.append(msg);
@@ -3758,7 +3810,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       mi(c, "Duplicate", () => duplicate(it));
       if (owner && owner !== "__none") mi(c, "Add note for " + owner + "…", () => openNoteDialog({ k: "person", p: owner, a0: iso(it.d0), a1: iso(it.d1) }));
       mi(c, "Add period note…", () => openNoteDialog({ k: "period", a0: iso(it.d0), a1: iso(it.d1) }));
-      mi(c, "Delete", () => removeItem(it.id), "danger");
+      if (canDelete()) mi(c, "Delete", () => removeItem(it.id), "danger");
     });
   }
   function rowMenu(person, x, y, k) {
@@ -3768,7 +3820,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       if (!none) mi(c, "Add note for " + person + "…", () => openNoteDialog({ k: "person", p: person, a0: iso(k), a1: iso(Math.min(NDAYS - 1, k + 13)) }));
       mi(c, "Add person…", (b) => openAddPerson(b));
       const id = Object.keys(S.extras).find((i) => S.extras[i] && S.extras[i].n === person);
-      if (!none && id) mi(c, "Remove " + person, () => removePerson(id, person), "danger");
+      if (!none && id && canDelete()) mi(c, "Remove " + person, () => removePerson(id, person), "danger");
     });
   }
   function removePerson(id, name) {
@@ -4532,6 +4584,180 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     listeners.forEach((f) => f());
   }
 
+  // src/esm/ui/confirm.js
+  function confirmDlg(title, msg, yes, onYes) {
+    openDlg(title, (box2) => {
+      const ok = el("button", "btn danger", yes), no = el("button", "btn", "Cancel");
+      ok.type = no.type = "button";
+      ok.addEventListener("click", () => {
+        closeDlg();
+        onYes();
+      });
+      no.addEventListener("click", closeDlg);
+      const row = el("div", "row");
+      row.append(ok, no);
+      box2.append(el("p", "", msg), row);
+    });
+  }
+
+  // src/esm/pages/permissions.js
+  var ui = { sel: "", draft: null };
+  var nameOf = (m) => m.name || m.email || "this person";
+  var summary = (p) => MODULES.filter((m) => p[m.k] > 0).map((m) => m.n + " " + LEVELS[p[m.k]]).join(", ") || "no access";
+  var sameP = (a, b) => MODULES.every((m) => (a[m.k] | 0) === (b[m.k] | 0));
+  async function patchProfile(m, patch, okMsg, log, reload) {
+    const r = await sb.from("profiles").update(patch).eq("id", m.id);
+    if (r.error) {
+      toast("Could not save: " + r.error.message + (/perms/.test(r.error.message || "") ? " (run supabase/sql/08-permissions.sql first)" : ""));
+      return false;
+    }
+    Object.assign(m, patch);
+    logAct("access", log);
+    toast(okMsg);
+    await reload();
+    return true;
+  }
+  function sw(label, on, disabled, onChange) {
+    const b = el("button", "permsw" + (on ? " on" : ""));
+    b.type = "button";
+    b.setAttribute("role", "switch");
+    b.setAttribute("aria-checked", String(on));
+    b.setAttribute("aria-label", label);
+    b.disabled = disabled;
+    b.append(el("span", "permknob"), el("span", "permlab", label.split(" ")[0]));
+    b.addEventListener("click", () => onChange(!on));
+    return b;
+  }
+  function renderPermissions(root, reload) {
+    if (!(S.me && S.me.is_admin)) return;
+    const people = S.members.slice().sort((a, b) => (a.approved === b.approved ? 0 : a.approved ? 1 : -1) || nameOf(a).localeCompare(nameOf(b)));
+    if (!people.length) return;
+    let cur2 = people.find((p) => p.id === ui.sel);
+    if (!cur2) {
+      cur2 = people.find((p) => p.approved && p.id !== S.me.id) || people[0];
+      ui.sel = cur2.id;
+      ui.draft = null;
+    }
+    const stored = cur2.approved || cur2.perms ? permsOf(cur2) : presetPerms("viewer");
+    if (!ui.draft || ui.draftFor !== cur2.id) {
+      ui.draft = Object.assign({}, stored);
+      ui.draftFor = cur2.id;
+    }
+    const card2 = el("div", "card permpage");
+    card2.id = "permissions";
+    card2.append(el("h2", "", "Users & permissions"), el("p", "sub", "Pick a person, then choose what they can do in each module. Delete includes Edit, and Edit includes View. Admins can approve new people and manage everyone's permissions."));
+    const lay = el("div", "permlay"), list = el("div", "permusers");
+    list.setAttribute("role", "listbox");
+    list.setAttribute("aria-label", "People");
+    people.forEach((p) => {
+      const b = el("button", "permuser" + (p.id === cur2.id ? " on" : ""));
+      b.type = "button";
+      b.setAttribute("role", "option");
+      b.setAttribute("aria-selected", String(p.id === cur2.id));
+      const t = el("span", "permwho");
+      t.append(el("b", "", nameOf(p)), el("small", "", (p.role ? p.role + " · " : "") + (p.email || "")));
+      b.append(avatarEl(p.avatar, 32, p.name), t);
+      if (!p.approved) b.append(el("span", "badge warn", "Waiting"));
+      else if (p.is_admin) b.append(el("span", "badge", "Admin"));
+      if (p.id === S.me.id) b.append(el("span", "hint", "You"));
+      b.addEventListener("click", () => {
+        if (p.id === cur2.id) return;
+        ui.sel = p.id;
+        ui.draft = null;
+        reload(true);
+      });
+      list.append(b);
+    });
+    const det = el("div", "permdetail");
+    det.setAttribute("aria-live", "polite");
+    const head = el("div", "permhead"), who = el("div");
+    who.append(el("h3", "", nameOf(cur2)), el("div", "hint", (cur2.role ? cur2.role + " · " : "") + (cur2.email || "")));
+    head.append(avatarEl(cur2.avatar, 48, cur2.name), who);
+    det.append(head);
+    const self = cur2.id === S.me.id, admins = S.members.filter((x) => x.approved && x.is_admin);
+    const ar = el("div", "permadmin"), at = el("div");
+    at.append(el("b", "", "Admin"), el("div", "hint", "Approves new people, manages permissions and has full access to every module."));
+    const asw = sw("Admin", !!cur2.is_admin, self || !cur2.approved, (on) => {
+      if (!on && admins.length <= 1) {
+        toast("There must be at least one admin.");
+        return;
+      }
+      confirmDlg(on ? "Make " + nameOf(cur2) + " an admin?" : "Remove admin from " + nameOf(cur2) + "?", on ? nameOf(cur2) + " will be able to approve new people, change anyone's permissions and make other admins." : nameOf(cur2) + " keeps their account but loses these powers. Their module permissions below apply again.", on ? "Make admin" : "Remove admin", () => {
+        patchProfile(cur2, { is_admin: on }, nameOf(cur2) + (on ? " is now an admin." : " is no longer an admin."), (on ? "made " : "removed admin from ") + nameOf(cur2) + (on ? " an admin" : ""), reload);
+      });
+    });
+    ar.append(at, asw);
+    det.append(ar);
+    if (self) det.append(el("p", "hint", "This is you. You cannot change your own admin switch or permissions."));
+    if (!cur2.approved) det.append(el("p", "hint permwait", nameOf(cur2) + " is waiting for approval. Choose what they can do, then approve."));
+    const full = !!cur2.is_admin, dis = self || full;
+    const pn = presetName(ui.draft), pre = selOf([["editor", "Editor (everything)"], ["viewer", "Viewer (look only)"], ["custom", "Custom"]], pn);
+    pre.setAttribute("aria-label", "Access for " + nameOf(cur2));
+    pre.disabled = dis;
+    pre.addEventListener("change", async () => {
+      if (pre.value === "custom") {
+        return;
+      }
+      const p = presetPerms(pre.value);
+      if (!cur2.approved) {
+        ui.draft = p;
+        reload(true);
+        return;
+      }
+      ui.draft = null;
+      await patchProfile(cur2, { access: pre.value, perms: p }, nameOf(cur2) + " is now a " + pre.value + ".", "set " + nameOf(cur2) + " as " + pre.value, reload);
+    });
+    const pr = el("div", "permpre");
+    pr.append(fld("Preset (saves right away)", pre));
+    det.append(pr);
+    const grid = el("div", "permgrid");
+    MODULES.forEach((m) => {
+      const lv = full ? m.max : ui.draft[m.k] | 0, c = el("div", "permmod" + (lv ? "" : " off")), top = el("div", "permtop");
+      top.append(el("b", "", m.n), el("span", "permbadge lv" + lv, full ? "Full" : LEVELS[lv]));
+      c.append(top, el("div", "hint", m.d));
+      const row = el("div", "permsws");
+      [["view", "View"], ["edit", "Edit"], ["del", "Delete"]].forEach(([w, lab2], i) => {
+        if (m.max < i + 1) return;
+        const on = lv >= i + 1;
+        row.append(sw(lab2 + " " + m.n, on, dis, (v) => {
+          ui.draft[m.k] = setSwitch(ui.draft[m.k] | 0, w, v, m.max);
+          reload(true);
+        }));
+      });
+      c.append(row);
+      grid.append(c);
+    });
+    det.append(grid);
+    const dirty = !dis && !sameP(ui.draft, stored), foot = el("div", "permfoot");
+    const save2 = el("button", "btn primary", cur2.approved ? "Save permissions" : "Approve with these permissions");
+    save2.type = "button";
+    save2.disabled = dis || cur2.approved && !dirty;
+    const undo2 = el("button", "btn", "Discard changes");
+    undo2.type = "button";
+    undo2.hidden = !dirty;
+    undo2.addEventListener("click", () => {
+      ui.draft = null;
+      reload(true);
+    });
+    save2.addEventListener("click", async () => {
+      save2.disabled = true;
+      const d = Object.assign({}, ui.draft);
+      ui.draft = null;
+      const patch = { perms: d, access: accessFor(d) };
+      if (!cur2.approved) patch.approved = true;
+      const ok = await patchProfile(cur2, patch, cur2.approved ? "Permissions saved for " + nameOf(cur2) + "." : nameOf(cur2) + " is approved.", (cur2.approved ? "changed permissions of " : "approved ") + nameOf(cur2) + ": " + summary(d), reload);
+      if (!ok) {
+        ui.draft = d;
+        save2.disabled = false;
+      }
+    });
+    foot.append(save2, undo2, el("span", "hint", dirty ? "Unsaved changes" : ""));
+    det.append(foot);
+    lay.append(list, det);
+    card2.append(lay);
+    root.append(card2);
+  }
+
   // src/esm/pages/resources.js
   function personDocId(name) {
     return Object.keys(S.extras).find((i) => S.extras[i] && S.extras[i].n === name && !S.extras[i].hidden);
@@ -4925,7 +5151,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
             rs.addEventListener("click", () => resetSquad(l.k));
             row.append(rs);
           }
-        } else {
+        } else if (canDelete()) {
           const rm = el("button", "btn danger sm", "Remove");
           rm.type = "button";
           rm.addEventListener("mousedown", (e) => e.preventDefault());
@@ -5019,7 +5245,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       ds.setAttribute("aria-label", "Domain of " + p.name);
       ds.addEventListener("change", () => savePerson(p.name, { domain: ds.value }, "changed domain of " + p.name + " to " + ds.value));
       c2.append(ds);
-      const c3 = el("td"), sw = el("div", "formrow");
+      const c3 = el("td"), sw2 = el("div", "formrow");
       LANES.forEach((l) => {
         const b = el("button", "pill", (p.sqs.has(l.k) ? "✓ " : "") + l.n);
         b.type = "button";
@@ -5038,11 +5264,11 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
           notify(p.name + (s.has(l.k) ? " added to " : " removed from ") + l.n);
           savePerson(p.name, { sqs: [...s], over: true }, "changed squads of " + p.name + ": " + [...s].map((k) => laneOf(k).n).join(" + "));
         });
-        sw.append(b);
+        sw2.append(b);
       });
-      c3.append(sw);
+      c3.append(sw2);
       const c4 = el("td");
-      if (canEdit()) {
+      if (canDelete()) {
         const rm = el("button", "btn danger sm", "Remove");
         rm.type = "button";
         rm.addEventListener("click", () => askRemove(p.name));
@@ -5083,7 +5309,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
   function renderAdmin() {
     const root = $("pg-admin");
     root.textContent = "";
-    root.append(pageHead("Approvals", "People who registered wait here until you approve them. They get an email when you do, and their waiting screen opens the tool by itself."));
+    root.append(pageHead("Approvals & permissions", "People who registered wait here until you approve them. Below, choose what each person can do in every module and who else is an admin."));
     const pend = S.members.filter((m) => !m.approved);
     const ac = el("div", "card");
     ac.append(el("h2", "", pend.length ? "Waiting for your approval (" + pend.length + ")" : "Nobody is waiting"));
@@ -5115,7 +5341,10 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       ac.append(row);
     });
     root.append(ac);
-    renderAccess(root);
+    renderPermissions(root, (again) => {
+      if (again === true) renderAdmin();
+      else return loadMembers();
+    });
   }
 
   // src/esm/features/month-model.js
@@ -5487,7 +5716,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     list.setAttribute("role", "listbox");
     box2.append(q, list);
     let picked = false;
-    const pick = (it) => {
+    const pick2 = (it) => {
       if (it.disabled) return;
       picked = true;
       const cb = o.onPick;
@@ -5515,7 +5744,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
         r2.append(el("span", "", it.label));
         if (it.sub) r2.append(el("span", "csub", it.sub));
         r2.addEventListener("pointerdown", (e) => e.preventDefault());
-        r2.addEventListener("click", () => pick(it));
+        r2.addEventListener("click", () => pick2(it));
         r2.addEventListener("pointermove", () => {
           list.querySelectorAll(".act").forEach((x) => x.classList.remove("act"));
           if (!it.disabled) r2.classList.add("act");
@@ -5547,7 +5776,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
         e.preventDefault();
         e.stopPropagation();
         const a = list.querySelector(".copt.act");
-        if (a && a._it) pick(a._it);
+        if (a && a._it) pick2(a._it);
       } else if (e.key === "Escape" || e.key === "Tab") {
         e.preventDefault();
         e.stopImmediatePropagation();
@@ -5832,22 +6061,6 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     return root;
   }
 
-  // src/esm/ui/confirm.js
-  function confirmDlg(title, msg, yes, onYes) {
-    openDlg(title, (box2) => {
-      const ok = el("button", "btn danger", yes), no = el("button", "btn", "Cancel");
-      ok.type = no.type = "button";
-      ok.addEventListener("click", () => {
-        closeDlg();
-        onYes();
-      });
-      no.addEventListener("click", closeDlg);
-      const row = el("div", "row");
-      row.append(ok, no);
-      box2.append(el("p", "", msg), row);
-    });
-  }
-
   // src/esm/pages/reports.js
   var rUI = { busy: false, note: "", noteFor: "", err: false, wait: false, last: "" };
   var routeId = () => {
@@ -5860,8 +6073,9 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     return l ? l.c : "var(--brand)";
   };
   var cfg = () => S.ideas.reportcfg || {};
-  var canBuild = () => !isViewer() && canWrite();
-  var reportList = () => Object.keys(S.reports).map((id) => Object.assign({ id }, S.reports[id])).filter((r) => r.a && (!isViewer() || r.status === "submitted")).sort((x, y) => x.a < y.a ? 1 : -1);
+  var viewerR = () => modLevel("reports") < 2;
+  var canBuild = () => !viewerR() && canWrite();
+  var reportList = () => Object.keys(S.reports).map((id) => Object.assign({ id }, S.reports[id])).filter((r) => r.a && (!viewerR() || r.status === "submitted")).sort((x, y) => x.a < y.a ? 1 : -1);
   var cur = () => {
     const id = routeId();
     return id ? reportList().find((r) => r.id === id) || null : null;
@@ -5898,7 +6112,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
   var unsubR = null;
   function reportUndo(dir) {
     const rep = cur();
-    if (!rep || isViewer() || !canBuild()) return;
+    if (!rep || viewerR() || !canBuild()) return;
     const r = undoR(rep.id).step(dir, (id) => S.reports[id], (id, doc2) => {
       if (!doc2) return;
       S.reports[id] = doc2;
@@ -5914,7 +6128,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
   }
   registerUndo("reports", { ready: () => {
     const r = cur();
-    return !!r && !isViewer() && canBuild();
+    return !!r && !viewerR() && canBuild();
   }, undo: () => reportUndo("undo"), redo: () => reportUndo("redo") });
   function roadFor(a, b) {
     const rm = allRoadmaps().find((r) => r.a <= a && r.b >= a);
@@ -6406,7 +6620,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       renderReports();
     });
   }
-  var canDelete = () => canBuild();
+  var canDelete2 = () => canBuild() && modLevel("reports") >= 3;
   function deleteReport(rep) {
     confirmDlg("Delete this weekly report?", "The report for the week of " + fmtIso(rep.a) + " is deleted for everyone" + (rep.status === "submitted" ? ", including the executives who can see it" : "") + ". The sprint and the roadmap are not touched.", "Delete report", () => {
       delete S.reports[rep.id];
@@ -6422,12 +6636,12 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
   function listView(pg, viewer, l) {
     const acts = el("div", "acts");
     if (!viewer) {
-      const free = missingWeeks(), t = todayIso(), pick = free.find((w) => w.a <= t) || free[free.length - 1];
-      if (pick) {
-        const nb = el("button", "btn primary", "+ New report for week of " + fmtIso(pick.a));
+      const free = missingWeeks(), t = todayIso(), pick2 = free.find((w) => w.a <= t) || free[free.length - 1];
+      if (pick2) {
+        const nb = el("button", "btn primary", "+ New report for week of " + fmtIso(pick2.a));
         nb.type = "button";
         nb.disabled = !canBuild();
-        nb.addEventListener("click", () => newReport(pick));
+        nb.addEventListener("click", () => newReport(pick2));
         acts.append(nb);
       }
       acts.append(settingsBtn());
@@ -6465,7 +6679,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       more.type = "button";
       more.setAttribute("aria-label", "More actions for the week of " + fmtIso(r.a));
       more.setAttribute("aria-haspopup", "menu");
-      more.addEventListener("click", () => openMenu(more, [{ label: "Open in new tab", value: "tab" }, { label: "Copy text", value: "copy" }].concat(canDelete() ? [{ label: "Delete report", value: "del" }] : []), {
+      more.addEventListener("click", () => openMenu(more, [{ label: "Open in new tab", value: "tab" }, { label: "Copy text", value: "copy" }].concat(canDelete2() ? [{ label: "Delete report", value: "del" }] : []), {
         search: false,
         label: "Report actions",
         onPick: (it) => {
@@ -6595,7 +6809,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     const id = routeId(), keepY = id && rUI.last === id ? window.scrollY : 0;
     rUI.last = id || "";
     pg.textContent = "";
-    const viewer = isViewer(), l = reportList(), rep = cur();
+    const viewer = viewerR(), l = reportList(), rep = cur();
     pg.classList.toggle("sheet", !!rep);
     if (id && !rep) {
       pg.append(crumbs([{ label: "Reports", href: "#/reports" }, { label: "Not found" }]), pageHead("Report not found", viewer ? "It may not be submitted yet, or it is still loading." : "It may have been removed, or it is still loading."));
@@ -7154,7 +7368,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       more.type = "button";
       more.setAttribute("aria-label", "More actions for Sprint " + sp.n);
       more.setAttribute("aria-haspopup", "menu");
-      more.addEventListener("click", () => openMenu(more, [{ label: "Open in new tab", value: "tab" }, { label: "Delete sprint", value: "del", disabled: ro }], {
+      more.addEventListener("click", () => openMenu(more, [{ label: "Open in new tab", value: "tab" }, { label: "Delete sprint", value: "del", disabled: ro || !canDelete() }], {
         search: false,
         label: "Sprint actions",
         onPick: (it) => {
@@ -7304,6 +7518,10 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       return ids;
     };
     const removeGroup = (b) => {
+      if (!canDelete()) {
+        notify("You do not have permission to delete here.", "err");
+        return;
+      }
       const all = list(), i = all.findIndex((x) => x.id === b.id), g = groupOf(all, i), go = () => {
         undoOf(spId).mark(g.length > 1 ? "Delete " + g.length + " lines" : "Delete line");
         g.forEach((x) => delItem(x.id));
@@ -8036,6 +8254,106 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     if (state.page === "sprints") renderSprints();
   });
 
+  // src/esm/features/month-undo.js
+  var SKIP = /* @__PURE__ */ new Set(["lines", "by", "ts", "subAt", "subBy", "status", "pl", "mo"]);
+  var same2 = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  var pick = (o, keys) => {
+    const r = {};
+    keys.forEach((k) => {
+      if (o && k in o) r[k] = o[k];
+    });
+    return r;
+  };
+  var clone2 = (o) => JSON.parse(JSON.stringify(o));
+  var changedKeys = (a, b, skip) => [...new Set(Object.keys(a || {}).concat(Object.keys(b || {})))].filter((k) => !(skip && skip.has(k)) && !same2(a && a[k], b && b[k]));
+  function diffDoc(old, nw) {
+    if (!nw) return old ? [{ t: "doc", before: clone2(old) }] : [];
+    const ol = old && old.lines || [], nl = nw.lines || [], om = new Map(ol.map((l) => [l.id, l])), nm = new Map(nl.map((l) => [l.id, l])), out = [];
+    ol.forEach((l, i) => {
+      if (!nm.has(l.id)) out.push({ t: "del", lid: l.id, before: clone2(l), next: ol[i + 1] ? ol[i + 1].id : null });
+    });
+    nl.forEach((l) => {
+      const o = om.get(l.id);
+      if (!o) {
+        out.push({ t: "add", lid: l.id });
+        return;
+      }
+      const ks = changedKeys(o, l);
+      if (ks.length) out.push({ t: "mod", lid: l.id, keys: ks, before: clone2(pick(o, ks)), after: clone2(pick(l, ks)) });
+    });
+    const co = ol.filter((l) => nm.has(l.id)).map((l) => l.id), cn = nl.filter((l) => om.has(l.id)).map((l) => l.id);
+    if (!same2(co, cn)) out.push({ t: "order", ids: co });
+    const mk = changedKeys(old, nw, SKIP);
+    if (old && mk.length) out.push({ t: "meta", keys: mk, before: clone2(pick(old, mk)), after: clone2(pick(nw, mk)) });
+    return out;
+  }
+  function undoChanges(cur2, changes, mo) {
+    let applied = 0, skipped = 0;
+    if (changes.length === 1 && changes[0].t === "doc") {
+      if (cur2) return { doc: cur2, applied: 0, skipped: 1 };
+      return { doc: clone2(changes[0].before), applied: 1, skipped: 0 };
+    }
+    const d = cur2 ? clone2(cur2) : { mo, lines: [] };
+    d.lines = d.lines || [];
+    changes.slice().reverse().forEach((c) => {
+      if (c.t === "add") {
+        const i = d.lines.findIndex((l) => l.id === c.lid);
+        if (i >= 0) {
+          d.lines.splice(i, 1);
+          applied++;
+        } else skipped++;
+      } else if (c.t === "del") {
+        if (d.lines.some((l) => l.id === c.lid)) {
+          skipped++;
+          return;
+        }
+        const i = c.next ? d.lines.findIndex((l) => l.id === c.next) : -1;
+        if (i >= 0) d.lines.splice(i, 0, clone2(c.before));
+        else d.lines.push(clone2(c.before));
+        applied++;
+      } else if (c.t === "mod") {
+        const l = d.lines.find((x) => x.id === c.lid);
+        if (!l) {
+          skipped++;
+          return;
+        }
+        c.keys.forEach((k) => {
+          if (!same2(l[k], c.after[k])) {
+            skipped++;
+            return;
+          }
+          if (k in c.before) l[k] = clone2(c.before[k]);
+          else delete l[k];
+          applied++;
+        });
+      } else if (c.t === "order") {
+        const pos = [];
+        d.lines.forEach((l, i) => {
+          if (c.ids.includes(l.id)) pos.push(i);
+        });
+        const present = c.ids.filter((id) => d.lines.some((l) => l.id === id)), byId = new Map(d.lines.map((l) => [l.id, l]));
+        if (present.length === pos.length && present.length > 1) {
+          const before = d.lines.map((l) => l.id).join();
+          present.forEach((id, k) => {
+            d.lines[pos[k]] = byId.get(id);
+          });
+          if (d.lines.map((l) => l.id).join() !== before) applied++;
+        } else skipped++;
+      } else if (c.t === "meta") {
+        c.keys.forEach((k) => {
+          if (!same2(d[k], c.after[k])) {
+            skipped++;
+            return;
+          }
+          if (k in c.before) d[k] = clone2(c.before[k]);
+          else delete d[k];
+          applied++;
+        });
+      }
+    });
+    return { doc: d, applied, skipped };
+  }
+
   // src/esm/pages/monthly.js
   var STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9 6.8 19.6l1-5.8-4.3-4.1 5.9-.8z"/></svg>';
   var blOpen = false;
@@ -8050,8 +8368,9 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     } catch (e) {
     }
   };
-  var ui = { q: "", pr: "all", fl: "all", past: false, prod: "", open: "" };
-  var canBuild2 = () => !isViewer() && canWrite();
+  var ui2 = { q: "", pr: "all", fl: "all", past: false, prod: "", open: "" };
+  var canBuild2 = () => modLevel("monthly") >= 2 && canWrite();
+  var canDel = () => modLevel("monthly") >= 3 && canWrite();
   var curMonth = () => todayIso().slice(0, 7);
   var colOf2 = (p) => p && p.c || "#7b8099";
   var BL = "backlog";
@@ -8072,7 +8391,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     all.forEach((m) => {
       if (m > last) last = m;
     });
-    const first = ui.past ? all.concat([c]).sort()[0] : c, out = [];
+    const first = ui2.past ? all.concat([c]).sort()[0] : c, out = [];
     for (let m = first; m <= last; m = nextMonth(m)) out.push(m);
     return out;
   }
@@ -8080,13 +8399,14 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
   var undoStack = [];
   var grp = null;
   var replaying = false;
-  var remember2 = (id, old) => {
+  var record = (m, old, nw) => {
     if (replaying) return;
-    const snap = { id, doc: old ? JSON.parse(JSON.stringify(old)) : null };
-    if (grp) {
-      if (!grp.some((x) => x.id === id)) grp.push(snap);
-    } else {
-      undoStack.push([snap]);
+    const ch = diffDoc(old, nw);
+    if (!ch.length) return;
+    const e = { mo: m, changes: ch };
+    if (grp) grp.push(e);
+    else {
+      undoStack.push([e]);
       if (undoStack.length > 50) undoStack.shift();
     }
   };
@@ -8108,28 +8428,30 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       notify("Nothing to undo");
       return;
     }
+    let applied = 0, skipped = 0;
     replaying = true;
     try {
-      a.slice().reverse().forEach((x) => {
-        if (x.doc) {
-          x.doc.ts = Date.now();
-          S.reports[x.id] = x.doc;
-          write("reports/" + x.id, x.doc);
-        } else {
-          delete S.reports[x.id];
-          write("reports/" + x.id, null);
-        }
+      a.slice().reverse().forEach((e) => {
+        const id = monthId(e.mo), r = undoChanges(S.reports[id] || null, e.changes, e.mo);
+        applied += r.applied;
+        skipped += r.skipped;
+        if (!r.applied) return;
+        const d = r.doc;
+        d.ts = Date.now();
+        d.status = "submitted";
+        d.by = S.me && (S.me.name || S.me.email) || d.by || "";
+        S.reports[id] = d;
+        write("reports/" + id, d);
       });
     } finally {
       replaying = false;
     }
-    logAct("report", "undid the last change on the Monthly board");
+    logAct("report", "undid their last change on the Monthly board");
     renderMonthly();
-    notify("Undone");
+    notify(!applied && skipped ? "Nothing to undo: someone else has changed it since" : skipped ? "Undone. Parts that a colleague changed since were left as they are." : "Undone");
   }
   function saveMonth(m, mutate, log, quiet) {
     const id = monthId(m), old = S.reports[id];
-    if (!quiet) remember2(id, old);
     const d = old ? JSON.parse(JSON.stringify(old)) : { mo: m, lines: [] };
     d.lines = d.lines || [];
     d.pl = TAGS.map((t) => ({ k: t.k, n: t.n, squads: t.squads }));
@@ -8141,6 +8463,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     d.ts = Date.now();
     S.reports[id] = d;
     write("reports/" + id, d);
+    if (!quiet) record(m, old, d);
     if (log) logAct("report", log);
   }
   var maxNo = () => rawDocs().reduce((a, d) => d.lines.reduce((b, l) => Math.max(b, +l.no || 0), a), 0);
@@ -8209,6 +8532,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     });
   }
   function deleteMonth(m) {
+    if (!canDel()) return;
     openDlg("Delete " + lab(m) + "?", (box2) => {
       box2.append(el("p", "", "Every card of " + lab(m) + " is deleted for everyone, including the executives who can see them. You can bring it back with Undo."));
       const inp = el("input");
@@ -8223,7 +8547,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       const go = () => {
         if (inp.value.trim().toLowerCase() !== "delete") return;
         const id = monthId(m);
-        remember2(id, S.reports[id]);
+        record(m, S.reports[id], null);
         delete S.reports[id];
         write("reports/" + id, null);
         logAct("report", "deleted the monthly deliverables for " + lab(m));
@@ -8338,7 +8662,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       ns.forEach((n) => {
         const it = el("div", "mdnitem"), top = el("div", "mdnhead");
         top.append(el("b", "", n.by || "Earlier note"), el("span", "mdnwhen", n.at ? stamp(n.at) : ""));
-        if (ed) {
+        if (ed && canDel()) {
           const x = el("button", "mdnx", "Delete");
           x.type = "button";
           x.setAttribute("aria-label", "Delete this note");
@@ -8518,13 +8842,15 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
           if (others2.length) mm.append(el("div", "mlab", m === BL ? "Plan in month" : "Move to month"));
           others2.forEach((x) => mi(mm, lab(x), () => moveCard(m, l.id, x)));
           if (m !== BL) mi(mm, "Back to backlog", () => moveCard(m, l.id, BL));
-          mm.append(el("div", "msep"));
-          mi(mm, "Delete card", () => confirmDlg("Delete this card?", '"' + l.t + '" is deleted from ' + lab(m) + ".", "Delete card", () => {
-            saveMonth(m, (d) => {
-              d.lines = d.lines.filter((z) => z.id !== l.id);
-            }, 'removed "' + l.t + '" from the ' + lab(m) + " deliverables");
-            renderMonthly();
-          }), "danger");
+          if (canDel()) {
+            mm.append(el("div", "msep"));
+            mi(mm, "Delete card", () => confirmDlg("Delete this card?", '"' + l.t + '" is deleted from ' + lab(m) + ".", "Delete card", () => {
+              saveMonth(m, (d) => {
+                d.lines = d.lines.filter((z) => z.id !== l.id);
+              }, 'removed "' + l.t + '" from the ' + lab(m) + " deliverables");
+              renderMonthly();
+            }), "danger");
+          }
         });
       });
       if (m !== BL) foot.append(pctSelect(pct2, "Percent complete", (v) => put({ pct: v, pe: true }, 'changed "' + l.t + '" to ' + v + "%")));
@@ -8576,32 +8902,32 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
   }
   function composer(m, prods) {
     const wrap = el("div", "mdcomp");
-    if (ui.open !== m) {
+    if (ui2.open !== m) {
       const b = el("button", "mdopen", "+ Add a card");
       b.type = "button";
       b.addEventListener("click", () => {
-        ui.open = m;
-        ui.focusComp = true;
+        ui2.open = m;
+        ui2.focusComp = true;
         renderMonthly();
       });
       wrap.append(b);
       return wrap;
     }
     const f = el("form", "mdadd"), ta = el("textarea"), chips = el("div", "mdchips"), byK = (k) => prods.find((q) => q.k === k) || prods[0];
-    ui.prod = byK(ui.prod).k;
-    f.style.setProperty("--c", colOf2(byK(ui.prod)));
+    ui2.prod = byK(ui2.prod).k;
+    f.style.setProperty("--c", colOf2(byK(ui2.prod)));
     ta.rows = 2;
     ta.maxLength = 1200;
     ta.placeholder = "Enter a title for this card. One card per line if you paste a list.";
     ta.setAttribute("aria-label", "New card for " + lab(m));
     prods.forEach((q) => {
-      const c = el("button", "mdchip" + (q.k === ui.prod ? " on" : ""), q.n);
+      const c = el("button", "mdchip" + (q.k === ui2.prod ? " on" : ""), q.n);
       c.type = "button";
       c.style.setProperty("--c", colOf2(q));
       c.dataset.k = q.k;
-      c.setAttribute("aria-pressed", String(q.k === ui.prod));
+      c.setAttribute("aria-pressed", String(q.k === ui2.prod));
       c.addEventListener("click", () => {
-        ui.prod = q.k;
+        ui2.prod = q.k;
         f.style.setProperty("--c", colOf2(q));
         chips.querySelectorAll(".mdchip").forEach((x) => {
           const on = x.dataset.k === q.k;
@@ -8618,7 +8944,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     no.setAttribute("aria-label", "Close");
     no.title = "Close (Esc)";
     const close = () => {
-      ui.open = "";
+      ui2.open = "";
       renderMonthly();
     };
     no.addEventListener("click", close);
@@ -8642,12 +8968,12 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       saveMonth(m, (d) => {
         let n = Math.max(maxNo(), ...d.lines.map((x) => +x.no || 0));
         ts.forEach((t) => {
-          const x = newLine(ui.prod, t, {});
+          const x = newLine(ui2.prod, t, {});
           x.no = ++n;
           d.lines.push(x);
         });
       }, "added " + (ts.length === 1 ? "a deliverable" : ts.length + " deliverables") + " to " + lab(m));
-      ui.focusComp = true;
+      ui2.focusComp = true;
       renderMonthly();
     });
     const row = el("div", "mdcrow");
@@ -8661,8 +8987,8 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     if (isBl) col.id = "mdbacklog";
     col.dataset.mo = m;
     col.style.setProperty("--c", isBl ? "#8a6d3b" : now ? "var(--brand)" : "#55608a");
-    const fq = ui.q.trim().toLowerCase();
-    const lines = d.lines.filter((l) => String(l.t || "").trim()), shown = lines.filter((l) => (ui.pr === "all" || l.k === ui.pr) && (ui.fl === "all" || (ui.fl === "hp" ? l.hp : l.sz === ui.fl)) && (!fq || (String(l.t) + " " + cardId(l)).toLowerCase().includes(fq)));
+    const fq = ui2.q.trim().toLowerCase();
+    const lines = d.lines.filter((l) => String(l.t || "").trim()), shown = lines.filter((l) => (ui2.pr === "all" || l.k === ui2.pr) && (ui2.fl === "all" || (ui2.fl === "hp" ? l.hp : l.sz === ui2.fl)) && (!fq || (String(l.t) + " " + cardId(l)).toLowerCase().includes(fq)));
     const h = el("h2");
     h.append(document.createTextNode(lab(m)), el("span", "badge", String(lines.length)));
     if (now) h.append(el("span", "chip mdnow", "This month"));
@@ -8680,7 +9006,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
         const b = more.getBoundingClientRect();
         openCtx(b.right - 190, b.bottom + 4, (mm) => {
           mi(mm, "Copy text", () => copyMonth(m));
-          if (S.reports[monthId(m)]) {
+          if (S.reports[monthId(m)] && canDel()) {
             mm.append(el("div", "msep"));
             mi(mm, "Delete month", () => deleteMonth(m), "danger");
           }
@@ -8715,7 +9041,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     pr.append(b0, el("b", "mdpct", pv + "%"), el("small", "", prog.pct === null ? "No planned deliverables yet" : prog.done + " of " + prog.n + " done" + (ad.n ? " · " + ad.n + " ad hoc" : "")));
     if (!isBl) col.append(pr);
     shown.forEach((l) => col.append(card(m, l, prods, ed)));
-    if (!shown.length && !(ed && ui.open === m)) col.append(el("div", "hint", lines.length ? "Nothing matches the filter." : isBl ? "The backlog is empty." : "Nothing here yet."));
+    if (!shown.length && !(ed && ui2.open === m)) col.append(el("div", "hint", lines.length ? "Nothing matches the filter." : isBl ? "The backlog is empty." : "Nothing here yet."));
     if (ed) col.append(composer(m, prods));
     if (ed) {
       const ok = (e) => [...e.dataTransfer ? e.dataTransfer.types : []].includes("text/mdcard");
@@ -8774,7 +9100,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     const act = document.activeElement, ta0 = act && act.matches && act.matches(".mdcomp textarea") ? act : null, draft = ta0 ? { v: ta0.value, s: ta0.selectionStart, m: ta0.closest(".mdcol").dataset.mo } : null;
     const prevBoard = pg.querySelector(".mdboard"), sx = prevBoard ? prevBoard.scrollLeft : 0, sy = window.scrollY;
     pg.textContent = "";
-    const viewer = isViewer(), ed = !viewer && canBuild2();
+    const viewer = modLevel("monthly") < 2, ed = !viewer && canBuild2();
     if (ed) fixCards();
     if (ed) docs().forEach((d) => {
       if (d.status !== "submitted" && !migrated.has(d.id)) {
@@ -8787,10 +9113,10 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     const q = el("input");
     q.type = "search";
     q.placeholder = "Search deliverables";
-    q.value = ui.q;
+    q.value = ui2.q;
     q.setAttribute("aria-label", "Search deliverables");
     q.addEventListener("input", () => {
-      ui.q = q.value;
+      ui2.q = q.value;
       renderMonthly();
       const s = pg.querySelector("input[type=search]");
       if (s) {
@@ -8803,11 +9129,11 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     [["all", "All tags"]].concat(prods.map((p) => [p.k, p.n])).forEach((x) => {
       const o = el("option", "", x[1]);
       o.value = x[0];
-      o.selected = x[0] === ui.pr;
+      o.selected = x[0] === ui2.pr;
       fp.append(o);
     });
     fp.addEventListener("change", () => {
-      ui.pr = fp.value;
+      ui2.pr = fp.value;
       renderMonthly();
     });
     const ff = el("select");
@@ -8815,11 +9141,11 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     [["all", "All cards"], ["hp", "Business priority"], ["quick", "Quick wins"], ["enh", "Small enhancements"]].forEach((x) => {
       const o = el("option", "", x[1]);
       o.value = x[0];
-      o.selected = x[0] === ui.fl;
+      o.selected = x[0] === ui2.fl;
       ff.append(o);
     });
     ff.addEventListener("change", () => {
-      ui.fl = ff.value;
+      ui2.fl = ff.value;
       renderMonthly();
     });
     tools.append(q, fp, ff);
@@ -8833,16 +9159,16 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       tools.append(ub);
     }
     const pc = pastCount();
-    if (pc || ui.past) {
-      const pb = el("button", "btn sm", ui.past ? "Hide past months" : "Show past months (" + pc + ")");
+    if (pc || ui2.past) {
+      const pb = el("button", "btn sm", ui2.past ? "Hide past months" : "Show past months (" + pc + ")");
       pb.type = "button";
       pb.addEventListener("click", () => {
-        ui.past = !ui.past;
+        ui2.past = !ui2.past;
         renderMonthly();
       });
       tools.append(pb);
     }
-    pg.append(pageHead("Monthly deliverables", viewer ? "What the business expects every month, tagged and coloured by Daycare, Tifli, Plan, AI, Finance or New initiative, and how far each deliverable is." : "What the business expects each month. Add a card with a tag. Use the ⋯ menu of a card to put it on the roadmap with a start, an end and an assignee. Drag a card to move it to another month.", tools));
+    pg.append(pageHead("Monthly deliverables", null, tools));
     const sb0 = viewer ? null : setupBanner();
     if (sb0) pg.append(sb0);
     {
@@ -8875,12 +9201,12 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     }
     pg.append(board);
     const cta = pg.querySelector(".mdcomp textarea");
-    if (cta && draft && draft.v && ui.open === draft.m) {
+    if (cta && draft && draft.v && ui2.open === draft.m) {
       cta.value = draft.v;
       cta.setSelectionRange(draft.s, draft.s);
       cta.focus({ preventScroll: true });
-    } else if (cta && ui.focusComp) {
-      ui.focusComp = false;
+    } else if (cta && ui2.focusComp) {
+      ui2.focusComp = false;
       cta.focus({ preventScroll: true });
       cta.scrollIntoView({ block: "nearest" });
     }
@@ -8896,7 +9222,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     if (!pg || !pg.offsetParent) return;
     const t = e.target;
     if (t && t.matches && t.matches("input, textarea, select, [contenteditable]")) return;
-    if (isViewer() || !canBuild2()) return;
+    if (!canBuild2()) return;
     e.preventDefault();
     undoMonthly();
   });
@@ -8978,9 +9304,9 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       renderAdmin();
     }, vacations: () => renderVacations(true), log: renderLog, sprints: renderSprints, reports: renderReports, monthly: renderMonthly })[p]();
   }
-  var VIEWER_PAGES = ["roadmap", "log", "reports", "monthly"];
+  var pageOk = (p) => p === "admin" ? !!(S.me && S.me.is_admin) : modLevel(p) >= 1;
   function showPage(p) {
-    if (!PAGES.some((x) => x[0] === p) || p === "admin" && !(S.me && S.me.is_admin) || isViewer() && !VIEWER_PAGES.includes(p)) p = "roadmap";
+    if (!PAGES.some((x) => x[0] === p) || !pageOk(p)) p = (PAGES.find((x) => pageOk(x[0])) || ["roadmap"])[0];
     state.page = p;
     closeCtx();
     closePicker();
@@ -8996,7 +9322,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     if (location.hash !== "#/" + p && !((p === "sprints" || p === "reports") && new RegExp("^#/" + p + "/").test(location.hash))) window.history.replaceState(null, "", "#/" + p);
     renderPage(p);
   }
-  var NAV_LABEL = { monthly: "Monthly" };
+  var NAV_LABEL = { monthly: "Monthly", admin: "Users" };
   var NAV_ICONS = {
     roadmap: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9M4 12h14M4 18h7" /><path d="M16 6h4M20 18h-6" /></svg>',
     roadmaps: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5-9-5zM3 13l9 5 9-5M3 17.5 12 22l9-4.5" /></svg>',
@@ -9011,7 +9337,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
   function buildNav() {
     const n = $("nav");
     n.textContent = "";
-    PAGES.filter((x) => (x[0] !== "admin" || S.me && S.me.is_admin) && (!isViewer() || VIEWER_PAGES.includes(x[0]))).forEach((x) => {
+    PAGES.filter((x) => pageOk(x[0])).forEach((x) => {
       const b = el("button", "");
       b.type = "button";
       b.dataset.p = x[0];
@@ -9031,7 +9357,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       n.append(b);
     });
   }
-  var same2 = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  var same3 = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   function softRender() {
     if (state.edit || S.dragging) {
       S.needRender = true;
@@ -9064,7 +9390,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     });
     S.db.collection("daysoff").onSnapshot((s) => {
       const n = snapDocs("daysoff", s, S.daysoff);
-      if (same2(n, S.daysoff)) return;
+      if (same3(n, S.daysoff)) return;
       S.daysoff = n;
       softRender();
       if (S.offOpen && !state.edit) buildOff();
@@ -9072,7 +9398,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     });
     S.db.collection("people").onSnapshot((s) => {
       const n = snapDocs("people", s, S.extras);
-      if (same2(n, S.extras)) return;
+      if (same3(n, S.extras)) return;
       S.extras = n;
       fillPersons();
       if (S.picker && S.picker.id) buildPicker();
@@ -9083,7 +9409,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     });
     S.db.collection("roadmaps").onSnapshot((s) => {
       const n = snapDocs("roadmaps", s, S.roadmaps);
-      if (same2(n, S.roadmaps)) return;
+      if (same3(n, S.roadmaps)) return;
       S.roadmaps = n;
       if (S.wantRm && allRoadmaps().some((r) => r.id === S.wantRm)) {
         const w = S.wantRm;
@@ -9096,7 +9422,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     });
     S.db.collection("ideas").onSnapshot((s) => {
       const n = snapDocs("ideas", s, S.ideas);
-      if (same2(n, S.ideas)) return;
+      if (same3(n, S.ideas)) return;
       const tn = (o) => Object.keys(o).filter((k) => o[k] && o[k].tn).sort().map((k) => o[k]), orderChanged = JSON.stringify([n.peopleorder, n.peoplehide, n.squadnames, tn(n)]) !== JSON.stringify([S.ideas.peopleorder, S.ideas.peoplehide, S.ideas.squadnames, tn(S.ideas)]);
       S.ideas = n;
       applySquadNames();
@@ -9106,7 +9432,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     });
     S.db.collection("reports").onSnapshot((s) => {
       const n = snapDocs("reports", s, S.reports);
-      if (same2(n, S.reports)) return;
+      if (same3(n, S.reports)) return;
       S.reports = n;
       if (state.page === "reports" && !state.edit && !document.activeElement.closest("#pg-reports")) renderReports();
       if (state.page === "monthly" && !state.edit && !document.activeElement.closest("#pg-monthly [contenteditable], #pg-monthly select, #pg-monthly input")) renderMonthly();
@@ -9116,10 +9442,10 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
         if (state.page === "reports" || state.page === "sprints") refreshPage();
       }
     });
-    if (!isViewer()) {
+    if (modLevel("sprints") >= 1) {
       S.db.collection("sprints").onSnapshot((s) => {
         const n = snapDocs("sprints", s, S.sprints);
-        if (same2(n, S.sprints)) return;
+        if (same3(n, S.sprints)) return;
         S.sprints = n;
         if (state.page === "sprints" && !document.activeElement.closest("#pg-sprints")) renderSprints({ keep: true });
         if (state.page === "reports") renderReports();
@@ -9131,7 +9457,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       });
       S.db.collection("sprint_items").onSnapshot((s) => {
         const n = snapDocs("sprint_items", s, S.sitems);
-        if (same2(n, S.sitems)) return;
+        if (same3(n, S.sitems)) return;
         S.sitems = n;
         if (state.page === "sprints" && !document.activeElement.closest("#pg-sprints")) renderSprints({ keep: true });
       }, (e) => {
@@ -9143,7 +9469,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     }
     S.db.collection("vacations").onSnapshot((s) => {
       const n = snapDocs("vacations", s, S.vacs);
-      if (same2(n, S.vacs)) return;
+      if (same3(n, S.vacs)) return;
       S.vacs = n;
       softRender();
       if (state.page === "vacations") renderVacations();
@@ -9233,7 +9559,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     const nm = gField("en", "Full name", "text", "name"), jb = gField("ej", "Your role", "select", "off", JOBS);
     nm.input.value = S.me.name || "";
     jb.input.value = JOBS.includes(S.me.role) ? S.me.role : "Other";
-    const sel = { v: S.me.avatar || "a0" }, pick = avPicker(sel);
+    const sel = { v: S.me.avatar || "a0" }, pick2 = avPicker(sel);
     const two = el("div", "two");
     two.append(nm.label, jb.label);
     const msg = el("div", "gerr");
@@ -9244,7 +9570,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     cancel.addEventListener("click", () => {
       $("gate").hidden = true;
     });
-    c.append(two, pick, msg, go, cancel);
+    c.append(two, pick2, msg, go, cancel);
     bindSubmit(c, async () => {
       const patch = { name: nm.input.value.trim(), role: jb.input.value, avatar: sel.v };
       const r = await sb.from("profiles").update(patch).eq("id", S.me.id);
@@ -9440,7 +9766,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     const c = gateCard("Create your account", "An admin approves new accounts before they can see the roadmap.");
     const nm = gField("sn", "Full name", "text", "name"), jb = gField("sj", "Your role", "select", "off", JOBS);
     const em = gField("se", "Work email", "email", "username"), pw = gField("sp", "Password (8 characters or more)", "password", "new-password");
-    const sel = { v: "a0" }, pick = avPicker(sel);
+    const sel = { v: "a0" }, pick2 = avPicker(sel);
     const two = el("div", "two");
     two.append(nm.label, jb.label);
     const msg = el("div", "gerr");
@@ -9448,7 +9774,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     const go = el("button", "btn primary", "Create account");
     go.type = "submit";
     pwMeter(pw.input, pw.label);
-    c.append(two, em.label, pw.label, pick, msg, go, linkBtn("I already have an account", showLogin));
+    c.append(two, em.label, pw.label, pick2, msg, go, linkBtn("I already have an account", showLogin));
     bindSubmit(c, async (m) => {
       if (pw.input.value.length < 8) throw new Error("Use at least 8 characters.");
       const r = await sb.auth.signUp({ email: em.input.value.trim(), password: pw.input.value, options: { data: { name: nm.input.value.trim(), role: jb.input.value, avatar: sel.v }, emailRedirectTo: location.origin + location.pathname } });
@@ -9543,7 +9869,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
   // src/esm/features/safety.js
   var ACTIVE_LOG_PAGE = 300;
   var canWrite = () => !S.readonly && !S.SHARE;
-  var isViewer = () => !!(S.me && S.me.access === "viewer" && !S.me.is_admin);
+  var isViewer = () => !!(S.me && !S.me.is_admin && MODULES.every((m) => levelOf(S.me, m.k) < 2));
   var dlgPrev = null;
   function closeDlg() {
     const d = $("xdlg");
@@ -9845,9 +10171,10 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
             break;
           }
           if (e && e.code === "invalid_argument") {
-            S.readonly = true;
+            S.denied = S.denied || {};
+            S.denied[state.page] = true;
             setSave("readonly");
-            notify("You have view-only access, so this change was not saved.", "err");
+            notify("You have view-only access here, so this change was not saved.", "err");
             render();
             break;
           }

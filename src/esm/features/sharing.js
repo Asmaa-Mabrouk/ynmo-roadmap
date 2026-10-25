@@ -69,27 +69,4 @@ export async function bootShared(token) {
   let last = JSON.stringify(r.data);
   setInterval(async () => { try { const n = await sb.rpc('shared_snapshot', { t: token }); if (n.data && JSON.stringify(n.data) !== last) { last = JSON.stringify(n.data); applyShared(n.data); } else if (!n.data && !n.error) { location.reload(); } } catch (e) { /* keep showing what we have */ } }, window.__sharePoll || 60000);
 }
-export function renderAccess(root) {
-  if (!(S.me && S.me.is_admin)) return;
-  const done = S.members.filter(m => m.approved);
-  const c = el('div', 'card'); c.append(el('h2', '', 'Who can edit'));
-  c.append(el('div', 'hint', 'Editors change the plan. Viewers can look at the roadmap, reports and log, but cannot change anything.'));
-  done.forEach(m => {
-    const row = el('div', 'formrow'); row.style.alignItems = 'center';
-    const who = el('div'); who.append(el('b', '', m.name || m.email), el('div', 'hint', (m.role ? m.role + ' · ' : '') + (m.email || '')));
-    row.append(avatarEl(m.avatar, 34, m.name), who);
-    if (m.is_admin) { const a = el('span', 'badge', 'Admin'); a.style.marginInlineStart = 'auto'; row.append(a); }
-    else {
-      const s = selOf([['editor', 'Editor'], ['viewer', 'Viewer']], m.access === 'viewer' ? 'viewer' : 'editor'); s.style.marginInlineStart = 'auto'; s.setAttribute('aria-label', 'Access for ' + (m.name || m.email));
-      s.addEventListener('change', async () => {
-        const r = await sb.from('profiles').update({ access: s.value }).eq('id', m.id);
-        if (r.error) { s.value = m.access === 'viewer' ? 'viewer' : 'editor'; toast('Could not change access. Ask the admin to run setup v4.'); return; }
-        m.access = s.value; logAct('access', 'set ' + (m.name || m.email) + ' as ' + s.value); toast((m.name || m.email) + ' is now a ' + s.value + '.');
-      });
-      row.append(s);
-    }
-    c.append(row);
-  });
-  root.append(c);
-}
 

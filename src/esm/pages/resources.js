@@ -5,7 +5,7 @@
  * Dependencies are explicit ES imports; shared mutable state lives in `S` (core/state.js).
  */
 import { S } from '../core/state.js';
-import { $, LANES, TEAMS, canEdit, directory, el, items, state } from '../core/model.js';
+import { $, LANES, TEAMS, canDelete, canEdit, directory, el, items, state } from '../core/model.js';
 import { DOMAINS, fld, logAct, pageHead, selOf, slug, toast } from '../core/shared.js';
 import { persist, write } from '../core/saving.js';
 import { saveIdea } from './ideas.js';
@@ -16,7 +16,7 @@ import { fillPersons } from '../ui/people-picker.js';
 import { laneOf, render } from '../ui/gantt-render.js';
 import { sb } from '../core/supabase.js';
 import { avatarEl } from '../ui/avatars.js';
-import { renderAccess } from '../features/sharing.js';
+import { renderPermissions } from './permissions.js';
 import { notify } from '../ui/notify.js';
 
 /* ---------- resources ---------- */
@@ -193,7 +193,7 @@ export function renderResources() {
     row.append(picker(l, c => recolorSquad(l.k, c)), inp);
     if (canEdit()) {
       if (isBaseSquad(l.k)) { if (l.n !== defaultSquadName(l.k) || String(l.c).toLowerCase() !== String(defaultSquadColor(l.k)).toLowerCase()) { const rs = el('button', 'btn sm', 'Reset'); rs.type = 'button'; rs.title = 'Back to ' + defaultSquadName(l.k) + ' and its default colour'; rs.addEventListener('mousedown', e => e.preventDefault()); rs.addEventListener('click', () => resetSquad(l.k)); row.append(rs); } }
-      else { const rm = el('button', 'btn danger sm', 'Remove'); rm.type = 'button'; rm.addEventListener('mousedown', e => e.preventDefault()); rm.addEventListener('click', () => removeProduct(l.k)); row.append(rm); }
+      else if (canDelete()) { const rm = el('button', 'btn danger sm', 'Remove'); rm.type = 'button'; rm.addEventListener('mousedown', e => e.preventDefault()); rm.addEventListener('click', () => removeProduct(l.k)); row.append(rm); }
     }
     sqCard.append(row);
   });
@@ -228,7 +228,7 @@ export function renderResources() {
     LANES.forEach(l => { const b = el('button', 'pill', (p.sqs.has(l.k) ? '✓ ' : '') + l.n); b.type = 'button'; b.title = (p.sqs.has(l.k) ? 'Remove ' : 'Add ') + p.name + (p.sqs.has(l.k) ? ' from ' : ' to ') + l.n; b.prepend(el('i')); b.style.setProperty('--c', l.c); b.setAttribute('aria-pressed', String(p.sqs.has(l.k))); b.disabled = !canEdit();
       b.addEventListener('click', () => { const s = new Set(p.sqs); s.has(l.k) ? s.delete(l.k) : s.add(l.k); if (!s.size) { notify(p.name + ' must stay in at least one squad', 'err'); return; } notify(p.name + (s.has(l.k) ? ' added to ' : ' removed from ') + l.n); savePerson(p.name, { sqs: [...s], over: true }, 'changed squads of ' + p.name + ': ' + [...s].map(k => laneOf(k).n).join(' + ')); }); sw.append(b); });
     c3.append(sw);
-    const c4 = el('td'); if (canEdit()) { const rm = el('button', 'btn danger sm', 'Remove'); rm.type = 'button'; rm.addEventListener('click', () => askRemove(p.name)); c4.append(rm); }
+    const c4 = el('td'); if (canDelete()) { const rm = el('button', 'btn danger sm', 'Remove'); rm.type = 'button'; rm.addEventListener('click', () => askRemove(p.name)); c4.append(rm); }
     tr.append(c1, c2, c3, c4); tb.append(tr);
   });
   t.append(tb); const sc = el('div', 'tscroll'); sc.append(t); card.append(sc); root.append(card);
@@ -242,7 +242,7 @@ export function renderResources() {
 
 export function renderAdmin() {
   const root = $('pg-admin'); root.textContent = '';
-  root.append(pageHead('Approvals', 'People who registered wait here until you approve them. They get an email when you do, and their waiting screen opens the tool by itself.'));
+  root.append(pageHead('Approvals & permissions', 'People who registered wait here until you approve them. Below, choose what each person can do in every module and who else is an admin.'));
   const pend = S.members.filter(m => !m.approved);
   const ac = el('div', 'card'); ac.append(el('h2', '', pend.length ? 'Waiting for your approval (' + pend.length + ')' : 'Nobody is waiting'));
   if (!pend.length) ac.append(el('div', 'hint', 'New registrations show up here.'));
@@ -259,6 +259,6 @@ export function renderAdmin() {
       row.append(avatarEl(m.avatar, 36, m.name), who, acc, ok); ac.append(row);
     });
   root.append(ac);
-  renderAccess(root);
+  renderPermissions(root, again => { if (again === true) renderAdmin(); else return loadMembers(); });
 }
 

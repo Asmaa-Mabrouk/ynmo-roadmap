@@ -5,7 +5,7 @@
  * Dependencies are explicit ES imports; shared mutable state lives in `S` (core/state.js).
  */
 import { S } from '../core/state.js';
-import { $, H2_ID, el, state } from '../core/model.js';
+import { $, H2_ID, el, modLevel, state } from '../core/model.js';
 import { render } from '../ui/gantt-render.js';
 import { allRoadmaps, fillRm, renderRoadmaps, useRoadmap } from '../pages/roadmaps.js';
 import { loadMembers, renderAdmin, renderResources } from '../pages/resources.js';
@@ -30,9 +30,10 @@ import { bootShared } from '../features/sharing.js';
 /* ---------- shell: navigation and start ---------- */
 export function refreshPage() { renderPage(state.page); }
 function renderPage(p) { ({ roadmap: render, roadmaps: renderRoadmaps, resources: renderResources, admin: () => { loadMembers(); renderAdmin(); }, vacations: () => renderVacations(true), log: renderLog, sprints: renderSprints, reports: renderReports, monthly: renderMonthly })[p](); }
-const VIEWER_PAGES = ['roadmap', 'log', 'reports', 'monthly'];
+/** May the person open this page? Admin page: admins only. Others: View or more for that module. */
+const pageOk = p => (p === 'admin' ? !!(S.me && S.me.is_admin) : modLevel(p) >= 1);
 export function showPage(p) {
-  if (!PAGES.some(x => x[0] === p) || (p === 'admin' && !(S.me && S.me.is_admin)) || (isViewer() && !VIEWER_PAGES.includes(p))) p = 'roadmap';
+  if (!PAGES.some(x => x[0] === p) || !pageOk(p)) p = (PAGES.find(x => pageOk(x[0])) || ['roadmap'])[0];
   state.page = p; closeCtx(); closePicker();
   PAGES.forEach(x => { $('pg-' + x[0]).hidden = x[0] !== p; });
   document.querySelectorAll('#nav button').forEach(b => { if (b.dataset.p === p) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
@@ -40,7 +41,7 @@ export function showPage(p) {
   if (location.hash !== '#/' + p && !((p === 'sprints' || p === 'reports') && new RegExp('^#/' + p + '/').test(location.hash))) window.history.replaceState(null, '', '#/' + p);
   renderPage(p);
 }
-const NAV_LABEL = { monthly: 'Monthly' };
+const NAV_LABEL = { monthly: 'Monthly', admin: 'Users' };
 const NAV_ICONS = {
   roadmap: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9M4 12h14M4 18h7" /><path d="M16 6h4M20 18h-6" /></svg>',
   roadmaps: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5-9-5zM3 13l9 5 9-5M3 17.5 12 22l9-4.5" /></svg>',
@@ -54,7 +55,7 @@ const NAV_ICONS = {
 };
 function buildNav() {
   const n = $('nav'); n.textContent = '';
-  PAGES.filter(x => (x[0] !== 'admin' || (S.me && S.me.is_admin)) && (!isViewer() || VIEWER_PAGES.includes(x[0]))).forEach(x => { const b = el('button', ''); b.type = 'button'; b.dataset.p = x[0]; b.title = x[1]; b.setAttribute('aria-label', x[1]); b.insertAdjacentHTML('beforeend', NAV_ICONS[x[0]] || ''); b.append(el('span', 'lbl', NAV_LABEL[x[0]] || x[1])); if (x[0] === 'admin') { const d = el('span', 'dot', '0'); d.hidden = true; b.append(d); } b.addEventListener('click', () => { window.history.replaceState(null, '', '#/' + x[0]); showPage(x[0]); }); n.append(b); });
+  PAGES.filter(x => pageOk(x[0])).forEach(x => { const b = el('button', ''); b.type = 'button'; b.dataset.p = x[0]; b.title = x[1]; b.setAttribute('aria-label', x[1]); b.insertAdjacentHTML('beforeend', NAV_ICONS[x[0]] || ''); b.append(el('span', 'lbl', NAV_LABEL[x[0]] || x[1])); if (x[0] === 'admin') { const d = el('span', 'dot', '0'); d.hidden = true; b.append(d); } b.addEventListener('click', () => { window.history.replaceState(null, '', '#/' + x[0]); showPage(x[0]); }); n.append(b); });
 }
 export const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
@@ -77,7 +78,7 @@ export function start() {
   }, () => {});
   S.db.collection('ideas').onSnapshot(s => { const n = snapDocs('ideas', s, S.ideas); if (same(n, S.ideas)) return; const tn = o => Object.keys(o).filter(k => o[k] && o[k].tn).sort().map(k => o[k]), orderChanged = JSON.stringify([n.peopleorder, n.peoplehide, n.squadnames, tn(n)]) !== JSON.stringify([S.ideas.peopleorder, S.ideas.peoplehide, S.ideas.squadnames, tn(S.ideas)]); S.ideas = n; applySquadNames(); if (orderChanged) softRender(); /* shared row order of the by-person view */ if (state.page === 'roadmaps') renderRoadmaps(); }, () => {});
   S.db.collection('reports').onSnapshot(s => { const n = snapDocs('reports', s, S.reports); if (same(n, S.reports)) return; S.reports = n; if (state.page === 'reports' && !state.edit && !document.activeElement.closest('#pg-reports')) renderReports(); if (state.page === 'monthly' && !state.edit && !document.activeElement.closest('#pg-monthly [contenteditable], #pg-monthly select, #pg-monthly input')) renderMonthly(); }, e => { if (e && e.code === 'missing_table') { S.setup['reports'] = true; if (state.page === 'reports' || state.page === 'sprints') refreshPage(); } });
-  if (!isViewer()) {
+  if (modLevel('sprints') >= 1) {
     S.db.collection('sprints').onSnapshot(s => { const n = snapDocs('sprints', s, S.sprints); if (same(n, S.sprints)) return; S.sprints = n; if (state.page === 'sprints' && !document.activeElement.closest('#pg-sprints')) renderSprints({ keep: true }); if (state.page === 'reports') renderReports(); }, e => { if (e && e.code === 'missing_table') { S.setup['sprints'] = true; if (state.page === 'reports' || state.page === 'sprints') refreshPage(); } });
     S.db.collection('sprint_items').onSnapshot(s => { const n = snapDocs('sprint_items', s, S.sitems); if (same(n, S.sitems)) return; S.sitems = n; if (state.page === 'sprints' && !document.activeElement.closest('#pg-sprints')) renderSprints({ keep: true }); }, e => { if (e && e.code === 'missing_table') { S.setup['sprint_items'] = true; if (state.page === 'reports' || state.page === 'sprints') refreshPage(); } });
   }

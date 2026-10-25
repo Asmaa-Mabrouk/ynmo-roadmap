@@ -5,7 +5,7 @@
  * One report per WEEK (sprints last two weeks). Doc `reports/rp<yyyymmdd of week start>`: {sp,n,w(1|2),a,b,status:'draft'|'submitted',pl:[{k,n,squads}],prods:{[k]:{sum,sumEdited,items:[...]}},by,ts,subAt,subBy,ai}.
  */
 import { S } from '../core/state.js';
-import { $, LANES, el } from '../core/model.js';
+import { $, LANES, el, modLevel } from '../core/model.js';
 import { fld, fmtIso, kOfIso, logAct, pageHead, toast, todayIso } from '../core/shared.js';
 import { write } from '../core/saving.js';
 import { sb } from '../core/supabase.js';
@@ -34,8 +34,9 @@ const routeId = () => { const m = /^#\/reports\/(\w+)/.exec(location.hash); retu
 const colOf = p => { if (p.c) return p.c; const l = LANES.concat(EXTRA_SECTIONS).find(x => (p.squads || []).includes(x.k)); return l ? l.c : 'var(--brand)'; };
 const cfg = () => S.ideas.reportcfg || {};
 const uidr = () => 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-const canBuild = () => !isViewer() && canWrite();
-export const reportList = () => Object.keys(S.reports).map(id => Object.assign({ id: id }, S.reports[id])).filter(r => r.a && (!isViewer() || r.status === 'submitted')).sort((x, y) => (x.a < y.a ? 1 : -1));
+const viewerR = () => modLevel('reports') < 2;
+const canBuild = () => !viewerR() && canWrite();
+export const reportList = () => Object.keys(S.reports).map(id => Object.assign({ id: id }, S.reports[id])).filter(r => r.a && (!viewerR() || r.status === 'submitted')).sort((x, y) => (x.a < y.a ? 1 : -1));
 /** The report named in the address (#/reports/<id>), or null on the list. Viewers can only open submitted ones. */
 const cur = () => { const id = routeId(); return id ? reportList().find(r => r.id === id) || null : null; };
 
@@ -53,12 +54,12 @@ function save(rep, log, label) {
 }
 let unsubR = null;
 function reportUndo(dir) {
-  const rep = cur(); if (!rep || isViewer() || !canBuild()) return;
+  const rep = cur(); if (!rep || viewerR() || !canBuild()) return;
   const r = undoR(rep.id).step(dir, id => S.reports[id], (id, doc) => { if (!doc) return; S.reports[id] = doc; write('reports/' + id, doc); baseline[id] = JSON.stringify(doc); }), word = dir === 'undo' ? 'Undo' : 'Redo';
   if (!r) { notify('Nothing to ' + word.toLowerCase(), 'info'); return; }
   notify(r.done ? word + ': ' + r.label : 'Someone else changed this report after you, so nothing was ' + (dir === 'undo' ? 'undone' : 'redone'), r.done ? 'ok' : 'info'); renderReports();
 }
-registerUndo('reports', { ready: () => { const r = cur(); return !!r && !isViewer() && canBuild(); }, undo: () => reportUndo('undo'), redo: () => reportUndo('redo') });
+registerUndo('reports', { ready: () => { const r = cur(); return !!r && !viewerR() && canBuild(); }, undo: () => reportUndo('undo'), redo: () => reportUndo('redo') });
 /** Roadmap bars for the roadmap that covers the sprint week, as day indexes of that roadmap. */
 function roadFor(a, b) {
   const rm = allRoadmaps().find(r => r.a <= a && r.b >= a); if (!rm) return { road: [], ka: NaN, kb: NaN };
@@ -263,7 +264,7 @@ function clearItems(rep) {
   });
 }
 /** Anyone with edit access can delete a report, from the ⋯ menu of the list only (SQL 07 lets the database allow it). */
-const canDelete = () => canBuild();
+const canDelete = () => canBuild() && modLevel('reports') >= 3;
 function deleteReport(rep) {
   confirmDlg('Delete this weekly report?', 'The report for the week of ' + fmtIso(rep.a) + ' is deleted for everyone' + (rep.status === 'submitted' ? ', including the executives who can see it' : '') + '. The sprint and the roadmap are not touched.', 'Delete report', () => {
     delete S.reports[rep.id]; delete baseline[rep.id]; undoR(rep.id).clear(); write('reports/' + rep.id, null);
@@ -347,7 +348,7 @@ export function renderReports() {
   const pg = $('pg-reports'); if (!pg) return; closeMenu();
   const id = routeId(), keepY = id && rUI.last === id ? window.scrollY : 0; rUI.last = id || '';
   pg.textContent = '';
-  const viewer = isViewer(), l = reportList(), rep = cur();
+  const viewer = viewerR(), l = reportList(), rep = cur();
   pg.classList.toggle('sheet', !!rep);
   if (id && !rep) { pg.append(crumbs([{ label: 'Reports', href: '#/reports' }, { label: 'Not found' }]), pageHead('Report not found', viewer ? 'It may not be submitted yet, or it is still loading.' : 'It may have been removed, or it is still loading.')); return; }
   if (rep) detailView(pg, viewer, rep); else listView(pg, viewer, l);

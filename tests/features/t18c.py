@@ -54,6 +54,7 @@ with sync_playwright() as pw:
     ok('revoked link dead', 'not active' in S2.locator('#gate').inner_text())
     # ---- viewer role
     A.keyboard.press('Escape'); A.click('#nav button[data-p="admin"]'); A.wait_for_timeout(500)
+    A.locator('#permissions .permuser:has-text("Engy")').click(); A.wait_for_timeout(300)
     A.locator('select[aria-label="Access for Engy"]').select_option('viewer'); A.wait_for_timeout(600)
     B.reload(); B.wait_for_timeout(1500)
     ok('viewer nav limited', B.locator('#nav button').count()==4)

@@ -6,7 +6,7 @@
  * A month is the doc `reports/mo<yyyymm>` (see features/month-model.js). The board always saves a month as `submitted`, so executives (viewers) see it all.
  */
 import { S } from '../core/state.js';
-import { $, LANES, NDAYS, canEdit, directory, el, items, state } from '../core/model.js';
+import { $, LANES, NDAYS, canEdit, directory, el, items, modLevel, state } from '../core/model.js';
 import { fld, fmtIso, kOfIso, logAct, pageHead, selOf, toast, todayIso } from '../core/shared.js';
 import { persist, pushHistory, write } from '../core/saving.js';
 import { canWrite, isViewer } from '../features/safety.js';
@@ -18,6 +18,7 @@ import { openCtx, mi, primarySq } from '../ui/editing.js';
 import { confirmDlg } from '../ui/confirm.js';
 import { plainBox } from '../features/rich-text.js';
 import { openDlg, closeDlg } from '../features/safety.js';
+import { diffDoc, undoChanges } from '../features/month-undo.js';
 import { adhocStats, cardId, notesOf, clampPct, monthId, monthLabel, monthProgress, monthRange, monthText, newLine, nextMonth, pctBand, SIZES, TAGS, legacyTag } from '../features/month-model.js';
 import { NOTE_ICON, setupBanner } from './reports.js';
 
@@ -25,7 +26,8 @@ const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5
 let blOpen = false; try { blOpen = localStorage.getItem('ynmo-backlog') === '1'; } catch (e) { /* no storage */ }
 const setBl = v => { blOpen = v; try { localStorage.setItem('ynmo-backlog', v ? '1' : '0'); } catch (e) { /* no storage */ } };
 const ui = { q: '', pr: 'all', fl: 'all', past: false, prod: '', open: '' };
-const canBuild = () => !isViewer() && canWrite();
+const canBuild = () => modLevel('monthly') >= 2 && canWrite();
+const canDel = () => modLevel('monthly') >= 3 && canWrite();
 const curMonth = () => todayIso().slice(0, 7);
 const colOf = p => (p && p.c) || '#7b8099';
 const BL = 'backlog';
@@ -51,21 +53,31 @@ function visibleMonths() {
 const pastCount = () => docs().filter(d => d.mo < curMonth() && d.lines.some(l => String(l.t || '').trim())).length;
 
 /** Changes a month through `mutate(doc)` and saves it (creating the doc the first time). */
-/** Undo for the board: before every save the month's previous doc is remembered (one entry per action, so moving a card to another month is one step). */
+/** Undo for the board: every save is recorded as small changes (see features/month-undo.js), so Undo takes back only YOUR last action and leaves colleagues' changes alone.
+ *  One entry per action (moving a card to another month is one step). */
 const undoStack = []; let grp = null, replaying = false;
-const remember = (id, old) => { if (replaying) return; const snap = { id, doc: old ? JSON.parse(JSON.stringify(old)) : null }; if (grp) { if (!grp.some(x => x.id === id)) grp.push(snap); } else { undoStack.push([snap]); if (undoStack.length > 50) undoStack.shift(); } };
+const record = (m, old, nw) => { if (replaying) return; const ch = diffDoc(old, nw); if (!ch.length) return; const e = { mo: m, changes: ch }; if (grp) grp.push(e); else { undoStack.push([e]); if (undoStack.length > 50) undoStack.shift(); } };
 const grouped = fn => { grp = []; try { fn(); } finally { if (grp.length) { undoStack.push(grp); if (undoStack.length > 50) undoStack.shift(); } grp = null; } };
 export function undoMonthly() {
   const a = undoStack.pop(); if (!a) { notify('Nothing to undo'); return; }
-  replaying = true; try { a.slice().reverse().forEach(x => { if (x.doc) { x.doc.ts = Date.now(); S.reports[x.id] = x.doc; write('reports/' + x.id, x.doc); } else { delete S.reports[x.id]; write('reports/' + x.id, null); } }); } finally { replaying = false; }
-  logAct('report', 'undid the last change on the Monthly board'); renderMonthly(); notify('Undone');
+  let applied = 0, skipped = 0;
+  replaying = true; try {
+    a.slice().reverse().forEach(e => {
+      const id = monthId(e.mo), r = undoChanges(S.reports[id] || null, e.changes, e.mo); applied += r.applied; skipped += r.skipped;
+      if (!r.applied) return;
+      const d = r.doc; d.ts = Date.now(); d.status = 'submitted'; d.by = (S.me && (S.me.name || S.me.email)) || d.by || ''; S.reports[id] = d; write('reports/' + id, d);
+    });
+  } finally { replaying = false; }
+  logAct('report', 'undid their last change on the Monthly board'); renderMonthly();
+  notify(!applied && skipped ? 'Nothing to undo: someone else has changed it since' : skipped ? 'Undone. Parts that a colleague changed since were left as they are.' : 'Undone');
 }
 function saveMonth(m, mutate, log, quiet) {
-  const id = monthId(m), old = S.reports[id]; if (!quiet) remember(id, old);
+  const id = monthId(m), old = S.reports[id];
   const d = old ? JSON.parse(JSON.stringify(old)) : { mo: m, lines: [] };
   d.lines = d.lines || []; d.pl = TAGS.map(t => ({ k: t.k, n: t.n, squads: t.squads })); mutate(d);
   d.status = 'submitted'; d.subAt = d.subAt || new Date().toISOString(); d.subBy = d.subBy || (S.me && (S.me.name || S.me.email)) || '';
   d.by = (S.me && (S.me.name || S.me.email)) || ''; d.ts = Date.now(); S.reports[id] = d; write('reports/' + id, d);
+  if (!quiet) record(m, old, d);
   if (log) logAct('report', log);
 }
 const maxNo = () => rawDocs().reduce((a, d) => d.lines.reduce((b, l) => Math.max(b, +l.no || 0), a), 0);
@@ -101,11 +113,12 @@ function addToRoadmap(m, l, tag) {
   });
 }
 function deleteMonth(m) {
+  if (!canDel()) return;
   openDlg('Delete ' + lab(m) + '?', box => {
     box.append(el('p', '', 'Every card of ' + lab(m) + ' is deleted for everyone, including the executives who can see them. You can bring it back with Undo.'));
     const inp = el('input'); inp.type = 'text'; inp.autocomplete = 'off'; inp.placeholder = 'Type delete to confirm'; inp.setAttribute('aria-label', 'Type delete to confirm');
     const ok = el('button', 'btn danger', 'Delete month'), no = el('button', 'btn', 'Cancel'); ok.type = no.type = 'button'; ok.disabled = true; no.addEventListener('click', closeDlg);
-    const go = () => { if (inp.value.trim().toLowerCase() !== 'delete') return; const id = monthId(m); remember(id, S.reports[id]); delete S.reports[id]; write('reports/' + id, null); logAct('report', 'deleted the monthly deliverables for ' + lab(m)); closeDlg(); notify('Month deleted. Press Undo to bring it back.'); renderMonthly(); };
+    const go = () => { if (inp.value.trim().toLowerCase() !== 'delete') return; const id = monthId(m); record(m, S.reports[id], null); delete S.reports[id]; write('reports/' + id, null); logAct('report', 'deleted the monthly deliverables for ' + lab(m)); closeDlg(); notify('Month deleted. Press Undo to bring it back.'); renderMonthly(); };
     inp.addEventListener('input', () => { ok.disabled = inp.value.trim().toLowerCase() !== 'delete'; }); inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
     ok.addEventListener('click', go); const row = el('div', 'row'); row.append(ok, no); box.append(inp, row); setTimeout(() => inp.focus(), 0);
   });
@@ -151,7 +164,7 @@ function openNotes(m, id, ed) {
     ns.forEach(n => {
       const it = el('div', 'mdnitem'), top = el('div', 'mdnhead');
       top.append(el('b', '', n.by || 'Earlier note'), el('span', 'mdnwhen', n.at ? stamp(n.at) : ''));
-      if (ed) { const x = el('button', 'mdnx', 'Delete'); x.type = 'button'; x.setAttribute('aria-label', 'Delete this note'); x.addEventListener('click', () => { saveMonth(m, d => { const z = tgt(d); if (z) { z.notes = notesOf(z).filter(q => q.id !== n.id); delete z.note; } }, 'deleted a note of ' + nm()); closeDlg(); renderMonthly(); openNotes(m, id, ed); }); top.append(x); }
+      if (ed && canDel()) { const x = el('button', 'mdnx', 'Delete'); x.type = 'button'; x.setAttribute('aria-label', 'Delete this note'); x.addEventListener('click', () => { saveMonth(m, d => { const z = tgt(d); if (z) { z.notes = notesOf(z).filter(q => q.id !== n.id); delete z.note; } }, 'deleted a note of ' + nm()); closeDlg(); renderMonthly(); openNotes(m, id, ed); }); top.append(x); }
       it.append(top, el('div', 'mdntext', n.t)); list.append(it);
     });
     box.append(list);
@@ -208,8 +221,8 @@ function card(m, l, prods, ed) {
         const others = visibleMonths().filter(x => x !== m); if (others.length) mm.append(el('div', 'mlab', m === BL ? 'Plan in month' : 'Move to month'));
         others.forEach(x => mi(mm, lab(x), () => moveCard(m, l.id, x)));
         if (m !== BL) mi(mm, 'Back to backlog', () => moveCard(m, l.id, BL));
-        mm.append(el('div', 'msep'));
-        mi(mm, 'Delete card', () => confirmDlg('Delete this card?', '"' + l.t + '" is deleted from ' + lab(m) + '.', 'Delete card', () => { saveMonth(m, d => { d.lines = d.lines.filter(z => z.id !== l.id); }, 'removed "' + l.t + '" from the ' + lab(m) + ' deliverables'); renderMonthly(); }), 'danger');
+        if (canDel()) { mm.append(el('div', 'msep'));
+        mi(mm, 'Delete card', () => confirmDlg('Delete this card?', '"' + l.t + '" is deleted from ' + lab(m) + '.', 'Delete card', () => { saveMonth(m, d => { d.lines = d.lines.filter(z => z.id !== l.id); }, 'removed "' + l.t + '" from the ' + lab(m) + ' deliverables'); renderMonthly(); }), 'danger'); }
       });
     });
     if (m !== BL) foot.append(pctSelect(pct, 'Percent complete', v => put({ pct: v, pe: true }, 'changed "' + l.t + '" to ' + v + '%')));
@@ -260,7 +273,7 @@ function column(m, prods, ed) {
   { const nb = noteBtn(m, d, ed, true); if (!nb.hidden) h.append(nb); }
   if (ed && !isBl) {
     const more = el('button', 'btn sm colmore', '⋯'); more.type = 'button'; more.setAttribute('aria-label', 'Month options for ' + lab(m)); more.title = 'Month options';
-    more.addEventListener('click', e => { e.stopPropagation(); const b = more.getBoundingClientRect(); openCtx(b.right - 190, b.bottom + 4, mm => { mi(mm, 'Copy text', () => copyMonth(m)); if (S.reports[monthId(m)]) { mm.append(el('div', 'msep')); mi(mm, 'Delete month', () => deleteMonth(m), 'danger'); } }); });
+    more.addEventListener('click', e => { e.stopPropagation(); const b = more.getBoundingClientRect(); openCtx(b.right - 190, b.bottom + 4, mm => { mi(mm, 'Copy text', () => copyMonth(m)); if (S.reports[monthId(m)] && canDel()) { mm.append(el('div', 'msep')); mi(mm, 'Delete month', () => deleteMonth(m), 'danger'); } }); });
     h.append(more); h.style.cssText = 'display:flex;align-items:center;gap:8px'; more.style.marginInlineStart = 'auto';
   }
   if (isBl) { const hb = el('button', 'btn sm colmore', '✕'); hb.type = 'button'; hb.setAttribute('aria-label', 'Hide the backlog'); hb.title = 'Hide the backlog'; hb.addEventListener('click', () => { setBl(false); renderMonthly(); }); h.append(hb); h.style.cssText = 'display:flex;align-items:center;gap:8px'; hb.style.marginInlineStart = 'auto'; }
@@ -294,7 +307,7 @@ export function renderMonthly() {
   const act = document.activeElement, ta0 = act && act.matches && act.matches('.mdcomp textarea') ? act : null, draft = ta0 ? { v: ta0.value, s: ta0.selectionStart, m: ta0.closest('.mdcol').dataset.mo } : null;
   const prevBoard = pg.querySelector('.mdboard'), sx = prevBoard ? prevBoard.scrollLeft : 0, sy = window.scrollY;
   pg.textContent = '';
-  const viewer = isViewer(), ed = !viewer && canBuild();
+  const viewer = modLevel('monthly') < 2, ed = !viewer && canBuild();
   if (ed) fixCards();
   if (ed) docs().forEach(d => { if (d.status !== 'submitted' && !migrated.has(d.id)) { migrated.add(d.id); S.reports[d.id] = Object.assign({}, S.reports[d.id], { status: 'submitted', subAt: d.subAt || new Date().toISOString() }); write('reports/' + d.id, S.reports[d.id]); } });
   const prods = boardProducts(), tools = el('div', 'formrow');
@@ -307,7 +320,7 @@ export function renderMonthly() {
   tools.append(q, fp, ff);
   if (ed) { const ub = el('button', 'btn sm mdundo', '↶ Undo'); ub.type = 'button'; ub.id = 'mdundo'; ub.disabled = !undoStack.length; ub.title = 'Undo the last change on this board (Ctrl+Z)'; ub.addEventListener('click', undoMonthly); tools.append(ub); }
   const pc = pastCount(); if (pc || ui.past) { const pb = el('button', 'btn sm', ui.past ? 'Hide past months' : 'Show past months (' + pc + ')'); pb.type = 'button'; pb.addEventListener('click', () => { ui.past = !ui.past; renderMonthly(); }); tools.append(pb); }
-  pg.append(pageHead('Monthly deliverables', viewer ? 'What the business expects every month, tagged and coloured by Daycare, Tifli, Plan, AI, Finance or New initiative, and how far each deliverable is.' : 'What the business expects each month. Add a card with a tag. Use the ⋯ menu of a card to put it on the roadmap with a start, an end and an assignee. Drag a card to move it to another month.', tools));
+  pg.append(pageHead('Monthly deliverables', null, tools));
   const sb0 = viewer ? null : setupBanner(); if (sb0) pg.append(sb0);
   { const n = docOf(BL).lines.filter(l => String(l.t || '').trim()).length, bb = el('button', 'mdblbar' + (blOpen ? ' on' : '')); bb.type = 'button'; bb.id = 'mdbltoggle'; bb.setAttribute('aria-expanded', String(blOpen)); bb.setAttribute('aria-controls', 'mdbacklog');
     bb.append(el('span', 'mdblcaret', blOpen ? '▾' : '▸'), el('b', '', blOpen ? 'Hide backlog' : 'Backlog'), el('span', 'badge', String(n)), el('span', 'mdblsub', blOpen ? 'Drag a card into a month, or use ⋯ → Plan in month' : 'Ideas and requests not planned yet. Open to plan them into a month.'));
@@ -324,5 +337,5 @@ export function renderMonthly() {
 document.addEventListener('keydown', e => {
   if (!(e.ctrlKey || e.metaKey) || e.shiftKey || (e.key || '').toLowerCase() !== 'z') return;
   const pg = $('pg-monthly'); if (!pg || !pg.offsetParent) return; const t = e.target; if (t && t.matches && t.matches('input, textarea, select, [contenteditable]')) return;
-  if (isViewer() || !canBuild()) return; e.preventDefault(); undoMonthly();
+  if (!canBuild()) return; e.preventDefault(); undoMonthly();
 });

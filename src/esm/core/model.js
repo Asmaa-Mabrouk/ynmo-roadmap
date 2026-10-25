@@ -5,6 +5,7 @@
  * Dependencies are explicit ES imports; shared mutable state lives in `S` (core/state.js).
  */
 import { S } from './state.js';
+import { levelOf, pageModule } from './permissions.js';
 
 /* ---------- time axis: one column per day, rebuilt for each roadmap (Fri and Sat are the weekend) ---------- */
 export const DAY = 864e5, H2_ID = 'h2-2026', H2_START = Date.UTC(2026, 9, 1);
@@ -173,7 +174,12 @@ export const $ = id => document.getElementById(id);
 export function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 export function clone(o) { return JSON.parse(JSON.stringify(o)); }
 function prodKey(pr) { const k = (pr || []).slice().sort().join(','); const p = PRODUCTS.find(x => x.pr.slice().sort().join(',') === k); return p ? p.v : 'tifli'; }
-export function canEdit() { return !S.readonly; }
+/** Permission level (0 none, 1 view, 2 edit, 3 delete) of the signed-in person for a module; a shared view-only link is always 1. */
+export const modLevel = mod => (S.SHARE ? 1 : S.me ? (S.denied && S.denied[mod] ? Math.min(1, levelOf(S.me, mod)) : levelOf(S.me, mod)) : 3);
+/** May the person change things on the page they are on? (Their level for that page's module, and the page is not read-only.) */
+export function canEdit() { if (S.readonly) return false; const m = pageModule(state.page); return !m || modLevel(m) >= 2; }
+/** May the person delete things in a module (default: the page they are on)? */
+export function canDelete(mod) { if (S.readonly) return false; const m = mod || pageModule(state.page); return !m || modLevel(m) >= 3; }
 export const byOrd = (a, b) => a.ord - b.ord || (a.id < b.id ? -1 : 1);
 
 function finish(it) {

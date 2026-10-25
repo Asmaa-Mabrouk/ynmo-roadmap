@@ -14,7 +14,7 @@ import { laneOf } from '../ui/gantt-render.js';
 /* ---------- shared state for pages ---------- */
 export let ideaUI = { st: 'open', q: '' };
 export const H2 = { id: H2_ID, n: 'H2 2026', a: '2026-10-01', b: '2027-01-31', kind: 'H2', builtin: true };
-export const PAGES = [['roadmap', 'Roadmap'], ['roadmaps', 'Roadmaps'], ['sprints', 'Sprints'], ['reports', 'Reports'], ['monthly', 'Monthly deliverables'], ['resources', 'Resources'], ['vacations', 'Vacations'], ['log', 'Log'], ['admin', 'Approvals']];
+export const PAGES = [['roadmap', 'Roadmap'], ['roadmaps', 'Roadmaps'], ['sprints', 'Sprints'], ['reports', 'Reports'], ['monthly', 'Monthly deliverables'], ['resources', 'Resources'], ['vacations', 'Vacations'], ['log', 'Log'], ['admin', 'Users & permissions']];
 export const DOMAINS = ['PM', 'Mobile', 'Backend', 'Frontend', 'Full-stack', 'Engineering', 'QA', 'UX / Design', 'AI / ML', 'Other'];
 export const VTYPES = ['Annual leave', 'Training', 'Public holiday', 'Other'];
 export const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'x';

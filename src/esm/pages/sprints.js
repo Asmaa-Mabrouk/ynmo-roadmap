@@ -10,7 +10,7 @@
  * The weekly report reads `itemsOf(sprint)`, which flattens the outline (see pages/reports.js).
  */
 import { S } from '../core/state.js';
-import { DAY, LANES, canEdit, directory, el, parseIso, $ } from '../core/model.js';
+import { DAY, LANES, canDelete, canEdit, directory, el, parseIso, $ } from '../core/model.js';
 import { fld, fmtIso, logAct, pageHead, todayIso } from '../core/shared.js';
 import { write } from '../core/saving.js';
 import { openDlg, closeDlg, canWrite } from '../features/safety.js';
@@ -97,7 +97,7 @@ function listView(pg, ro) {
     const pr = el('div', 'prods'); secs.forEach(k => { const c = el('span', 'pchip', lane(k).n); c.style.setProperty('--c', lane(k).c); pr.append(c); }); if (!secs.length) pr.append(el('span', 'meta', 'No product sections yet')); info.append(pr);
     const prog = el('div', 'spprog'); prog.append(el('div', 'meta', done + ' of ' + leaf.length + ' done')); const b0 = el('div', 'bar0'), i0 = el('i'); i0.style.width = pct + '%'; b0.append(i0); prog.append(b0);
     const more = el('button', 'btn sm spmore', '⋯'); more.type = 'button'; more.setAttribute('aria-label', 'More actions for Sprint ' + sp.n); more.setAttribute('aria-haspopup', 'menu');
-    more.addEventListener('click', () => openMenu(more, [{ label: 'Open in new tab', value: 'tab' }, { label: 'Delete sprint', value: 'del', disabled: ro }], {
+    more.addEventListener('click', () => openMenu(more, [{ label: 'Open in new tab', value: 'tab' }, { label: 'Delete sprint', value: 'del', disabled: ro || !canDelete() }], {
       search: false, label: 'Sprint actions', onPick: it => { if (it.value === 'tab') window.open(location.pathname + location.search + '#/sprints/' + sp.id, '_blank', 'noopener'); else deleteSprint(sp); }, onClose: () => more.focus()
     }));
     card.append(info, prog, more); wrap.append(card);
@@ -175,6 +175,7 @@ function docEditor(sp, ro) {
     return ids;
   };
   const removeGroup = (b) => {
+    if (!canDelete()) { notify('You do not have permission to delete here.', 'err'); return; }
     const all = list(), i = all.findIndex(x => x.id === b.id), g = groupOf(all, i), go = () => { undoOf(spId).mark(g.length > 1 ? 'Delete ' + g.length + ' lines' : 'Delete line'); g.forEach(x => delItem(x.id)); notify(g.length > 1 ? g.length + ' lines deleted' : 'Line deleted'); redraw(); };
     if (g.length > 1) confirmDlg('Delete ' + (KIND_NAME[b.k] || 'line') + '?', 'This also deletes the ' + (g.length - 1) + ' line' + (g.length === 2 ? '' : 's') + ' inside it.', 'Delete', go); else go();
   };

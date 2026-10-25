@@ -6,6 +6,7 @@
  */
 import { S } from '../core/state.js';
 import { $, el } from '../core/model.js';
+import { MODULES, levelOf } from '../core/permissions.js';
 import { sb } from '../core/supabase.js';
 import { doLogout } from '../auth/gate.js';
 
@@ -13,7 +14,8 @@ import { doLogout } from '../auth/gate.js';
 
 export const ACTIVE_LOG_PAGE = 300;
 export const canWrite = () => !S.readonly && !S.SHARE;
-export const isViewer = () => !!(S.me && S.me.access === 'viewer' && !S.me.is_admin);
+/** Can this person change nothing anywhere? (Every module is View or less.) */
+export const isViewer = () => !!(S.me && !S.me.is_admin && MODULES.every(m => levelOf(S.me, m.k) < 2));
 
 /* ---------- generic dialog ---------- */
 let dlgPrev = null;

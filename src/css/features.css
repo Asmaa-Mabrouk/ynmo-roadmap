@@ -750,3 +750,36 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
 .mdblcaret { font-size: .85rem; width: 1em; }
 .mdblsub { color: var(--mut, #6b7390); font-size: .8rem; margin-inline-start: auto; text-align: end; }
 .mdmnote { flex: none; }
+
+/* Users & permissions */
+.permlay { display: grid; grid-template-columns: minmax(220px, 280px) 1fr; gap: 18px; align-items: start; }
+.permusers { display: grid; gap: 6px; max-height: 70vh; overflow: auto; }
+.permuser { display: flex; align-items: center; gap: 10px; width: 100%; text-align: start; padding: 8px 10px; border: 1px solid var(--line, #e3e6f0); border-radius: 12px; background: var(--card, #fff); color: inherit; font: inherit; cursor: pointer; }
+.permuser:hover, .permuser:focus-visible { border-color: var(--brand, #18b087); }
+.permuser.on { border-color: var(--brand, #18b087); background: color-mix(in srgb, var(--brand, #18b087) 9%, var(--card, #fff)); box-shadow: inset 3px 0 0 var(--brand, #18b087); }
+.permwho { display: grid; min-width: 0; flex: 1; }
+.permwho b, .permwho small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.permwho small { color: var(--mut, #6b7390); font-size: .74rem; }
+.permdetail { display: grid; gap: 14px; min-width: 0; }
+.permhead { display: flex; align-items: center; gap: 12px; }
+.permhead h3 { margin: 0; }
+.permadmin { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--line, #e3e6f0); border-radius: 12px; }
+.permgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.permmod { border: 1px solid var(--line, #e3e6f0); border-radius: 14px; padding: 12px; display: grid; gap: 8px; background: var(--card, #fff); align-content: start; }
+.permmod.off { opacity: .8; }
+.permtop { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.permbadge { font-size: .7rem; padding: 2px 8px; border-radius: 999px; background: #eceef5; color: #4a5272; }
+.permbadge.lv1 { background: #e3effd; color: #1d4f9a; }
+.permbadge.lv2 { background: #e2f5ec; color: #14724a; }
+.permbadge.lv3 { background: #fde7e7; color: #a12830; }
+.permsws { display: flex; flex-wrap: wrap; gap: 8px 12px; }
+.permsw { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; padding: 2px; font: inherit; color: inherit; cursor: pointer; }
+.permsw[disabled] { cursor: default; opacity: .55; }
+.permknob { position: relative; width: 34px; height: 20px; border-radius: 999px; background: #c5cadb; transition: background .15s; flex: none; }
+.permknob::after { content: ''; position: absolute; top: 2px; inset-inline-start: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .3); transition: inset-inline-start .15s; }
+.permsw.on .permknob { background: var(--brand, #18b087); }
+.permsw.on .permknob::after { inset-inline-start: 16px; }
+.permsw:focus-visible .permknob { outline: 2px solid var(--brand, #18b087); outline-offset: 2px; }
+.permfoot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+@media (max-width: 760px) { .permlay { grid-template-columns: 1fr; } .permusers { max-height: 240px; } }
+@media (prefers-reduced-motion: reduce) { .permknob, .permknob::after { transition: none; } }

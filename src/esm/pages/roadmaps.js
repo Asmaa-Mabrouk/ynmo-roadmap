@@ -8,7 +8,7 @@ import { openShare } from '../features/sharing.js';
 import { canWrite } from '../features/safety.js';
 import { S } from '../core/state.js';
 import { H2, fld, fmtIso, logAct, pageHead, selOf } from '../core/shared.js';
-import { $, DAY, H2_ID, base, canEdit, el, items, parseIso, setRange, state } from '../core/model.js';
+import { $, DAY, H2_ID, base, canDelete, canEdit, el, items, parseIso, setRange, state } from '../core/model.js';
 import { render } from '../ui/gantt-render.js';
 import { persist, write } from '../core/saving.js';
 import { saveIdea } from './ideas.js';
@@ -101,7 +101,7 @@ export function renderRoadmaps() {
     const open = el('button', 'btn primary sm', r.id === state.rm ? 'Open (current)' : 'Open'); open.type = 'button'; open.addEventListener('click', () => { useRoadmap(r.id); showPage('roadmap'); });
     act.append(open);
     if (canWrite()) { const sh = el('button', 'btn sm', 'Share'); sh.type = 'button'; sh.id = 'sharebtn-' + r.id; sh.title = 'Read-only link for people without an account'; sh.addEventListener('click', () => openShare(r.id)); act.append(sh); }
-    if (!r.builtin && canEdit()) {
+    if (!r.builtin && canDelete()) {
       let armed = false; const del = el('button', 'btn danger sm', 'Delete'); del.type = 'button';
       del.addEventListener('click', () => { if (armed) { deleteRoadmap(r.id); renderRoadmaps(); return; } armed = true; del.textContent = 'Click again to delete'; setTimeout(() => { armed = false; del.textContent = 'Delete'; }, 3500); });
       act.append(del);

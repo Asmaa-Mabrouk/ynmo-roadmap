@@ -291,6 +291,7 @@ with sync_playwright() as pw:
     C=newpage(ctx,errs); signup(C,'Vic','vic@x.com')
     A.click('#nav button[data-p="admin"]'); A.wait_for_timeout(500)
     A.locator('.card:has-text("Vic") button:text-is("Approve")').first.click(); A.wait_for_timeout(700)
+    A.locator('#permissions .permuser:has-text("Vic")').click(); A.wait_for_timeout(300)
     A.locator('select[aria-label="Access for Vic"]').select_option('viewer'); A.wait_for_timeout(700)
     C.reload(); C.wait_for_timeout(1500); C.click('#nav button[data-p="monthly"]'); C.wait_for_timeout(600)
     ok('executives see the board with every month, read-only', C.locator('.mdcol').count()>=3 and C.locator('.mdcard').count()>=1 and C.locator('#pg-monthly input:not([type=search]), #pg-monthly select:not([aria-label="Filter by tag"]):not([aria-label="Filter by flag"]), #pg-monthly .mdadd, #addmonth, #pg-monthly [contenteditable]').count()==0)

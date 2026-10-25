@@ -205,6 +205,7 @@ with sync_playwright() as pw:
     A.click('#nav button[data-p="admin"]'); A.wait_for_timeout(500)
     A.locator('.card:has-text("Ed") button:text-is("Approve")').first.click(); A.wait_for_timeout(700)
     A.locator('.card:has-text("Vic") button:text-is("Approve")').first.click(); A.wait_for_timeout(700)
+    A.locator('#permissions .permuser:has-text("Vic")').click(); A.wait_for_timeout(300)
     A.locator('select[aria-label="Access for Vic"]').select_option('viewer'); A.wait_for_timeout(700)
     B.reload(); B.wait_for_timeout(1500); C.reload(); C.wait_for_timeout(1500)
     ok('viewer nav: no Sprints, has Reports', C.locator('#nav button[data-p="sprints"]').count()==0 and C.locator('#nav button[data-p="reports"]').count()==1)

@@ -35,7 +35,7 @@ replaced by creating new roadmaps with their own date range.
 | **Log** | Every change with who/when; export; undo | Audit trail and safe experimentation |
 | **Sharing** | Read-only public link per roadmap; Editor/Viewer access | Stakeholder transparency without accounts |
 | **Presence** | See who is online; soft lock warning when two people edit one bar | Avoids overwriting each other |
-| **Approvals** | Admin approval queue | Controlled access |
+| **Users & permissions** (admins) | Approve registered people; per person and per module View / Edit / Delete switches; make other people admins | Controlled access: each person sees and changes only their modules |
 
 ## 5. Key workflows
 1. **Onboarding:** sign up → confirm email → "pending approval" screen → admin approves as Editor/Viewer → user enters.
