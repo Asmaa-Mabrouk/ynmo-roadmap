@@ -1206,6 +1206,23 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
 .permfoot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 @media (max-width: 760px) { .permlay { grid-template-columns: 1fr; } .permusers { max-height: 240px; } }
 @media (prefers-reduced-motion: reduce) { .permknob, .permknob::after { transition: none; } }
+
+/* ---- linked features: progress on roadmap bars, check updates, roadmap update requests ---- */
+.bar .pgf{position:absolute;inset:0 auto 0 0;background:rgba(255,255,255,.28);border-radius:inherit;pointer-events:none}
+.bar.hasp .nm2{position:relative}
+.mpcsel{width:calc(100% - 16px);margin:2px 8px 6px;min-height:34px}
+.fschip{font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px}
+.fschip.in{background:#e8f0ff;color:#1d4fb8}
+.fschip.out{background:#fff4d6;color:#8a6100}
+.fidin{width:84px;min-height:32px;font-size:12px;border:1px solid var(--line,#d5d9e5);border-radius:8px;padding:2px 8px;background:var(--bg,#fff);color:inherit}
+.fsrow{border:1px solid var(--line,#e2e5ee);border-radius:12px;padding:12px;margin:10px 0;display:grid;gap:8px}
+.fshead{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.fsid{font-variant-numeric:tabular-nums}
+.fsname{font-weight:600}
+.fsdiff{font-size:13px;color:var(--muted,#626d90)}
+.mdcheck{white-space:nowrap}
+.fsreq .fsrow:last-child{margin-bottom:0}
+@media (prefers-color-scheme:dark){.fschip.in{background:#1d2c4d;color:#a9c4ff}.fschip.out{background:#4a3a10;color:#ffd77a}}
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -1541,7 +1558,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     { id: "d7", t: "Staff self check-in in the Mahd app", sq: "daycare", pr: ["daycare"], s: 2, e: 2, st: "planned", src: [CP] },
     { id: "d8", t: "Export data and reports across all features", sq: "daycare", pr: ["daycare"], s: 2, e: 2, st: "decide", src: [CP], n: "Define the reports with Doaa." }
   ];
-  var FIELDS = ["t", "sq", "pr", "d0", "d1", "st", "n", "res", "c", "ord", "dep", "ms", "pd"];
+  var FIELDS = ["t", "sq", "pr", "d0", "d1", "st", "n", "res", "c", "ord", "dep", "ms", "pd", "pc"];
   var base = /* @__PURE__ */ new Map();
   LANES.forEach((l) => {
     ITEMS.map((it, i) => ({ it, i })).filter((x) => x.it.sq === l.k).sort((a, b) => a.it.s - b.it.s || a.i - b.i).forEach((x, r) => base.set(x.it.id, Object.assign({}, x.it, { d0: MSTART[x.it.s], d1: MEND[x.it.e], ord: r })));
@@ -3678,6 +3695,318 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     }
   }
 
+  // src/esm/features/month-model.js
+  var uid = () => "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  var clampPct = (v) => Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
+  var pctBand = (v) => {
+    v = clampPct(v);
+    return v >= 100 ? "g" : v > 50 ? "o" : v > 0 ? "y" : "n";
+  };
+  var addD = (iso4, n) => new Date(Date.parse(iso4 + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
+  var isMonth = (m) => /^\d{4}-(0[1-9]|1[0-2])$/.test(m || "");
+  var monthId = (m) => "mo" + m.replace("-", "");
+  var monthLabel = (m) => isMonth(m) ? (/* @__PURE__ */ new Date(m + "-01T00:00:00Z")).toLocaleString("en", { month: "long", year: "numeric", timeZone: "UTC" }) : "";
+  var nextMonth = (m) => {
+    const d = /* @__PURE__ */ new Date(m + "-01T00:00:00Z");
+    d.setUTCMonth(d.getUTCMonth() + 1);
+    return d.toISOString().slice(0, 7);
+  };
+  function monthRange(m) {
+    const a = m + "-01";
+    return { a, b: addD(nextMonth(m) + "-01", -1) };
+  }
+  function newLine(k, t, o) {
+    o = o || {};
+    return { id: uid(), k, t: String(t || "").replace(/\s+/g, " ").trim().slice(0, 300), pct: 0, w: 1, adhoc: !!o.adhoc, by: String(o.by || "").replace(/\s+/g, " ").trim().slice(0, 80), at: o.at || "", src: o.src || "", pe: false };
+  }
+  var live = (ls) => (ls || []).filter((l) => String(l.t || "").trim());
+  function monthProgress(lines) {
+    const pl = live(lines).filter((l) => !l.adhoc);
+    if (!pl.length) return { pct: null, n: 0, done: 0 };
+    const w = pl.reduce((a, l) => a + (l.w || 1), 0), s = pl.reduce((a, l) => a + (l.w || 1) * clampPct(l.pct), 0);
+    return { pct: Math.round(s / w), n: pl.length, done: pl.filter((l) => clampPct(l.pct) >= 100).length };
+  }
+  function adhocStats(lines) {
+    const a = live(lines).filter((l) => l.adhoc);
+    return { n: a.length, done: a.filter((l) => clampPct(l.pct) >= 100).length };
+  }
+  var TAGS = [
+    { k: "daycare", n: "Daycare", ab: "DC", c: "#d6338a", squads: ["daycare"] },
+    { k: "tifli", n: "Tifli", ab: "TF", c: "#6d48a8", squads: ["tifli"] },
+    { k: "plan", n: "Plan", ab: "PL", c: "#0d8560", squads: ["plan"] },
+    { k: "ai", n: "AI", ab: "AI", c: "#2f6fe0", squads: ["ai"] },
+    { k: "finance", n: "Finance", ab: "FN", c: "#7b8099", squads: [] },
+    { k: "initiative", n: "New initiative", ab: "NI", c: "#d9a400", squads: [] },
+    { k: "schs", n: "SCHS", ab: "SC", c: "#2e818d", squads: [] },
+    { k: "warif", n: "Warif", ab: "WR", c: "#5dd9d2", squads: [] }
+  ];
+  var legacyTag = (k, squad) => {
+    const t = TAGS.find((x) => squad && x.squads.includes(squad));
+    return t ? t.k : k === "plan_daycare" ? "plan" : TAGS.some((x) => x.k === k) ? k : "initiative";
+  };
+  var cardId = (l) => {
+    if (!l || !l.no) return "";
+    const t = TAGS.find((x) => x.k === l.k);
+    return (t ? t.ab : String(l.k || "??").slice(0, 2).toUpperCase()) + "#" + l.no;
+  };
+  var notesOf = (l) => l && Array.isArray(l.notes) ? l.notes : l && l.note ? [{ id: "n0", t: String(l.note), by: "", at: "" }] : [];
+  var SIZES = { quick: "Quick win", enh: "Small enhancement" };
+  var tagsOf = (l) => (l.hp ? " [BUSINESS PRIORITY]" : "") + (SIZES[l.sz] ? " [" + SIZES[l.sz].toUpperCase() + "]" : "");
+  function monthText(doc2, products, fmt) {
+    if (!doc2 || !live(doc2.lines).length) return [];
+    const prog = monthProgress(doc2.lines), out = ["MONTHLY DELIVERABLES - " + monthLabel(doc2.mo) + (prog.pct === null ? "" : " - " + prog.pct + "% complete (" + prog.done + " of " + prog.n + " done)"), ""];
+    notesOf(doc2).forEach((n) => out.push("Month note" + (n.by ? " (" + n.by + ")" : "") + ": " + String(n.t).replace(/\s+/g, " ")));
+    if (notesOf(doc2).length) out.push("");
+    (products || doc2.pl || []).forEach((p) => {
+      const its = live(doc2.lines).filter((l) => l.k === p.k);
+      if (!its.length) return;
+      const pl = its.filter((l) => !l.adhoc), ad = its.filter((l) => l.adhoc), pp = monthProgress(pl);
+      out.push(p.n + (pp.pct === null ? "" : " - " + pp.pct + "%"));
+      pl.forEach((l) => {
+        out.push("- " + (cardId(l) ? cardId(l) + " " : "") + l.t + ": " + clampPct(l.pct) + "%" + tagsOf(l));
+        notesOf(l).forEach((n) => out.push("  Note" + (n.by ? " (" + n.by + ")" : "") + ": " + String(n.t).replace(/\s+/g, " ")));
+      });
+      if (ad.length) {
+        out.push("Ad hoc requests:");
+        ad.forEach((l) => out.push("- " + l.t + (l.by ? " (requested by " + l.by + (l.at && fmt ? ", " + fmt(l.at) : "") + ")" : "") + ": " + clampPct(l.pct) + "%"));
+      }
+      out.push("");
+    });
+    return out;
+  }
+
+  // src/esm/features/feature-link.js
+  var LINK_FIELDS = [["t", "Title"], ["pct", "Progress"]];
+  var clean = (v) => typeof v === "string" ? v.replace(/\s+/g, " ").trim() : v;
+  var roadVals = (bar4) => ({ t: clean(bar4 && bar4.t), pct: bar4 && Number.isFinite(bar4.pc) ? bar4.pc : void 0 });
+  function compare(cur2, base3, road) {
+    const incoming2 = [], outgoing2 = [], rebase = {}, b0 = base3 || cur2;
+    LINK_FIELDS.forEach(([f]) => {
+      const c = clean(cur2[f]), b = clean(b0[f]), r = road[f];
+      if (r === void 0) {
+        if (c !== b) outgoing2.push({ f, road: void 0, to: c });
+        return;
+      }
+      if (c === r) {
+        if (b !== r) rebase[f] = r;
+        return;
+      }
+      if (c === b) incoming2.push({ f, from: c, to: r });
+      else outgoing2.push({ f, road: r, to: c });
+    });
+    return { incoming: incoming2, outgoing: outgoing2, rebase };
+  }
+  var fieldName = (f) => (LINK_FIELDS.find((x) => x[0] === f) || [, f])[1];
+  var showVal = (f, v) => v === void 0 || v === null || v === "" ? "not set" : f === "pct" ? v + "%" : '"' + v + '"';
+
+  // src/esm/features/feature-sync.js
+  var isMonthDoc = (id) => /^mo\d{6}$/.test(id);
+  var isReportDoc = (id) => /^rp\d{8}/.test(id);
+  var barOf = (rid) => {
+    const o = rid && S.over[rid];
+    return o && !o.x ? o : null;
+  };
+  var linePctOf = (l) => Number.isFinite(l.pct) ? l.pct : l.st === "done" ? 100 : 0;
+  function allCards() {
+    const out = [];
+    Object.keys(S.reports || {}).filter(isMonthDoc).forEach((did) => ((S.reports[did] || {}).lines || []).forEach((l) => out.push({ did, l })));
+    return out;
+  }
+  var cardByFid = (fid) => {
+    const x = allCards().find((c) => c.l.id === fid);
+    return x ? x.l : null;
+  };
+  var fidLabel = (fid) => {
+    const c = cardByFid(fid);
+    return c ? cardId(c) : "";
+  };
+  function fidFromText(txt) {
+    const t = String(txt || "").trim().toUpperCase().replace(/\s+/g, "");
+    if (!t) return "";
+    const c = allCards().find((x) => cardId(x.l).toUpperCase() === t);
+    return c ? c.l.id : "";
+  }
+  var cardIdsList = () => allCards().filter((x) => x.l.rid).map((x) => cardId(x.l)).filter(Boolean).sort();
+  function scan() {
+    const rows2 = [];
+    const cards = allCards();
+    cards.forEach(({ did, l }) => {
+      const bar4 = barOf(l.rid);
+      if (!bar4) return;
+      const cur2 = { t: l.t, pct: clampPct(l.pct) }, base3 = l.lk || null;
+      rows2.push({ kind: "card", did, l, id: cardId(l), label: l.t, bar: bar4, rid: l.rid, cur: cur2, base: base3, cmp: compare(cur2, base3, roadVals(bar4)) });
+    });
+    Object.keys(S.reports || {}).filter(isReportDoc).forEach((did) => {
+      const d = S.reports[did] || {};
+      Object.keys(d.prods || {}).forEach((k) => ((d.prods[k] || {}).items || []).forEach((l) => {
+        if (!l.fid) return;
+        const c = cards.find((x) => x.l.id === l.fid), bar4 = c && barOf(c.l.rid);
+        if (!bar4) return;
+        const cur2 = { t: l.t, pct: linePctOf(l) }, base3 = l.lk || null;
+        rows2.push({ kind: "line", did, pk: k, l, id: cardId(c.l), label: l.t, bar: bar4, rid: c.l.rid, cur: cur2, base: base3, cmp: compare(cur2, base3, roadVals(bar4)), week: d.a });
+      }));
+    });
+    return rows2;
+  }
+  var incoming = (kind) => scan().filter((r) => r.kind === kind && r.cmp.incoming.length);
+  var outgoing = () => scan().filter((r) => r.cmp.outgoing.length);
+  var pendingCount = () => outgoing().reduce((n, r) => n + r.cmp.outgoing.length, 0);
+  function saveDoc(did, mutate) {
+    const old = S.reports[did];
+    if (!old) return;
+    const d = JSON.parse(JSON.stringify(old));
+    mutate(d);
+    d.by = S.me && (S.me.name || S.me.email) || "";
+    d.ts = Date.now();
+    S.reports[did] = d;
+    write("reports/" + did, d);
+  }
+  var findLine = (d, row) => row.kind === "card" ? (d.lines || []).find((z) => z.id === row.l.id) : ((d.prods[row.pk] || {}).items || []).find((z) => z.id === row.l.id);
+  var setVal = (x, f, v, kind) => {
+    if (f === "t") x.t = v;
+    else {
+      x.pct = v;
+      if (kind === "card") x.pe = true;
+      else x.st = v >= 100 ? "done" : x.st === "done" ? "on" : x.st;
+    }
+    if (kind === "line") x.edited = true;
+  };
+  function applyIncoming(row, f, to) {
+    saveDoc(row.did, (d) => {
+      const x = findLine(d, row);
+      if (!x) return;
+      setVal(x, f, to, row.kind);
+      x.lk = Object.assign({ t: row.cur.t, pct: row.cur.pct }, x.lk || {});
+      x.lk[f] = to;
+    });
+    logAct(row.kind === "card" ? "report" : "report", "applied the roadmap " + fieldName(f).toLowerCase() + " to " + row.id + ' "' + row.label + '"');
+  }
+  function keepMine(row, f, road) {
+    saveDoc(row.did, (d) => {
+      const x = findLine(d, row);
+      if (!x) return;
+      x.lk = Object.assign({ t: row.cur.t, pct: row.cur.pct }, x.lk || {});
+      x.lk[f] = road;
+    });
+  }
+  function approve(row, f, to) {
+    if (!(S.me && S.me.is_admin)) return;
+    pushHistory();
+    const patch = f === "t" ? { t: String(to).slice(0, 140) } : { pc: clampPct(to) };
+    S.over[row.rid] = Object.assign({}, S.over[row.rid], patch);
+    persist(row.rid, patch);
+    render();
+    saveDoc(row.did, (d) => {
+      const x = findLine(d, row);
+      if (!x) return;
+      x.lk = Object.assign({ t: row.cur.t, pct: row.cur.pct }, x.lk || {});
+      x.lk[f] = to;
+    });
+    logAct("roadmap", "approved " + fieldName(f).toLowerCase() + " of " + row.id + ' "' + row.label + '" on the roadmap: ' + showVal(f, to));
+  }
+  function reject(row, f, road) {
+    if (!(S.me && S.me.is_admin)) return;
+    saveDoc(row.did, (d) => {
+      const x = findLine(d, row);
+      if (!x) return;
+      const to = road === void 0 ? x.lk && x.lk[f] !== void 0 ? x.lk[f] : row.cur[f] : road;
+      setVal(x, f, to, row.kind);
+      x.lk = Object.assign({ t: row.cur.t, pct: row.cur.pct }, x.lk || {});
+      x.lk[f] = to;
+    });
+    logAct("roadmap", "rejected a " + fieldName(f).toLowerCase() + " change of " + row.id + ' "' + row.label + '"');
+  }
+  var ensuring = false;
+  function ensureRecords() {
+    if (ensuring || !canEdit()) return;
+    const rows2 = scan(), todo = rows2.filter((r) => !r.base || Object.keys(r.cmp.rebase).length);
+    if (!todo.length) return;
+    ensuring = true;
+    try {
+      todo.forEach((r) => saveDoc(r.did, (d) => {
+        const x = findLine(d, r);
+        if (!x) return;
+        x.lk = Object.assign({ t: r.cur.t, pct: r.cur.pct }, x.lk || {}, r.cmp.rebase);
+      }));
+    } finally {
+      ensuring = false;
+    }
+  }
+  function rowBlock(r, f, side, actions) {
+    const b = el("div", "fsrow"), top = el("div", "fshead");
+    top.append(el("b", "fsid", r.id), el("span", "fsname", r.label), el("span", "chip fsf", fieldName(f) + (r.kind === "line" ? " · weekly report" : "")));
+    b.append(top, el("div", "fsdiff", side));
+    const row = el("div", "row");
+    actions.forEach((a) => row.append(a));
+    b.append(row);
+    return b;
+  }
+  var btn = (txt, cls, fn) => {
+    const x = el("button", "btn" + (cls ? " " + cls : ""), txt);
+    x.type = "button";
+    x.addEventListener("click", fn);
+    return x;
+  };
+  function openCheckUpdates(kind, after, did) {
+    openDlg("Check updates from the roadmap", (box2) => {
+      const draw = () => {
+        box2.textContent = "";
+        const rows2 = incoming(kind).filter((r) => !did || r.did === did);
+        box2.append(el("p", "sub2", 'These features changed on the roadmap. Apply each change you agree with. "Keep mine" leaves your value and asks an admin to change the roadmap instead.'));
+        if (!rows2.length) {
+          box2.append(el("p", "hint", "Everything is up to date."));
+          box2.append(btn("Close", "", () => {
+            closeDlg();
+            if (after) after();
+          }));
+          return;
+        }
+        rows2.forEach((r) => r.cmp.incoming.forEach((x) => {
+          const a = btn("Apply", "primary", () => {
+            applyIncoming(r, x.f, x.to);
+            toast("Applied.");
+            draw();
+          }), k = btn("Keep mine", "", () => {
+            keepMine(r, x.f, x.to);
+            draw();
+          });
+          a.setAttribute("aria-label", "Apply " + fieldName(x.f) + " of " + r.id);
+          k.setAttribute("aria-label", "Keep mine for " + fieldName(x.f) + " of " + r.id);
+          box2.append(rowBlock(r, x.f, "Roadmap: " + showVal(x.f, x.to) + "   ·   Here: " + showVal(x.f, x.from), [a, k]));
+        }));
+        box2.append(btn("Close", "", () => {
+          closeDlg();
+          if (after) after();
+        }));
+      };
+      draw();
+    });
+  }
+  function requestsCard(again) {
+    const rows2 = outgoing(), c = el("div", "card fsreq");
+    c.id = "roadreq";
+    c.append(el("h2", "", "Roadmap update requests" + (rows2.length ? " (" + rows2.reduce((n, r) => n + r.cmp.outgoing.length, 0) + ")" : "")), el("p", "sub", "Changes made in Monthly deliverables or the weekly report to a feature that is on the roadmap. Nothing changes on the roadmap until you approve it."));
+    if (!rows2.length) {
+      c.append(el("p", "hint", "No requests waiting."));
+      return c;
+    }
+    rows2.forEach((r) => r.cmp.outgoing.forEach((x) => {
+      const a = btn("Approve", "primary", () => {
+        approve(r, x.f, x.to);
+        toast("Roadmap updated.");
+        again();
+      }), n = btn("Reject", "", () => {
+        reject(r, x.f, x.road);
+        toast("Rejected. The item went back to the roadmap value.");
+        again();
+      });
+      a.setAttribute("aria-label", "Approve " + fieldName(x.f) + " of " + r.id);
+      n.setAttribute("aria-label", "Reject " + fieldName(x.f) + " of " + r.id);
+      c.append(rowBlock(r, x.f, "Roadmap now: " + showVal(x.f, x.road) + "   →   Requested: " + showVal(x.f, x.to) + "   (from " + (r.kind === "card" ? "Monthly deliverables" : "the weekly report") + ")", [a, n]));
+    }));
+    return c;
+  }
+
   // src/esm/ui/editing.js
   function startEdit(it, owner) {
     if (!canEdit() || !lockCheck(it)) return;
@@ -3762,6 +4091,32 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       mi(c, "Rename", () => startEdit(it, owner));
       mlab(c, "Status");
       Object.keys(STATUS).forEach((k) => mi(c, (it.st === k ? "✓ " : "") + STATUS[k], () => commit(it.id, { st: k })));
+      mlab(c, "Progress" + (it.card ? " (linked to " + (fidLabel(it.card) || "Monthly") + ")" : ""));
+      {
+        const pg = el("select", "mpcsel");
+        pg.setAttribute("aria-label", "Progress");
+        const cur2 = Number.isFinite(it.pc) ? it.pc : null, vals = [];
+        for (let v = 0; v <= 100; v += 10) vals.push(v);
+        if (cur2 !== null && !vals.includes(cur2)) {
+          vals.push(cur2);
+          vals.sort((x2, y2) => x2 - y2);
+        }
+        const none = el("option", "", "Not set");
+        none.value = "";
+        none.selected = cur2 === null;
+        pg.append(none);
+        vals.forEach((v) => {
+          const o = el("option", "", v + "%");
+          o.value = String(v);
+          o.selected = v === cur2;
+          pg.append(o);
+        });
+        pg.addEventListener("change", () => {
+          closeCtx();
+          if (pg.value !== "") commit(it.id, { pc: Number(pg.value) });
+        });
+        c.append(pg);
+      }
       mlab(c, "Product (sets the bar colour)");
       const prow = el("div", "mrow prodrow");
       LANES.forEach((l) => {
@@ -4291,6 +4646,15 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       bar4.append(inp);
     } else bar4.append(el("span", "nm2", (it.st === "done" ? "✓ " : "") + it.t));
     if (it.tag) bar4.append(el("span", "tg", it.tag === "High priority" ? "High" : it.tag === "Low priority" ? "Low" : it.tag));
+    if (Number.isFinite(it.pc)) {
+      const pf = el("i", "pgf");
+      pf.style.width = it.pc + "%";
+      pf.setAttribute("aria-hidden", "true");
+      bar4.prepend(pf);
+      bar4.classList.add("hasp");
+      bar4.dataset.tipSub += " · " + it.pc + "% done";
+      bar4.setAttribute("aria-label", bar4.getAttribute("aria-label") + ", " + it.pc + " percent done");
+    }
     const hl = el("span", "hd l"), hr = el("span", "hd r");
     bar4.append(hl, hr);
     bar4.addEventListener("pointerdown", (e) => {
@@ -5047,10 +5411,10 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       applyAccessChange();
     }
     const pend = S.members.filter((m) => !m.approved).length;
-    const b = document.querySelector('#nav [data-p="admin"] .dot');
+    const reqs = S.me.is_admin ? pendingCount() : 0, b = document.querySelector('#nav [data-p="admin"] .dot');
     if (b) {
-      b.hidden = !(S.me.is_admin && pend);
-      b.textContent = pend;
+      b.hidden = !(S.me.is_admin && pend + reqs);
+      b.textContent = pend + reqs;
     }
     if (state.page === "admin") renderAdmin();
   }
@@ -5356,90 +5720,11 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       ac.append(row);
     });
     root.append(ac);
+    root.append(requestsCard(renderAdmin));
     renderPermissions(root, (again) => {
       if (again === true) renderAdmin();
       else return loadMembers();
     });
-  }
-
-  // src/esm/features/month-model.js
-  var uid = () => "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-  var clampPct = (v) => Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
-  var pctBand = (v) => {
-    v = clampPct(v);
-    return v >= 100 ? "g" : v > 50 ? "o" : v > 0 ? "y" : "n";
-  };
-  var addD = (iso4, n) => new Date(Date.parse(iso4 + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
-  var isMonth = (m) => /^\d{4}-(0[1-9]|1[0-2])$/.test(m || "");
-  var monthId = (m) => "mo" + m.replace("-", "");
-  var monthLabel = (m) => isMonth(m) ? (/* @__PURE__ */ new Date(m + "-01T00:00:00Z")).toLocaleString("en", { month: "long", year: "numeric", timeZone: "UTC" }) : "";
-  var nextMonth = (m) => {
-    const d = /* @__PURE__ */ new Date(m + "-01T00:00:00Z");
-    d.setUTCMonth(d.getUTCMonth() + 1);
-    return d.toISOString().slice(0, 7);
-  };
-  function monthRange(m) {
-    const a = m + "-01";
-    return { a, b: addD(nextMonth(m) + "-01", -1) };
-  }
-  function newLine(k, t, o) {
-    o = o || {};
-    return { id: uid(), k, t: String(t || "").replace(/\s+/g, " ").trim().slice(0, 300), pct: 0, w: 1, adhoc: !!o.adhoc, by: String(o.by || "").replace(/\s+/g, " ").trim().slice(0, 80), at: o.at || "", src: o.src || "", pe: false };
-  }
-  var live = (ls) => (ls || []).filter((l) => String(l.t || "").trim());
-  function monthProgress(lines) {
-    const pl = live(lines).filter((l) => !l.adhoc);
-    if (!pl.length) return { pct: null, n: 0, done: 0 };
-    const w = pl.reduce((a, l) => a + (l.w || 1), 0), s = pl.reduce((a, l) => a + (l.w || 1) * clampPct(l.pct), 0);
-    return { pct: Math.round(s / w), n: pl.length, done: pl.filter((l) => clampPct(l.pct) >= 100).length };
-  }
-  function adhocStats(lines) {
-    const a = live(lines).filter((l) => l.adhoc);
-    return { n: a.length, done: a.filter((l) => clampPct(l.pct) >= 100).length };
-  }
-  var TAGS = [
-    { k: "daycare", n: "Daycare", ab: "DC", c: "#d6338a", squads: ["daycare"] },
-    { k: "tifli", n: "Tifli", ab: "TF", c: "#6d48a8", squads: ["tifli"] },
-    { k: "plan", n: "Plan", ab: "PL", c: "#0d8560", squads: ["plan"] },
-    { k: "ai", n: "AI", ab: "AI", c: "#2f6fe0", squads: ["ai"] },
-    { k: "finance", n: "Finance", ab: "FN", c: "#7b8099", squads: [] },
-    { k: "initiative", n: "New initiative", ab: "NI", c: "#d9a400", squads: [] },
-    { k: "schs", n: "SCHS", ab: "SC", c: "#2e818d", squads: [] },
-    { k: "warif", n: "Warif", ab: "WR", c: "#5dd9d2", squads: [] }
-  ];
-  var legacyTag = (k, squad) => {
-    const t = TAGS.find((x) => squad && x.squads.includes(squad));
-    return t ? t.k : k === "plan_daycare" ? "plan" : TAGS.some((x) => x.k === k) ? k : "initiative";
-  };
-  var cardId = (l) => {
-    if (!l || !l.no) return "";
-    const t = TAGS.find((x) => x.k === l.k);
-    return (t ? t.ab : String(l.k || "??").slice(0, 2).toUpperCase()) + "#" + l.no;
-  };
-  var notesOf = (l) => l && Array.isArray(l.notes) ? l.notes : l && l.note ? [{ id: "n0", t: String(l.note), by: "", at: "" }] : [];
-  var SIZES = { quick: "Quick win", enh: "Small enhancement" };
-  var tagsOf = (l) => (l.hp ? " [BUSINESS PRIORITY]" : "") + (SIZES[l.sz] ? " [" + SIZES[l.sz].toUpperCase() + "]" : "");
-  function monthText(doc2, products, fmt) {
-    if (!doc2 || !live(doc2.lines).length) return [];
-    const prog = monthProgress(doc2.lines), out = ["MONTHLY DELIVERABLES - " + monthLabel(doc2.mo) + (prog.pct === null ? "" : " - " + prog.pct + "% complete (" + prog.done + " of " + prog.n + " done)"), ""];
-    notesOf(doc2).forEach((n) => out.push("Month note" + (n.by ? " (" + n.by + ")" : "") + ": " + String(n.t).replace(/\s+/g, " ")));
-    if (notesOf(doc2).length) out.push("");
-    (products || doc2.pl || []).forEach((p) => {
-      const its = live(doc2.lines).filter((l) => l.k === p.k);
-      if (!its.length) return;
-      const pl = its.filter((l) => !l.adhoc), ad = its.filter((l) => l.adhoc), pp = monthProgress(pl);
-      out.push(p.n + (pp.pct === null ? "" : " - " + pp.pct + "%"));
-      pl.forEach((l) => {
-        out.push("- " + (cardId(l) ? cardId(l) + " " : "") + l.t + ": " + clampPct(l.pct) + "%" + tagsOf(l));
-        notesOf(l).forEach((n) => out.push("  Note" + (n.by ? " (" + n.by + ")" : "") + ": " + String(n.t).replace(/\s+/g, " ")));
-      });
-      if (ad.length) {
-        out.push("Ad hoc requests:");
-        ad.forEach((l) => out.push("- " + l.t + (l.by ? " (requested by " + l.by + (l.at && fmt ? ", " + fmt(l.at) : "") + ")" : "") + ": " + clampPct(l.pct) + "%"));
-      }
-      out.push("");
-    });
-    return out;
   }
 
   // src/esm/features/report-model.js
@@ -5637,14 +5922,14 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
   function parseOutline(text, lanes) {
     const out = [], lines = String(text || "").split(/\r?\n/).filter((l) => l.trim());
     let scopeIndent = -1;
-    const clean = (l) => l.trim().replace(BULLET, "").trim();
+    const clean2 = (l) => l.trim().replace(BULLET, "").trim();
     lines.forEach((raw, i) => {
       const indent = /^[ \t]*/.exec(raw)[0].replace(/\t/g, "  ").length;
-      let s = clean(raw);
+      let s = clean2(raw);
       if (!s) return;
       const marked = /^#{1,3}\s+\S/.test(s);
       if (marked) s = s.replace(/^#{1,3}\s+/, "");
-      const nextIsPerson = lines[i + 1] !== void 0 && clean(lines[i + 1])[0] === "@";
+      const nextIsPerson = lines[i + 1] !== void 0 && clean2(lines[i + 1])[0] === "@";
       const x0 = s.replace(/[:：]\s*$/, "").toLowerCase();
       const lane2 = (marked || nextIsPerson) && (lanes || []).find((l) => x0 === String(l.n).toLowerCase() || x0 === String(l.k).toLowerCase());
       if (lane2) {
@@ -6350,6 +6635,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       r.append(a);
     }
     (l.tg || []).forEach((x) => r.append(el("span", "tgchip tg-" + x.c, "#" + x.n)));
+    if (l.fid && fidLabel(l.fid)) r.append(el("span", "chip fsid", fidLabel(l.fid)));
     if (l.rk) r.append(el("span", "chip riskchip", "At risk"));
     if (l.fl) r.append(el("span", "chip scopechip", "Out of scope"));
     if (l.note) {
@@ -6433,6 +6719,57 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       touch({ t: v.slice(0, 1200), h: "" });
     });
     r.append(st, t);
+    {
+      const fi = el("input", "fidin");
+      fi.type = "text";
+      fi.size = 7;
+      fi.maxLength = 12;
+      fi.placeholder = "Feature id";
+      fi.setAttribute("aria-label", "Feature id (links this item to the roadmap)");
+      fi.setAttribute("list", "fidlist");
+      fi.value = l.fid ? fidLabel(l.fid) : "";
+      fi.title = "Type the id of a feature that is on the roadmap (for example DC#12) to keep title and progress linked.";
+      fi.addEventListener("change", () => {
+        const v = fi.value.trim();
+        if (!v) {
+          delete l.fid;
+          delete l.lk;
+          l.edited = true;
+          save(rep, "", "Unlink item");
+          renderReports();
+          return;
+        }
+        const id = fidFromText(v);
+        if (!id) {
+          toast("No feature on the roadmap has the id " + v + ".");
+          fi.value = l.fid ? fidLabel(l.fid) : "";
+          return;
+        }
+        const k2 = scan().find((x2) => x2.kind === "card" && x2.l.id === id);
+        if (!k2) {
+          toast(v.toUpperCase() + " is not on the roadmap yet. Add the card to the roadmap in Monthly deliverables first.");
+          fi.value = l.fid ? fidLabel(l.fid) : "";
+          return;
+        }
+        l.fid = id;
+        l.lk = { t: l.t, pct: linePct(l) };
+        l.edited = true;
+        save(rep, 'linked "' + l.t + '" to ' + v.toUpperCase(), "Link to feature");
+        renderReports();
+      });
+      r.append(fi);
+      const k = l.fid ? scan().find((x2) => x2.kind === "line" && x2.l.id === l.id) : null;
+      if (k && k.cmp.incoming.length) {
+        const b = el("span", "chip fschip in", "Roadmap changed");
+        b.title = "The roadmap has a newer " + k.cmp.incoming.map((x2) => x2.f === "t" ? "title" : "progress").join(" and ") + ". Use Check updates.";
+        r.append(b);
+      }
+      if (k && k.cmp.outgoing.length) {
+        const b = el("span", "chip fschip out", "Waiting for admin");
+        b.title = "Your change is waiting for an admin to approve it on the roadmap.";
+        r.append(b);
+      }
+    }
     const u = jiraUrl(cfg().jira, l.jira);
     if (l.jira) {
       const a = el(u ? "a" : "span", "jira", l.jira);
@@ -6719,7 +7056,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     const srcTxt = rep.srcN ? " · built from " + rep.srcN.si + " sprint items + " + rep.srcN.rf + " roadmap bars" : "";
     const meta = el("p", "sub rmeta", (sub ? "Saved" + (rep.subBy ? " by " + rep.subBy : "") + (rep.subAt ? " on " + fmtIso(rep.subAt.slice(0, 10)) : "") + " · visible to the executives" : "Not saved yet · the executives cannot see it") + (viewer ? "" : " · last edit " + (rep.by || "") + srcTxt));
     const tools = el("div", "row spbar rtools");
-    const btn = (t, cls, fn, dis) => {
+    const btn2 = (t, cls, fn, dis) => {
       const b = el("button", "btn " + (cls || ""), t);
       b.type = "button";
       b.disabled = !!dis;
@@ -6728,10 +7065,10 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       return b;
     };
     if (!viewer) {
-      btn("Sync from Sprint & Roadmap", "", () => sync(rep, false), !canBuild() || rUI.busy);
+      btn2("Sync from Sprint & Roadmap", "", () => sync(rep, false), !canBuild() || rUI.busy);
     }
     if (!viewer) {
-      const U = undoR(rep.id), ub = btn("↶ Undo", "", () => reportUndo("undo"), true), rb = btn("↷ Redo", "", () => reportUndo("redo"), true);
+      const U = undoR(rep.id), ub = btn2("↶ Undo", "", () => reportUndo("undo"), true), rb = btn2("↷ Redo", "", () => reportUndo("redo"), true);
       const upd = () => {
         ub.disabled = !U.canUndo() || !canBuild();
         rb.disabled = !U.canRedo() || !canBuild();
@@ -6742,12 +7079,19 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       unsubR = U.subscribe(upd);
       upd();
     }
-    if (!viewer) btn("+ Product section", "", () => addSection(rep), !canBuild());
-    if (!viewer) btn("Clear all items", "", () => clearItems(rep), !canBuild());
-    btn("Copy text", "", () => copyReport(rep));
-    btn("Print / PDF", "", () => printReport(rep));
+    if (!viewer && canBuild()) {
+      const n = scan().filter((x) => x.kind === "line" && x.did === rep.id).reduce((a, x) => a + x.cmp.incoming.length, 0);
+      if (n) {
+        const cb = btn2("Check updates (" + n + ")", "primary", () => openCheckUpdates("line", renderReports, rep.id));
+        cb.id = "rpcheck";
+      }
+    }
+    if (!viewer) btn2("+ Product section", "", () => addSection(rep), !canBuild());
+    if (!viewer) btn2("Clear all items", "", () => clearItems(rep), !canBuild());
+    btn2("Copy text", "", () => copyReport(rep));
+    btn2("Print / PDF", "", () => printReport(rep));
     if (!viewer) tools.append(settingsBtn());
-    if (!viewer) btn("Save", "primary", () => {
+    if (!viewer) btn2("Save", "primary", () => {
       const first = rep.status !== "submitted";
       if (first) {
         rep.status = "submitted";
@@ -6758,6 +7102,17 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       notify(first ? "Saved. The executives can see this report now. Later changes are saved automatically." : "Saved. Changes are saved automatically and the executives see them.");
       renderReports();
     }, !canBuild());
+    if (!viewer && canBuild()) {
+      const dl2 = el("datalist");
+      dl2.id = "fidlist";
+      cardIdsList().forEach((v) => {
+        const o = el("option");
+        o.value = v;
+        dl2.append(o);
+      });
+      pg.append(dl2);
+      setTimeout(ensureRecords, 0);
+    }
     const body = el("div", "rbody sdoc"), pls = rep.pl || productsOf(cfg());
     const label = rep.label !== void 0 ? rep.label : "Sprint " + rep.n + " · week " + (rep.w || 1) + " of 2", hero = el("div", "rhero");
     hero.append(el("small", "", "Ynmo · Weekly product update"));
@@ -8370,6 +8725,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
   }
 
   // src/esm/pages/monthly.js
+  var lkMap = /* @__PURE__ */ new Map();
   var STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9 6.8 19.6l1-5.8-4.3-4.1 5.9-.8z"/></svg>';
   var blOpen = false;
   try {
@@ -8531,13 +8887,14 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
         }
         pushHistory();
         const nid = "c" + Date.now().toString(36), none = who.value === "__none", all = items().filter((x) => x.sq === sq.value);
-        S.over[nid] = { custom: true, rm: state.rm, t: l.t, n: notesOf(l).map((q) => q.t).join(" | "), sq: sq.value, pr: sq.value === "ai" ? ["tifli"] : [sq.value], d0: Math.max(0, k0), d1: Math.min(NDAYS - 1, k1), st: "planned", res: none ? [] : [who.value], ord: all.length ? Math.max.apply(null, all.map((x) => x.ord)) + 1 : 0, card: l.id };
+        S.over[nid] = { custom: true, rm: state.rm, t: l.t, n: notesOf(l).map((q) => q.t).join(" | "), sq: sq.value, pr: sq.value === "ai" ? ["tifli"] : [sq.value], d0: Math.max(0, k0), d1: Math.min(NDAYS - 1, k1), st: "planned", pc: clampPct(l.pct), res: none ? [] : [who.value], ord: all.length ? Math.max.apply(null, all.map((x) => x.ord)) + 1 : 0, card: l.id };
         persist(nid);
         saveMonth(m, (d) => {
           const x = d.lines.find((z) => z.id === l.id);
           if (x) {
             x.rid = nid;
             x.rm = state.rm;
+            x.lk = { t: x.t, pct: clampPct(x.pct) };
           }
         }, null, true);
         logAct("roadmap", 'added "' + l.t + '" (' + cardId(l) + ") to " + r.n + " from " + d0.value + " to " + d1.value + (none ? "" : " for " + who.value));
@@ -8890,6 +9247,21 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       b.title = "Brought in from the roadmap";
       foot.append(b);
     }
+    {
+      const k = lkMap.get(l.id);
+      if (k) {
+        if (k.cmp.incoming.length) {
+          const b = el("span", "chip fschip in", "Roadmap changed");
+          b.title = "The roadmap has a newer " + k.cmp.incoming.map((x) => x.f === "t" ? "title" : "progress").join(" and ") + ". Use Check updates.";
+          foot.append(b);
+        }
+        if (k.cmp.outgoing.length) {
+          const b = el("span", "chip fschip out", "Waiting for admin");
+          b.title = "Your change to the " + k.cmp.outgoing.map((x) => x.f === "t" ? "title" : "progress").join(" and ") + " is waiting for an admin to approve it on the roadmap.";
+          foot.append(b);
+        }
+      }
+    }
     foot.append(noteBtn2(m, l, ed));
     r.append(head, t, foot);
     if (ed) {
@@ -9131,6 +9503,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
         write("reports/" + d.id, S.reports[d.id]);
       }
     });
+    lkMap = new Map(scan().filter((r) => r.kind === "card").map((r) => [r.l.id, r]));
     const prods = boardProducts(), tools = el("div", "formrow");
     const q = el("input");
     q.type = "search";
@@ -9180,6 +9553,17 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       ub.addEventListener("click", undoMonthly);
       tools.append(ub);
     }
+    if (ed) {
+      const n = [...lkMap.values()].reduce((a, r) => a + r.cmp.incoming.length, 0);
+      if (n) {
+        const cb = el("button", "btn sm primary mdcheck", "Check updates (" + n + ")");
+        cb.type = "button";
+        cb.id = "mdcheck";
+        cb.title = "The roadmap changed some of your features. Check and apply them one by one.";
+        cb.addEventListener("click", () => openCheckUpdates("card", renderMonthly));
+        tools.append(cb);
+      }
+    }
     const pc = pastCount();
     if (pc || ui2.past) {
       const pb = el("button", "btn sm", ui2.past ? "Hide past months" : "Show past months (" + pc + ")");
@@ -9206,6 +9590,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       });
       pg.append(bb);
     }
+    if (ed) setTimeout(ensureRecords, 0);
     const board = el("div", "mdboard");
     if (blOpen) board.append(column(BL, prods, ed));
     visibleMonths().forEach((m) => board.append(column(m, prods, ed)));

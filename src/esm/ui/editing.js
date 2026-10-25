@@ -14,6 +14,7 @@ import { logAct, toast } from '../core/shared.js';
 import { curRm } from '../pages/roadmaps.js';
 import { closePicker, fillPersons, openPicker, placePop } from './people-picker.js';
 import { depsOf, openDeps, toggleMilestone } from '../features/dependencies.js';
+import { fidLabel } from '../features/feature-sync.js';
 
 /* ---------- inline edit, context menu, people ---------- */
 export function startEdit(it, owner) { if (!canEdit() || !lockCheck(it)) return; closeCtx(); state.edit = it.id + '|' + (owner || ''); state.needFocus = true; render(); trackPres(); }
@@ -62,6 +63,10 @@ export function barMenu(it, owner, x, y) {
     mi(c, 'Rename', () => startEdit(it, owner));
     mlab(c, 'Status');
     Object.keys(STATUS).forEach(k => mi(c, (it.st === k ? '✓ ' : '') + STATUS[k], () => commit(it.id, { st: k })));
+    mlab(c, 'Progress' + (it.card ? ' (linked to ' + (fidLabel(it.card) || 'Monthly') + ')' : ''));
+    { const pg = el('select', 'mpcsel'); pg.setAttribute('aria-label', 'Progress'); const cur = Number.isFinite(it.pc) ? it.pc : null, vals = []; for (let v = 0; v <= 100; v += 10) vals.push(v); if (cur !== null && !vals.includes(cur)) { vals.push(cur); vals.sort((x, y) => x - y); }
+      const none = el('option', '', 'Not set'); none.value = ''; none.selected = cur === null; pg.append(none); vals.forEach(v => { const o = el('option', '', v + '%'); o.value = String(v); o.selected = v === cur; pg.append(o); });
+      pg.addEventListener('change', () => { closeCtx(); if (pg.value !== '') commit(it.id, { pc: Number(pg.value) }); }); c.append(pg); }
     mlab(c, 'Product (sets the bar colour)');
     const prow = el('div', 'mrow prodrow');
     LANES.forEach(l => { const b = el('button', 'pchip pick', l.n); b.type = 'button'; b.style.setProperty('--c', l.c); b.setAttribute('aria-pressed', String(it.sq === l.k)); b.addEventListener('click', () => { closeCtx(); if (it.sq !== l.k) commit(it.id, Object.assign(squadPatch(it, l.k), { c: null })); }); prow.append(b); });

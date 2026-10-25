@@ -11,6 +11,7 @@ for f in tests/features/*.py; do
   echo "$(basename "$f"): pass=$p fail=$x exit=$code"
   if [ "$x" -gt 0 ] || [ "$code" -ne 0 ]; then echo "$out" | grep -E '^FAIL|Error|Traceback' | head -5; fail=1; fi
 done
+node tests/feature_link_unit.mjs | grep -q '^FAIL' && { echo 'feature_link_unit.mjs: FAIL'; fail=1; }
 node tests/monthly_unit.mjs | grep -q '^FAIL' && { echo 'monthly_unit.mjs: FAIL'; fail=1; }
 node tests/undo_unit.mjs | grep -q '^FAIL' && { echo 'undo_unit.mjs: FAIL'; fail=1; }
 node build.mjs --dist >/dev/null && python3 tests/csp_check.py || fail=1

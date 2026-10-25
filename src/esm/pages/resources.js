@@ -18,6 +18,7 @@ import { sb } from '../core/supabase.js';
 import { avatarEl } from '../ui/avatars.js';
 import { renderPermissions } from './permissions.js';
 import { notify } from '../ui/notify.js';
+import { requestsCard, pendingCount } from '../features/feature-sync.js';
 import { applyAccessChange } from '../app/shell.js';
 
 /* ---------- resources ---------- */
@@ -166,7 +167,7 @@ export async function loadMembers() {
   if (S.denied) S.denied = null; /* a save refused earlier must not keep blocking edits once an admin has changed access; a new refusal sets it again */
   if (mine && (mine.access !== S.me.access || !!mine.is_admin !== !!S.me.is_admin || JSON.stringify(mine.perms || null) !== JSON.stringify(S.me.perms || null))) { Object.assign(S.me, { access: mine.access, is_admin: mine.is_admin, perms: mine.perms }); applyAccessChange(); }
   const pend = S.members.filter(m => !m.approved).length;
-  const b = document.querySelector('#nav [data-p="admin"] .dot'); if (b) { b.hidden = !(S.me.is_admin && pend); b.textContent = pend; }
+  const reqs = S.me.is_admin ? pendingCount() : 0, b = document.querySelector('#nav [data-p="admin"] .dot'); if (b) { b.hidden = !(S.me.is_admin && (pend + reqs)); b.textContent = pend + reqs; }
   if (state.page === 'admin') renderAdmin();
 }
 export function renderResources() {
@@ -263,6 +264,7 @@ export function renderAdmin() {
       row.append(avatarEl(m.avatar, 36, m.name), who, acc, ok); ac.append(row);
     });
   root.append(ac);
+  root.append(requestsCard(renderAdmin));
   renderPermissions(root, again => { if (again === true) renderAdmin(); else return loadMembers(); });
 }
 

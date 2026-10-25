@@ -25,6 +25,7 @@ import { pctBand } from '../features/month-model.js';
 import { progressBlock } from '../features/month-view.js';
 import { buildPrint } from '../features/report-print.js';
 import { confirmDlg } from '../ui/confirm.js';
+import { scan, ensureRecords, openCheckUpdates, fidFromText, fidLabel, cardIdsList } from '../features/feature-sync.js';
 import { EXTRA_SECTIONS } from '../features/sprint-doc.js';
 
 const SPARK = '<svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8L2.5 17.5l1.8-.7z"/></svg>';
@@ -164,6 +165,7 @@ function viewLine(l) {
   const r = el('div', 'rv ln-' + l.st + (l.fl ? ' oos' : '')), t = el('span', 'rvt', l.t); r.append(el('span', 'rvp pc-' + pctBand(linePct(l)), linePct(l) + '%'), t);
   const u = jiraUrl(cfg().jira, l.jira); if (l.jira) { const a = el(u ? 'a' : 'span', 'jira', l.jira); if (u) { a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer'; } r.append(a); }
   (l.tg || []).forEach(x => r.append(el('span', 'tgchip tg-' + x.c, '#' + x.n)));
+  if (l.fid && fidLabel(l.fid)) r.append(el('span', 'chip fsid', fidLabel(l.fid)));
   if (l.rk) r.append(el('span', 'chip riskchip', 'At risk'));
   if (l.fl) r.append(el('span', 'chip scopechip', 'Out of scope'));
   if (l.note) { const n = el('span', 'nbtn has ro'); n.tabIndex = 0; n.innerHTML = NOTE_ICON; n.dataset.tip = l.note; n.setAttribute('role', 'note'); n.setAttribute('aria-label', 'Note: ' + l.note); r.append(n); }
@@ -195,6 +197,15 @@ function lineRow(rep, d, l, ro) {
   st.addEventListener('change', () => { const v = Number(st.value); touch({ pct: v, st: v >= 100 ? 'done' : l.st === 'done' ? 'on' : l.st }); renderReports(); });
   const t = plainBox('sptext', l.t, 'Item text', v => { if (!v) { t.textContent = l.t; return; } touch({ t: v.slice(0, 1200), h: '' }); });
   r.append(st, t);
+  { const fi = el('input', 'fidin'); fi.type = 'text'; fi.size = 7; fi.maxLength = 12; fi.placeholder = 'Feature id'; fi.setAttribute('aria-label', 'Feature id (links this item to the roadmap)'); fi.setAttribute('list', 'fidlist'); fi.value = l.fid ? fidLabel(l.fid) : ''; fi.title = 'Type the id of a feature that is on the roadmap (for example DC#12) to keep title and progress linked.';
+    fi.addEventListener('change', () => { const v = fi.value.trim(); if (!v) { delete l.fid; delete l.lk; l.edited = true; save(rep, '', 'Unlink item'); renderReports(); return; }
+      const id = fidFromText(v); if (!id) { toast('No feature on the roadmap has the id ' + v + '.'); fi.value = l.fid ? fidLabel(l.fid) : ''; return; }
+      const k = scan().find(x => x.kind === 'card' && x.l.id === id); if (!k) { toast(v.toUpperCase() + ' is not on the roadmap yet. Add the card to the roadmap in Monthly deliverables first.'); fi.value = l.fid ? fidLabel(l.fid) : ''; return; }
+      l.fid = id; l.lk = { t: l.t, pct: linePct(l) }; l.edited = true; save(rep, 'linked "' + l.t + '" to ' + v.toUpperCase(), 'Link to feature'); renderReports(); });
+    r.append(fi);
+    const k = l.fid ? scan().find(x => x.kind === 'line' && x.l.id === l.id) : null;
+    if (k && k.cmp.incoming.length) { const b = el('span', 'chip fschip in', 'Roadmap changed'); b.title = 'The roadmap has a newer ' + k.cmp.incoming.map(x => x.f === 't' ? 'title' : 'progress').join(' and ') + '. Use Check updates.'; r.append(b); }
+    if (k && k.cmp.outgoing.length) { const b = el('span', 'chip fschip out', 'Waiting for admin'); b.title = 'Your change is waiting for an admin to approve it on the roadmap.'; r.append(b); } }
   const u = jiraUrl(cfg().jira, l.jira);
   if (l.jira) { const a = el(u ? 'a' : 'span', 'jira', l.jira); if (u) { a.href = u; a.target = '_blank'; a.rel = 'noopener noreferrer'; } r.append(a); }
   const rk = el('button', 'btn sm flagbtn riskbtn' + (l.rk ? ' on' : ''), l.rk ? '⚑ At risk' : '⚐'); rk.type = 'button'; rk.title = l.rk ? 'At risk: may not meet the deadline. Click again to remove.' : 'Click to flag as at risk (may not meet the deadline)'; rk.setAttribute('aria-label', 'At risk'); rk.setAttribute('aria-pressed', l.rk ? 'true' : 'false');
@@ -319,12 +330,14 @@ function detailView(pg, viewer, rep) {
     const upd = () => { ub.disabled = !U.canUndo() || !canBuild(); rb.disabled = !U.canRedo() || !canBuild(); ub.title = ub.ariaLabel = U.canUndo() ? 'Undo: ' + U.nextUndo() + ' (Ctrl/Cmd+Z)' : 'Nothing to undo'; rb.title = rb.ariaLabel = U.canRedo() ? 'Redo: ' + U.nextRedo() + ' (Ctrl/Cmd+Shift+Z)' : 'Nothing to redo'; };
     if (unsubR) unsubR(); unsubR = U.subscribe(upd); upd();
   }
+  if (!viewer && canBuild()) { const n = scan().filter(x => x.kind === 'line' && x.did === rep.id).reduce((a, x) => a + x.cmp.incoming.length, 0); if (n) { const cb = btn('Check updates (' + n + ')', 'primary', () => openCheckUpdates('line', renderReports, rep.id)); cb.id = 'rpcheck'; } }
   if (!viewer) btn('+ Product section', '', () => addSection(rep), !canBuild());
   if (!viewer) btn('Clear all items', '', () => clearItems(rep), !canBuild());
   btn('Copy text', '', () => copyReport(rep));
   btn('Print / PDF', '', () => printReport(rep));
   if (!viewer) tools.append(settingsBtn());
   if (!viewer) btn('Save', 'primary', () => { const first = rep.status !== 'submitted'; if (first) { rep.status = 'submitted'; rep.subAt = new Date().toISOString(); rep.subBy = S.me.name || S.me.email; } save(rep, first ? 'saved the weekly report for ' + fmtIso(rep.a) + ' for the executives' : '', first ? 'Save' : 'Save'); notify(first ? 'Saved. The executives can see this report now. Later changes are saved automatically.' : 'Saved. Changes are saved automatically and the executives see them.'); renderReports(); }, !canBuild());
+  if (!viewer && canBuild()) { const dl = el('datalist'); dl.id = 'fidlist'; cardIdsList().forEach(v => { const o = el('option'); o.value = v; dl.append(o); }); pg.append(dl); setTimeout(ensureRecords, 0); }
   const body = el('div', 'rbody sdoc'), pls = rep.pl || productsOf(cfg());
   const label = rep.label !== undefined ? rep.label : 'Sprint ' + rep.n + ' · week ' + (rep.w || 1) + ' of 2', hero = el('div', 'rhero'); hero.append(el('small', '', 'Ynmo · Weekly product update'));
   if (ro) hero.append(el('h2', 'rtitle', fmtIso(rep.a) + ' – ' + fmtIso(rep.b)), el('span', 'rsp', label));

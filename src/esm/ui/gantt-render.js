@@ -68,6 +68,7 @@ function buildBar(it, owner) {
     bar.append(inp);
   } else bar.append(el('span', 'nm2', (it.st === 'done' ? '✓ ' : '') + it.t));
   if (it.tag) bar.append(el('span', 'tg', it.tag === 'High priority' ? 'High' : it.tag === 'Low priority' ? 'Low' : it.tag));
+  if (Number.isFinite(it.pc)) { const pf = el('i', 'pgf'); pf.style.width = it.pc + '%'; pf.setAttribute('aria-hidden', 'true'); bar.prepend(pf); bar.classList.add('hasp'); bar.dataset.tipSub += ' · ' + it.pc + '% done'; bar.setAttribute('aria-label', bar.getAttribute('aria-label') + ', ' + it.pc + ' percent done'); }
   const hl = el('span', 'hd l'), hr = el('span', 'hd r'); bar.append(hl, hr);
   bar.addEventListener('pointerdown', e => { if (e.target.tagName === 'INPUT') return; const mode = e.target === hl ? 'l' : e.target === hr ? 'r' : 'move'; if (canEdit()) startDrag(e, it, bar, mode); });
   bar.addEventListener('pointerenter', () => { if (S.dragging) return; const g = $('grid'); g.classList.add('hov'); g.querySelectorAll('.bar').forEach(b => b.classList.toggle('same', b.dataset.id === it.id)); });

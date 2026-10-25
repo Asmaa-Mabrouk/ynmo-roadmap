@@ -38,6 +38,8 @@ replaced by creating new roadmaps with their own date range.
 | **Users & permissions** (admins) | Approve registered people; per person and per module View / Edit / Delete switches; make other people admins | Controlled access: each person sees and changes only their modules |
 
 ## 5. Key workflows
+
+**Keeping a feature in step:** a feature on the roadmap has one id (for example DC#12) shown on its Monthly card and in the weekly report. Title and progress stay linked. People in Monthly or the report propose changes and an admin approves them onto the roadmap; changes made on the roadmap are checked and applied by the team one by one in Monthly and the report.
 1. **Onboarding:** sign up → confirm email → "pending approval" screen → admin approves as Editor/Viewer → user enters.
 2. **Planning a period:** create roadmap (range) → add features per squad → assign people → set dependencies.
 3. **Weekly review:** open Roadmap → adjust → share link to leadership.

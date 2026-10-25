@@ -42,6 +42,23 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-25 - Linked features (roadmap, Monthly, weekly report)
+```
+🔄 YNMO LEDGER UPDATE — 2026-10-25
+Request: link feature ids across the roadmap gantt, weekly report and Monthly (title and progress both ways, admin approval, check updates, hidden record per card)
+Surface: cross-cutting (Roadmaps tool)
+Outcome: shared feature id; roadmap bars have progress; Monthly/report edits wait for admin approval; roadmap changes are checked one by one
+New facts / decisions locked:
+  • Linked fields: title and progress %. The roadmap bar is the master; progress lives on the bar (pc)
+  • Report items link by typing the card id (DC#12); each card/item keeps a hidden record lk {t, pct}
+  • Monthly/report -> roadmap needs admin approval; roadmap -> Monthly/report is checked and applied one by one (or Keep mine = request)
+Corrections to this skill: none
+Open / flagged:
+  • Dates and assignee are not linked (only title and progress); only cards added to the roadmap can be linked
+  • Roadmap editors can still change a bar directly; approval applies to changes coming from Monthly and the report
+Changelog: Feature ids link roadmap, Monthly and report; admin approval queue
+```
+
 ### 2026-10-25 - QA pass: Monthly and permissions
 ```
 🔄 YNMO LEDGER UPDATE — 2026-10-25

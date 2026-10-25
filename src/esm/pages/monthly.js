@@ -22,6 +22,8 @@ import { saveIdea } from './ideas.js';
 import { diffDoc, undoChanges } from '../features/month-undo.js';
 import { adhocStats, cardId, notesOf, clampPct, monthId, monthLabel, monthProgress, monthRange, monthText, newLine, nextMonth, pctBand, SIZES, TAGS, legacyTag } from '../features/month-model.js';
 import { NOTE_ICON, setupBanner } from './reports.js';
+import { scan, ensureRecords, openCheckUpdates } from '../features/feature-sync.js';
+let lkMap = new Map();
 
 const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9 6.8 19.6l1-5.8-4.3-4.1 5.9-.8z"/></svg>';
 let blOpen = false; try { blOpen = localStorage.getItem('ynmo-backlog') === '1'; } catch (e) { /* no storage */ }
@@ -106,9 +108,9 @@ function addToRoadmap(m, l, tag) {
       if (k1 < k0) { err.textContent = 'The end must be on or after the start.'; return; }
       pushHistory();
       const nid = 'c' + Date.now().toString(36), none = who.value === '__none', all = items().filter(x => x.sq === sq.value);
-      S.over[nid] = { custom: true, rm: state.rm, t: l.t, n: notesOf(l).map(q => q.t).join(' | '), sq: sq.value, pr: sq.value === 'ai' ? ['tifli'] : [sq.value], d0: Math.max(0, k0), d1: Math.min(NDAYS - 1, k1), st: 'planned', res: none ? [] : [who.value], ord: all.length ? Math.max.apply(null, all.map(x => x.ord)) + 1 : 0, card: l.id };
+      S.over[nid] = { custom: true, rm: state.rm, t: l.t, n: notesOf(l).map(q => q.t).join(' | '), sq: sq.value, pr: sq.value === 'ai' ? ['tifli'] : [sq.value], d0: Math.max(0, k0), d1: Math.min(NDAYS - 1, k1), st: 'planned', pc: clampPct(l.pct), res: none ? [] : [who.value], ord: all.length ? Math.max.apply(null, all.map(x => x.ord)) + 1 : 0, card: l.id };
       persist(nid);
-      saveMonth(m, d => { const x = d.lines.find(z => z.id === l.id); if (x) { x.rid = nid; x.rm = state.rm; } }, null, true);
+      saveMonth(m, d => { const x = d.lines.find(z => z.id === l.id); if (x) { x.rid = nid; x.rm = state.rm; x.lk = { t: x.t, pct: clampPct(x.pct) }; } }, null, true);
       logAct('roadmap', 'added "' + l.t + '" (' + cardId(l) + ') to ' + r.n + ' from ' + d0.value + ' to ' + d1.value + (none ? '' : ' for ' + who.value));
       closeDlg(); render(); renderMonthly(); toast('Added "' + l.t + '" to ' + r.n + '.');
     });
@@ -233,6 +235,7 @@ function card(m, l, prods, ed) {
   if (SIZES[l.sz]) { const z = el('span', 'chip mdsz mdsz-' + l.sz); z.innerHTML = (l.sz === 'enh' ? STAR + ' ' : '') + SIZES[l.sz]; foot.append(z); }
   if (l.adhoc) foot.append(el('span', 'chip mdadhoc', 'Ad hoc'));
   if (onRoadmap(l)) { const b = el('span', 'chip mdroad', 'On roadmap'); b.title = 'This card is a bar on the roadmap'; foot.append(b); } else if (l.src) { const b = el('span', 'chip mdroad', 'From roadmap'); b.title = 'Brought in from the roadmap'; foot.append(b); }
+  { const k = lkMap.get(l.id); if (k) { if (k.cmp.incoming.length) { const b = el('span', 'chip fschip in', 'Roadmap changed'); b.title = 'The roadmap has a newer ' + k.cmp.incoming.map(x => x.f === 't' ? 'title' : 'progress').join(' and ') + '. Use Check updates.'; foot.append(b); } if (k.cmp.outgoing.length) { const b = el('span', 'chip fschip out', 'Waiting for admin'); b.title = 'Your change to the ' + k.cmp.outgoing.map(x => x.f === 't' ? 'title' : 'progress').join(' and ') + ' is waiting for an admin to approve it on the roadmap.'; foot.append(b); } } }
   foot.append(noteBtn(m, l, ed));
   r.append(head, t, foot);
   if (ed) { // drag the card to another month
@@ -313,6 +316,7 @@ export function renderMonthly() {
   const viewer = modLevel('monthly') < 2, ed = !viewer && canBuild();
   if (ed) fixCards();
   if (ed) docs().forEach(d => { if (d.status !== 'submitted' && !migrated.has(d.id)) { migrated.add(d.id); S.reports[d.id] = Object.assign({}, S.reports[d.id], { status: 'submitted', subAt: d.subAt || new Date().toISOString() }); write('reports/' + d.id, S.reports[d.id]); } });
+  lkMap = new Map(scan().filter(r => r.kind === 'card').map(r => [r.l.id, r]));
   const prods = boardProducts(), tools = el('div', 'formrow');
   const q = el('input'); q.type = 'search'; q.placeholder = 'Search deliverables'; q.value = ui.q; q.setAttribute('aria-label', 'Search deliverables');
   q.addEventListener('input', () => { ui.q = q.value; renderMonthly(); const s = pg.querySelector('input[type=search]'); if (s) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); } });
@@ -322,12 +326,14 @@ export function renderMonthly() {
   ff.addEventListener('change', () => { ui.fl = ff.value; renderMonthly(); });
   tools.append(q, fp, ff);
   if (ed) { const ub = el('button', 'btn sm mdundo', '↶ Undo'); ub.type = 'button'; ub.id = 'mdundo'; ub.disabled = !undoStack.length; ub.title = 'Undo the last change on this board (Ctrl+Z)'; ub.addEventListener('click', undoMonthly); tools.append(ub); }
+  if (ed) { const n = [...lkMap.values()].reduce((a, r) => a + r.cmp.incoming.length, 0); if (n) { const cb = el('button', 'btn sm primary mdcheck', 'Check updates (' + n + ')'); cb.type = 'button'; cb.id = 'mdcheck'; cb.title = 'The roadmap changed some of your features. Check and apply them one by one.'; cb.addEventListener('click', () => openCheckUpdates('card', renderMonthly)); tools.append(cb); } }
   const pc = pastCount(); if (pc || ui.past) { const pb = el('button', 'btn sm', ui.past ? 'Hide past months' : 'Show past months (' + pc + ')'); pb.type = 'button'; pb.addEventListener('click', () => { ui.past = !ui.past; renderMonthly(); }); tools.append(pb); }
   pg.append(pageHead('Monthly deliverables', null, tools));
   const sb0 = viewer ? null : setupBanner(); if (sb0) pg.append(sb0);
   { const n = docOf(BL).lines.filter(l => String(l.t || '').trim()).length, bb = el('button', 'mdblbar' + (blOpen ? ' on' : '')); bb.type = 'button'; bb.id = 'mdbltoggle'; bb.setAttribute('aria-expanded', String(blOpen)); bb.setAttribute('aria-controls', 'mdbacklog');
     bb.append(el('span', 'mdblcaret', blOpen ? '▾' : '▸'), el('b', '', blOpen ? 'Hide backlog' : 'Backlog'), el('span', 'badge', String(n)), el('span', 'mdblsub', blOpen ? 'Drag a card into a month, or use ⋯ → Plan in month' : 'Ideas and requests not planned yet. Open to plan them into a month.'));
     bb.addEventListener('click', () => { setBl(!blOpen); renderMonthly(); }); pg.append(bb); }
+  if (ed) setTimeout(ensureRecords, 0); /* keeps the hidden link records of the cards up to date */
   const board = el('div', 'mdboard'); if (blOpen) board.append(column(BL, prods, ed)); visibleMonths().forEach(m => board.append(column(m, prods, ed)));
   if (ed) { const ms = visibleMonths(), nm = nextMonth(ms[ms.length - 1]); const ac = el('button', 'addcol mdaddmonth', '+ Add month (' + lab(nm) + ')'); ac.type = 'button'; ac.id = 'addmonth'; ac.addEventListener('click', () => { saveMonth(nm, () => {}, 'added the ' + lab(nm) + ' column to the monthly deliverables'); renderMonthly(); }); board.append(ac); }
   pg.append(board);

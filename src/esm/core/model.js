@@ -160,7 +160,7 @@ const NOTES = [
   'Edits are shared: anyone with edit access sees your changes.'
 ];
 
-const FIELDS = ['t', 'sq', 'pr', 'd0', 'd1', 'st', 'n', 'res', 'c', 'ord', 'dep', 'ms', 'pd'];
+const FIELDS = ['t', 'sq', 'pr', 'd0', 'd1', 'st', 'n', 'res', 'c', 'ord', 'dep', 'ms', 'pd', 'pc'];
 export const base = new Map();
 LANES.forEach(l => {
   ITEMS.map((it, i) => ({ it: it, i: i })).filter(x => x.it.sq === l.k)
