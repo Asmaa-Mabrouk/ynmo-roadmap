@@ -22,12 +22,18 @@ import { adhocStats, cardId, clampPct, monthId, monthLabel, monthProgress, month
 import { NOTE_ICON, setupBanner } from './reports.js';
 
 const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9 6.8 19.6l1-5.8-4.3-4.1 5.9-.8z"/></svg>';
+let blOpen = false; try { blOpen = localStorage.getItem('ynmo-backlog') === '1'; } catch (e) { /* no storage */ }
+const setBl = v => { blOpen = v; try { localStorage.setItem('ynmo-backlog', v ? '1' : '0'); } catch (e) { /* no storage */ } };
 const ui = { q: '', pr: 'all', fl: 'all', past: false, prod: '', open: '' };
 const canBuild = () => !isViewer() && canWrite();
 const curMonth = () => todayIso().slice(0, 7);
 const colOf = p => (p && p.c) || '#7b8099';
-const docs = () => Object.keys(S.reports).filter(id => S.reports[id] && S.reports[id].mo).map(id => Object.assign({ id: id }, S.reports[id], { lines: S.reports[id].lines || [] }));
-const docOf = m => docs().find(d => d.mo === m) || { id: monthId(m), mo: m, lines: [] };
+const BL = 'backlog';
+const lab = m => m === BL ? 'Backlog' : monthLabel(m);
+const rawDocs = () => Object.keys(S.reports).filter(id => S.reports[id] && S.reports[id].mo).map(id => Object.assign({ id: id }, S.reports[id], { lines: S.reports[id].lines || [] }));
+/** The month docs (the backlog is a doc too, `reports/mobacklog` with mo 'backlog', but it is not a month). */
+const docs = () => rawDocs().filter(d => d.mo !== BL);
+const docOf = m => rawDocs().find(d => d.mo === m) || { id: monthId(m), mo: m, lines: [] };
 /** The tags a card can have (Daycare, Tifli, Plan, AI, Finance, New initiative), plus any older tag a card still carries until it is converted. */
 function boardProducts() {
   const pl = TAGS.map(t => Object.assign({}, t));
@@ -62,7 +68,7 @@ function saveMonth(m, mutate, log, quiet) {
   d.by = (S.me && (S.me.name || S.me.email)) || ''; d.ts = Date.now(); S.reports[id] = d; write('reports/' + id, d);
   if (log) logAct('report', log);
 }
-const maxNo = () => docs().reduce((a, d) => d.lines.reduce((b, l) => Math.max(b, +l.no || 0), a), 0);
+const maxNo = () => rawDocs().reduce((a, d) => d.lines.reduce((b, l) => Math.max(b, +l.no || 0), a), 0);
 /** Is the roadmap bar made from this card still there? */
 const onRoadmap = l => !!(l.rid && S.over[l.rid] && !S.over[l.rid].x);
 /** "Add to roadmap": the card becomes a bar on the roadmap that is open, with a start, an end and an assignee, and stays linked to the card. */
@@ -95,11 +101,11 @@ function addToRoadmap(m, l, tag) {
   });
 }
 function deleteMonth(m) {
-  confirmDlg('Delete ' + monthLabel(m) + '?', 'Every card of ' + monthLabel(m) + ' is deleted for everyone, including the executives who can see them.', 'Delete month', () => {
-    delete S.reports[monthId(m)]; write('reports/' + monthId(m), null); logAct('report', 'deleted the monthly deliverables for ' + monthLabel(m)); notify('Month deleted'); renderMonthly();
+  confirmDlg('Delete ' + lab(m) + '?', 'Every card of ' + lab(m) + ' is deleted for everyone, including the executives who can see them.', 'Delete month', () => {
+    delete S.reports[monthId(m)]; write('reports/' + monthId(m), null); logAct('report', 'deleted the monthly deliverables for ' + lab(m)); notify('Month deleted'); renderMonthly();
   });
 }
-const copyMonth = m => { const txt = monthText(docOf(m), boardProducts(), fmtIso).join('\n') || monthLabel(m) + '\nNo deliverables yet.'; (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify('Month text copied to the clipboard'), () => notify('Could not copy. Select the text and copy it manually.', 'err')); };
+const copyMonth = m => { const txt = monthText(docOf(m), boardProducts(), fmtIso).join('\n') || lab(m) + '\nNo deliverables yet.'; (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify('Month text copied to the clipboard'), () => notify('Could not copy. Select the text and copy it manually.', 'err')); };
 /** Moves a card to month `to`, before the card `before` (or to the end). Within one month this re-orders. */
 const moveCard = (from, id, to, before) => {
   if (from === to && before === id) return;
@@ -107,7 +113,7 @@ const moveCard = (from, id, to, before) => {
   const put = (d) => { const i = before ? d.lines.findIndex(l => l.id === before) : -1; if (i >= 0) d.lines.splice(i, 0, copy); else d.lines.push(copy); };
   grouped(() => {
     if (from === to) saveMonth(from, d => { d.lines = d.lines.filter(l => l.id !== id); put(d); }, null);
-    else { saveMonth(to, d => { d.lines = d.lines.filter(l => l.id !== id); put(d); }, 'moved "' + line.t + '" to the ' + monthLabel(to) + ' deliverables'); saveMonth(from, d => { d.lines = d.lines.filter(l => l.id !== id); }, null); }
+    else { saveMonth(to, d => { d.lines = d.lines.filter(l => l.id !== id); put(d); }, 'moved "' + line.t + '" to the ' + lab(to) + ' deliverables'); saveMonth(from, d => { d.lines = d.lines.filter(l => l.id !== id); }, null); }
   }); renderMonthly();
 };
 
@@ -170,17 +176,18 @@ function card(m, l, prods, ed) {
       e.stopPropagation(); const b = more.getBoundingClientRect();
       openCtx(b.right - 200, b.bottom + 4, mm => {
         Object.keys(SIZES).forEach(k => mi(mm, (l.sz === k ? '✓ ' : '') + SIZES[k], () => put({ sz: l.sz === k ? '' : k }, l.sz === k ? 'removed the ' + SIZES[k] + ' flag' : 'flagged "' + l.t + '" as ' + SIZES[k])));
-        if (onRoadmap(l)) mi(mm, 'Show on roadmap', () => { if (l.rm) useRoadmap(l.rm); showPage('roadmap'); }); else mi(mm, 'Add to roadmap…', () => addToRoadmap(m, l, p));
+        if (m === BL) { /* backlog cards are not scheduled yet */ } else if (onRoadmap(l)) mi(mm, 'Show on roadmap', () => { if (l.rm) useRoadmap(l.rm); showPage('roadmap'); }); else mi(mm, 'Add to roadmap…', () => addToRoadmap(m, l, p));
         mm.append(el('div', 'msep'));
         if (l.adhoc) mi(mm, 'Mark as planned (not ad hoc)', () => put({ adhoc: false }, 'marked as planned'));
-        const others = visibleMonths().filter(x => x !== m); if (others.length) mm.append(el('div', 'mlab', 'Move to month'));
-        others.forEach(x => mi(mm, monthLabel(x), () => moveCard(m, l.id, x)));
+        const others = visibleMonths().filter(x => x !== m); if (others.length) mm.append(el('div', 'mlab', m === BL ? 'Plan in month' : 'Move to month'));
+        others.forEach(x => mi(mm, lab(x), () => moveCard(m, l.id, x)));
+        if (m !== BL) mi(mm, 'Back to backlog', () => moveCard(m, l.id, BL));
         mm.append(el('div', 'msep'));
-        mi(mm, 'Delete card', () => confirmDlg('Delete this card?', '"' + l.t + '" is deleted from ' + monthLabel(m) + '.', 'Delete card', () => { saveMonth(m, d => { d.lines = d.lines.filter(z => z.id !== l.id); }, 'removed "' + l.t + '" from the ' + monthLabel(m) + ' deliverables'); renderMonthly(); }), 'danger');
+        mi(mm, 'Delete card', () => confirmDlg('Delete this card?', '"' + l.t + '" is deleted from ' + lab(m) + '.', 'Delete card', () => { saveMonth(m, d => { d.lines = d.lines.filter(z => z.id !== l.id); }, 'removed "' + l.t + '" from the ' + lab(m) + ' deliverables'); renderMonthly(); }), 'danger');
       });
     });
-    foot.append(pctSelect(pct, 'Percent complete', v => put({ pct: v, pe: true }, 'changed "' + l.t + '" to ' + v + '%')));
-  } else foot.append(el('span', 'rvp pc-' + pctBand(pct), pct + '%'));
+    if (m !== BL) foot.append(pctSelect(pct, 'Percent complete', v => put({ pct: v, pe: true }, 'changed "' + l.t + '" to ' + v + '%')));
+  } else if (m !== BL) foot.append(el('span', 'rvp pc-' + pctBand(pct), pct + '%'));
   if (SIZES[l.sz]) { const z = el('span', 'chip mdsz mdsz-' + l.sz); z.innerHTML = (l.sz === 'enh' ? STAR + ' ' : '') + SIZES[l.sz]; foot.append(z); }
   if (l.adhoc) foot.append(el('span', 'chip mdadhoc', 'Ad hoc'));
   if (onRoadmap(l)) { const b = el('span', 'chip mdroad', 'On roadmap'); b.title = 'This card is a bar on the roadmap'; foot.append(b); } else if (l.src) { const b = el('span', 'chip mdroad', 'From roadmap'); b.title = 'Brought in from the roadmap'; foot.append(b); }
@@ -203,7 +210,7 @@ function composer(m, prods) {
   }
   const f = el('form', 'mdadd'), ta = el('textarea'), chips = el('div', 'mdchips'), byK = k => prods.find(q => q.k === k) || prods[0];
   ui.prod = byK(ui.prod).k; f.style.setProperty('--c', colOf(byK(ui.prod)));
-  ta.rows = 2; ta.maxLength = 1200; ta.placeholder = 'Enter a title for this card. One card per line if you paste a list.'; ta.setAttribute('aria-label', 'New card for ' + monthLabel(m));
+  ta.rows = 2; ta.maxLength = 1200; ta.placeholder = 'Enter a title for this card. One card per line if you paste a list.'; ta.setAttribute('aria-label', 'New card for ' + lab(m));
   prods.forEach(q => {
     const c = el('button', 'mdchip' + (q.k === ui.prod ? ' on' : ''), q.n); c.type = 'button'; c.style.setProperty('--c', colOf(q)); c.dataset.k = q.k; c.setAttribute('aria-pressed', String(q.k === ui.prod));
     c.addEventListener('click', () => { ui.prod = q.k; f.style.setProperty('--c', colOf(q)); chips.querySelectorAll('.mdchip').forEach(x => { const on = x.dataset.k === q.k; x.classList.toggle('on', on); x.setAttribute('aria-pressed', String(on)); }); ta.focus(); }); chips.append(c);
@@ -214,27 +221,29 @@ function composer(m, prods) {
   ta.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); f.requestSubmit(); } else if (e.key === 'Escape') { e.preventDefault(); close(); } });
   f.addEventListener('submit', e => {
     e.preventDefault(); const ts = ta.value.split('\n').map(x => x.replace(/^\s*[-*•\d.)]+\s+/, '').trim()).filter(Boolean); if (!ts.length) { ta.focus(); return; }
-    ta.value = ''; saveMonth(m, d => { let n = Math.max(maxNo(), ...d.lines.map(x => +x.no || 0)); ts.forEach(t => { const x = newLine(ui.prod, t, {}); x.no = ++n; d.lines.push(x); }); }, 'added ' + (ts.length === 1 ? 'a deliverable' : ts.length + ' deliverables') + ' to ' + monthLabel(m)); ui.focusComp = true; renderMonthly();
+    ta.value = ''; saveMonth(m, d => { let n = Math.max(maxNo(), ...d.lines.map(x => +x.no || 0)); ts.forEach(t => { const x = newLine(ui.prod, t, {}); x.no = ++n; d.lines.push(x); }); }, 'added ' + (ts.length === 1 ? 'a deliverable' : ts.length + ' deliverables') + ' to ' + lab(m)); ui.focusComp = true; renderMonthly();
   });
   const row = el('div', 'mdcrow'); row.append(go, no); f.append(ta, chips, row); wrap.append(f); return wrap;
 }
 function column(m, prods, ed) {
-  const d = docOf(m), now = m === curMonth(), col = el('div', 'col mdcol' + (now ? ' now' : '')); col.dataset.mo = m; col.style.setProperty('--c', now ? 'var(--brand)' : '#55608a');
+  const d = docOf(m), isBl = m === BL, now = m === curMonth(), col = el('div', 'col mdcol' + (now ? ' now' : '') + (isBl ? ' mdbl' : '')); if (isBl) col.id = 'mdbacklog'; col.dataset.mo = m; col.style.setProperty('--c', isBl ? '#8a6d3b' : now ? 'var(--brand)' : '#55608a');
   const fq = ui.q.trim().toLowerCase();
   const lines = d.lines.filter(l => String(l.t || '').trim()), shown = lines.filter(l => (ui.pr === 'all' || l.k === ui.pr) && (ui.fl === 'all' || (ui.fl === 'hp' ? l.hp : l.sz === ui.fl)) && (!fq || (String(l.t) + ' ' + cardId(l)).toLowerCase().includes(fq)));
-  const h = el('h2'); h.append(document.createTextNode(monthLabel(m)), el('span', 'badge', String(lines.length)));
+  const h = el('h2'); h.append(document.createTextNode(lab(m)), el('span', 'badge', String(lines.length)));
   if (now) h.append(el('span', 'chip mdnow', 'This month'));
-  if (ed) {
-    const more = el('button', 'btn sm colmore', '⋯'); more.type = 'button'; more.setAttribute('aria-label', 'Month options for ' + monthLabel(m)); more.title = 'Month options';
+  if (ed && !isBl) {
+    const more = el('button', 'btn sm colmore', '⋯'); more.type = 'button'; more.setAttribute('aria-label', 'Month options for ' + lab(m)); more.title = 'Month options';
     more.addEventListener('click', e => { e.stopPropagation(); const b = more.getBoundingClientRect(); openCtx(b.right - 190, b.bottom + 4, mm => { mi(mm, 'Copy text', () => copyMonth(m)); if (S.reports[monthId(m)]) { mm.append(el('div', 'msep')); mi(mm, 'Delete month', () => deleteMonth(m), 'danger'); } }); });
     h.append(more); h.style.cssText = 'display:flex;align-items:center;gap:8px'; more.style.marginInlineStart = 'auto';
   }
+  if (isBl) { const hb = el('button', 'btn sm colmore', '✕'); hb.type = 'button'; hb.setAttribute('aria-label', 'Hide the backlog'); hb.title = 'Hide the backlog'; hb.addEventListener('click', () => { setBl(false); renderMonthly(); }); h.append(hb); h.style.cssText = 'display:flex;align-items:center;gap:8px'; hb.style.marginInlineStart = 'auto'; }
   col.append(h);
-  const prog = monthProgress(lines), ad = adhocStats(lines), pv = prog.pct === null ? 0 : prog.pct, pr = el('div', 'mdprog pc-' + pctBand(pv));
-  const b0 = el('div', 'mbar pc-' + pctBand(pv)), i0 = el('i'); i0.style.width = pv + '%'; b0.append(i0); b0.setAttribute('aria-label', 'Progress of ' + monthLabel(m));
-  pr.append(b0, el('b', 'mdpct', pv + '%'), el('small', '', prog.pct === null ? 'No planned deliverables yet' : prog.done + ' of ' + prog.n + ' done' + (ad.n ? ' · ' + ad.n + ' ad hoc' : ''))); col.append(pr);
+  if (isBl) { col.append(el('p', 'hint mdblhint', ed ? 'Ideas and requests not planned yet. Drag a card into a month, or use ⋯ → Plan in month.' : 'Ideas and requests not planned yet.')); }
+  const prog = isBl ? { pct: null, n: 0, done: 0 } : monthProgress(lines), ad = adhocStats(lines), pv = prog.pct === null ? 0 : prog.pct, pr = el('div', 'mdprog pc-' + pctBand(pv));
+  const b0 = el('div', 'mbar pc-' + pctBand(pv)), i0 = el('i'); i0.style.width = pv + '%'; b0.append(i0); b0.setAttribute('aria-label', 'Progress of ' + lab(m));
+  pr.append(b0, el('b', 'mdpct', pv + '%'), el('small', '', prog.pct === null ? 'No planned deliverables yet' : prog.done + ' of ' + prog.n + ' done' + (ad.n ? ' · ' + ad.n + ' ad hoc' : ''))); if (!isBl) col.append(pr);
   shown.forEach(l => col.append(card(m, l, prods, ed)));
-  if (!shown.length && !(ed && ui.open === m)) col.append(el('div', 'hint', lines.length ? 'Nothing matches the filter.' : 'Nothing here yet.'));
+  if (!shown.length && !(ed && ui.open === m)) col.append(el('div', 'hint', lines.length ? 'Nothing matches the filter.' : isBl ? 'The backlog is empty.' : 'Nothing here yet.'));
   if (ed) col.append(composer(m, prods));
   if (ed) {
     const ok = e => [...(e.dataTransfer ? e.dataTransfer.types : [])].includes('text/mdcard');
@@ -248,7 +257,7 @@ function column(m, prods, ed) {
 const migrated = new Set();
 /** One-time clean-up when an editor opens the board: cards made before the tags were split get their new tag (the old combined Plan / Daycare card follows the squad of its roadmap bar, else becomes Plan), and cards without a number get one. */
 function fixCards() {
-  const bad = d => d.lines.some(l => (l.k && !TAGS.some(t => t.k === l.k)) || (String(l.t || '').trim() && !l.no)); const old = docs().filter(bad); if (!old.length) return;
+  const bad = d => d.lines.some(l => (l.k && !TAGS.some(t => t.k === l.k)) || (String(l.t || '').trim() && !l.no)); const old = rawDocs().filter(bad); if (!old.length) return;
   const sq = new Map(); allRoadmaps().forEach(rm => withRm(rm.id, () => items().forEach(i => sq.set(rm.id + ':' + i.id, i.sq))));
   let n = maxNo();
   old.sort((x, y) => (x.mo < y.mo ? -1 : 1)).forEach(d => saveMonth(d.mo, dd => { dd.lines.forEach(l => { if (l.k && !TAGS.some(t => t.k === l.k)) l.k = legacyTag(l.k, sq.get(l.src)); if (String(l.t || '').trim() && !l.no) l.no = ++n; }); }, null, true));
@@ -269,12 +278,13 @@ export function renderMonthly() {
   const ff = el('select'); ff.setAttribute('aria-label', 'Filter by flag'); [['all', 'All cards'], ['hp', 'Business priority'], ['quick', 'Quick wins'], ['enh', 'Small enhancements']].forEach(x => { const o = el('option', '', x[1]); o.value = x[0]; o.selected = x[0] === ui.fl; ff.append(o); });
   ff.addEventListener('change', () => { ui.fl = ff.value; renderMonthly(); });
   tools.append(q, fp, ff);
+  { const n = docOf(BL).lines.filter(l => String(l.t || '').trim()).length, bb = el('button', 'btn sm mdbltoggle' + (blOpen ? ' on' : ''), (blOpen ? 'Hide backlog' : 'Backlog') + (n ? ' (' + n + ')' : '')); bb.type = 'button'; bb.id = 'mdbltoggle'; bb.setAttribute('aria-expanded', String(blOpen)); bb.setAttribute('aria-controls', 'mdbacklog'); bb.title = 'Ideas and requests not planned yet'; bb.addEventListener('click', () => { setBl(!blOpen); renderMonthly(); }); tools.append(bb); }
   if (ed) { const ub = el('button', 'btn sm mdundo', '↶ Undo'); ub.type = 'button'; ub.id = 'mdundo'; ub.disabled = !undoStack.length; ub.title = 'Undo the last change on this board (Ctrl+Z)'; ub.addEventListener('click', undoMonthly); tools.append(ub); }
   const pc = pastCount(); if (pc || ui.past) { const pb = el('button', 'btn sm', ui.past ? 'Hide past months' : 'Show past months (' + pc + ')'); pb.type = 'button'; pb.addEventListener('click', () => { ui.past = !ui.past; renderMonthly(); }); tools.append(pb); }
   pg.append(pageHead('Monthly deliverables', viewer ? 'What the business expects every month, tagged and coloured by Daycare, Tifli, Plan, AI, Finance or New initiative, and how far each deliverable is.' : 'What the business expects each month. Add a card with a tag. Use the ⋯ menu of a card to put it on the roadmap with a start, an end and an assignee. Drag a card to move it to another month.', tools));
   const sb0 = viewer ? null : setupBanner(); if (sb0) pg.append(sb0);
-  const board = el('div', 'mdboard'); visibleMonths().forEach(m => board.append(column(m, prods, ed)));
-  if (ed) { const ms = visibleMonths(), nm = nextMonth(ms[ms.length - 1]); const ac = el('button', 'addcol mdaddmonth', '+ Add month (' + monthLabel(nm) + ')'); ac.type = 'button'; ac.id = 'addmonth'; ac.addEventListener('click', () => { saveMonth(nm, () => {}, 'added the ' + monthLabel(nm) + ' column to the monthly deliverables'); renderMonthly(); }); board.append(ac); }
+  const board = el('div', 'mdboard'); if (blOpen) board.append(column(BL, prods, ed)); visibleMonths().forEach(m => board.append(column(m, prods, ed)));
+  if (ed) { const ms = visibleMonths(), nm = nextMonth(ms[ms.length - 1]); const ac = el('button', 'addcol mdaddmonth', '+ Add month (' + lab(nm) + ')'); ac.type = 'button'; ac.id = 'addmonth'; ac.addEventListener('click', () => { saveMonth(nm, () => {}, 'added the ' + lab(nm) + ' column to the monthly deliverables'); renderMonthly(); }); board.append(ac); }
   pg.append(board);
   const cta = pg.querySelector('.mdcomp textarea');
   if (cta && draft && draft.v && ui.open === draft.m) { cta.value = draft.v; cta.setSelectionRange(draft.s, draft.s); cta.focus({ preventScroll: true }); }

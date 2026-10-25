@@ -43,6 +43,18 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 ## Ledger updates
 
 🔄 YNMO LEDGER UPDATE — 2026-10-25
+Request: Simplify the UI; add a collapsed Backlog in the Monthly module that the business can drag from, or choose an action on the card, to plan a specific month.
+Surface: cross-cutting (Roadmaps tool)
+Outcome: Collapsible Backlog column (sticky, remembered), drag or "Plan in month", "Back to backlog"; stored as reports/mobacklog.
+New facts / decisions locked:
+  • Backlog lives inside Monthly as a pseudo-month doc (mo 'backlog'); its cards have no percentage and are not scheduled on the roadmap.
+Corrections to this skill:
+  • none
+Open / flagged:
+  • Backlog and months are still one doc each (same-save overwrite risk); per-card documents not decided.
+Changelog: Monthly: collapsible Backlog with drag and Plan in month.
+
+🔄 YNMO LEDGER UPDATE — 2026-10-25
 Request: Dragging a card from the top to the bottom does not scroll automatically; fix it.
 Surface: cross-cutting (Roadmaps tool)
 Outcome: Auto-scroll while dragging a Monthly card (page vertical, board horizontal) near the edges.

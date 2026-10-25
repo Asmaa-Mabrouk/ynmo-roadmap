@@ -1150,6 +1150,11 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
 
 .mdprod .mdcaret { font-size: .7em; opacity: .75; margin-inline-start: 2px; }
 .mdundo[disabled] { opacity: .45; cursor: default; }
+
+/* Backlog panel: first column of the board, sticky so it stays in view while the months scroll */
+.mdcol.mdbl { position: sticky; inset-inline-start: 0; z-index: 3; background: color-mix(in srgb, #8a6d3b 7%, var(--bg, #fff)); border: 1.5px dashed #b89a5e; box-shadow: 6px 0 14px -10px rgba(0, 0, 0, .35); }
+.mdblhint { margin: 0 0 8px; font-size: .78rem; }
+.mdbltoggle.on { background: #8a6d3b; color: #fff; border-color: #8a6d3b; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -3363,13 +3368,13 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     im.disabled = ef.disabled = !ed;
     im.setAttribute("aria-label", "Impact");
     ef.setAttribute("aria-label", "Effort");
-    const lab = (x, sel) => {
+    const lab2 = (x, sel) => {
       const w = el("label", "hint");
       w.append(document.createTextNode(x + " "), sel);
       return w;
     };
     const r1 = el("div", "row2");
-    r1.append(lab("Impact", im), lab("Effort", ef));
+    r1.append(lab2("Impact", im), lab2("Effort", ef));
     const score = el("span", "score", "Score " + ideaScore(i));
     const stat = el("span", "badge" + (i.st === "scheduled" ? " ok" : ""), (ISTAT.find((x) => x[0] === (i.st || "idea")) || ISTAT[0])[1]);
     const save2 = el("button", "btn primary sm", "Save");
@@ -5291,8 +5296,8 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     });
     put(el("div", "hc r2 first", "Team member"), 2, 1);
     DAYS.forEach((x) => {
-      const off = offAt(x.k), full = dw >= 20, lab = dw >= 10 && dw < 20 && x.dow === 0;
-      const c = el("div", "wk" + (x.we ? " we" : "") + (x.k === todayK ? " today" : "") + (off ? " offd" : "") + (full ? "" : " sparse") + (lab ? " lab" : ""), full || lab ? String(x.d.getUTCDate()) : "");
+      const off = offAt(x.k), full = dw >= 20, lab2 = dw >= 10 && dw < 20 && x.dow === 0;
+      const c = el("div", "wk" + (x.we ? " we" : "") + (x.k === todayK ? " today" : "") + (off ? " offd" : "") + (full ? "" : " sparse") + (lab2 ? " lab" : ""), full || lab2 ? String(x.d.getUTCDate()) : "");
       c.title = dlabel(x.k) + (x.k === todayK ? " (today)" : "") + (off ? " · " + off.n : "");
       put(c, 2, x.k + 2 + "");
     });
@@ -5813,17 +5818,17 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     const sqCard = el("div", "card");
     sqCard.append(el("h2", "", "Products"), el("p", "sub", "Each product has its own colour, so its bars are easy to recognise. Click a colour to change it, edit a name and press Enter. New products can be added below."));
     const picker = (l, onPick) => {
-      const lab = el("label", "colbtn");
-      lab.style.background = l.c;
-      lab.title = "Change colour";
+      const lab2 = el("label", "colbtn");
+      lab2.style.background = l.c;
+      lab2.title = "Change colour";
       const ci = el("input");
       ci.type = "color";
       ci.value = /^#[0-9a-f]{6}$/i.test(l.c) ? l.c : "#6b7280";
       ci.disabled = !canEdit();
       ci.setAttribute("aria-label", "Colour of " + l.n);
       ci.addEventListener("change", () => onPick(ci.value));
-      lab.append(ci);
-      return lab;
+      lab2.append(ci);
+      return lab2;
     };
     LANES.forEach((l) => {
       const row = el("div", "formrow sqrow");
@@ -7447,11 +7452,11 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     if (ro) hero.append(el("h2", "rtitle", fmtIso(rep.a) + " – " + fmtIso(rep.b)), el("span", "rsp", label));
     else {
       hero.append(el("h2", "rtitle", fmtIso(rep.a) + " – " + fmtIso(rep.b)));
-      const ed = el("div", "rhedit"), mk = (lab, val) => {
+      const ed = el("div", "rhedit"), mk = (lab2, val) => {
         const i = el("input");
         i.type = "date";
         i.value = val;
-        i.setAttribute("aria-label", lab);
+        i.setAttribute("aria-label", lab2);
         return i;
       };
       const fa = mk("Week start", rep.a), fb = mk("Week end", rep.b), lb = el("input");
@@ -7930,11 +7935,11 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
         closeDlg();
         if (then) then();
       });
-      const lab = el("label");
-      lab.append(el("span", "", "Client ID"), ci);
+      const lab2 = el("label");
+      lab2.append(el("span", "", "Client ID"), ci);
       const row = el("div", "row");
       row.append(ok, no);
-      box2.append(ol, lab, msg, row);
+      box2.append(ol, lab2, msg, row);
       setTimeout(() => ci.focus(), 0);
     });
   }
@@ -8950,12 +8955,27 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
 
   // src/esm/pages/monthly.js
   var STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9 6.8 19.6l1-5.8-4.3-4.1 5.9-.8z"/></svg>';
+  var blOpen = false;
+  try {
+    blOpen = localStorage.getItem("ynmo-backlog") === "1";
+  } catch (e) {
+  }
+  var setBl = (v) => {
+    blOpen = v;
+    try {
+      localStorage.setItem("ynmo-backlog", v ? "1" : "0");
+    } catch (e) {
+    }
+  };
   var ui = { q: "", pr: "all", fl: "all", past: false, prod: "", open: "" };
   var canBuild2 = () => !isViewer() && canWrite();
   var curMonth = () => todayIso().slice(0, 7);
   var colOf2 = (p) => p && p.c || "#7b8099";
-  var docs = () => Object.keys(S.reports).filter((id) => S.reports[id] && S.reports[id].mo).map((id) => Object.assign({ id }, S.reports[id], { lines: S.reports[id].lines || [] }));
-  var docOf = (m) => docs().find((d) => d.mo === m) || { id: monthId(m), mo: m, lines: [] };
+  var BL = "backlog";
+  var lab = (m) => m === BL ? "Backlog" : monthLabel(m);
+  var rawDocs = () => Object.keys(S.reports).filter((id) => S.reports[id] && S.reports[id].mo).map((id) => Object.assign({ id }, S.reports[id], { lines: S.reports[id].lines || [] }));
+  var docs = () => rawDocs().filter((d) => d.mo !== BL);
+  var docOf = (m) => rawDocs().find((d) => d.mo === m) || { id: monthId(m), mo: m, lines: [] };
   function boardProducts() {
     const pl = TAGS.map((t) => Object.assign({}, t));
     docs().forEach((d) => d.lines.forEach((l) => {
@@ -9040,7 +9060,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     write("reports/" + id, d);
     if (log) logAct("report", log);
   }
-  var maxNo = () => docs().reduce((a, d) => d.lines.reduce((b, l) => Math.max(b, +l.no || 0), a), 0);
+  var maxNo = () => rawDocs().reduce((a, d) => d.lines.reduce((b, l) => Math.max(b, +l.no || 0), a), 0);
   var onRoadmap = (l) => !!(l.rid && S.over[l.rid] && !S.over[l.rid].x);
   function addToRoadmap(m, l, tag) {
     if (!canEdit()) return;
@@ -9106,16 +9126,16 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     });
   }
   function deleteMonth(m) {
-    confirmDlg("Delete " + monthLabel(m) + "?", "Every card of " + monthLabel(m) + " is deleted for everyone, including the executives who can see them.", "Delete month", () => {
+    confirmDlg("Delete " + lab(m) + "?", "Every card of " + lab(m) + " is deleted for everyone, including the executives who can see them.", "Delete month", () => {
       delete S.reports[monthId(m)];
       write("reports/" + monthId(m), null);
-      logAct("report", "deleted the monthly deliverables for " + monthLabel(m));
+      logAct("report", "deleted the monthly deliverables for " + lab(m));
       notify("Month deleted");
       renderMonthly();
     });
   }
   var copyMonth = (m) => {
-    const txt = monthText(docOf(m), boardProducts(), fmtIso).join("\n") || monthLabel(m) + "\nNo deliverables yet.";
+    const txt = monthText(docOf(m), boardProducts(), fmtIso).join("\n") || lab(m) + "\nNo deliverables yet.";
     (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify("Month text copied to the clipboard"), () => notify("Could not copy. Select the text and copy it manually.", "err"));
   };
   var moveCard = (from, id, to, before) => {
@@ -9137,7 +9157,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
         saveMonth(to, (d) => {
           d.lines = d.lines.filter((l) => l.id !== id);
           put(d);
-        }, 'moved "' + line.t + '" to the ' + monthLabel(to) + " deliverables");
+        }, 'moved "' + line.t + '" to the ' + lab(to) + " deliverables");
         saveMonth(from, (d) => {
           d.lines = d.lines.filter((l) => l.id !== id);
         }, null);
@@ -9313,7 +9333,8 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
         const b = more.getBoundingClientRect();
         openCtx(b.right - 200, b.bottom + 4, (mm) => {
           Object.keys(SIZES).forEach((k) => mi(mm, (l.sz === k ? "✓ " : "") + SIZES[k], () => put({ sz: l.sz === k ? "" : k }, l.sz === k ? "removed the " + SIZES[k] + " flag" : 'flagged "' + l.t + '" as ' + SIZES[k])));
-          if (onRoadmap(l)) mi(mm, "Show on roadmap", () => {
+          if (m === BL) {
+          } else if (onRoadmap(l)) mi(mm, "Show on roadmap", () => {
             if (l.rm) useRoadmap(l.rm);
             showPage("roadmap");
           });
@@ -9321,19 +9342,20 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
           mm.append(el("div", "msep"));
           if (l.adhoc) mi(mm, "Mark as planned (not ad hoc)", () => put({ adhoc: false }, "marked as planned"));
           const others2 = visibleMonths().filter((x) => x !== m);
-          if (others2.length) mm.append(el("div", "mlab", "Move to month"));
-          others2.forEach((x) => mi(mm, monthLabel(x), () => moveCard(m, l.id, x)));
+          if (others2.length) mm.append(el("div", "mlab", m === BL ? "Plan in month" : "Move to month"));
+          others2.forEach((x) => mi(mm, lab(x), () => moveCard(m, l.id, x)));
+          if (m !== BL) mi(mm, "Back to backlog", () => moveCard(m, l.id, BL));
           mm.append(el("div", "msep"));
-          mi(mm, "Delete card", () => confirmDlg("Delete this card?", '"' + l.t + '" is deleted from ' + monthLabel(m) + ".", "Delete card", () => {
+          mi(mm, "Delete card", () => confirmDlg("Delete this card?", '"' + l.t + '" is deleted from ' + lab(m) + ".", "Delete card", () => {
             saveMonth(m, (d) => {
               d.lines = d.lines.filter((z) => z.id !== l.id);
-            }, 'removed "' + l.t + '" from the ' + monthLabel(m) + " deliverables");
+            }, 'removed "' + l.t + '" from the ' + lab(m) + " deliverables");
             renderMonthly();
           }), "danger");
         });
       });
-      foot.append(pctSelect(pct2, "Percent complete", (v) => put({ pct: v, pe: true }, 'changed "' + l.t + '" to ' + v + "%")));
-    } else foot.append(el("span", "rvp pc-" + pctBand(pct2), pct2 + "%"));
+      if (m !== BL) foot.append(pctSelect(pct2, "Percent complete", (v) => put({ pct: v, pe: true }, 'changed "' + l.t + '" to ' + v + "%")));
+    } else if (m !== BL) foot.append(el("span", "rvp pc-" + pctBand(pct2), pct2 + "%"));
     if (SIZES[l.sz]) {
       const z = el("span", "chip mdsz mdsz-" + l.sz);
       z.innerHTML = (l.sz === "enh" ? STAR + " " : "") + SIZES[l.sz];
@@ -9398,7 +9420,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     ta.rows = 2;
     ta.maxLength = 1200;
     ta.placeholder = "Enter a title for this card. One card per line if you paste a list.";
-    ta.setAttribute("aria-label", "New card for " + monthLabel(m));
+    ta.setAttribute("aria-label", "New card for " + lab(m));
     prods.forEach((q) => {
       const c = el("button", "mdchip" + (q.k === ui.prod ? " on" : ""), q.n);
       c.type = "button";
@@ -9451,7 +9473,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
           x.no = ++n;
           d.lines.push(x);
         });
-      }, "added " + (ts.length === 1 ? "a deliverable" : ts.length + " deliverables") + " to " + monthLabel(m));
+      }, "added " + (ts.length === 1 ? "a deliverable" : ts.length + " deliverables") + " to " + lab(m));
       ui.focusComp = true;
       renderMonthly();
     });
@@ -9462,18 +9484,19 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     return wrap;
   }
   function column(m, prods, ed) {
-    const d = docOf(m), now = m === curMonth(), col = el("div", "col mdcol" + (now ? " now" : ""));
+    const d = docOf(m), isBl = m === BL, now = m === curMonth(), col = el("div", "col mdcol" + (now ? " now" : "") + (isBl ? " mdbl" : ""));
+    if (isBl) col.id = "mdbacklog";
     col.dataset.mo = m;
-    col.style.setProperty("--c", now ? "var(--brand)" : "#55608a");
+    col.style.setProperty("--c", isBl ? "#8a6d3b" : now ? "var(--brand)" : "#55608a");
     const fq = ui.q.trim().toLowerCase();
     const lines = d.lines.filter((l) => String(l.t || "").trim()), shown = lines.filter((l) => (ui.pr === "all" || l.k === ui.pr) && (ui.fl === "all" || (ui.fl === "hp" ? l.hp : l.sz === ui.fl)) && (!fq || (String(l.t) + " " + cardId(l)).toLowerCase().includes(fq)));
     const h = el("h2");
-    h.append(document.createTextNode(monthLabel(m)), el("span", "badge", String(lines.length)));
+    h.append(document.createTextNode(lab(m)), el("span", "badge", String(lines.length)));
     if (now) h.append(el("span", "chip mdnow", "This month"));
-    if (ed) {
+    if (ed && !isBl) {
       const more = el("button", "btn sm colmore", "⋯");
       more.type = "button";
-      more.setAttribute("aria-label", "Month options for " + monthLabel(m));
+      more.setAttribute("aria-label", "Month options for " + lab(m));
       more.title = "Month options";
       more.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -9490,16 +9513,32 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       h.style.cssText = "display:flex;align-items:center;gap:8px";
       more.style.marginInlineStart = "auto";
     }
+    if (isBl) {
+      const hb = el("button", "btn sm colmore", "✕");
+      hb.type = "button";
+      hb.setAttribute("aria-label", "Hide the backlog");
+      hb.title = "Hide the backlog";
+      hb.addEventListener("click", () => {
+        setBl(false);
+        renderMonthly();
+      });
+      h.append(hb);
+      h.style.cssText = "display:flex;align-items:center;gap:8px";
+      hb.style.marginInlineStart = "auto";
+    }
     col.append(h);
-    const prog = monthProgress(lines), ad = adhocStats(lines), pv = prog.pct === null ? 0 : prog.pct, pr = el("div", "mdprog pc-" + pctBand(pv));
+    if (isBl) {
+      col.append(el("p", "hint mdblhint", ed ? "Ideas and requests not planned yet. Drag a card into a month, or use ⋯ → Plan in month." : "Ideas and requests not planned yet."));
+    }
+    const prog = isBl ? { pct: null, n: 0, done: 0 } : monthProgress(lines), ad = adhocStats(lines), pv = prog.pct === null ? 0 : prog.pct, pr = el("div", "mdprog pc-" + pctBand(pv));
     const b0 = el("div", "mbar pc-" + pctBand(pv)), i0 = el("i");
     i0.style.width = pv + "%";
     b0.append(i0);
-    b0.setAttribute("aria-label", "Progress of " + monthLabel(m));
+    b0.setAttribute("aria-label", "Progress of " + lab(m));
     pr.append(b0, el("b", "mdpct", pv + "%"), el("small", "", prog.pct === null ? "No planned deliverables yet" : prog.done + " of " + prog.n + " done" + (ad.n ? " · " + ad.n + " ad hoc" : "")));
-    col.append(pr);
+    if (!isBl) col.append(pr);
     shown.forEach((l) => col.append(card(m, l, prods, ed)));
-    if (!shown.length && !(ed && ui.open === m)) col.append(el("div", "hint", lines.length ? "Nothing matches the filter." : "Nothing here yet."));
+    if (!shown.length && !(ed && ui.open === m)) col.append(el("div", "hint", lines.length ? "Nothing matches the filter." : isBl ? "The backlog is empty." : "Nothing here yet."));
     if (ed) col.append(composer(m, prods));
     if (ed) {
       const ok = (e) => [...e.dataTransfer ? e.dataTransfer.types : []].includes("text/mdcard");
@@ -9540,7 +9579,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
   var migrated = /* @__PURE__ */ new Set();
   function fixCards() {
     const bad = (d) => d.lines.some((l) => l.k && !TAGS.some((t) => t.k === l.k) || String(l.t || "").trim() && !l.no);
-    const old = docs().filter(bad);
+    const old = rawDocs().filter(bad);
     if (!old.length) return;
     const sq = /* @__PURE__ */ new Map();
     allRoadmaps().forEach((rm) => withRm(rm.id, () => items().forEach((i) => sq.set(rm.id + ":" + i.id, i.sq))));
@@ -9607,6 +9646,19 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       renderMonthly();
     });
     tools.append(q, fp, ff);
+    {
+      const n = docOf(BL).lines.filter((l) => String(l.t || "").trim()).length, bb = el("button", "btn sm mdbltoggle" + (blOpen ? " on" : ""), (blOpen ? "Hide backlog" : "Backlog") + (n ? " (" + n + ")" : ""));
+      bb.type = "button";
+      bb.id = "mdbltoggle";
+      bb.setAttribute("aria-expanded", String(blOpen));
+      bb.setAttribute("aria-controls", "mdbacklog");
+      bb.title = "Ideas and requests not planned yet";
+      bb.addEventListener("click", () => {
+        setBl(!blOpen);
+        renderMonthly();
+      });
+      tools.append(bb);
+    }
     if (ed) {
       const ub = el("button", "btn sm mdundo", "↶ Undo");
       ub.type = "button";
@@ -9630,15 +9682,16 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     const sb0 = viewer ? null : setupBanner();
     if (sb0) pg.append(sb0);
     const board = el("div", "mdboard");
+    if (blOpen) board.append(column(BL, prods, ed));
     visibleMonths().forEach((m) => board.append(column(m, prods, ed)));
     if (ed) {
       const ms = visibleMonths(), nm = nextMonth(ms[ms.length - 1]);
-      const ac = el("button", "addcol mdaddmonth", "+ Add month (" + monthLabel(nm) + ")");
+      const ac = el("button", "addcol mdaddmonth", "+ Add month (" + lab(nm) + ")");
       ac.type = "button";
       ac.id = "addmonth";
       ac.addEventListener("click", () => {
         saveMonth(nm, () => {
-        }, "added the " + monthLabel(nm) + " column to the monthly deliverables");
+        }, "added the " + lab(nm) + " column to the monthly deliverables");
         renderMonthly();
       });
       board.append(ac);
@@ -10433,12 +10486,12 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
         bar4.querySelectorAll("i").forEach((i) => i.className = "");
         return;
       }
-      const r = pwScore(v), lab = ["Weak", "Weak", "Okay", "Good", "Strong"][r.s];
+      const r = pwScore(v), lab2 = ["Weak", "Weak", "Okay", "Good", "Strong"][r.s];
       w.dataset.s = String(r.s);
       bar4.querySelectorAll("i").forEach((i, n) => {
         i.className = n < Math.max(1, r.s) ? "on" : "";
       });
-      txt.textContent = lab + (r.tips.length && r.s < 4 ? " · " + r.tips[0] : "");
+      txt.textContent = lab2 + (r.tips.length && r.s < 4 ? " · " + r.tips[0] : "");
     };
     input.addEventListener("input", upd);
     return upd;

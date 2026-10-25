@@ -727,3 +727,8 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
 
 .mdprod .mdcaret { font-size: .7em; opacity: .75; margin-inline-start: 2px; }
 .mdundo[disabled] { opacity: .45; cursor: default; }
+
+/* Backlog panel: first column of the board, sticky so it stays in view while the months scroll */
+.mdcol.mdbl { position: sticky; inset-inline-start: 0; z-index: 3; background: color-mix(in srgb, #8a6d3b 7%, var(--bg, #fff)); border: 1.5px dashed #b89a5e; box-shadow: 6px 0 14px -10px rgba(0, 0, 0, .35); }
+.mdblhint { margin: 0 0 8px; font-size: .78rem; }
+.mdbltoggle.on { background: #8a6d3b; color: #fff; border-color: #8a6d3b; }
