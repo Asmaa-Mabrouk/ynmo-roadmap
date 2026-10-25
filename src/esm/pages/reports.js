@@ -169,7 +169,7 @@ function viewLine(l) {
   if (l.st === 'risk' || l.st === 'late') r.append(el('span', 'chip rs-' + l.st, RSTATUS[l.st]));
   return r;
 }
-const NOTE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8l-4.5 4v-4H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 8.5h8M8 12h5"/></svg>';
+export const NOTE_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8l-4.5 4v-4H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 8.5h8M8 12h5"/></svg>';
 /** Note icon of an item: hover (or focus) shows the note as a tooltip; in edit mode a click edits it. */
 function noteBtn(rep, l) {
   const b = el('button', 'nbtn' + (l.note ? ' has' : '')); b.type = 'button'; b.innerHTML = NOTE_ICON;

@@ -693,3 +693,17 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .mdcol h2 { font-size: 1rem; flex-wrap: nowrap; gap: 6px !important; }
 .mdcol h2 .colmore { flex: none; }
 .mdnow { margin-inline-start: 0; font-size: .66rem; padding: 1px 7px; }
+
+/* High priority (gold flag), size tags (quick win / enhancement), card note */
+.mdhp { flex: none; width: 28px; height: 28px; border: 1.5px solid transparent; border-radius: 8px; background: transparent; color: #9aa0b4; font-size: 17px; line-height: 1; cursor: pointer; margin-inline-start: auto; }
+.mdhp:hover, .mdhp:focus-visible { color: #c99700; background: #fff6d6; border-color: #f0d36b; }
+.mdhp.on, .mdhp.on:hover { color: #fff; background: #d9a400; border-color: #d9a400; }
+.mdhead .mdhp + .kebab { margin-inline-start: 0; }
+.mdcard.hp { box-shadow: 0 0 0 2px #e0b000, 0 3px 10px rgba(217, 164, 0, .25); }
+.mdhpchip { background: #d9a400; border-color: #d9a400; color: #fff; font-size: .72rem; font-weight: 800; padding: 1px 8px; }
+.mdsz { font-size: .72rem; font-weight: 800; padding: 1px 8px; }
+.mdsz-quick { background: #dff4ea; border-color: #7fcba4; color: #0b5d3a; }
+.mdsz-enh { background: #ece6f9; border-color: #b9a6e8; color: #4b2a96; }
+.mdnote { margin-inline-start: auto; }
+.mdnote.has { color: #1f9d5c; } .mdnote.has svg { fill: color-mix(in srgb, #1f9d5c 22%, #fff); }
+.mdcard .nbtn[data-tip]:hover::after, .mdcard .nbtn[data-tip]:focus-visible::after { z-index: 30; }

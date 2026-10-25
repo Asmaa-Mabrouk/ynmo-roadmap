@@ -15,12 +15,13 @@ import { notify } from '../ui/notify.js';
 import { openCtx, mi } from '../ui/editing.js';
 import { confirmDlg } from '../ui/confirm.js';
 import { plainBox } from '../features/rich-text.js';
+import { openDlg, closeDlg } from '../features/safety.js';
 import { EXTRA_SECTIONS } from '../features/sprint-doc.js';
 import { productsOf } from '../features/report-model.js';
-import { adhocStats, clampPct, mergeRoad, monthId, monthLabel, monthProgress, monthRange, monthText, newLine, nextMonth, pctBand } from '../features/month-model.js';
-import { setupBanner } from './reports.js';
+import { adhocStats, clampPct, mergeRoad, monthId, monthLabel, monthProgress, monthRange, monthText, newLine, nextMonth, pctBand, SIZES } from '../features/month-model.js';
+import { NOTE_ICON, setupBanner } from './reports.js';
 
-const ui = { q: '', pr: 'all', past: false, prod: '', open: '' };
+const ui = { q: '', pr: 'all', fl: 'all', past: false, prod: '', open: '' };
 const cfg = () => S.ideas.reportcfg || {};
 const canBuild = () => !isViewer() && canWrite();
 const curMonth = () => todayIso().slice(0, 7);
@@ -86,9 +87,24 @@ const pctSelect = (v, label, onChange) => {
   steps.forEach(x => { const o = el('option', '', x + '%'); o.value = String(x); o.selected = x === v; st.append(o); });
   st.addEventListener('change', () => onChange(Number(st.value))); return st;
 };
+/** Note icon of a card: green when it has a note; hover (or focus) shows the note as a tooltip; editors click it to write or change the note. */
+function noteBtn(m, l, ed) {
+  const b = el('button', 'nbtn mdnote' + (l.note ? ' has' : '') + (ed ? '' : ' ro')); b.type = 'button'; b.innerHTML = NOTE_ICON;
+  if (l.note) b.dataset.tip = l.note;
+  if (!ed) { b.tabIndex = l.note ? 0 : -1; b.hidden = !l.note; b.setAttribute('aria-label', 'Note: ' + (l.note || '')); return b; }
+  b.setAttribute('aria-label', l.note ? 'Edit note: ' + l.note : 'Add a note'); if (!l.note) b.title = 'Add a note';
+  b.addEventListener('click', () => openDlg('Note for this card', box => {
+    const ta = el('textarea'); ta.rows = 4; ta.maxLength = 1000; ta.value = l.note || ''; ta.setAttribute('aria-label', 'Note'); ta.placeholder = 'A short note. It appears when someone hovers the note icon.';
+    const ok = el('button', 'btn primary', 'Save'), no = el('button', 'btn', 'Cancel'), rm = el('button', 'btn', 'Remove note'); ok.type = no.type = rm.type = 'button'; rm.hidden = !l.note;
+    const put = v => { saveMonth(m, d => { const x = d.lines.find(z => z.id === l.id); if (x) x.note = v; }, v ? 'edited the note of "' + l.t + '"' : 'removed the note of "' + l.t + '"'); closeDlg(); renderMonthly(); };
+    ok.addEventListener('click', () => put(ta.value.trim())); rm.addEventListener('click', () => put('')); no.addEventListener('click', closeDlg);
+    const row = el('div', 'row'); row.append(ok, rm, no); box.append(ta, row);
+  }));
+  return b;
+}
 function card(m, l, prods, ed) {
   const p = prods.find(x => x.k === l.k) || { k: l.k, n: l.k, squads: [] }, c = colOf(p), pct = clampPct(l.pct);
-  const r = el('div', 'icard mdcard' + (l.adhoc ? ' adhoc' : '') + (pct >= 100 ? ' fin' : '')); r.style.setProperty('--c', c); r.dataset.id = l.id;
+  const r = el('div', 'icard mdcard' + (l.adhoc ? ' adhoc' : '') + (pct >= 100 ? ' fin' : '') + (l.hp ? ' hp' : '')); r.style.setProperty('--c', c); r.dataset.id = l.id;
   const put = (patch, label) => { saveMonth(m, d => { const x = d.lines.find(z => z.id === l.id); if (x) Object.assign(x, patch); }, label); renderMonthly(); };
   const head = el('div', 'mdhead');
   if (ed) {
@@ -102,10 +118,14 @@ function card(m, l, prods, ed) {
   const t = ed ? plainBox('mdtext', l.t, 'Deliverable', v => { if (!v) { t.textContent = l.t; return; } put({ t: v.slice(0, 300) }); }) : el('div', 'mdtext', l.t);
   const foot = el('div', 'mdfoot');
   if (ed) {
+    const hp = el('button', 'mdhp' + (l.hp ? ' on' : ''), l.hp ? '⚑' : '⚐'); hp.type = 'button'; hp.setAttribute('aria-pressed', String(!!l.hp)); hp.setAttribute('aria-label', 'High priority'); hp.title = l.hp ? 'High priority. Click again to remove the gold flag.' : 'Click to flag as high priority (gold flag)';
+    hp.addEventListener('click', () => put({ hp: !l.hp }, l.hp ? 'removed the high priority flag' : 'flagged "' + l.t + '" as high priority')); head.append(hp);
     const more = el('button', 'kebab', '⋯'); more.type = 'button'; more.setAttribute('aria-label', 'More actions for ' + l.t); more.setAttribute('aria-haspopup', 'menu'); head.append(more);
     more.addEventListener('click', e => {
       e.stopPropagation(); const b = more.getBoundingClientRect();
       openCtx(b.right - 200, b.bottom + 4, mm => {
+        Object.keys(SIZES).forEach(k => mi(mm, (l.sz === k ? '✓ ' : '') + SIZES[k], () => put({ sz: l.sz === k ? '' : k }, l.sz === k ? 'removed the ' + SIZES[k] + ' flag' : 'flagged "' + l.t + '" as ' + SIZES[k])));
+        mm.append(el('div', 'msep'));
         mi(mm, l.adhoc ? 'Mark as planned' : 'Mark as ad hoc request', () => put({ adhoc: !l.adhoc }, l.adhoc ? 'marked as planned' : 'marked as an ad hoc request'));
         const others = visibleMonths().filter(x => x !== m); if (others.length) mm.append(el('div', 'mlab', 'Move to month'));
         others.forEach(x => mi(mm, monthLabel(x), () => moveCard(m, l.id, x)));
@@ -115,8 +135,11 @@ function card(m, l, prods, ed) {
     });
     foot.append(pctSelect(pct, 'Percent complete', v => put({ pct: v, pe: true }, 'changed "' + l.t + '" to ' + v + '%')));
   } else foot.append(el('span', 'rvp pc-' + pctBand(pct), pct + '%'));
+  if (l.hp && !ed) foot.append(el('span', 'chip mdhpchip', '⚑ High priority'));
+  if (SIZES[l.sz]) foot.append(el('span', 'chip mdsz mdsz-' + l.sz, SIZES[l.sz]));
   if (l.adhoc) foot.append(el('span', 'chip mdadhoc', 'Ad hoc'));
   if (l.src) { const b = el('span', 'chip mdroad', l.pe ? 'Roadmap' : 'Roadmap · estimated'); b.title = l.pe ? 'Came from the roadmap; the percentage was set by a person.' : 'Came from the roadmap; the percentage is estimated from its dates. Change it to set your own.'; foot.append(b); }
+  foot.append(noteBtn(m, l, ed));
   r.append(head, t, foot);
   if (ed) { // drag the card to another month
     const g = el('div', 'grip', '⋮⋮'); g.title = 'Drag to another month'; g.setAttribute('aria-hidden', 'true'); r.prepend(g);
@@ -153,7 +176,7 @@ function composer(m, prods) {
 function column(m, prods, ed) {
   const d = docOf(m), now = m === curMonth(), col = el('div', 'col mdcol' + (now ? ' now' : '')); col.dataset.mo = m; col.style.setProperty('--c', now ? 'var(--brand)' : '#55608a');
   const fq = ui.q.trim().toLowerCase();
-  const lines = d.lines.filter(l => String(l.t || '').trim()), shown = lines.filter(l => (ui.pr === 'all' || l.k === ui.pr) && (!fq || String(l.t).toLowerCase().includes(fq)));
+  const lines = d.lines.filter(l => String(l.t || '').trim()), shown = lines.filter(l => (ui.pr === 'all' || l.k === ui.pr) && (ui.fl === 'all' || (ui.fl === 'hp' ? l.hp : l.sz === ui.fl)) && (!fq || String(l.t).toLowerCase().includes(fq)));
   const h = el('h2'); h.append(document.createTextNode(monthLabel(m)), el('span', 'badge', String(lines.length)));
   if (now) h.append(el('span', 'chip mdnow', 'This month'));
   if (ed) {
@@ -193,7 +216,9 @@ export function renderMonthly() {
   q.addEventListener('input', () => { ui.q = q.value; renderMonthly(); const s = pg.querySelector('input[type=search]'); if (s) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); } });
   const fp = el('select'); fp.setAttribute('aria-label', 'Filter by product'); [['all', 'All products']].concat(prods.map(p => [p.k, p.n])).forEach(x => { const o = el('option', '', x[1]); o.value = x[0]; o.selected = x[0] === ui.pr; fp.append(o); });
   fp.addEventListener('change', () => { ui.pr = fp.value; renderMonthly(); });
-  tools.append(q, fp);
+  const ff = el('select'); ff.setAttribute('aria-label', 'Filter by flag'); [['all', 'All cards'], ['hp', 'High priority'], ['quick', 'Quick wins'], ['enh', 'Enhancements']].forEach(x => { const o = el('option', '', x[1]); o.value = x[0]; o.selected = x[0] === ui.fl; ff.append(o); });
+  ff.addEventListener('change', () => { ui.fl = ff.value; renderMonthly(); });
+  tools.append(q, fp, ff);
   const pc = pastCount(); if (pc || ui.past) { const pb = el('button', 'btn sm', ui.past ? 'Hide past months' : 'Show past months (' + pc + ')'); pb.type = 'button'; pb.addEventListener('click', () => { ui.past = !ui.past; renderMonthly(); }); tools.append(pb); }
   pg.append(pageHead('Monthly deliverables', viewer ? 'What each product committed to deliver every month, coloured by product, and how far each deliverable is.' : 'What the business expects each month. Add a card for a product, or press Sync from Roadmap in a month to bring the features that end in it. Drag a card to move it to another month.', tools));
   const sb0 = viewer ? null : setupBanner(); if (sb0) pg.append(sb0);

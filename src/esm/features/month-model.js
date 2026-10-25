@@ -87,6 +87,9 @@ export function mergeRoad(lines, road, pl, m, today, others) {
   });
   return { lines: out, added: added, updated: updated, skipped: g.skipped, dup: dup };
 }
+export const SIZES = { quick: 'Quick win', enh: 'Enhancement' };
+/** Flags of a card as text: high priority, and a small piece of work (quick win / enhancement). */
+const tagsOf = l => (l.hp ? ' [HIGH PRIORITY]' : '') + (SIZES[l.sz] ? ' [' + SIZES[l.sz].toUpperCase() + ']' : '');
 /** Plain text of a month (for Copy text). `products` = [{k,n}]. Empty when there is nothing to show. */
 export function monthText(doc, products, fmt) {
   if (!doc || !live(doc.lines).length) return [];
@@ -95,7 +98,7 @@ export function monthText(doc, products, fmt) {
     const its = live(doc.lines).filter(l => l.k === p.k); if (!its.length) return;
     const pl = its.filter(l => !l.adhoc), ad = its.filter(l => l.adhoc), pp = monthProgress(pl);
     out.push(p.n + (pp.pct === null ? '' : ' - ' + pp.pct + '%'));
-    pl.forEach(l => out.push('- ' + l.t + ': ' + clampPct(l.pct) + '%'));
+    pl.forEach(l => { out.push('- ' + l.t + ': ' + clampPct(l.pct) + '%' + tagsOf(l)); if (l.note) out.push('  Note: ' + String(l.note).replace(/\s+/g, ' ')); });
     if (ad.length) { out.push('Ad hoc requests:'); ad.forEach(l => out.push('- ' + l.t + (l.by ? ' (requested by ' + l.by + (l.at && fmt ? ', ' + fmt(l.at) : '') + ')' : '') + ': ' + clampPct(l.pct) + '%')); }
     out.push('');
   });

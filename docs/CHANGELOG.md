@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased – Sprints + Weekly executive report
+- **Monthly cards: flags and notes (2026-10-25):** a **gold flag** on a card marks it **high priority** (one click on/off, gold ring around the card, shown to executives as "High priority"). The card menu has **Quick win** and **Enhancement** (one at a time, click again to remove) so the business can see which items are small. A **note icon** on every card opens a box; once a note exists the icon turns green and hovering (or focusing) it shows the note as a tooltip, for executives too. A new filter next to the product filter shows only High priority, Quick wins or Enhancements. Copy text adds [HIGH PRIORITY], [QUICK WIN] / [ENHANCEMENT] and the note.
+
 - **Monthly board stays live while you type (2026-10-25):** a card added or changed by someone else now appears even while you have the "Add a card" box open (what you were typing is kept). The page only holds off refreshing while you are editing a card's title, a dropdown or a search box.
 
 - **Monthly deliverables, Trello-style (2026-10-25):** each column ends with **+ Add a card**: it opens a composer with the products as colour chips (pick one, the box takes its colour); **Enter** adds the card and keeps the box open for the next one, **Esc** closes it, and a pasted list becomes one card per line. The product label on a card is a button: click it to pick another product and the whole card is repainted in that colour. Cards can be **dragged to any position**, inside a month (re-order, with a drop line) or into another month.

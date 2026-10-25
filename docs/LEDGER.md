@@ -43,6 +43,18 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 ## Ledger updates
 
 🔄 YNMO LEDGER UPDATE — 2026-10-25
+Request: Monthly cards: Quick win / Enhancement flag, notes with green icon and hover tooltip, gold high-priority flag
+Surface: cross-cutting (Ynmo Roadmaps internal tool)
+Outcome: Cards carry `hp` (gold flag, high priority), `sz` ('quick' / 'enh') and `note`; flag filter and copy text include them; executives see all of it read-only.
+New facts / decisions locked:
+  • Gold = high priority (set by the business, one click). Quick win and Enhancement are one-at-a-time size tags in the card menu. A card note shows as a tooltip and its icon is green.
+Corrections to this skill:
+  • none
+Open / flagged:
+  • Still pending: run supabase/sql/07-reports-editor-delete.sql; unfinished features carrying to next month; green threshold (100%); per-card documents to remove the same-month overwrite risk.
+Changelog: Monthly cards: gold high-priority flag, Quick win/Enhancement tags, notes.
+
+🔄 YNMO LEDGER UPDATE — 2026-10-25
 Request: Make sure every user working on the Monthly module sees the others' changes
 Surface: cross-cutting (Ynmo Roadmaps internal tool)
 Outcome: Tested two editors and an executive on the board at once. Changes reached everyone, but a user with the "Add a card" box open did not see others' cards until closing it; fixed (live refresh, draft text kept).

@@ -1116,6 +1116,20 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .mdcol h2 { font-size: 1rem; flex-wrap: nowrap; gap: 6px !important; }
 .mdcol h2 .colmore { flex: none; }
 .mdnow { margin-inline-start: 0; font-size: .66rem; padding: 1px 7px; }
+
+/* High priority (gold flag), size tags (quick win / enhancement), card note */
+.mdhp { flex: none; width: 28px; height: 28px; border: 1.5px solid transparent; border-radius: 8px; background: transparent; color: #9aa0b4; font-size: 17px; line-height: 1; cursor: pointer; margin-inline-start: auto; }
+.mdhp:hover, .mdhp:focus-visible { color: #c99700; background: #fff6d6; border-color: #f0d36b; }
+.mdhp.on, .mdhp.on:hover { color: #fff; background: #d9a400; border-color: #d9a400; }
+.mdhead .mdhp + .kebab { margin-inline-start: 0; }
+.mdcard.hp { box-shadow: 0 0 0 2px #e0b000, 0 3px 10px rgba(217, 164, 0, .25); }
+.mdhpchip { background: #d9a400; border-color: #d9a400; color: #fff; font-size: .72rem; font-weight: 800; padding: 1px 8px; }
+.mdsz { font-size: .72rem; font-weight: 800; padding: 1px 8px; }
+.mdsz-quick { background: #dff4ea; border-color: #7fcba4; color: #0b5d3a; }
+.mdsz-enh { background: #ece6f9; border-color: #b9a6e8; color: #4b2a96; }
+.mdnote { margin-inline-start: auto; }
+.mdnote.has { color: #1f9d5c; } .mdnote.has svg { fill: color-mix(in srgb, #1f9d5c 22%, #fff); }
+.mdcard .nbtn[data-tip]:hover::after, .mdcard .nbtn[data-tip]:focus-visible::after { z-index: 30; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -6123,6 +6137,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     });
     return { lines: out, added, updated, skipped: g.skipped, dup };
   }
+  var SIZES = { quick: "Quick win", enh: "Enhancement" };
+  var tagsOf = (l) => (l.hp ? " [HIGH PRIORITY]" : "") + (SIZES[l.sz] ? " [" + SIZES[l.sz].toUpperCase() + "]" : "");
   function monthText(doc2, products, fmt) {
     if (!doc2 || !live(doc2.lines).length) return [];
     const prog = monthProgress(doc2.lines), out = ["MONTHLY DELIVERABLES - " + monthLabel(doc2.mo) + (prog.pct === null ? "" : " - " + prog.pct + "% complete (" + prog.done + " of " + prog.n + " done)"), ""];
@@ -6131,7 +6147,10 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       if (!its.length) return;
       const pl = its.filter((l) => !l.adhoc), ad = its.filter((l) => l.adhoc), pp = monthProgress(pl);
       out.push(p.n + (pp.pct === null ? "" : " - " + pp.pct + "%"));
-      pl.forEach((l) => out.push("- " + l.t + ": " + clampPct(l.pct) + "%"));
+      pl.forEach((l) => {
+        out.push("- " + l.t + ": " + clampPct(l.pct) + "%" + tagsOf(l));
+        if (l.note) out.push("  Note: " + String(l.note).replace(/\s+/g, " "));
+      });
       if (ad.length) {
         out.push("Ad hoc requests:");
         ad.forEach((l) => out.push("- " + l.t + (l.by ? " (requested by " + l.by + (l.at && fmt ? ", " + fmt(l.at) : "") + ")" : "") + ": " + clampPct(l.pct) + "%"));
@@ -6374,8 +6393,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       else tops.push(i);
     });
     const squads = Object.keys(sp.secs || {}).concat(tops.map((i) => i.squad)).filter((k, i, a) => k && a.indexOf(k) === i), out = [];
-    const tagsOf = (i) => i.kind === "fix" ? ["fix"] : i.kind === "support" ? ["support"] : [];
-    const mk = (i, k) => ({ id: i.id, doc: { sp: sp.id || i.sp, k, t: i.t, st: i.st || "planned", dn: i.dn || "", tags: tagsOf(i) } });
+    const tagsOf2 = (i) => i.kind === "fix" ? ["fix"] : i.kind === "support" ? ["support"] : [];
+    const mk = (i, k) => ({ id: i.id, doc: { sp: sp.id || i.sp, k, t: i.t, st: i.st || "planned", dn: i.dn || "", tags: tagsOf2(i) } });
     squads.forEach((sq) => {
       out.push({ id: null, doc: { sp: sp.id, k: "h", sq, t: laneName(sq), tags: [] } });
       const mine = tops.filter((i) => i.squad === sq), reg = ((sp.secs || {})[sq] || {}).people || [];
@@ -8958,7 +8977,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
   });
 
   // src/esm/pages/monthly.js
-  var ui = { q: "", pr: "all", past: false, prod: "", open: "" };
+  var ui = { q: "", pr: "all", fl: "all", past: false, prod: "", open: "" };
   var cfg2 = () => S.ideas.reportcfg || {};
   var canBuild2 = () => !isViewer() && canWrite();
   var curMonth = () => todayIso().slice(0, 7);
@@ -9074,9 +9093,49 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     st.addEventListener("change", () => onChange(Number(st.value)));
     return st;
   };
+  function noteBtn2(m, l, ed) {
+    const b = el("button", "nbtn mdnote" + (l.note ? " has" : "") + (ed ? "" : " ro"));
+    b.type = "button";
+    b.innerHTML = NOTE_ICON;
+    if (l.note) b.dataset.tip = l.note;
+    if (!ed) {
+      b.tabIndex = l.note ? 0 : -1;
+      b.hidden = !l.note;
+      b.setAttribute("aria-label", "Note: " + (l.note || ""));
+      return b;
+    }
+    b.setAttribute("aria-label", l.note ? "Edit note: " + l.note : "Add a note");
+    if (!l.note) b.title = "Add a note";
+    b.addEventListener("click", () => openDlg("Note for this card", (box2) => {
+      const ta = el("textarea");
+      ta.rows = 4;
+      ta.maxLength = 1e3;
+      ta.value = l.note || "";
+      ta.setAttribute("aria-label", "Note");
+      ta.placeholder = "A short note. It appears when someone hovers the note icon.";
+      const ok = el("button", "btn primary", "Save"), no = el("button", "btn", "Cancel"), rm = el("button", "btn", "Remove note");
+      ok.type = no.type = rm.type = "button";
+      rm.hidden = !l.note;
+      const put = (v) => {
+        saveMonth(m, (d) => {
+          const x = d.lines.find((z) => z.id === l.id);
+          if (x) x.note = v;
+        }, v ? 'edited the note of "' + l.t + '"' : 'removed the note of "' + l.t + '"');
+        closeDlg();
+        renderMonthly();
+      };
+      ok.addEventListener("click", () => put(ta.value.trim()));
+      rm.addEventListener("click", () => put(""));
+      no.addEventListener("click", closeDlg);
+      const row = el("div", "row");
+      row.append(ok, rm, no);
+      box2.append(ta, row);
+    }));
+    return b;
+  }
   function card(m, l, prods, ed) {
     const p = prods.find((x) => x.k === l.k) || { k: l.k, n: l.k, squads: [] }, c = colOf2(p), pct2 = clampPct(l.pct);
-    const r = el("div", "icard mdcard" + (l.adhoc ? " adhoc" : "") + (pct2 >= 100 ? " fin" : ""));
+    const r = el("div", "icard mdcard" + (l.adhoc ? " adhoc" : "") + (pct2 >= 100 ? " fin" : "") + (l.hp ? " hp" : ""));
     r.style.setProperty("--c", c);
     r.dataset.id = l.id;
     const put = (patch, label) => {
@@ -9119,6 +9178,13 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     }) : el("div", "mdtext", l.t);
     const foot = el("div", "mdfoot");
     if (ed) {
+      const hp = el("button", "mdhp" + (l.hp ? " on" : ""), l.hp ? "⚑" : "⚐");
+      hp.type = "button";
+      hp.setAttribute("aria-pressed", String(!!l.hp));
+      hp.setAttribute("aria-label", "High priority");
+      hp.title = l.hp ? "High priority. Click again to remove the gold flag." : "Click to flag as high priority (gold flag)";
+      hp.addEventListener("click", () => put({ hp: !l.hp }, l.hp ? "removed the high priority flag" : 'flagged "' + l.t + '" as high priority'));
+      head.append(hp);
       const more = el("button", "kebab", "⋯");
       more.type = "button";
       more.setAttribute("aria-label", "More actions for " + l.t);
@@ -9128,6 +9194,8 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
         e.stopPropagation();
         const b = more.getBoundingClientRect();
         openCtx(b.right - 200, b.bottom + 4, (mm) => {
+          Object.keys(SIZES).forEach((k) => mi(mm, (l.sz === k ? "✓ " : "") + SIZES[k], () => put({ sz: l.sz === k ? "" : k }, l.sz === k ? "removed the " + SIZES[k] + " flag" : 'flagged "' + l.t + '" as ' + SIZES[k])));
+          mm.append(el("div", "msep"));
           mi(mm, l.adhoc ? "Mark as planned" : "Mark as ad hoc request", () => put({ adhoc: !l.adhoc }, l.adhoc ? "marked as planned" : "marked as an ad hoc request"));
           const others2 = visibleMonths().filter((x) => x !== m);
           if (others2.length) mm.append(el("div", "mlab", "Move to month"));
@@ -9143,12 +9211,15 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       });
       foot.append(pctSelect(pct2, "Percent complete", (v) => put({ pct: v, pe: true }, 'changed "' + l.t + '" to ' + v + "%")));
     } else foot.append(el("span", "rvp pc-" + pctBand(pct2), pct2 + "%"));
+    if (l.hp && !ed) foot.append(el("span", "chip mdhpchip", "⚑ High priority"));
+    if (SIZES[l.sz]) foot.append(el("span", "chip mdsz mdsz-" + l.sz, SIZES[l.sz]));
     if (l.adhoc) foot.append(el("span", "chip mdadhoc", "Ad hoc"));
     if (l.src) {
       const b = el("span", "chip mdroad", l.pe ? "Roadmap" : "Roadmap · estimated");
       b.title = l.pe ? "Came from the roadmap; the percentage was set by a person." : "Came from the roadmap; the percentage is estimated from its dates. Change it to set your own.";
       foot.append(b);
     }
+    foot.append(noteBtn2(m, l, ed));
     r.append(head, t, foot);
     if (ed) {
       const g = el("div", "grip", "⋮⋮");
@@ -9258,7 +9329,7 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
     col.dataset.mo = m;
     col.style.setProperty("--c", now ? "var(--brand)" : "#55608a");
     const fq = ui.q.trim().toLowerCase();
-    const lines = d.lines.filter((l) => String(l.t || "").trim()), shown = lines.filter((l) => (ui.pr === "all" || l.k === ui.pr) && (!fq || String(l.t).toLowerCase().includes(fq)));
+    const lines = d.lines.filter((l) => String(l.t || "").trim()), shown = lines.filter((l) => (ui.pr === "all" || l.k === ui.pr) && (ui.fl === "all" || (ui.fl === "hp" ? l.hp : l.sz === ui.fl)) && (!fq || String(l.t).toLowerCase().includes(fq)));
     const h = el("h2");
     h.append(document.createTextNode(monthLabel(m)), el("span", "badge", String(lines.length)));
     if (now) h.append(el("span", "chip mdnow", "This month"));
@@ -9379,7 +9450,19 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
       ui.pr = fp.value;
       renderMonthly();
     });
-    tools.append(q, fp);
+    const ff = el("select");
+    ff.setAttribute("aria-label", "Filter by flag");
+    [["all", "All cards"], ["hp", "High priority"], ["quick", "Quick wins"], ["enh", "Enhancements"]].forEach((x) => {
+      const o = el("option", "", x[1]);
+      o.value = x[0];
+      o.selected = x[0] === ui.fl;
+      ff.append(o);
+    });
+    ff.addEventListener("change", () => {
+      ui.fl = ff.value;
+      renderMonthly();
+    });
+    tools.append(q, fp, ff);
     const pc = pastCount();
     if (pc || ui.past) {
       const pb = el("button", "btn sm", ui.past ? "Hide past months" : "Show past months (" + pc + ")");
