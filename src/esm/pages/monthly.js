@@ -21,6 +21,7 @@ import { productsOf } from '../features/report-model.js';
 import { adhocStats, clampPct, mergeRoad, monthId, monthLabel, monthProgress, monthRange, monthText, newLine, nextMonth, pctBand, SIZES } from '../features/month-model.js';
 import { NOTE_ICON, setupBanner } from './reports.js';
 
+const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9 6.8 19.6l1-5.8-4.3-4.1 5.9-.8z"/></svg>';
 const ui = { q: '', pr: 'all', fl: 'all', past: false, prod: '', open: '' };
 const cfg = () => S.ideas.reportcfg || {};
 const canBuild = () => !isViewer() && canWrite();
@@ -104,7 +105,8 @@ function noteBtn(m, l, ed) {
 }
 function card(m, l, prods, ed) {
   const p = prods.find(x => x.k === l.k) || { k: l.k, n: l.k, squads: [] }, c = colOf(p), pct = clampPct(l.pct);
-  const r = el('div', 'icard mdcard' + (l.adhoc ? ' adhoc' : '') + (pct >= 100 ? ' fin' : '') + (l.hp ? ' hp' : '')); r.style.setProperty('--c', c); r.dataset.id = l.id;
+  const r = el('div', 'icard mdcard' + (l.adhoc ? ' adhoc' : '') + (pct >= 100 ? ' fin' : '') + (l.hp ? ' hp' : ''));
+  if (l.hp) r.append(el('div', 'mdribbon', '⚑ Business priority')); r.style.setProperty('--c', c); r.dataset.id = l.id;
   const put = (patch, label) => { saveMonth(m, d => { const x = d.lines.find(z => z.id === l.id); if (x) Object.assign(x, patch); }, label); renderMonthly(); };
   const head = el('div', 'mdhead');
   if (ed) {
@@ -118,15 +120,17 @@ function card(m, l, prods, ed) {
   const t = ed ? plainBox('mdtext', l.t, 'Deliverable', v => { if (!v) { t.textContent = l.t; return; } put({ t: v.slice(0, 300) }); }) : el('div', 'mdtext', l.t);
   const foot = el('div', 'mdfoot');
   if (ed) {
-    const hp = el('button', 'mdhp' + (l.hp ? ' on' : ''), l.hp ? '⚑' : '⚐'); hp.type = 'button'; hp.setAttribute('aria-pressed', String(!!l.hp)); hp.setAttribute('aria-label', 'High priority'); hp.title = l.hp ? 'High priority. Click again to remove the gold flag.' : 'Click to flag as high priority (gold flag)';
-    hp.addEventListener('click', () => put({ hp: !l.hp }, l.hp ? 'removed the high priority flag' : 'flagged "' + l.t + '" as high priority')); head.append(hp);
+    const st = el('button', 'mdstar' + (l.sz === 'enh' ? ' on' : '')); st.type = 'button'; st.innerHTML = STAR; st.setAttribute('aria-pressed', String(l.sz === 'enh')); st.setAttribute('aria-label', 'Small enhancement'); st.title = l.sz === 'enh' ? 'Small enhancement. Click again to remove the star.' : 'Click to mark as a small enhancement (a small feature, not a big one)';
+    st.addEventListener('click', () => put({ sz: l.sz === 'enh' ? '' : 'enh' }, l.sz === 'enh' ? 'removed the Small enhancement flag' : 'flagged "' + l.t + '" as Small enhancement')); head.append(st);
+    const hp = el('button', 'mdhp' + (l.hp ? ' on' : ''), l.hp ? '⚑' : '⚐'); hp.type = 'button'; hp.setAttribute('aria-pressed', String(!!l.hp)); hp.setAttribute('aria-label', 'Business priority'); hp.title = l.hp ? 'Business priority. Click again to remove the gold flag.' : 'Click to flag as business priority (gold flag)';
+    hp.addEventListener('click', () => put({ hp: !l.hp }, l.hp ? 'removed the business priority flag' : 'flagged "' + l.t + '" as business priority')); head.append(hp);
     const more = el('button', 'kebab', '⋯'); more.type = 'button'; more.setAttribute('aria-label', 'More actions for ' + l.t); more.setAttribute('aria-haspopup', 'menu'); head.append(more);
     more.addEventListener('click', e => {
       e.stopPropagation(); const b = more.getBoundingClientRect();
       openCtx(b.right - 200, b.bottom + 4, mm => {
         Object.keys(SIZES).forEach(k => mi(mm, (l.sz === k ? '✓ ' : '') + SIZES[k], () => put({ sz: l.sz === k ? '' : k }, l.sz === k ? 'removed the ' + SIZES[k] + ' flag' : 'flagged "' + l.t + '" as ' + SIZES[k])));
         mm.append(el('div', 'msep'));
-        mi(mm, l.adhoc ? 'Mark as planned' : 'Mark as ad hoc request', () => put({ adhoc: !l.adhoc }, l.adhoc ? 'marked as planned' : 'marked as an ad hoc request'));
+        if (l.adhoc) mi(mm, 'Mark as planned (not ad hoc)', () => put({ adhoc: false }, 'marked as planned'));
         const others = visibleMonths().filter(x => x !== m); if (others.length) mm.append(el('div', 'mlab', 'Move to month'));
         others.forEach(x => mi(mm, monthLabel(x), () => moveCard(m, l.id, x)));
         mm.append(el('div', 'msep'));
@@ -135,8 +139,7 @@ function card(m, l, prods, ed) {
     });
     foot.append(pctSelect(pct, 'Percent complete', v => put({ pct: v, pe: true }, 'changed "' + l.t + '" to ' + v + '%')));
   } else foot.append(el('span', 'rvp pc-' + pctBand(pct), pct + '%'));
-  if (l.hp && !ed) foot.append(el('span', 'chip mdhpchip', '⚑ High priority'));
-  if (SIZES[l.sz]) foot.append(el('span', 'chip mdsz mdsz-' + l.sz, SIZES[l.sz]));
+  if (SIZES[l.sz]) { const z = el('span', 'chip mdsz mdsz-' + l.sz); z.innerHTML = (l.sz === 'enh' ? STAR + ' ' : '') + SIZES[l.sz]; foot.append(z); }
   if (l.adhoc) foot.append(el('span', 'chip mdadhoc', 'Ad hoc'));
   if (l.src) { const b = el('span', 'chip mdroad', l.pe ? 'Roadmap' : 'Roadmap · estimated'); b.title = l.pe ? 'Came from the roadmap; the percentage was set by a person.' : 'Came from the roadmap; the percentage is estimated from its dates. Change it to set your own.'; foot.append(b); }
   foot.append(noteBtn(m, l, ed));
@@ -216,7 +219,7 @@ export function renderMonthly() {
   q.addEventListener('input', () => { ui.q = q.value; renderMonthly(); const s = pg.querySelector('input[type=search]'); if (s) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); } });
   const fp = el('select'); fp.setAttribute('aria-label', 'Filter by product'); [['all', 'All products']].concat(prods.map(p => [p.k, p.n])).forEach(x => { const o = el('option', '', x[1]); o.value = x[0]; o.selected = x[0] === ui.pr; fp.append(o); });
   fp.addEventListener('change', () => { ui.pr = fp.value; renderMonthly(); });
-  const ff = el('select'); ff.setAttribute('aria-label', 'Filter by flag'); [['all', 'All cards'], ['hp', 'High priority'], ['quick', 'Quick wins'], ['enh', 'Enhancements']].forEach(x => { const o = el('option', '', x[1]); o.value = x[0]; o.selected = x[0] === ui.fl; ff.append(o); });
+  const ff = el('select'); ff.setAttribute('aria-label', 'Filter by flag'); [['all', 'All cards'], ['hp', 'Business priority'], ['quick', 'Quick wins'], ['enh', 'Small enhancements']].forEach(x => { const o = el('option', '', x[1]); o.value = x[0]; o.selected = x[0] === ui.fl; ff.append(o); });
   ff.addEventListener('change', () => { ui.fl = ff.value; renderMonthly(); });
   tools.append(q, fp, ff);
   const pc = pastCount(); if (pc || ui.past) { const pb = el('button', 'btn sm', ui.past ? 'Hide past months' : 'Show past months (' + pc + ')'); pb.type = 'button'; pb.addEventListener('click', () => { ui.past = !ui.past; renderMonthly(); }); tools.append(pb); }

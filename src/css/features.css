@@ -707,3 +707,12 @@ body.dragging, body.dragging * { cursor: grabbing !important; user-select: none 
 .mdnote { margin-inline-start: auto; }
 .mdnote.has { color: #1f9d5c; } .mdnote.has svg { fill: color-mix(in srgb, #1f9d5c 22%, #fff); }
 .mdcard .nbtn[data-tip]:hover::after, .mdcard .nbtn[data-tip]:focus-visible::after { z-index: 30; }
+
+/* Business priority ribbon, small-enhancement star */
+.mdribbon { margin: -12px -10px 4px -10px; padding: 3px 10px; background: #d9a400; color: #fff; font-weight: 800; font-size: .72rem; letter-spacing: .05em; text-transform: uppercase; border-start-end-radius: 10px; }
+.mdstar { flex: none; width: 28px; height: 28px; border: 1.5px solid transparent; border-radius: 8px; background: transparent; color: #9aa0b4; cursor: pointer; margin-inline-start: auto; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+.mdstar svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.mdstar:hover, .mdstar:focus-visible { color: #6d48a8; background: #ece6f9; border-color: #b9a6e8; }
+.mdstar.on, .mdstar.on:hover { color: #fff; background: #6d48a8; border-color: #6d48a8; } .mdstar.on svg { fill: currentColor; }
+.mdhp, .mdhead .mdhp { margin-inline-start: 0; }
+.mdsz svg { width: 12px; height: 12px; fill: currentColor; stroke: currentColor; stroke-width: 1.5; vertical-align: -1px; }

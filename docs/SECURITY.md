@@ -17,7 +17,7 @@ only usability. The only key in the client is the *publishable* key. Never commi
 | Supply chain | supabase-js vendored at a pinned version (no CDN, no SRI drift) | vendor/ |
 | Clickjacking / sniffing / referrer leaks | `frame-ancestors 'self'`, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy, HSTS | vercel.json |
 | Webhook abuse | Edge Function requires `x-webhook-secret` (constant-time compare); CR/LF stripped from email subject | supabase/functions |
-| Brute force / stolen device | Password meter (min 8), idle logout 30 min, sign-out-everywhere | src/esm/features/safety.js |
+| Brute force / stolen device | Password meter (min 8), idle logout after 48 hours without activity (with a 60-second warning), sign-out-everywhere | src/esm/features/safety.js |
 | Public link leakage | Token-based, revocable, RPC returns only one roadmap's bars, people, company days off | sql/04 |
 
 | Executives seeing unsent drafts / sprint internals | `reports` readable by viewers only when `status='submitted'`; `sprints`/`sprint_items` editor-only; editors/admins submit; only admins delete submitted reports | sql/06 |

@@ -87,9 +87,9 @@ export function mergeRoad(lines, road, pl, m, today, others) {
   });
   return { lines: out, added: added, updated: updated, skipped: g.skipped, dup: dup };
 }
-export const SIZES = { quick: 'Quick win', enh: 'Enhancement' };
-/** Flags of a card as text: high priority, and a small piece of work (quick win / enhancement). */
-const tagsOf = l => (l.hp ? ' [HIGH PRIORITY]' : '') + (SIZES[l.sz] ? ' [' + SIZES[l.sz].toUpperCase() + ']' : '');
+export const SIZES = { quick: 'Quick win', enh: 'Small enhancement' };
+/** Flags of a card as text: business priority, and a small piece of work (quick win / enhancement). */
+const tagsOf = l => (l.hp ? ' [BUSINESS PRIORITY]' : '') + (SIZES[l.sz] ? ' [' + SIZES[l.sz].toUpperCase() + ']' : '');
 /** Plain text of a month (for Copy text). `products` = [{k,n}]. Empty when there is nothing to show. */
 export function monthText(doc, products, fmt) {
   if (!doc || !live(doc.lines).length) return [];

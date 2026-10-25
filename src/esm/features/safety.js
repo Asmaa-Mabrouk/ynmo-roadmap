@@ -1,7 +1,7 @@
 /**
  * @module features/safety
  * Cross-cutting safety UI.
- * Accessible modal dialogs (openDlg), offline banner, password-strength meter, idle auto-logout (30 min, warning at 60 s) and sign-out-everywhere. Also the `canWrite()`/`isViewer()` permission helpers used before every mutation.
+ * Accessible modal dialogs (openDlg), offline banner, password-strength meter, idle auto-logout (48 hours without activity, warning at 60 s) and sign-out-everywhere. Also the `canWrite()`/`isViewer()` permission helpers used before every mutation.
  * Dependencies are explicit ES imports; shared mutable state lives in `S` (core/state.js).
  */
 import { S } from '../core/state.js';
@@ -83,13 +83,16 @@ export function pwMeter(input, host) {
   };
   input.addEventListener('input', upd); return upd;
 }
-const IDLE_MS = () => window.__idleMs || 30 * 60 * 1000, IDLE_WARN = () => window.__idleWarn || 60 * 1000;
+const IDLE_MS = () => window.__idleMs || 48 * 60 * 60 * 1000, IDLE_WARN = () => window.__idleWarn || 60 * 1000;
 let lastAct = Date.now(), idleT = 0, idleShown = false, idleTick = 0;
 function bumpAct() {
   const n = Date.now(); if (n - lastAct < 1500) return; lastAct = n;
   try { localStorage.setItem('ynmo-act', String(n)); } catch (e) { /* storage unavailable */ }
 }
 export function startIdle() {
+  /* Count idle time from the last activity of this browser (it survives closing the tab), or from the sign-in if that is newer. */
+  try { lastAct = +localStorage.getItem('ynmo-act') || Date.now(); } catch (e) { lastAct = Date.now(); }
+  Promise.resolve(sb.auth.getSession()).then(r => { const u = r && r.data && r.data.session && r.data.session.user, t = u && u.last_sign_in_at ? Date.parse(u.last_sign_in_at) : 0; if (t > lastAct) { lastAct = t; try { localStorage.setItem('ynmo-act', String(t)); } catch (e) { /* storage unavailable */ } } }).catch(() => {});
   ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(ev => document.addEventListener(ev, () => { if (!idleShown) bumpAct(); }, { passive: true, capture: true }));
   window.addEventListener('storage', e => { if (e.key === 'ynmo-act' && !idleShown) lastAct = Math.max(lastAct, +e.newValue || 0); });
   clearInterval(idleT);

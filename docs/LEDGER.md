@@ -43,6 +43,20 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 ## Ledger updates
 
 🔄 YNMO LEDGER UPDATE — 2026-10-25
+Request: Keep every user signed in for 48 hours (no direct sign-out); rename the gold flag "Business priority"; replace "Mark as ad hoc request" with a small-enhancement star icon beside the flag
+Surface: cross-cutting (Ynmo Roadmaps internal tool)
+Outcome: Idle sign-out is now 48 hours (was 30 min), still with the 60-second warning. Gold flag = Business priority (ribbon). Star button = Small enhancement; ad hoc item removed from the card menu.
+New facts / decisions locked:
+  • Session rule: signed out only after 48 hours without activity; activity time survives closing the tab (stored in the browser) or is the sign-in time if newer.
+  • Gold flag is called Business priority; the star is Small enhancement (`sz:'enh'`); Quick win stays in the menu.
+Corrections to this skill:
+  • Idle logout is 48 hours, not 30 minutes.
+Open / flagged:
+  • In Supabase (Authentication > Sessions) make sure no time-box or inactivity timeout is set shorter than 48 hours, and that the JWT/refresh settings allow it; the app cannot change that.
+  • Still pending: run supabase/sql/07-reports-editor-delete.sql; unfinished features carrying to next month; green threshold (100%); per-card documents to remove the same-month overwrite risk.
+Changelog: 48h sessions; Business priority flag; small-enhancement star.
+
+🔄 YNMO LEDGER UPDATE — 2026-10-25
 Request: Monthly cards: Quick win / Enhancement flag, notes with green icon and hover tooltip, gold high-priority flag
 Surface: cross-cutting (Ynmo Roadmaps internal tool)
 Outcome: Cards carry `hp` (gold flag, high priority), `sz` ('quick' / 'enh') and `note`; flag filter and copy text include them; executives see all of it read-only.

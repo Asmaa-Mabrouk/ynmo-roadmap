@@ -13,6 +13,16 @@ with sync_playwright() as pw:
     A.wait_for_timeout(5800)
     ok('auto sign-out after idle', A.locator('#gate').is_visible() and 'Sign in' in A.locator('#gate').inner_text())
     ctx.close()
+    # 48-hour session: 3 hours idle is still signed in, 49 hours idle signs out (with the real default, no test override)
+    ctx.close(); ctx=mkctx(b); errs=[]
+    A=newpage(ctx,errs); signup(A,'Admin','adm@x.com'); A.wait_for_timeout(800)
+    A.evaluate("localStorage.setItem('ynmo-act', String(Date.now()-3*3600*1000))"); A.reload(); A.wait_for_timeout(2500)
+    ok('after 3 hours idle the user is still signed in (no 30-minute logout any more)', A.locator('#nav button').count()>0 and A.locator('#xdlg:has-text("Still there?")').count()==0)
+    A.evaluate("localStorage.setItem('ynmo-act', String(Date.now()-47*3600*1000))"); A.reload(); A.wait_for_timeout(2500)
+    ok('after 47 hours idle the user is still signed in', A.locator('#nav button').count()>0)
+    A.evaluate("localStorage.setItem('ynmo-act', String(Date.now()-49*3600*1000))"); A.reload(); A.wait_for_timeout(7000)
+    ok('after 49 hours idle the session ends', A.locator('#gate').is_visible() or A.locator('#nav button').count()==0)
+    ctx.close()
     # undo clash (needs a signed-in editor)
     ctx=mkctx(b); errs=[]
     A=newpage(ctx,errs); signup(A,'Admin','adm@x.com')
