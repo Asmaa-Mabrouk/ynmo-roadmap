@@ -25,7 +25,7 @@ only usability. The only key in the client is the *publishable* key. Never commi
 | Executives seeing unsent drafts / sprint internals | `reports` readable by viewers only when `status='submitted'`; `sprints`/`sprint_items` editor-only; editors/admins submit; only admins delete submitted reports | sql/06 |
 | Gemini key leak / prompt injection | Key only in Edge Function secrets; caller must be an editor; item text treated as untrusted data; output schema-constrained and filtered to known ids; only titles are sent | functions/weekly-draft |
 
-| Jira credentials leak / write access | Token only in Supabase secrets; the function only issues search (read) requests; caller must be an editor; JQL is built server-side from validated inputs; base address must match `https://<site>.atlassian.net` | functions/jira-sync |
+| Jira credentials leak / write access | Token only in Supabase secrets; the function only issues search (read) requests; caller must be an editor; JQL is built server-side from validated inputs; base address must match `https://<site>.atlassian.net` | functions/jira-sync, functions/jira-search (search text is stripped of JQL characters; max 8 results) |
 | Google sign-in abuse | Scope `drive.file` only (documents the tool created); access token in memory, never saved; OAuth Client ID is public and no client secret is used; CSP allows only `accounts.google.com/gsi/*` and `www.googleapis.com` | features/google-drive.js, vercel.json |
 | Stored XSS through rich text in reports | HTML is never inserted as-is: `cleanFragment` rebuilds nodes from a tag whitelist (b, i, u, ul, ol, li, br, p, https/mailto links); scripts, handlers, styles and `javascript:` links are dropped on paste and on display | features/rich-text.js |
 

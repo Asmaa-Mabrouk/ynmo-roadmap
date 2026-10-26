@@ -7,7 +7,7 @@ Shared, editable, real-time **Gantt roadmap and planning workspace** for the Ynm
 |---|---|
 | Live | https://ynmo-roadmap.vercel.app |
 | Hosting | Vercel (auto-deploys `main`) |
-| Backend | Supabase (Auth + Postgres + Realtime + three Edge Functions: `notify-approval`, `weekly-draft`, `jira-sync`) |
+| Backend | Supabase (Auth + Postgres + Realtime + four Edge Functions: `notify-approval`, `weekly-draft`, `jira-sync`, `jira-search`) |
 | Stack | Vanilla JS (native ES modules, bundled by esbuild) + CSS, no framework, Supabase JS v2 (vendored) |
 
 ## What it does (30 seconds)
@@ -36,7 +36,7 @@ lint.mjs                  module-graph lint (missing imports / undefined names)
 index.html                GENERATED deploy artifact (committed; Vercel serves it as-is)
 vendor/supabase-js.js     pinned, self-hosted client (no CDN => strict CSP, no supply-chain drift)
 supabase/sql/*.sql        numbered migrations, run in order
-supabase/functions/       Edge Functions: notify-approval (email admins), weekly-draft (Gemini report wording), jira-sync (read-only Jira Cloud search)
+supabase/functions/       Edge Functions: notify-approval (email admins), weekly-draft (Gemini report wording), jira-sync (read-only Jira Cloud search), jira-search (find a ticket to link a sprint task)
 tests/                    Playwright E2E suite + in-browser fake Supabase
 vercel.json               security headers + CSP
 docs/                     BUSINESS, ARCHITECTURE, DATABASE, SECURITY, DEPLOYMENT, TESTING, CONTRIBUTING, CHANGELOG, LEDGER

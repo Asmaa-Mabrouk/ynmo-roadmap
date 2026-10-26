@@ -42,6 +42,23 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-26 - Link sprint tasks to Jira (search as you type)
+```
+🔄 YNMO LEDGER UPDATE — 2026-10-26
+Request: link sprints with Jira so tasks are always connected; type the start of a task and see Jira issues like a connector
+Surface: cross-cutting (Roadmaps tool, Sprints)
+Outcome: Link to Jira… on sprint tasks with live search (jira-search Edge Function), key chip linking to the issue, status from Jira, Unlink
+New facts / decisions locked:
+  • Jira Cloud + API token as Supabase secrets (same as jira-sync); read-only; one Jira board per product, so search can be limited by project keys
+  • The link is stored as jk on the sprint line; no database change
+Corrections to this skill: none
+Open / flagged:
+  • Deploy the jira-search function in Supabase (same secrets as jira-sync); not yet verified against the real Jira
+  • Not built: two-way sync, automatic status refresh without Pull from Jira, typing-in-line suggestions (picker is in the line options)
+Changelog: Sprint tasks can be linked to Jira issues by live search.
+```
+Paste this into Section 11 of the ynmo-master skill to keep it current.
+
 ### 2026-10-26 - Sorted by default, off when a card is added
 ```
 🔄 YNMO LEDGER UPDATE — 2026-10-26

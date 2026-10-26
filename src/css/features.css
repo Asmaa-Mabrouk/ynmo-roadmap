@@ -812,3 +812,11 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
 .nbtn[hidden] { display: none; } /* a Viewer sees no icon on a card without a note or details */
 
 .mdsort.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+/* Jira link on sprint tasks */
+.jkchip{display:inline-block;margin-inline-start:6px;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:600;background:#e8f0fe;color:#1a56c4;text-decoration:none;white-space:nowrap}
+a.jkchip:hover{text-decoration:underline}
+.jklist{display:flex;flex-direction:column;gap:4px;max-height:260px;overflow:auto;margin:6px 0}
+.jkopt{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;text-align:start;padding:6px 8px;border:1px solid var(--line,#d9dde3);border-radius:8px;background:transparent;cursor:pointer;font:inherit}
+.jkopt:hover,.jkopt:focus-visible{background:#eef3ff}
+.jkopt .jks{grid-column:2;font-size:11px;opacity:.7}

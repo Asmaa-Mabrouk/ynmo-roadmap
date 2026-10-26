@@ -38,6 +38,10 @@ Read-only: the function only reads tickets, it never changes Jira.
 4. In a sprint, click "Pull from Jira", keep the projects (`DYC, FAS, AU`), choose Active / Upcoming sprints, and Pull. Tickets become scopes under each person; pulling again only adds new tickets and updates statuses.
 Troubleshooting: "not deployed" = the function is missing; "(401)" = wrong email or token; "(403)" = that account cannot see the project; "not in the team list" = the Jira name did not match a Resources member, so the Jira name was used.
 
+## 2d. Link a sprint task to Jira (Edge Function `jira-search`)
+
+Uses the **same three secrets** as `jira-sync` (`JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`); nothing new to create. Deploy: `supabase functions deploy jira-search` (or create a function named `jira-search` and paste `supabase/functions/jira-search/index.ts`). Read-only, editors only. Without it, the Link to Jira picker says the function is not deployed.
+
 ## 2d. Google Drive export (one-time, an admin)
 Setup done for this tool: Google Cloud project **YNMO PM** under the trianglz.com organisation, Google Drive API enabled, OAuth consent screen **Internal** (so every trianglz.com account can sign in with no Google review), one **Web application** client with the authorised JavaScript origin `https://ynmo-roadmap.vercel.app` and no redirect URIs.
 1. console.cloud.google.com > create or choose a project. APIs & Services > Library > enable "Google Drive API".

@@ -9,6 +9,7 @@ import { fld, logAct } from '../core/shared.js';
 import { openDlg, closeDlg } from './safety.js';
 import { notify } from '../ui/notify.js';
 import { primarySq } from '../ui/editing.js';
+import { rememberBase } from './jira-link.js';
 import { DEFAULT_PROJECTS, PROJECT_SQUAD, mergeJira } from './jira-merge.js';
 
 const KEY = 'ynmo-jira-projects';
@@ -47,7 +48,7 @@ export function openJiraPull(o) {
       try {
         const r = await sb.functions.invoke('jira-sync', { body: { projects: projects, sprints: mode.value, sprintName: nm.value.trim() } });
         if (r.error) throw r.error;
-        const issues = (r.data && r.data.issues) || [];
+        const issues = (r.data && r.data.issues) || []; rememberBase(r.data && r.data.base);
         if (!issues.length) { msg.textContent = 'Jira returned no tickets for ' + projects.join(', ') + ' in those sprints.'; go.disabled = false; return; }
         const names = [...directory().keys()];
         const res = mergeJira(o.blocks(), issues, { names: names, squadOf: (p, who) => PROJECT_SQUAD[p] || primarySq(who), squadName: o.laneName });

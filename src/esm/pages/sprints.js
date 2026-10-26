@@ -20,6 +20,7 @@ import { setupBanner } from './reports.js';
 import { notify } from '../ui/notify.js';
 import { confirmDlg } from '../ui/confirm.js';
 import { openJiraPull } from '../features/jira-pull.js';
+import { openJiraLink, issueUrl } from '../features/jira-link.js';
 import { copyRich, docUrl, sprintDoc } from '../features/sprint-export.js';
 import { jiraUrl } from '../features/report-model.js';
 import { clientId, docId, exportDoc, getToken, isAdmin, openDriveSetup } from '../features/google-drive.js';
@@ -284,8 +285,9 @@ function docEditor(sp, ro) {
   const handleMenu = (b, x) => {
     const cur = S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, into = b.k === 'h' ? [] : ['s', 'u', 'n'].filter(k => k !== b.k).map(k => ({ label: 'Turn into ' + KIND_NAME[k].toLowerCase(), value: 'k:' + k }));
     const all = list(), g = groupOf(all, all.findIndex(z => z.id === b.id)); setPicked(g.map(z => z.id));
-    openMenu(x, [{ label: 'Move up', value: 'up' }, { label: 'Move down', value: 'down' }].concat(into, [{ label: 'Delete', value: 'del' }]), {
-      label: 'Line options', onPick: it => { if (it.value === 'up') move(cur, -1); else if (it.value === 'down') move(cur, 1); else if (it.value === 'del') removeGroup(cur); else { saveItem(b.id, { k: it.value.slice(2) }); redraw(b.id); } }, onClose: p => { setPicked(null); if (!p) focusLater(b.id); }
+    const jl = (b.k === 's' || b.k === 'u') ? [{ label: cur.jk ? 'Change Jira link (' + cur.jk + ')…' : 'Link to Jira…', value: 'jira' }] : [];
+    openMenu(x, [{ label: 'Move up', value: 'up' }, { label: 'Move down', value: 'down' }].concat(into, jl, [{ label: 'Delete', value: 'del' }]), {
+      label: 'Line options', onPick: it => { if (it.value === 'up') move(cur, -1); else if (it.value === 'down') move(cur, 1); else if (it.value === 'del') removeGroup(cur); else if (it.value === 'jira') openJiraLink({ b: cur, saveItem: saveItem, redraw: redraw, notify: notify }); else { saveItem(b.id, { k: it.value.slice(2) }); redraw(b.id); } }, onClose: p => { setPicked(null); if (!p) focusLater(b.id); }
     });
   };
   function startDrag(e, b, x) {
@@ -326,6 +328,7 @@ function docEditor(sp, ro) {
         bt.addEventListener('paste', e => onPaste(e, Object.assign({ id: b.id }, S.sitems[b.id] || b), bt));
       }
       r.append(bt);
+      if (b.jk && (b.k === 's' || b.k === 'u')) { const u = issueUrl(b.jk), jc = el(u ? 'a' : 'span', 'jkchip', b.jk); if (u) { jc.href = u; jc.target = '_blank'; jc.rel = 'noopener noreferrer'; jc.title = 'Open ' + b.jk + ' in Jira'; } else jc.title = 'Linked to Jira ' + b.jk; r.append(jc); }
       if (b.k === 'p') { const inf = directory().get(b.t); if (inf) r.append(el('span', 'role', inf.domain)); }
       const tags = el('span', 'btags'); (b.tags || []).forEach(n => { const ch = el('button', 'tgchip tg-' + (tagMap(spId)[n] || 'gray'), '#' + n); ch.type = 'button'; ch.disabled = ro; ch.setAttribute('aria-label', 'Tag ' + n + ': change colour or remove'); ch.addEventListener('click', () => chipMenu(b, n, ch)); tags.append(ch); }); r.append(tags);
     }

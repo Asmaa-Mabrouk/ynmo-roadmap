@@ -2,6 +2,8 @@
 
 ## Unreleased – Sprints + Weekly executive report
 
+- **Link a sprint task to Jira by searching (2026-10-26):** on a sprint plan, the line options (⋮⋮) of a scope or sub-section now have **Link to Jira…** (or **Change Jira link**). Type a few letters of the title, or a key like DYC-123, and pick the ticket from a live list (optionally limited to project keys, so each board can be searched on its own). The task then shows the Jira key as a link that opens the issue, takes the Jira status, and can be unlinked. Read-only: nothing is changed in Jira. New Edge Function **`jira-search`** (editors only, same three secrets as `jira-sync`, **must be deployed**); the Jira site address is remembered from Pull from Jira / search so keys become links. Tests: `jira_link.py` (14).
+
 - **Monthly is sorted by default (2026-10-26):** the board now opens already sorted by product (Tifli, AI, Daycare, Plan, SCHS, Warif). When someone **adds a card**, sorting switches **off** so the new card stays where it was added and can be dragged; clicking **Sort by product** again sorts it into place. The choice is remembered per browser.
 
 - **Sort by product on Monthly (2026-10-26):** new **Sort by product** button beside the search and filters. When on, every column (each month and the Backlog) lists its cards as **Tifli, AI, Daycare, Plan, SCHS, Warif**, then Finance and New initiative; cards of the same product keep their order. It only changes the display, not the saved order, and dropping a card while sorted puts it at the end of the month. Each person's choice is remembered in their browser (off by default, available to executives too). Click again to return to the saved order. No database change. Tests: `monthly_sort.py` (10) and `sortByProduct` unit checks.
