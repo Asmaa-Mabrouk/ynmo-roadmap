@@ -65,7 +65,7 @@ export function monthText(doc, products, fmt) {
     const its = live(doc.lines).filter(l => l.k === p.k); if (!its.length) return;
     const pl = its.filter(l => !l.adhoc), ad = its.filter(l => l.adhoc), pp = monthProgress(pl);
     out.push(p.n + (pp.pct === null ? '' : ' - ' + pp.pct + '%'));
-    pl.forEach(l => { out.push('- ' + (cardId(l) ? cardId(l) + ' ' : '') + l.t + ': ' + clampPct(l.pct) + '%' + tagsOf(l)); notesOf(l).forEach(n => out.push('  Note' + (n.by ? ' (' + n.by + ')' : '') + ': ' + String(n.t).replace(/\s+/g, ' '))); });
+    pl.forEach(l => { out.push('- ' + (cardId(l) ? cardId(l) + ' ' : '') + l.t + ': ' + clampPct(l.pct) + '%' + tagsOf(l)); if (String(l.info || '').trim()) out.push('  Details: ' + String(l.info).trim().replace(/\s+/g, ' ')); notesOf(l).forEach(n => out.push('  Note' + (n.by ? ' (' + n.by + ')' : '') + ': ' + String(n.t).replace(/\s+/g, ' '))); });
     if (ad.length) { out.push('Ad hoc requests:'); ad.forEach(l => out.push('- ' + l.t + (l.by ? ' (requested by ' + l.by + (l.at && fmt ? ', ' + fmt(l.at) : '') + ')' : '') + ': ' + clampPct(l.pct) + '%')); }
     out.push('');
   });

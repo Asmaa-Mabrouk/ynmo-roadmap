@@ -32,8 +32,8 @@ function drawPresence() {
   if (!box) { box = el('div', 'presence'); box.id = 'presence'; box.setAttribute('aria-label', 'People online'); const av = $('avbtn'); av.parentNode.insertBefore(box, av); }
   box.textContent = '';
   const o = others(); box.hidden = !o.length;
-  o.slice(0, 4).forEach(m => { const a = avatarEl(m.av, 28, m.name); a.title = m.name + (m.edit ? ' · editing' : ' · online') + ' · ' + (m.page || ''); a.classList.add('pav'); box.append(a); });
-  if (o.length > 4) box.append(el('span', 'pmore', '+' + (o.length - 4)));
+  o.slice(0, 4).forEach(m => { const a = avatarEl(m.av, 28, m.name); const what = m.name + (m.edit ? ' is editing' : ' is online') + (m.page ? ' · ' + m.page : ''); a.dataset.tip = what; a.tabIndex = 0; a.setAttribute('role', 'img'); a.setAttribute('aria-label', what); a.classList.add('pav'); box.append(a); });
+  if (o.length > 4) { const mo = el('span', 'pmore', '+' + (o.length - 4)); mo.dataset.tip = o.slice(4).map(x => x.name).join(', '); mo.tabIndex = 0; box.append(mo); }
   box.setAttribute('role', 'group'); box.setAttribute('aria-label', o.length + (o.length === 1 ? ' other person online: ' : ' others online: ') + o.map(m => m.name).join(', '));
 }
 export function decorateLocks() {

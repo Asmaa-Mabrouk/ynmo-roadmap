@@ -23,3 +23,5 @@ ok('text has the month, product percentage, lines and ad hoc requests', /MONTHLY
 ok('no text for an empty month', monthText({ mo: '2026-10', lines: [] }, prods).length === 0 && monthText(null, prods).length === 0);
 ok('the weekly report text includes the month when given', /MONTHLY DELIVERABLES/.test(reportToText({ a: '2026-10-18', b: '2026-10-24', prods: {} }, prods, x => x, { mo: '2026-10', lines: [a] })) && !/MONTHLY/.test(reportToText({ a: '2026-10-18', b: '2026-10-24', prods: {} }, prods, x => x)));
 ok('percentage colour: none grey, 1-50 yellow, 51-99 orange, 100 green', pctBand(0) === 'n' && pctBand(1) === 'y' && pctBand(50) === 'y' && pctBand(51) === 'o' && pctBand(99) === 'o' && pctBand(100) === 'g');
+const d1 = Object.assign({}, a, { info: '  Nudge   parents\nbefore visits ' });
+ok('copy text carries the details of a card', /  Details: Nudge parents before visits/.test(monthText({ mo: '2026-10', pl: prods, lines: [d1] }, prods, x => x).join('\n')));

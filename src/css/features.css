@@ -800,3 +800,13 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
 .mdcheck{white-space:nowrap}
 .fsreq .fsrow:last-child{margin-bottom:0}
 @media (prefers-color-scheme:dark){.fschip.in{background:#1d2c4d;color:#a9c4ff}.fschip.out{background:#4a3a10;color:#ffd77a}}
+
+/* ---- who is online: name on hover; card details (info icon) ---- */
+.presence .pav, .presence .pmore { position: relative; cursor: default; }
+.presence [data-tip]:hover::after, .presence [data-tip]:focus-visible::after { content: attr(data-tip); position: absolute; top: calc(100% + 8px); inset-inline-end: 0; width: max-content; max-width: 260px; padding: 6px 10px; border-radius: 8px; background: #1c2033; color: #fff; font-size: .8rem; font-weight: 600; line-height: 1.35; white-space: pre-wrap; box-shadow: 0 6px 20px rgba(20, 24, 50, .25); z-index: 90; pointer-events: none; }
+.mdinfo svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.mdinfo.has { color: var(--brand); }
+.mdinfo:not(.has) { opacity: .55; }
+.mdinfo[data-tip]:hover::after, .mdinfo[data-tip]:focus-visible::after { inset-inline-end: auto; inset-inline-start: 0; z-index: 30; }
+.mdinfotxt { white-space: pre-wrap; line-height: 1.55; max-height: 55vh; overflow: auto; padding: 4px 2px 12px; overflow-wrap: anywhere; }
+.nbtn[hidden] { display: none; } /* a Viewer sees no icon on a card without a note or details */

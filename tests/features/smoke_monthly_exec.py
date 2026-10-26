@@ -41,6 +41,7 @@ with sync_playwright() as pw:
     E.set_viewport_size({'width':1400,'height':900}); E.wait_for_timeout(300)
     ok('S11 the copy-text button works for the executive without errors', True)
     ok('S12 the admin board survived a reload with everything in place', (A.reload() or True) and (A.wait_for_timeout(1500) or True) and (A.click('#nav button[data-p="monthly"]') or True) and (A.wait_for_timeout(900) or True) and A.locator('#pg-monthly .mdcard').count()>=3)
+    ok('S13 the executive sees no empty note icons on cards without notes', E.locator('#pg-monthly .mdcard .nbtn:visible').count()==0)
     ok('no page errors', errs==[]); bad=[x for x in bad if 'ERR_FAILED' not in x]  # the test blocks web fonts on purpose
     ok('no console errors %s'%bad[:2], bad==[]); print('errors:',errs[:3])
     print(sum(1 for _,c in R if c),'/',len(R))

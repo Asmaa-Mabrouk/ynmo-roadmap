@@ -42,6 +42,20 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-26 - Card details and avatar names
+```
+🔄 YNMO LEDGER UPDATE — 2026-10-26
+Request: show the name when hovering the avatars of people online; add per-card details shown as an info icon for the business
+Surface: cross-cutting (Roadmaps tool)
+Outcome: instant name tooltip on online avatars; Details field + info icon on Monthly cards; Viewers no longer see empty note icons
+New facts / decisions locked:
+  • Card details are stored on the card as `info` (text up to 4000 chars); executives see the icon only when details exist
+Corrections to this skill: none
+Open / flagged:
+  • Details are plain text (no formatting or images)
+Changelog: Card details info icon; avatar names on hover
+```
+
 ### 2026-10-26 - Monthly smoke test for the executive demo
 ```
 🔄 YNMO LEDGER UPDATE — 2026-10-26

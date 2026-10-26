@@ -193,6 +193,28 @@ function noteBtn(m, l, ed, month) {
   b.addEventListener('click', () => openNotes(m, month ? null : l.id, ed));
   return b;
 }
+const INFO_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><circle cx="12" cy="7.8" r=".6"/></svg>';
+/** Details of a card: what the business needs to understand the feature. An info icon on the card shows them on hover and opens them on click; editors write them. */
+function infoBtn(m, l, ed) {
+  const txt = String(l.info || '').trim(), b = el('button', 'nbtn mdinfo' + (txt ? ' has' : '') + (ed ? '' : ' ro')); b.type = 'button'; b.innerHTML = INFO_ICON;
+  if (!ed && !txt) { b.hidden = true; b.tabIndex = -1; return b; }
+  if (txt) b.dataset.tip = txt.length > 320 ? txt.slice(0, 320).trim() + '… (click to read all)' : txt;
+  b.setAttribute('aria-label', txt ? 'Details of ' + l.t + ', open' : 'Add details for ' + l.t); if (!txt) b.title = 'Add details so the business can understand this feature';
+  b.addEventListener('click', () => openInfo(m, l, ed));
+  return b;
+}
+function openInfo(m, l, ed) {
+  openDlg('Details · ' + (cardId(l) ? cardId(l) + ' ' : '') + l.t, box => {
+    const cur = () => { const d = S.reports[monthId(m)]; const x = d && (d.lines || []).find(z => z.id === l.id); return String((x || l).info || ''); };
+    if (!ed) { const p = el('div', 'mdinfotxt'); p.textContent = cur().trim() || 'No details yet.'; const c = el('button', 'btn', 'Close'); c.type = 'button'; c.addEventListener('click', closeDlg); box.append(p, el('div', 'row')); box.lastChild.append(c); return; }
+    const ta = el('textarea'); ta.rows = 9; ta.maxLength = 4000; ta.value = cur(); ta.setAttribute('aria-label', 'Details'); ta.placeholder = 'What is this feature, who is it for, what changes for the user, and anything the business should know. Shown to everyone when they hover or open the info icon.';
+    const ok = el('button', 'btn primary', 'Save'), rm = el('button', 'btn', 'Remove details'), no = el('button', 'btn', 'Cancel'); ok.type = rm.type = no.type = 'button'; rm.hidden = !cur().trim();
+    const put = v => { saveMonth(m, d => { const x = d.lines.find(z => z.id === l.id); if (x) { if (v) x.info = v; else delete x.info; } }, (v ? 'wrote details for "' : 'removed the details of "') + l.t + '"'); closeDlg(); renderMonthly(); };
+    ok.addEventListener('click', () => put(ta.value.trim())); rm.addEventListener('click', () => put('')); no.addEventListener('click', closeDlg);
+    ta.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); put(ta.value.trim()); } });
+    const row = el('div', 'row'); row.append(ok, rm, no); box.append(ta, row); setTimeout(() => ta.focus(), 0);
+  });
+}
 function card(m, l, prods, ed) {
   const p = prods.find(x => x.k === l.k) || { k: l.k, n: l.k, squads: [] }, c = colOf(p), pct = clampPct(l.pct);
   const r = el('div', 'icard mdcard' + (l.adhoc ? ' adhoc' : '') + (pct >= 100 ? ' fin' : '') + (l.hp ? ' hp' : ''));
@@ -236,7 +258,7 @@ function card(m, l, prods, ed) {
   if (l.adhoc) foot.append(el('span', 'chip mdadhoc', 'Ad hoc'));
   if (onRoadmap(l)) { const b = el('span', 'chip mdroad', 'On roadmap'); b.title = 'This card is a bar on the roadmap'; foot.append(b); } else if (l.src) { const b = el('span', 'chip mdroad', 'From roadmap'); b.title = 'Brought in from the roadmap'; foot.append(b); }
   { const k = lkMap.get(l.id); if (k) { if (k.cmp.incoming.length) { const b = el('span', 'chip fschip in', 'Roadmap changed'); b.title = 'The roadmap has a newer ' + k.cmp.incoming.map(x => x.f === 't' ? 'title' : 'progress').join(' and ') + '. Use Check updates.'; foot.append(b); } if (k.cmp.outgoing.length) { const b = el('span', 'chip fschip out', 'Waiting for admin'); b.title = 'Your change to the ' + k.cmp.outgoing.map(x => x.f === 't' ? 'title' : 'progress').join(' and ') + ' is waiting for an admin to approve it on the roadmap.'; foot.append(b); } } }
-  foot.append(noteBtn(m, l, ed));
+  foot.append(infoBtn(m, l, ed), noteBtn(m, l, ed));
   r.append(head, t, foot);
   if (ed) { // drag the card to another month
     const g = el('div', 'grip', '⋮⋮'); g.title = 'Drag to another month'; g.setAttribute('aria-hidden', 'true'); r.prepend(g);
