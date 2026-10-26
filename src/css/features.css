@@ -810,3 +810,5 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
 .mdinfo[data-tip]:hover::after, .mdinfo[data-tip]:focus-visible::after { inset-inline-end: auto; inset-inline-start: 0; z-index: 30; }
 .mdinfotxt { white-space: pre-wrap; line-height: 1.55; max-height: 55vh; overflow: auto; padding: 4px 2px 12px; overflow-wrap: anywhere; }
 .nbtn[hidden] { display: none; } /* a Viewer sees no icon on a card without a note or details */
+
+.mdsort.on { background: var(--brand); border-color: var(--brand); color: #fff; }

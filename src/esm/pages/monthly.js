@@ -20,13 +20,15 @@ import { plainBox } from '../features/rich-text.js';
 import { openDlg, closeDlg } from '../features/safety.js';
 import { saveIdea } from './ideas.js';
 import { diffDoc, undoChanges } from '../features/month-undo.js';
-import { adhocStats, cardId, notesOf, clampPct, monthId, monthLabel, monthProgress, monthRange, monthText, newLine, nextMonth, pctBand, SIZES, TAGS, legacyTag } from '../features/month-model.js';
+import { adhocStats, cardId, sortByProduct, PRODUCT_ORDER, notesOf, clampPct, monthId, monthLabel, monthProgress, monthRange, monthText, newLine, nextMonth, pctBand, SIZES, TAGS, legacyTag } from '../features/month-model.js';
 import { NOTE_ICON, setupBanner } from './reports.js';
 import { scan, ensureRecords, openCheckUpdates } from '../features/feature-sync.js';
 let lkMap = new Map();
 
 const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9 6.8 19.6l1-5.8-4.3-4.1 5.9-.8z"/></svg>';
 let blOpen = false; try { blOpen = localStorage.getItem('ynmo-backlog') === '1'; } catch (e) { /* no storage */ }
+let sortOn = false; try { sortOn = localStorage.getItem('ynmo-month-sort') === '1'; } catch (e) { /* no storage */ }
+const setSort = v => { sortOn = v; try { localStorage.setItem('ynmo-month-sort', v ? '1' : '0'); } catch (e) { /* no storage */ } };
 const setBl = v => { blOpen = v; try { localStorage.setItem('ynmo-backlog', v ? '1' : '0'); } catch (e) { /* no storage */ } };
 const ui = { q: '', pr: 'all', fl: 'all', past: false, prod: '', open: '' };
 const canBuild = () => modLevel('monthly') >= 2 && canWrite();
@@ -310,7 +312,7 @@ function column(m, prods, ed) {
   const prog = isBl ? { pct: null, n: 0, done: 0 } : monthProgress(lines), ad = adhocStats(lines), pv = prog.pct === null ? 0 : prog.pct, pr = el('div', 'mdprog pc-' + pctBand(pv));
   const b0 = el('div', 'mbar pc-' + pctBand(pv)), i0 = el('i'); i0.style.width = pv + '%'; b0.append(i0); b0.setAttribute('aria-label', 'Progress of ' + lab(m));
   pr.append(b0, el('b', 'mdpct', pv + '%'), el('small', '', prog.pct === null ? 'No planned deliverables yet' : prog.done + ' of ' + prog.n + ' done' + (ad.n ? ' · ' + ad.n + ' ad hoc' : ''))); if (!isBl) col.append(pr);
-  shown.forEach(l => col.append(card(m, l, prods, ed)));
+  (sortOn ? sortByProduct(shown) : shown).forEach(l => col.append(card(m, l, prods, ed)));
   if (!shown.length && !(ed && ui.open === m)) col.append(el('div', 'hint', lines.length ? 'Nothing matches the filter.' : isBl ? 'The backlog is empty.' : 'Nothing here yet.'));
   if (ed) col.append(composer(m, prods));
   if (ed) {
@@ -318,7 +320,7 @@ function column(m, prods, ed) {
     const line = el('div', 'mddrop'), beforeOf = e => { const cs = [...col.querySelectorAll('.mdcard:not(.dragging)')]; return cs.find(c => { const r = c.getBoundingClientRect(); return e.clientY < r.top + r.height / 2; }) || null; };
     col.addEventListener('dragover', e => { if (!ok(e)) return; e.preventDefault(); col.classList.add('dropcol'); const c = beforeOf(e); if (c) c.before(line); else col.append(line); });
     col.addEventListener('dragleave', e => { if (!col.contains(e.relatedTarget)) { col.classList.remove('dropcol'); line.remove(); } });
-    col.addEventListener('drop', e => { const c = beforeOf(e); line.remove(); col.classList.remove('dropcol'); const v = e.dataTransfer.getData('text/mdcard'); if (!v) return; e.preventDefault(); const i = v.indexOf('|'); moveCard(v.slice(0, i), v.slice(i + 1), m, c ? c.dataset.id : ''); });
+    col.addEventListener('drop', e => { const c = beforeOf(e); line.remove(); col.classList.remove('dropcol'); const v = e.dataTransfer.getData('text/mdcard'); if (!v) return; e.preventDefault(); const i = v.indexOf('|'); moveCard(v.slice(0, i), v.slice(i + 1), m, sortOn ? '' : c ? c.dataset.id : ''); });
   }
   return col;
 }
@@ -347,6 +349,7 @@ export function renderMonthly() {
   const ff = el('select'); ff.setAttribute('aria-label', 'Filter by flag'); [['all', 'All cards'], ['hp', 'Business priority'], ['quick', 'Quick wins'], ['enh', 'Small enhancements']].forEach(x => { const o = el('option', '', x[1]); o.value = x[0]; o.selected = x[0] === ui.fl; ff.append(o); });
   ff.addEventListener('change', () => { ui.fl = ff.value; renderMonthly(); });
   tools.append(q, fp, ff);
+  { const sb = el('button', 'btn sm mdsort' + (sortOn ? ' on' : ''), sortOn ? '✓ Sorted by product' : 'Sort by product'); sb.type = 'button'; sb.id = 'mdsort'; sb.setAttribute('aria-pressed', String(sortOn)); sb.title = 'In every column: ' + PRODUCT_ORDER.slice(0, 6).map(k => (TAGS.find(t => t.k === k) || {}).n).join(', then ') + '. Click again to go back to your own order.'; sb.addEventListener('click', () => { setSort(!sortOn); renderMonthly(); }); tools.append(sb); }
   if (ed) { const ub = el('button', 'btn sm mdundo', '↶ Undo'); ub.type = 'button'; ub.id = 'mdundo'; ub.disabled = !undoStack.length; ub.title = 'Undo the last change on this board (Ctrl+Z)'; ub.addEventListener('click', undoMonthly); tools.append(ub); }
   if (ed) { const n = [...lkMap.values()].reduce((a, r) => a + r.cmp.incoming.length, 0); if (n) { const cb = el('button', 'btn sm primary mdcheck', 'Check updates (' + n + ')'); cb.type = 'button'; cb.id = 'mdcheck'; cb.title = 'The roadmap changed some of your features. Check and apply them one by one.'; cb.addEventListener('click', () => openCheckUpdates('card', renderMonthly)); tools.append(cb); } }
   const pc = pastCount(); if (pc || ui.past) { const pb = el('button', 'btn sm', ui.past ? 'Hide past months' : 'Show past months (' + pc + ')'); pb.type = 'button'; pb.addEventListener('click', () => { ui.past = !ui.past; renderMonthly(); }); tools.append(pb); }

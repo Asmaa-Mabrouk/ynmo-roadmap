@@ -42,6 +42,22 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-26 - Sort by product (Monthly)
+```
+🔄 YNMO LEDGER UPDATE — 2026-10-26
+Request: add a button beside the filters to sort each Monthly column by product: Tifli, AI, Daycare, Plan, then SCHS and Warif
+Surface: cross-cutting (Roadmaps tool, Monthly)
+Outcome: Sort by product button; per-column display sort, remembered per browser, no database change
+New facts / decisions locked:
+  • Product order: Tifli, AI, Daycare, Plan, SCHS, Warif, then Finance, New initiative; stable inside a product
+  • Display-only sort; saved card order is unchanged; dropping while sorted appends to the month
+Corrections to this skill: none
+Open / flagged:
+  • Reordering by drag has no visible effect while sorting is on (by design)
+Changelog: Monthly: Sort by product button, per column, display only.
+```
+Paste this into Section 11 of the ynmo-master skill to keep it current.
+
 ### 2026-10-26 - Card details and avatar names
 ```
 🔄 YNMO LEDGER UPDATE — 2026-10-26

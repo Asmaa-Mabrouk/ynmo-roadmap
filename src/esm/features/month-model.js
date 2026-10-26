@@ -47,6 +47,13 @@ export const TAGS = [
   { k: 'schs', n: 'SCHS', ab: 'SC', c: '#2e818d', squads: [] },
   { k: 'warif', n: 'Warif', ab: 'WR', c: '#5dd9d2', squads: [] }
 ];
+/** The order of "Sort by product": Tifli, AI, Daycare, Plan, then SCHS and Warif; the other tags follow. */
+export const PRODUCT_ORDER = ['tifli', 'ai', 'daycare', 'plan', 'schs', 'warif', 'finance', 'initiative'];
+/** Cards sorted by product (a new list; cards of the same product keep the order they have). */
+export function sortByProduct(lines) {
+  const rank = l => { const i = PRODUCT_ORDER.indexOf(l.k); return i < 0 ? PRODUCT_ORDER.length : i; };
+  return lines.map((l, i) => ({ l, i })).sort((a, b) => rank(a.l) - rank(b.l) || a.i - b.i).map(x => x.l);
+}
 /** Tag of a card made before the tags were split: the old combined Plan / Daycare card becomes Plan (or the tag of its roadmap squad when known). */
 export const legacyTag = (k, squad) => { const t = TAGS.find(x => squad && x.squads.includes(squad)); return t ? t.k : k === 'plan_daycare' ? 'plan' : TAGS.some(x => x.k === k) ? k : 'initiative'; };
 /** Tracking id of a card: the abbreviation of its tag and its number, e.g. DC#12 (the number never changes, the abbreviation follows the tag). '' for a card without a number yet. */

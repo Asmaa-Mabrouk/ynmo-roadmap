@@ -25,3 +25,9 @@ ok('the weekly report text includes the month when given', /MONTHLY DELIVERABLES
 ok('percentage colour: none grey, 1-50 yellow, 51-99 orange, 100 green', pctBand(0) === 'n' && pctBand(1) === 'y' && pctBand(50) === 'y' && pctBand(51) === 'o' && pctBand(99) === 'o' && pctBand(100) === 'g');
 const d1 = Object.assign({}, a, { info: '  Nudge   parents\nbefore visits ' });
 ok('copy text carries the details of a card', /  Details: Nudge parents before visits/.test(monthText({ mo: '2026-10', pl: prods, lines: [d1] }, prods, x => x).join('\n')));
+import { sortByProduct, PRODUCT_ORDER } from '../src/esm/features/month-model.js';
+const mk = (t, k) => ({ id: t, t, k });
+const srt = sortByProduct([mk('w', 'warif'), mk('p1', 'plan'), mk('d', 'daycare'), mk('s', 'schs'), mk('a', 'ai'), mk('t', 'tifli'), mk('p2', 'plan'), mk('f', 'finance'), mk('x', 'nope')]);
+ok('sort by product: Tifli, AI, Daycare, Plan, SCHS, Warif, then the others', srt.map(l => l.id).join() === 't,a,d,p1,p2,s,w,f,x' && PRODUCT_ORDER.slice(0, 6).join() === 'tifli,ai,daycare,plan,schs,warif');
+const inp = [mk('b', 'plan'), mk('a', 'plan')]; sortByProduct(inp);
+ok('sorting does not change the original list and keeps the order inside a product', inp[0].id === 'b' && sortByProduct(inp).map(l => l.id).join() === 'b,a');

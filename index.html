@@ -1233,6 +1233,8 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
 .mdinfo[data-tip]:hover::after, .mdinfo[data-tip]:focus-visible::after { inset-inline-end: auto; inset-inline-start: 0; z-index: 30; }
 .mdinfotxt { white-space: pre-wrap; line-height: 1.55; max-height: 55vh; overflow: auto; padding: 4px 2px 12px; overflow-wrap: anywhere; }
 .nbtn[hidden] { display: none; } /* a Viewer sees no icon on a card without a note or details */
+
+.mdsort.on { background: var(--brand); border-color: var(--brand); color: #fff; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -3759,6 +3761,14 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     { k: "schs", n: "SCHS", ab: "SC", c: "#2e818d", squads: [] },
     { k: "warif", n: "Warif", ab: "WR", c: "#5dd9d2", squads: [] }
   ];
+  var PRODUCT_ORDER = ["tifli", "ai", "daycare", "plan", "schs", "warif", "finance", "initiative"];
+  function sortByProduct(lines) {
+    const rank = (l) => {
+      const i = PRODUCT_ORDER.indexOf(l.k);
+      return i < 0 ? PRODUCT_ORDER.length : i;
+    };
+    return lines.map((l, i) => ({ l, i })).sort((a, b) => rank(a.l) - rank(b.l) || a.i - b.i).map((x) => x.l);
+  }
   var legacyTag = (k, squad) => {
     const t = TAGS.find((x) => squad && x.squads.includes(squad));
     return t ? t.k : k === "plan_daycare" ? "plan" : TAGS.some((x) => x.k === k) ? k : "initiative";
@@ -8752,6 +8762,18 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     blOpen = localStorage.getItem("ynmo-backlog") === "1";
   } catch (e) {
   }
+  var sortOn = false;
+  try {
+    sortOn = localStorage.getItem("ynmo-month-sort") === "1";
+  } catch (e) {
+  }
+  var setSort = (v) => {
+    sortOn = v;
+    try {
+      localStorage.setItem("ynmo-month-sort", v ? "1" : "0");
+    } catch (e) {
+    }
+  };
   var setBl = (v) => {
     blOpen = v;
     try {
@@ -9521,7 +9543,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     b0.setAttribute("aria-label", "Progress of " + lab(m));
     pr.append(b0, el("b", "mdpct", pv + "%"), el("small", "", prog.pct === null ? "No planned deliverables yet" : prog.done + " of " + prog.n + " done" + (ad.n ? " · " + ad.n + " ad hoc" : "")));
     if (!isBl) col.append(pr);
-    shown.forEach((l) => col.append(card(m, l, prods, ed)));
+    (sortOn ? sortByProduct(shown) : shown).forEach((l) => col.append(card(m, l, prods, ed)));
     if (!shown.length && !(ed && ui2.open === m)) col.append(el("div", "hint", lines.length ? "Nothing matches the filter." : isBl ? "The backlog is empty." : "Nothing here yet."));
     if (ed) col.append(composer(m, prods));
     if (ed) {
@@ -9555,7 +9577,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
         if (!v) return;
         e.preventDefault();
         const i = v.indexOf("|");
-        moveCard(v.slice(0, i), v.slice(i + 1), m, c ? c.dataset.id : "");
+        moveCard(v.slice(0, i), v.slice(i + 1), m, sortOn ? "" : c ? c.dataset.id : "");
       });
     }
     return col;
@@ -9632,6 +9654,18 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
       renderMonthly();
     });
     tools.append(q, fp, ff);
+    {
+      const sb2 = el("button", "btn sm mdsort" + (sortOn ? " on" : ""), sortOn ? "✓ Sorted by product" : "Sort by product");
+      sb2.type = "button";
+      sb2.id = "mdsort";
+      sb2.setAttribute("aria-pressed", String(sortOn));
+      sb2.title = "In every column: " + PRODUCT_ORDER.slice(0, 6).map((k) => (TAGS.find((t) => t.k === k) || {}).n).join(", then ") + ". Click again to go back to your own order.";
+      sb2.addEventListener("click", () => {
+        setSort(!sortOn);
+        renderMonthly();
+      });
+      tools.append(sb2);
+    }
     if (ed) {
       const ub = el("button", "btn sm mdundo", "↶ Undo");
       ub.type = "button";
