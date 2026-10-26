@@ -42,6 +42,20 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-26 - Sorted by default, off when a card is added
+```
+🔄 YNMO LEDGER UPDATE — 2026-10-26
+Request: make Monthly sorted by product by default; adding a card turns sorting off until the user clicks it again
+Surface: cross-cutting (Roadmaps tool, Monthly)
+Outcome: default view sorted; adding a card switches sorting off (remembered per browser)
+New facts / decisions locked:
+  • Sort by product is ON by default; any add-card action sets it OFF; clicking the button turns it on again
+Corrections to this skill: the earlier entry said "off by default"; it is now on by default
+Open / flagged: none
+Changelog: Monthly sorted by default; adding a card turns sort off.
+```
+Paste this into Section 11 of the ynmo-master skill to keep it current.
+
 ### 2026-10-26 - Sort by product (Monthly)
 ```
 🔄 YNMO LEDGER UPDATE — 2026-10-26
