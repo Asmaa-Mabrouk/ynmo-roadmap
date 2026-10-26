@@ -16,7 +16,7 @@ body.offline .topbar, body.sharedview .topbar { top: 34px; }
 .pwmeter[data-s="3"] .pwbar i.on, .pwmeter[data-s="4"] .pwbar i.on { background: var(--brand); }
 .pwtxt { font-size: 12.5px; font-weight: 600; color: var(--ink); }
 .presence { display: flex; align-items: center; margin-inline-end: 6px; }
-.presence .pav { margin-inline-start: -8px; border: 2px solid var(--surface); border-radius: 50%; }
+.presence .pav { margin-inline-start: -8px; border: 2px solid var(--surface); border-radius: 50%; display: inline-flex; }
 .presence .pav:first-child { margin-inline-start: 0; }
 .pmore { font-size: 12px; font-weight: 700; margin-inline-start: 6px; color: var(--muted); }
 .bar.locked { outline: 2px dashed var(--brand-2); outline-offset: 1px; }

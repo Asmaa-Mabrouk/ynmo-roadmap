@@ -50,6 +50,7 @@ with sync_playwright() as pw:
     pav.first.hover(); A.wait_for_timeout(300)
     t=A.evaluate("e=>getComputedStyle(e,'::after').content", pav.first.element_handle())
     ok('D13 hovering the avatar shows the name instantly %s'%t, 'Exec' in t and 'online' in t)
+    ok('D13b the tooltip is not clipped: its owner does not hide overflow (the round avatar inside does)', A.evaluate("e=>getComputedStyle(e).overflow", pav.first.element_handle())!='hidden' and pav.first.locator('.av').count()==1)
     ok('D14 the avatar can be focused with the keyboard and has an accessible name', pav.first.get_attribute('tabindex')=='0' and 'Exec' in (pav.first.get_attribute('aria-label') or ''))
     ok('no page errors', errs==[]); print('errors:',errs[:3])
     print(sum(1 for _,c in R if c),'/',len(R))

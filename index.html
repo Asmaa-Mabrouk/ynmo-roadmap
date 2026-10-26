@@ -439,7 +439,7 @@ body.offline .topbar, body.sharedview .topbar { top: 34px; }
 .pwmeter[data-s="3"] .pwbar i.on, .pwmeter[data-s="4"] .pwbar i.on { background: var(--brand); }
 .pwtxt { font-size: 12.5px; font-weight: 600; color: var(--ink); }
 .presence { display: flex; align-items: center; margin-inline-end: 6px; }
-.presence .pav { margin-inline-start: -8px; border: 2px solid var(--surface); border-radius: 50%; }
+.presence .pav { margin-inline-start: -8px; border: 2px solid var(--surface); border-radius: 50%; display: inline-flex; }
 .presence .pav:first-child { margin-inline-start: 0; }
 .pmore { font-size: 12px; font-weight: 700; margin-inline-start: 6px; color: var(--muted); }
 .bar.locked { outline: 2px dashed var(--brand-2); outline-offset: 1px; }
@@ -3122,13 +3122,13 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     box2.hidden = !o.length;
     o.slice(0, 4).forEach((m) => {
       const a = avatarEl(m.av, 28, m.name);
-      const what = m.name + (m.edit ? " is editing" : " is online") + (m.page ? " · " + m.page : "");
-      a.dataset.tip = what;
-      a.tabIndex = 0;
-      a.setAttribute("role", "img");
-      a.setAttribute("aria-label", what);
-      a.classList.add("pav");
-      box2.append(a);
+      const what = m.name + (m.edit ? " is editing" : " is online") + (m.page ? " · " + m.page : ""), w = el("span", "pav");
+      w.dataset.tip = what;
+      w.tabIndex = 0;
+      w.setAttribute("role", "img");
+      w.setAttribute("aria-label", what);
+      w.append(a);
+      box2.append(w);
     });
     if (o.length > 4) {
       const mo = el("span", "pmore", "+" + (o.length - 4));
