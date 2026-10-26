@@ -8762,9 +8762,9 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
     blOpen = localStorage.getItem("ynmo-backlog") === "1";
   } catch (e) {
   }
-  var sortOn = false;
+  var sortOn = true;
   try {
-    sortOn = localStorage.getItem("ynmo-month-sort") === "1";
+    sortOn = localStorage.getItem("ynmo-month-sort") !== "0";
   } catch (e) {
   }
   var setSort = (v) => {
@@ -9467,6 +9467,7 @@ button.mdid:hover, button.mdid:focus-visible { background: color-mix(in srgb, va
         return;
       }
       ta.value = "";
+      setSort(false);
       const first = reserveNos(ts.length);
       saveMonth(m, (d) => {
         let n = first - 1;

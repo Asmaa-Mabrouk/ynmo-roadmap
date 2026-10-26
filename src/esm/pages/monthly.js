@@ -27,7 +27,7 @@ let lkMap = new Map();
 
 const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9 6.8 19.6l1-5.8-4.3-4.1 5.9-.8z"/></svg>';
 let blOpen = false; try { blOpen = localStorage.getItem('ynmo-backlog') === '1'; } catch (e) { /* no storage */ }
-let sortOn = false; try { sortOn = localStorage.getItem('ynmo-month-sort') === '1'; } catch (e) { /* no storage */ }
+let sortOn = true; try { sortOn = localStorage.getItem('ynmo-month-sort') !== '0'; } catch (e) { /* no storage */ }
 const setSort = v => { sortOn = v; try { localStorage.setItem('ynmo-month-sort', v ? '1' : '0'); } catch (e) { /* no storage */ } };
 const setBl = v => { blOpen = v; try { localStorage.setItem('ynmo-backlog', v ? '1' : '0'); } catch (e) { /* no storage */ } };
 const ui = { q: '', pr: 'all', fl: 'all', past: false, prod: '', open: '' };
@@ -290,7 +290,7 @@ function composer(m, prods) {
   ta.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); f.requestSubmit(); } else if (e.key === 'Escape') { e.preventDefault(); close(); } });
   f.addEventListener('submit', e => {
     e.preventDefault(); const ts = ta.value.split('\n').map(x => x.replace(/^\s*[-*•\d.)]+\s+/, '').trim()).filter(Boolean); if (!ts.length) { ta.focus(); return; }
-    ta.value = ''; const first = reserveNos(ts.length); saveMonth(m, d => { let n = first - 1; ts.forEach(t => { const x = newLine(ui.prod, t, {}); x.no = ++n; d.lines.push(x); }); }, 'added ' + (ts.length === 1 ? 'a deliverable' : ts.length + ' deliverables') + ' to ' + lab(m)); ui.focusComp = true; renderMonthly();
+    ta.value = ''; setSort(false); const first = reserveNos(ts.length); saveMonth(m, d => { let n = first - 1; ts.forEach(t => { const x = newLine(ui.prod, t, {}); x.no = ++n; d.lines.push(x); }); }, 'added ' + (ts.length === 1 ? 'a deliverable' : ts.length + ' deliverables') + ' to ' + lab(m)); ui.focusComp = true; renderMonthly();
   });
   const row = el('div', 'mdcrow'); row.append(go, no); f.append(ta, chips, row); wrap.append(f); return wrap;
 }
