@@ -42,6 +42,39 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-27 - Cards added by the CTO yesterday not found
+```
+🔄 YNMO LEDGER UPDATE — 2026-10-27
+Request: business cards added yesterday at about 5:00 by Dr Abdullah (CTO) are missing
+Surface: cross-cutting (Roadmaps tool, Monthly)
+Outcome: cause not confirmed from here; added a guard so a save keeps cards others added; recovery steps given
+New facts / decisions locked:
+  • Monthly saves read the stored month first and keep unseen cards (writeMonth); same-card edits remain last-writer-wins
+Corrections to this skill: none
+Open / flagged:
+  • Find the lost cards: activity Log for 26 Oct about 17:00, Dr Abdullah's browser tab (do not refresh it), the reports row mo202610 / mo202611 in Supabase
+  • Likely causes: his saves failed during the API outage (503), or a stale screen overwrote the month before this fix
+Changelog: Monthly saves now keep cards added by others.
+```
+Paste this into Section 11 of the ynmo-master skill to keep it current.
+
+### 2026-10-27 - Login outage root cause and prevention
+```
+🔄 YNMO LEDGER UPDATE — 2026-10-27
+Request: the outage was fixed (project restarted from the Claude extension); add actions to prevent it in future
+Surface: cross-cutting (Roadmaps tool, Supabase)
+Outcome: stuck screen retries automatically every 15 s; runbook and prevention list added (monitor, alerts, plan, pre-demo check)
+New facts / decisions locked:
+  • Root cause: PostgREST (data API) 503 PGRST002 with a healthy database; one stale 27-day-old connection; project status Unhealthy on the free Nano plan; fix = restart the project (no data lost)
+  • Prevention: external uptime monitor on /rest/v1 with the publishable key, Supabase email alerts, consider Pro plan, restart after big SQL changes, private-window sign-in check before demos
+Corrections to this skill: the earlier entry guessed a missing/unapproved admin profile; the profile was fine (approved, admin), the data API was down
+Open / flagged:
+  • Set up the uptime monitor and Supabase alerts (needs the owner's accounts; not done from here)
+  • Decide on upgrading the plan before executive demos
+Changelog: Login outage fixed by restart; auto-retry and prevention runbook added.
+```
+Paste this into Section 11 of the ynmo-master skill to keep it current.
+
 ### 2026-10-27 - Login screen stuck on loading
 ```
 🔄 YNMO LEDGER UPDATE — 2026-10-27

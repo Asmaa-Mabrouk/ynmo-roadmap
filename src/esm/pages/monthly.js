@@ -8,6 +8,7 @@
 import { S } from '../core/state.js';
 import { $, LANES, NDAYS, canEdit, directory, el, items, modLevel, state } from '../core/model.js';
 import { fld, fmtIso, kOfIso, logAct, pageHead, selOf, toast, todayIso } from '../core/shared.js';
+import { sb } from '../core/supabase.js';
 import { persist, pushHistory, write } from '../core/saving.js';
 import { canWrite, isViewer } from '../features/safety.js';
 import { allRoadmaps, curRm, useRoadmap, withRm } from './roadmaps.js';
@@ -76,12 +77,26 @@ export function undoMonthly() {
   logAct('report', 'undid their last change on the Monthly board'); renderMonthly();
   notify(!applied && skipped ? 'Nothing to undo: someone else has changed it since' : skipped ? 'Undone. Parts that a colleague changed since were left as they are.' : 'Undone');
 }
+/** Saves of one month go one after the other, and each first looks at what is stored: cards other people added since this screen last refreshed are kept, never overwritten. */
+const monthQueue = {};
+function writeMonth(id, d, old) {
+  monthQueue[id] = (monthQueue[id] || Promise.resolve()).then(async () => {
+    try {
+      const r = await sb.from('reports').select('data').eq('id', id).maybeSingle(), srv = r && r.data && r.data.data;
+      if (srv && Array.isArray(srv.lines)) {
+        const mine = new Set(d.lines.map(l => l.id)), seen = new Set(((old && old.lines) || []).map(l => l.id)), extra = srv.lines.filter(l => l && l.id && !mine.has(l.id) && !seen.has(l.id));
+        if (extra.length) { d.lines = d.lines.concat(extra); S.reports[id] = d; toast(extra.length + ' card' + (extra.length === 1 ? '' : 's') + ' added by someone else ' + (extra.length === 1 ? 'was' : 'were') + ' kept.'); try { renderMonthly(); } catch (e) { /* page not open */ } }
+      }
+    } catch (e) { /* could not look: save as before */ }
+    write('reports/' + id, d);
+  });
+}
 function saveMonth(m, mutate, log, quiet) {
   const id = monthId(m), old = S.reports[id];
   const d = old ? JSON.parse(JSON.stringify(old)) : { mo: m, lines: [] };
   d.lines = d.lines || []; d.pl = TAGS.map(t => ({ k: t.k, n: t.n, squads: t.squads })); mutate(d);
   d.status = 'submitted'; d.subAt = d.subAt || new Date().toISOString(); d.subBy = d.subBy || (S.me && (S.me.name || S.me.email)) || '';
-  d.by = (S.me && (S.me.name || S.me.email)) || ''; d.ts = Date.now(); S.reports[id] = d; write('reports/' + id, d);
+  d.by = (S.me && (S.me.name || S.me.email)) || ''; d.ts = Date.now(); S.reports[id] = d; writeMonth(id, d, old);
   if (!quiet) record(m, old, d);
   if (log) logAct('report', log);
 }

@@ -90,3 +90,20 @@ select id, email, approved, is_admin from public.profiles order by created_at;
 ```
 
 If the select shows no row for that email, sign in once more (the app creates it), then run the update again.
+
+## Runbook: nobody can open the tool, "Taking longer than expected" (data API down)
+
+**What happened on 2026-10-27:** sign-in worked (`/auth/v1/token` 200) but every data request (`/rest/v1/*`) returned **503 with PGRST002 "Could not query the database for the schema cache"**. The database was healthy; the API layer (PostgREST) held one 27-day-old stuck connection. The project showed **Unhealthy** on the free Nano plan. **Fix: Project Settings > General > Restart project** (about a minute, no data lost).
+
+**Quick check (30 seconds):**
+1. Supabase dashboard: project status (Healthy / Unhealthy), then Logs > API / PostgREST for `PGRST002` or many 503s.
+2. SQL editor: `select 1;` works and `select id, email, approved, is_admin from public.profiles;` returns quickly. If yes, the database is fine and the API needs the restart.
+
+**What the app does now:** the sign-in check and profile read give up after 10-12 s, show "Taking longer than expected", and **retry by themselves every 15 s**, opening the tool the moment the server answers again. People do not need to refresh.
+
+**Prevention (recommended, in this order):**
+1. **Uptime monitor on the data API** (free): an external monitor (for example UptimeRobot or Better Stack) that requests `https://avgkenwdehtwynrswsck.supabase.co/rest/v1/profiles?select=id&limit=1` every 5 minutes with the **publishable** key in the `apikey` header and expects HTTP 200 (an unsigned request returns 200 with `[]` when RLS hides rows). Alert by email to the admins. A 503 here is exactly this incident. Never use the service-role key.
+2. **Supabase email alerts:** Project Settings > Notifications, turn on status and usage emails.
+3. **Upgrade from the free Nano plan** (Pro) before the executive demos: free projects have little compute and no support SLA, and a stuck API connection is the failure seen here.
+4. **Restart the project on a calm day** (Settings > General) after large changes such as running a SQL file, so the schema cache is rebuilt cleanly.
+5. **Pre-demo check:** open the live site in a private window and sign in 15 minutes before any executive session.

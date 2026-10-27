@@ -9012,6 +9012,28 @@ a.jkchip:hover{text-decoration:underline}
     renderMonthly();
     notify(!applied && skipped ? "Nothing to undo: someone else has changed it since" : skipped ? "Undone. Parts that a colleague changed since were left as they are." : "Undone");
   }
+  var monthQueue = {};
+  function writeMonth(id, d, old) {
+    monthQueue[id] = (monthQueue[id] || Promise.resolve()).then(async () => {
+      try {
+        const r = await sb.from("reports").select("data").eq("id", id).maybeSingle(), srv = r && r.data && r.data.data;
+        if (srv && Array.isArray(srv.lines)) {
+          const mine = new Set(d.lines.map((l) => l.id)), seen = new Set((old && old.lines || []).map((l) => l.id)), extra = srv.lines.filter((l) => l && l.id && !mine.has(l.id) && !seen.has(l.id));
+          if (extra.length) {
+            d.lines = d.lines.concat(extra);
+            S.reports[id] = d;
+            toast(extra.length + " card" + (extra.length === 1 ? "" : "s") + " added by someone else " + (extra.length === 1 ? "was" : "were") + " kept.");
+            try {
+              renderMonthly();
+            } catch (e) {
+            }
+          }
+        }
+      } catch (e) {
+      }
+      write("reports/" + id, d);
+    });
+  }
   function saveMonth(m, mutate, log, quiet) {
     const id = monthId(m), old = S.reports[id];
     const d = old ? JSON.parse(JSON.stringify(old)) : { mo: m, lines: [] };
@@ -9024,7 +9046,7 @@ a.jkchip:hover{text-decoration:underline}
     d.by = S.me && (S.me.name || S.me.email) || "";
     d.ts = Date.now();
     S.reports[id] = d;
-    write("reports/" + id, d);
+    writeMonth(id, d, old);
     if (!quiet) record(m, old, d);
     if (log) logAct("report", log);
   }
@@ -10202,13 +10224,16 @@ a.jkchip:hover{text-decoration:underline}
     }
   }
   function showStuck(why3) {
-    const c = gateCard("Taking longer than expected", why3 || "We could not reach the server to check your sign-in. This is usually the network or a stale saved sign-in.");
+    const c = gateCard("Taking longer than expected", why3 || "We could not reach the server to check your sign-in. This is usually the network, or the data service restarting.");
+    const note = el("div", "meta", "Trying again automatically every 15 seconds. This page opens the tool as soon as the server answers.");
+    note.setAttribute("aria-live", "polite");
     const b1 = el("button", "btn primary", "Try again");
     b1.type = "button";
     b1.addEventListener("click", () => location.reload());
     const b2 = el("button", "btn", "Sign out and start fresh");
     b2.type = "button";
     b2.addEventListener("click", async () => {
+      clearInterval(tm);
       try {
         await Promise.race([sb.auth.signOut({ scope: "local" }), new Promise((r) => setTimeout(r, 2500))]);
       } catch (e) {
@@ -10219,7 +10244,20 @@ a.jkchip:hover{text-decoration:underline}
       }
       location.reload();
     });
-    c.append(b1, b2);
+    c.append(note, b1, b2);
+    let busy = false;
+    const tm = setInterval(async () => {
+      if (busy || started) return;
+      busy = true;
+      try {
+        const s = (await within(sb.auth.getSession(), 8e3, "sign-in check")).data.session;
+        clearInterval(tm);
+        if (!s) showLogin();
+        else await afterAuth(s);
+      } catch (e) {
+        busy = false;
+      }
+    }, 15e3);
   }
   async function boot() {
     showLoading();

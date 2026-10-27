@@ -105,11 +105,18 @@ export function start() {
 }
 /** The sign-in check or profile did not answer: show a way out instead of a spinner that never ends. */
 function showStuck(why) {
-  const c = gateCard('Taking longer than expected', why || 'We could not reach the server to check your sign-in. This is usually the network or a stale saved sign-in.');
+  const c = gateCard('Taking longer than expected', why || 'We could not reach the server to check your sign-in. This is usually the network, or the data service restarting.');
+  const note = el('div', 'meta', 'Trying again automatically every 15 seconds. This page opens the tool as soon as the server answers.'); note.setAttribute('aria-live', 'polite');
   const b1 = el('button', 'btn primary', 'Try again'); b1.type = 'button'; b1.addEventListener('click', () => location.reload());
   const b2 = el('button', 'btn', 'Sign out and start fresh'); b2.type = 'button';
-  b2.addEventListener('click', async () => { try { await Promise.race([sb.auth.signOut({ scope: 'local' }), new Promise(r => setTimeout(r, 2500))]); } catch (e) { /* ignore */ } try { Object.keys(localStorage).filter(k => /^sb-.*-auth-token/.test(k)).forEach(k => localStorage.removeItem(k)); } catch (e) { /* ignore */ } location.reload(); });
-  c.append(b1, b2);
+  b2.addEventListener('click', async () => { clearInterval(tm); try { await Promise.race([sb.auth.signOut({ scope: 'local' }), new Promise(r => setTimeout(r, 2500))]); } catch (e) { /* ignore */ } try { Object.keys(localStorage).filter(k => /^sb-.*-auth-token/.test(k)).forEach(k => localStorage.removeItem(k)); } catch (e) { /* ignore */ } location.reload(); });
+  c.append(note, b1, b2);
+  let busy = false;
+  const tm = setInterval(async () => {
+    if (busy || started) return; busy = true;
+    try { const s = (await within(sb.auth.getSession(), 8000, 'sign-in check')).data.session; clearInterval(tm); if (!s) showLogin(); else await afterAuth(s); }
+    catch (e) { busy = false; }
+  }, 15000);
 }
 export async function boot() { showLoading(); try { await bootInner(); } finally { if (!started) hideLoading(); } }
 async function bootInner() {

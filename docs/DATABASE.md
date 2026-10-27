@@ -62,3 +62,7 @@ Publication includes the doc tables; the client subscribes per table. Presence u
 
 
 Note (sprint document): `sprint_items` docs are now blocks `{sp,k,sq,t,st,dn,tags[],ord}` (k = h|p|s|u|n). Pulled Jira tickets carry `jk` (the Jira key, used to avoid duplicates; shown as the report's Jira reference). Rows saved by the first version (`squad/person/par`) are converted once when the sprint is opened. `sprints` docs gain `tags:{name:colour}` and optional `gdoc` (linked Google Doc address) / `gdocId` (set when the tool created that doc through Google Drive). Meta doc `ideas/googlecfg` = `{cfg:true, cid}` (Google OAuth Client ID, public). No SQL change.
+
+
+### Concurrent edits of one month (2026-10-27)
+A month is one document (`reports/mo<yyyymm>`). Each save reads the stored month first and keeps cards the screen has never seen (`writeMonth` in `pages/monthly.js`). Two people editing the **same card** at the same moment is still last-writer-wins; per-card documents would remove that and are not built. Free-tier Supabase has no point-in-time recovery, so a card lost before this change cannot be restored from the database (see the recovery steps in LEDGER 2026-10-27).
