@@ -57,7 +57,7 @@ with sync_playwright() as pw:
     A.locator('#permissions .permuser:has-text("Engy")').click(); A.wait_for_timeout(300)
     A.locator('select[aria-label="Access for Engy"]').select_option('viewer'); A.wait_for_timeout(600)
     B.reload(); B.wait_for_timeout(1500)
-    ok('viewer nav limited', B.locator('#nav button').count()==4)
+    ok('viewer nav limited', B.locator('#nav button').count()==5)
     ok('viewer cannot add', not B.locator('#add').is_visible())
     B.locator('.bar').first.dblclick(); B.wait_for_timeout(200); ok('viewer no edit', B.locator('input.bi').count()==0)
     B.screenshot(path='v4_viewer.png')

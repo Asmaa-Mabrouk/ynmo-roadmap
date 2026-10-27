@@ -47,4 +47,4 @@ export function presetName(perms) {
 /** The legacy `access` value that goes with a set of levels (the database still uses it): anything editable = editor. */
 export const accessFor = perms => (MODULES.some(m => (perms[m.k] | 0) >= 2) ? 'editor' : 'viewer');
 /** The page names and the module each belongs to (admin is not a module). */
-export const pageModule = p => (MODULES.some(m => m.k === p) ? p : null);
+export const pageModule = p => (p === 'capacity' ? 'monthly' : MODULES.some(m => m.k === p) ? p : null);

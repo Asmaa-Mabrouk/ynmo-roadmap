@@ -21,6 +21,7 @@ export const DEFAULTS = { ppp: 8, reserve: 0.2, buffer: 0.1 };
 /** Allowed point values for one role of one card. */
 export const SCALE = [0, 1, 2, 3, 5, 8, 13];
 
+export const addIso = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 /** Working days (Sunday to Thursday) from a to b, both ISO dates, inclusive. */
 export function workdays(a, b) { let n = 0; for (let d = a; d <= b; d = addDays(d, 1)) { const w = new Date(d + 'T00:00:00Z').getUTCDay(); if (w !== 5 && w !== 6) n++; } return n; }
@@ -32,17 +33,24 @@ export function leaveDays(vacs, name, a, b) {
   let n = 0; (vacs || []).forEach(v => { if (!sameName(v.p, name) || !v.a0) return; const s = v.a0 > a ? v.a0 : a, e = (v.a1 || v.a0) < b ? (v.a1 || v.a0) : b; if (s <= e) n += workdays(s, e); });
   return n;
 }
-/** Settings with defaults filled in. cfg may hold {ppp, reserve, buffer, lanes:[{k, people:[...]}]} */
+/** Settings with defaults filled in. cfg may hold {ppp, reserve, buffer, lanes:[{k, people:[...]}], leaving:{name: 'YYYY-MM-DD'}}
+ *  `leaving` is the last working day of someone who is leaving or has left. */
 export function settings(cfg) {
   const c = cfg || {}, byK = {}; (c.lanes || []).forEach(x => { if (x && x.k && Array.isArray(x.people)) byK[x.k] = x.people.map(String).filter(Boolean); });
   const num = (v, d, lo, hi) => { const n = +v; return Number.isFinite(n) && n >= lo && n <= hi ? n : d; };
-  return { ppp: num(c.ppp, DEFAULTS.ppp, 0, 100), reserve: num(c.reserve, DEFAULTS.reserve, 0, 0.9), buffer: num(c.buffer, DEFAULTS.buffer, 0, 0.9), lanes: LANES.map(l => ({ k: l.k, n: l.n, people: byK[l.k] || l.people })) };
+  const leaving = {}; Object.keys(c.leaving && typeof c.leaving === 'object' ? c.leaving : {}).forEach(n => { if (/^\d{4}-\d{2}-\d{2}$/.test(c.leaving[n])) leaving[n] = c.leaving[n]; });
+  return { ppp: num(c.ppp, DEFAULTS.ppp, 0, 100), reserve: num(c.reserve, DEFAULTS.reserve, 0, 0.9), buffer: num(c.buffer, DEFAULTS.buffer, 0, 0.9), leaving: leaving, lanes: LANES.map(l => ({ k: l.k, n: l.n, people: byK[l.k] || l.people })) };
 }
-/** Plannable points of one role in a month: people x points each, less their leave, less reserve and buffer. */
+/** Plannable points of one role in a month: people x points each, less their leave, less the days after their last working day,
+ *  less reserve and buffer. `people` counts those still working at some point of the month. */
 export function laneCapacity(lane, range, vacs, cfg) {
-  const s = settings(cfg), wd = Math.max(1, workdays(range.a, range.b)); let raw = 0;
-  (lane.people || []).forEach(p => { raw += s.ppp * Math.max(0, 1 - leaveDays(vacs, p, range.a, range.b) / wd); });
-  return { people: (lane.people || []).length, raw: Math.round(raw * 10) / 10, cap: Math.round(raw * (1 - s.reserve - s.buffer) * 10) / 10 };
+  const s = settings(cfg), wd = Math.max(1, workdays(range.a, range.b)); let raw = 0, here = 0;
+  (lane.people || []).forEach(p => {
+    const until = s.leaving[p], end = until && until < range.b ? until : range.b;
+    if (end < range.a) return; here++;
+    raw += s.ppp * Math.max(0, (workdays(range.a, end) - leaveDays(vacs, p, range.a, end)) / wd);
+  });
+  return { people: here, raw: Math.round(raw * 10) / 10, cap: Math.round(raw * (1 - s.reserve - s.buffer) * 10) / 10 };
 }
 export const ptsOf = (l, k) => Math.max(0, +(l && l.pts && l.pts[k]) || 0);
 export const totalPts = l => Object.keys((l && l.pts) || {}).reduce((a, k) => a + ptsOf(l, k), 0);
@@ -62,5 +70,36 @@ export function dependencyProblems(line, to, monthOf, labelOf, dependants) {
   const out = [];
   if (line.needs) { const pm = monthOf(line.needs); if (!pm) out.push('It needs ' + labelOf(line.needs) + ', which is not planned in a month yet.'); else if (pm > to) out.push('It needs ' + labelOf(line.needs) + ', which is planned later (' + pm + ').'); }
   (dependants || []).forEach(d => { const dm = monthOf(d.id); if (dm && dm < to) out.push(labelOf(d.id) + ' needs this card and is planned earlier (' + dm + ').'); });
+  return out;
+}
+
+/** Where one person stands today: on leave now, next leave in the coming days, and whether they are leaving or have left.
+ *  leave: {a0, a1} of the current or next leave inside `horizon` days (or null). leaving: {date, state: 'left' | 'soon' | 'later'}. */
+export function personState(name, today, vacs, leaving, horizon, soonDays) {
+  const end = addIso(today, horizon || 90), mine = (vacs || []).filter(v => v && v.a0 && sameName(v.p, name) && (v.a1 || v.a0) >= today && v.a0 <= end).sort((x, y) => (x.a0 < y.a0 ? -1 : 1));
+  const cur = mine.find(v => v.a0 <= today), next = mine.find(v => v.a0 > today), lv = leaving && leaving[name];
+  return {
+    onLeave: !!cur, leave: cur ? { a0: cur.a0, a1: cur.a1 || cur.a0 } : next ? { a0: next.a0, a1: next.a1 || next.a0 } : null,
+    leaving: lv ? { date: lv, state: lv < today ? 'left' : lv <= addIso(today, soonDays || 60) ? 'soon' : 'later' } : null
+  };
+}
+/** Review of the months: per month and role, points used, plannable points, room left, and ok / warn / over. */
+export function review(months, o) {
+  return months.map(m => {
+    const lines = o.linesOf(m), rg = o.rangeOf(m), ld = loads(lines);
+    const lanes = settings(o.cfg).lanes.map(l => { const c = laneCapacity(l, rg, o.vacs, o.cfg), used = ld[l.k]; return { k: l.k, n: l.n, used: used, cap: c.cap, people: c.people, free: Math.max(0, Math.round((c.cap - used) * 10) / 10), over: Math.max(0, Math.round((used - c.cap) * 10) / 10), st: statusOf(used, c.cap) }; });
+    return { m: m, lines: lines, lanes: lanes, st: lanes.some(x => x.st === 'over') ? 'over' : lanes.some(x => x.st === 'warn') ? 'warn' : 'ok', pts: lanes.reduce((a, x) => a + x.used, 0) };
+  });
+}
+/** For each role that is over in a month: cards that could go to a later month where everything still fits.
+ *  probsOf(line, to) gives order problems of putting the card in month `to`. Suggests cards until the excess is cleared (at most two per role), never the same card twice. */
+export function suggestMoves(rev, o) {
+  const out = [], used = {};
+  rev.forEach((r, i) => r.lanes.filter(x => x.st === 'over').forEach(x => {
+    const cands = r.lines.filter(l => ptsOf(l, x.k) > 0 && !used[l.id]).sort((a, b) => { const fa = ptsOf(a, x.k) >= x.over, fb = ptsOf(b, x.k) >= x.over; return fa !== fb ? (fa ? -1 : 1) : fa ? ptsOf(a, x.k) - ptsOf(b, x.k) : ptsOf(b, x.k) - ptsOf(a, x.k); });
+    let found = 0, cleared = 0;
+    cands.forEach(l => { if (found >= 2 || cleared >= x.over) return; const to = rev.slice(i + 1).find(t => !overAfter(l, t.lines, o.rangeOf(t.m), o.vacs, o.cfg).length && !o.probsOf(l, t.m).length); if (to) { used[l.id] = 1; found++; cleared += ptsOf(l, x.k); out.push({ m: r.m, k: x.k, n: x.n, line: l, to: to.m, pts: ptsOf(l, x.k) }); } });
+    if (!found) out.push({ m: r.m, k: x.k, n: x.n, none: true });
+  }));
   return out;
 }

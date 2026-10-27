@@ -11,7 +11,7 @@ with sync_playwright() as pw:
     A.evaluate("location.hash='#/forgot'"); A.wait_for_timeout(200); ok('forgot route renders', A.evaluate("location.hash")=='#/forgot' and A.locator('#gate h1').count()==1)
     A.evaluate("location.hash='#/login'"); A.wait_for_timeout(200)
     signup(A,'Admin','adm@x.com')
-    ok('app shell after signup', A.locator('#nav button').count()==9)
+    ok('app shell after signup', A.locator('#nav button').count()==10)
     # loader visible while data is slow, hidden afterwards
     A.evaluate("localStorage.setItem('dly','1500')"); A.reload(); A.wait_for_timeout(300)
     ok('loader visible during slow load', A.locator('#ldg').is_visible())

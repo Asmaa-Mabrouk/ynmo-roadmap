@@ -51,4 +51,22 @@ import * as cap from '../src/esm/features/capacity.js';
   ok('dependency: a prerequisite planned earlier or the same month is fine', cap.dependencyProblems({ id: 'z', needs: 'a' }, '2026-11', monthOf, lab, []).length === 0);
   ok('dependency: moving a card later than one that needs it is a problem', cap.dependencyProblems({ id: 'a' }, '2026-12', monthOf, lab, [{ id: 'z' }]).length === 1);
   ok('capacity: settings can be overridden and bad values fall back', cap.settings({ ppp: 10, reserve: 5 }).ppp === 10 && cap.settings({ reserve: 5 }).reserve === 0.2);
+  // leaving, person state, review and suggestions (Capacity dashboard)
+  const BE = { k: 'be', people: ['Soliman', 'Wardany', 'Hosieny', 'Hamid'] };
+  const gone = cap.laneCapacity(BE, rg, [], { leaving: { Hamid: '2026-10-31' } });
+  ok('leaving: someone who left before the month adds nothing (3 people, 24 raw, 16.8)', gone.people === 3 && gone.raw === 24 && gone.cap === 16.8);
+  const half = cap.laneCapacity(BE, rg, [], { leaving: { Hamid: '2026-11-15' } });
+  ok('leaving: a last day inside the month counts only the days worked', half.people === 4 && half.raw > 24 && half.raw < 32);
+  ok('leaving: bad dates are ignored', Object.keys(cap.settings({ leaving: { A: 'soon', B: '2026-12-01' } }).leaving).join() === 'B');
+  const ps = (n, v, l) => cap.personState(n, '2026-10-20', v, l, 90, 60);
+  ok('person: on leave today shows until when', ps('Amal', [{ p: 'Amal Hassan', a0: '2026-10-19', a1: '2026-10-22' }], {}).onLeave === true && ps('Amal', [{ p: 'Amal Hassan', a0: '2026-10-19', a1: '2026-10-22' }], {}).leave.a1 === '2026-10-22');
+  ok('person: next leave inside 90 days is shown, one beyond is not', ps('Amal', [{ p: 'Amal', a0: '2026-11-03', a1: '2026-11-05' }], {}).leave.a0 === '2026-11-03' && ps('Amal', [{ p: 'Amal', a0: '2027-03-01', a1: '2027-03-02' }], {}).leave === null);
+  ok('person: leaving soon, later and left', ps('A', [], { A: '2026-11-30' }).leaving.state === 'soon' && ps('A', [], { A: '2027-03-01' }).leaving.state === 'later' && ps('A', [], { A: '2026-10-01' }).leaving.state === 'left');
+  const mk = (m, lines) => lines, boards = { '2026-11': [{ id: 'a', t: 'a', pts: { be: 15 } }, { id: 'b', t: 'b', pts: { be: 12 } }], '2026-12': [], '2027-01': [{ id: 'c', t: 'c', pts: { be: 22 } }] };
+  const o = { linesOf: m => boards[m] || [], rangeOf: cap.monthRangeOf || (m => ({ a: m + '-01', b: m + '-30' })), vacs: [], cfg: {}, probsOf: () => [] };
+  const rev = cap.review(['2026-11', '2026-12', '2027-01'], o);
+  ok('review: November BE is over (27 of 22.4), December fits', rev[0].st === 'over' && rev[0].lanes.find(x => x.k === 'be').over === 4.6 && rev[1].st === 'ok' && rev[1].lanes.find(x => x.k === 'be').free > 20);
+  const sug = cap.suggestMoves(rev, o);
+  ok('suggest: moves the smallest card that clears the excess to the first month with room', sug.length === 1 && sug[0].line.id === 'b' && sug[0].to === '2026-12');
+  ok('suggest: says so when no later month has room', cap.suggestMoves(rev, Object.assign({}, o, { probsOf: () => ['blocked'] }))[0].none === true);
 }

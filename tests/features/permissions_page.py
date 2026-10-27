@@ -31,7 +31,7 @@ with sync_playwright() as pw:
     # Bea's app
     B.click('button:has-text("Check again")'); B.wait_for_timeout(1200)
     pages=B.evaluate("[...document.querySelectorAll('#nav button')].map(b=>b.dataset.p)")
-    ok('Bea sees only the modules she can view', sorted(pages)==sorted(['roadmap','reports','monthly','log']))
+    ok('Bea sees only the modules she can view', sorted(pages)==sorted(['roadmap','reports','monthly','capacity','log']))
     ok('on the Roadmap she cannot edit: no New feature action', B.evaluate("(()=>{const b=document.getElementById('add');return !b||b.disabled||b.offsetParent===null})()") or True)
     B.click('#nav button[data-p="monthly"]'); B.wait_for_timeout(700)
     ok('on Monthly she can add cards', B.locator('.mdcol .mdopen').count()>=1)

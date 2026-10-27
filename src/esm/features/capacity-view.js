@@ -17,6 +17,8 @@ const vacList = () => Object.keys(S.vacs || {}).map(id => S.vacs[id]).filter(v =
 const fmt = n => String(Math.round(n * 10) / 10);
 const monthOfId = id => { const x = allCards().find(c => c.l.id === id); const d = x && S.reports[x.did]; return d && d.mo && d.mo !== 'backlog' ? d.mo : ''; };
 const labelOf = id => fidLabel(id) || 'another card';
+/** Order problems of putting a card in month `to` (plain sentences). */
+export const depProblemsFor = (line, to) => dependencyProblems(line, to, monthOfId, labelOf, dependants(line.id));
 const dependants = id => allCards().filter(c => c.l.needs === id).map(c => c.l);
 
 /** Short chips for a card: its points and what it needs. */
@@ -25,23 +27,6 @@ export function ptsChips(l) {
   if (t) { const s = el('span', 'chip mdpts', t + ' pts'); s.title = settings(cfg()).lanes.filter(x => ptsOf(l, x.k)).map(x => x.n + ' ' + ptsOf(l, x.k)).join(' · '); out.push(s); }
   if (l.needs) { const n = fidLabel(l.needs); if (n) { const s = el('span', 'chip mdneeds', 'Needs ' + n); s.title = 'This card needs ' + n + ' planned in the same month or earlier.'; out.push(s); } }
   return out;
-}
-
-/** Meters of one month: points used / plannable points for each role. */
-export function capBlock(m, lines) {
-  const rg = monthRange(m), s = settings(cfg()), vac = vacList(), ld = loads(lines);
-  const rows = s.lanes.map(l => { const c = laneCapacity(l, rg, vac, cfg()); return { l: l, used: ld[l.k], cap: c.cap, st: statusOf(ld[l.k], c.cap), people: c.people }; });
-  const over = rows.filter(r => r.st === 'over').length, tot = rows.reduce((a, r) => a + r.used, 0);
-  const det = el('details', 'mdcap'); det.open = true;
-  const sum = el('summary', '', 'Capacity · ' + (over ? over + ' over' : 'within limits') + (tot ? ' · ' + tot + ' pts planned' : ''));
-  if (over) sum.classList.add('bad'); det.append(sum);
-  rows.forEach(r => {
-    const row = el('div', 'caprow cap-' + r.st); row.dataset.lane = r.l.k;
-    const bar = el('span', 'capbar'), fill = el('i'); fill.style.width = Math.min(100, r.cap > 0 ? r.used / r.cap * 100 : (r.used ? 100 : 0)) + '%'; bar.append(fill);
-    row.append(el('span', 'capn', r.l.n), bar, el('span', 'capv', fmt(r.used) + ' / ' + fmt(r.cap)));
-    row.title = r.l.n + ': ' + fmt(r.used) + ' points planned, ' + fmt(r.cap) + ' can be planned (' + r.people + ' people, after leave, reserve and buffer).'; det.append(row);
-  });
-  return det;
 }
 
 /** Points by role and the "needs" link of one card. put(patch, log) saves it. */
@@ -78,6 +63,7 @@ export function guardMove(line, to, go) {
 }
 
 /** Everything that does not fit: capacity per role per month, card order, and roadmap dates outside the planned month. */
+/** Everything that does not fit (also used by the Capacity page). */
 export function checkPlan(months) {
   const out = [], vac = vacList();
   months.forEach(m => {
@@ -90,15 +76,6 @@ export function checkPlan(months) {
   });
   return out;
 }
-export function openCheckPlan(months) {
-  const res = checkPlan(months);
-  openDlg('Check plan', box => {
-    if (!res.length) box.append(el('p', '', 'Everything fits: no role is over capacity, cards are in a workable order, and roadmap bars match their months.'));
-    else { const names = { cap: 'Capacity', dep: 'Order', gantt: 'Roadmap dates' }; ['cap', 'dep', 'gantt'].forEach(t => { const r = res.filter(x => x.t === t); if (!r.length) return; box.append(el('h3', '', names[t] + ' (' + r.length + ')')); const ul = el('ul'); r.forEach(x => ul.append(el('li', '', monthLabel(x.m) + ' · ' + x.s))); box.append(ul); }); }
-    const c = el('button', 'btn', 'Close'); c.type = 'button'; c.addEventListener('click', closeDlg); const row = el('div', 'row'); row.append(c); box.append(row);
-  });
-}
-
 /** Points per person, reserve, buffer and who is in each role (editors). */
 export function openCapSettings(done) {
   if (!canEdit()) return; const s = settings(cfg());
@@ -108,8 +85,14 @@ export function openCapSettings(done) {
     const ppp = mk(s.ppp, '0.5'), rs = mk(Math.round(s.reserve * 100), '5'), bf = mk(Math.round(s.buffer * 100), '5');
     box.append(fld('Points per person per month', ppp), fld('Reserve for bugs and support (%)', rs), fld('Buffer (%)', bf));
     const ta = {}; s.lanes.forEach(l => { const t = el('input'); t.type = 'text'; t.value = l.people.join(', '); t.setAttribute('aria-label', l.n + ' people'); ta[l.k] = t; box.append(fld(l.n + ' (names, comma separated)', t)); });
+    const lv = el('input'); lv.type = 'text'; lv.placeholder = 'Adnan: 2026-12-15, Mona: 2027-01-31'; lv.value = Object.keys(s.leaving).map(n => n + ': ' + s.leaving[n]).join(', '); lv.setAttribute('aria-label', 'Leaving');
+    box.append(fld('Leaving or left (name: last working day, comma separated)', lv));
+    const msg = el('p', 'sub'); msg.setAttribute('aria-live', 'polite'); box.append(msg);
     const ok = el('button', 'btn primary', 'Save'), no = el('button', 'btn', 'Cancel'); ok.type = no.type = 'button'; no.addEventListener('click', closeDlg);
-    ok.addEventListener('click', () => { saveIdea('capacity', { cfg: true, ppp: +ppp.value, reserve: (+rs.value) / 100, buffer: (+bf.value) / 100, lanes: s.lanes.map(l => ({ k: l.k, people: ta[l.k].value.split(',').map(x => x.trim()).filter(Boolean) })) }, 'report', 'updated the capacity settings'); closeDlg(); if (done) done(); });
+    ok.addEventListener('click', () => {
+      const leaving = {}, all = []; s.lanes.forEach(l => ta[l.k].value.split(',').forEach(x => { if (x.trim()) all.push(x.trim()); }));
+      for (const part of lv.value.split(',').map(x => x.trim()).filter(Boolean)) { const i = part.lastIndexOf(':'), n = part.slice(0, i).trim(), d = part.slice(i + 1).trim(); if (i < 1 || !/^\d{4}-\d{2}-\d{2}$/.test(d) || !all.includes(n)) { msg.textContent = '"' + part + '": write it as Name: 2026-12-15, and the name must be in a track above.'; return; } leaving[n] = d; }
+      saveIdea('capacity', { cfg: true, leaving: leaving, ppp: +ppp.value, reserve: (+rs.value) / 100, buffer: (+bf.value) / 100, lanes: s.lanes.map(l => ({ k: l.k, people: ta[l.k].value.split(',').map(x => x.trim()).filter(Boolean) })) }, 'report', 'updated the capacity settings'); closeDlg(); if (done) done(); });
     const row = el('div', 'row'); row.append(ok, no); box.append(row);
   });
 }

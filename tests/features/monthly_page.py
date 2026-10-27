@@ -79,7 +79,7 @@ with sync_playwright() as pw:
     A.locator('.rpcard .spmore').first.click(); A.locator('.cmenu .copt:has-text("Delete report")').click(); A.click('#xdlg button:text-is("Delete report")'); A.wait_for_timeout(500)
     # ---- Monthly deliverables board ----
     A.click('#nav button[data-p="monthly"]'); A.wait_for_timeout(400)
-    ok('nav has no Capacity or Baselines, has Monthly deliverables', A.locator('#nav button[data-p="capacity"]').count()==0 and A.locator('#nav button[data-p="baselines"]').count()==0 and A.locator('#nav button[data-p="monthly"]').get_attribute('title')=='Monthly deliverables')
+    ok('nav has no Baselines, has Monthly deliverables and the new Capacity dashboard', A.locator('#nav button[data-p="capacity"]').count()==1 and A.locator('#nav button[data-p="baselines"]').count()==0 and A.locator('#nav button[data-p="monthly"]').get_attribute('title')=='Monthly deliverables')
     cols=A.evaluate("[...document.querySelectorAll('#pg-monthly .mdcol h2')].map(h=>h.innerText.split('\\n')[0])")
     ok('the board starts with this month, then the next', cols[:2]==['October 2026','November 2026'] and A.locator('.mdcol.now').count()==1 and 'This month' in A.locator('.mdcol').first.inner_text())
     ok('it is a board like Ideas: columns side by side, add month at the end', A.locator('.mdboard .mdcol').count()==2 and A.locator('#addmonth').inner_text()=='+ Add month (December 2026)')

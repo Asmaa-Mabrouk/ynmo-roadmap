@@ -20,7 +20,7 @@ import { confirmDlg } from '../ui/confirm.js';
 import { plainBox } from '../features/rich-text.js';
 import { openDlg, closeDlg } from '../features/safety.js';
 import { saveIdea } from './ideas.js';
-import { capBlock, guardMove, openCapSettings, openCheckPlan, openPoints, ptsChips } from '../features/capacity-view.js';
+import { guardMove, openPoints, ptsChips } from '../features/capacity-view.js';
 import { diffDoc, undoChanges } from '../features/month-undo.js';
 import { adhocStats, cardId, sortByProduct, PRODUCT_ORDER, notesOf, clampPct, monthId, monthLabel, monthProgress, monthRange, monthText, newLine, nextMonth, pctBand, SIZES, TAGS, legacyTag } from '../features/month-model.js';
 import { NOTE_ICON, setupBanner } from './reports.js';
@@ -327,7 +327,6 @@ function column(m, prods, ed) {
   }
   if (isBl) { const hb = el('button', 'btn sm colmore', '✕'); hb.type = 'button'; hb.setAttribute('aria-label', 'Hide the backlog'); hb.title = 'Hide the backlog'; hb.addEventListener('click', () => { setBl(false); renderMonthly(); }); h.append(hb); h.style.cssText = 'display:flex;align-items:center;gap:8px'; hb.style.marginInlineStart = 'auto'; }
   col.append(h);
-  if (!isBl) col.append(capBlock(m, lines));
   if (isBl) { col.append(el('p', 'hint mdblhint', ed ? 'Ideas and requests not planned yet. Drag a card into a month, or use ⋯ → Plan in month.' : 'Ideas and requests not planned yet.')); }
   const prog = isBl ? { pct: null, n: 0, done: 0 } : monthProgress(lines), ad = adhocStats(lines), pv = prog.pct === null ? 0 : prog.pct, pr = el('div', 'mdprog pc-' + pctBand(pv));
   const b0 = el('div', 'mbar pc-' + pctBand(pv)), i0 = el('i'); i0.style.width = pv + '%'; b0.append(i0); b0.setAttribute('aria-label', 'Progress of ' + lab(m));
@@ -369,8 +368,7 @@ export function renderMonthly() {
   const ff = el('select'); ff.setAttribute('aria-label', 'Filter by flag'); [['all', 'All cards'], ['hp', 'Business priority'], ['quick', 'Quick wins'], ['enh', 'Small enhancements']].forEach(x => { const o = el('option', '', x[1]); o.value = x[0]; o.selected = x[0] === ui.fl; ff.append(o); });
   ff.addEventListener('change', () => { ui.fl = ff.value; renderMonthly(); });
   tools.append(q, fp, ff);
-  { const cb = el('button', 'btn sm', 'Check plan'); cb.type = 'button'; cb.id = 'mdcheckplan'; cb.title = 'Capacity per role, card order and roadmap dates'; cb.addEventListener('click', () => openCheckPlan(visibleMonths().filter(x => x !== BL))); tools.append(cb);
-    if (ed) { const cs = el('button', 'btn sm', 'Capacity settings'); cs.type = 'button'; cs.id = 'mdcapset'; cs.addEventListener('click', () => openCapSettings(renderMonthly)); tools.append(cs); } }
+  { const cb = el('button', 'btn sm', 'Capacity'); cb.type = 'button'; cb.id = 'mdtocap'; cb.title = 'Open the Capacity dashboard: what fits, what to fix, who is available'; cb.addEventListener('click', () => showPage('capacity')); tools.append(cb); }
   { const sb = el('button', 'btn sm mdsort' + (sortOn ? ' on' : ''), sortOn ? '✓ Sorted by product' : 'Sort by product'); sb.type = 'button'; sb.id = 'mdsort'; sb.setAttribute('aria-pressed', String(sortOn)); sb.title = 'In every column: ' + PRODUCT_ORDER.slice(0, 6).map(k => (TAGS.find(t => t.k === k) || {}).n).join(', then ') + '. Click again to go back to your own order.'; sb.addEventListener('click', () => { setSort(!sortOn); renderMonthly(); }); tools.append(sb); }
   if (ed) { const ub = el('button', 'btn sm mdundo', '↶ Undo'); ub.type = 'button'; ub.id = 'mdundo'; ub.disabled = !undoStack.length; ub.title = 'Undo the last change on this board (Ctrl+Z)'; ub.addEventListener('click', undoMonthly); tools.append(ub); }
   if (ed) { const n = [...lkMap.values()].reduce((a, r) => a + r.cmp.incoming.length, 0); if (n) { const cb = el('button', 'btn sm primary mdcheck', 'Check updates (' + n + ')'); cb.type = 'button'; cb.id = 'mdcheck'; cb.title = 'The roadmap changed some of your features. Check and apply them one by one.'; cb.addEventListener('click', () => openCheckUpdates('card', renderMonthly)); tools.append(cb); } }

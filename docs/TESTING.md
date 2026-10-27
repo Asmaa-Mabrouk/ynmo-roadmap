@@ -37,7 +37,7 @@ The bundle is an IIFE, so tests reach internals through `window.__ynmo` (`items,
 - `feature_link.py` (24 checks) and `tests/feature_link_unit.mjs`: linked features, admin approval, Check updates, Keep mine, reject.
 - `smoke_monthly_exec.py` (14 checks): the executive demo path. An admin prepares a board (cards, percentages, flag, backlog, a card on the roadmap) and an executive (Viewer) reads it: everything visible, no editing control or internal wording, read-only backlog, phone width. Screenshots go to `tests/out/smoke_*.png`.
 - `monthly_details.py` (15 checks): card details and the info icon (editor writes, executive reads, tooltip, Undo, long text) and the name on hover of online avatars.
-- `monthly_capacity.py` (15 checks): points by role, meters per month, warning before a move, Check plan (capacity and order), settings, executive view. Fake database only.
+- `monthly_capacity.py` (31 checks): points by role, the Capacity dashboard (tiles, what needs fixing with a suggested move, room per track, team with leave, leaving and left), warning before a move, settings, executive view. Fake database only.
 - `monthly_merge_save.py` (5 checks): a save keeps cards another person added since the screen last refreshed, no duplicates, normal saves unchanged.
 - `login_hang.py` (6 checks): a sign-in check that never answers ends in the recovery screen (Try again / Sign out and start fresh); a normal start shows the login form at once.
 - `jira_link.py` (14 checks): the Jira link picker on sprint tasks (live search, key search, pick, status, unlink, no match, Jira errors). Fake Jira only.

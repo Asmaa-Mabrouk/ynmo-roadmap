@@ -14,7 +14,7 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 | Repo | `Asmaa-Mabrouk/ynmo-roadmap`, branch `main`; last change: Monthly deliverables board (see CHANGELOG) |
 | Backend | Supabase project **YNMO_PM**; SQL 01 to 07; Edge Functions `notify-approval`, `weekly-draft`, `jira-sync` (code in repo; deployment status per the open items below) |
 | Owner | Asmaa (Senior PM, TrianglZ, Ynmo ecosystem, Riyadh) |
-| Pages | Roadmap, Roadmaps, Sprints, Reports, Monthly deliverables, Resources, Vacations, Log, Users & permissions |
+| Pages | Roadmap, Roadmaps, Sprints, Reports, Monthly deliverables, Capacity, Resources, Vacations, Log, Users & permissions |
 | Tests | `tests/run_all.sh`: last full run 88/88 scenarios and all feature scripts green (`sprints_reports.py` 94, `monthly_page.py` 79) |
 | Jira | Site `tatralab.atlassian.net`; default projects DYC (Daycare), FAS (Tifli), AU (AI). Plan, Warif and Sharjah project keys not known yet. Rovo was considered; the API route was chosen |
 | Google Drive export | Google Cloud project **YNMO PM** (trianglz.com, Internal consent), Drive API on, Web client created for `https://ynmo-roadmap.vercel.app`. Client ID to be pasted in the tool by an admin; the client secret is not used |
@@ -41,6 +41,24 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 8. Not yet tested against the real services: Jira, Google sign-in and Drive.
 
 ## Ledger updates
+
+### 2026-10-27 - Capacity dashboard
+```
+🔄 YNMO LEDGER UPDATE — 2026-10-27
+Request: move capacity out of the Monthly columns into a dashboard for business insights: what can move, what to fix, team names per track, leave, and who left or is leaving
+Surface: cross-cutting (Roadmaps tool)
+Outcome: new Capacity page (months at a glance, what needs fixing with suggested moves, room left per track, the team); meters removed from Monthly; `leaving` added to the capacity settings
+New facts / decisions locked:
+  • Capacity has its own page; Monthly only shows points on cards, the Points menu, the move warning and a Capacity button
+  • A person who leaves (last working day in Capacity settings) stops counting after that day; leave comes from Vacations
+  • Suggestions are rule-based: the smallest card that clears the excess, moved to the first later month where every role and the card order still fit
+Corrections to this skill: none
+Open / flagged:
+  • Khalid is listed in PMs and Design and counted in both (shown with an "Also in" note): confirm
+  • Points per person (default 8) still to be calibrated from three months of delivered points
+Changelog: Capacity dashboard page with team, leave and leavers.
+```
+Paste this into Section 11 of the ynmo-master skill to keep it current.
 
 ### 2026-10-27 - Monthly capacity by role
 ```

@@ -11,7 +11,7 @@ with sync_playwright() as pw:
     ok('H2 after about 10 s the loader is gone', P.locator('#ldg:not([hidden])').count()==0)
     ok('H3 a clear screen explains and offers Try again and Sign out', 'Taking longer' in P.locator('#gate').inner_text() and P.locator('#gate button:text-is("Try again")').count()==1 and P.locator('#gate button:text-is("Sign out and start fresh")').count()==1)
     ok('H3b the screen says it retries by itself', 'automatically' in P.locator('#gate').inner_text())
-    P.evaluate("sessionStorage.setItem('fixed','1')"); P.click('#gate button:text-is("Sign out and start fresh")'); P.wait_for_timeout(1500)
+    P.evaluate("sessionStorage.setItem('fixed','1')"); P.click('#gate button:text-is("Sign out and start fresh")'); P.locator('#gate input[type=email]').first.wait_for(timeout=8000) if True else None; P.wait_for_timeout(300)
     ok('H4 start fresh clears the saved sign-in and shows the login form once the server answers', P.locator('#gate input[type=email]').count()==1)
     ctx3=mkctx(b,init="if(!sessionStorage.getItem('fixed')) window.__authHang=true"); R3=ctx3.new_page(); R3.goto(URL); R3.wait_for_timeout(11500)
     ok('H6 the stuck screen shows', 'Taking longer' in R3.locator('#gate').inner_text())
