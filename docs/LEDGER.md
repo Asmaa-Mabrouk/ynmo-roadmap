@@ -14,7 +14,7 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 | Repo | `Asmaa-Mabrouk/ynmo-roadmap`, branch `main`; last change: Monthly deliverables board (see CHANGELOG) |
 | Backend | Supabase project **YNMO_PM**; SQL 01 to 07; Edge Functions `notify-approval`, `weekly-draft`, `jira-sync` (code in repo; deployment status per the open items below) |
 | Owner | Asmaa (Senior PM, TrianglZ, Ynmo ecosystem, Riyadh) |
-| Pages | Roadmap, Roadmaps, Sprints, Reports, Monthly deliverables, Capacity, Resources, Vacations, Log, Users & permissions |
+| Pages | Roadmap, Roadmaps, Sprints, Reports, Monthly deliverables, Dashboard, Resources, Vacations, Log, Users & permissions |
 | Tests | `tests/run_all.sh`: last full run 88/88 scenarios and all feature scripts green (`sprints_reports.py` 94, `monthly_page.py` 79) |
 | Jira | Site `tatralab.atlassian.net`; default projects DYC (Daycare), FAS (Tifli), AU (AI). Plan, Warif and Sharjah project keys not known yet. Rovo was considered; the API route was chosen |
 | Google Drive export | Google Cloud project **YNMO PM** (trianglz.com, Internal consent), Drive API on, Web client created for `https://ynmo-roadmap.vercel.app`. Client ID to be pasted in the tool by an admin; the client secret is not used |
@@ -41,6 +41,24 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 8. Not yet tested against the real services: Jira, Google sign-in and Drive.
 
 ## Ledger updates
+
+### 2026-10-27 - Points per person; module renamed Dashboard
+```
+🔄 YNMO LEDGER UPDATE — 2026-10-27
+Request: choose tracks first, then the people, then points for each person; rename the Capacity module to Dashboard
+Surface: cross-cutting (Roadmaps tool)
+Outcome: the points dialog is three steps (tracks, people, points per person); card field `who`; per-person load and capacity on the Dashboard with a month picker; module renamed Dashboard
+New facts / decisions locked:
+  • Points are given per person; the track total (sum of its people) is what the capacity meters use
+  • A person's capacity = points per person less leave, last working day, reserve and buffer; a person in two tracks (Khalid) has one personal load across both
+  • The Capacity module is called Dashboard (route stays `#/capacity`)
+Corrections to this skill: none
+Open / flagged:
+  • Old cards with track totals only must be reopened to choose the people
+  • Khalid counted in two track capacities (PMs and Design) but once as a person: confirm
+Changelog: Points per person and the Dashboard rename.
+```
+Paste this into Section 11 of the ynmo-master skill to keep it current.
 
 ### 2026-10-27 - Capacity dashboard
 ```

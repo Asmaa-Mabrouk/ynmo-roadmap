@@ -1287,6 +1287,17 @@ a.jkchip:hover{text-decoration:underline}
 .cpname { font-weight: 700; } .cptags { display: inline-flex; flex-wrap: wrap; gap: 4px; }
 .cptag { font-size: 11.5px; font-weight: 700; border-radius: 6px; padding: 1px 7px; background: var(--surface-2); color: var(--muted); }
 .cptag.warn { background: #fdf0d0; color: #8a5a00; } .cptag.bad { background: #fbe0de; color: #9b1c14; } .cptag.info { background: #e6eefc; color: #1d4f9c; }
+.ptsdlg h3 { margin: 12px 0 4px; font-size: .95rem; }
+.ptpills { display: flex; flex-wrap: wrap; gap: 6px; }
+.ptsec { display: grid; gap: 4px; border-top: 1px solid var(--line); padding-top: 6px; }
+.pperson { display: grid; grid-template-columns: 1fr 130px; align-items: center; gap: 8px; padding: 2px 0; }
+.ppname { display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
+.pperson select { width: 100%; box-sizing: border-box; font: inherit; padding: 6px 8px; min-height: 34px; border: 1.5px solid var(--line); border-radius: 8px; background: var(--surface); }
+.pptot { font-size: 12.5px; color: var(--muted); font-weight: 700; }
+.ptsfoot { position: sticky; bottom: -16px; background: var(--surface); padding: 10px 0 2px; }
+.cpload { margin-inline-start: auto; }
+#cpmonth { width: max-content; max-width: 100%; font: inherit; padding: 6px 10px; border: 1.5px solid var(--line); border-radius: 8px; background: var(--surface); }
+.ptsec[hidden] { display: none; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -2417,7 +2428,7 @@ a.jkchip:hover{text-decoration:underline}
 
   // src/esm/core/shared.js
   var H2 = { id: H2_ID, n: "H2 2026", a: "2026-10-01", b: "2027-01-31", kind: "H2", builtin: true };
-  var PAGES = [["roadmap", "Roadmap"], ["roadmaps", "Roadmaps"], ["sprints", "Sprints"], ["reports", "Reports"], ["monthly", "Monthly deliverables"], ["capacity", "Capacity"], ["resources", "Resources"], ["vacations", "Vacations"], ["log", "Log"], ["admin", "Users & permissions"]];
+  var PAGES = [["roadmap", "Roadmap"], ["roadmaps", "Roadmaps"], ["sprints", "Sprints"], ["reports", "Reports"], ["monthly", "Monthly deliverables"], ["capacity", "Dashboard"], ["resources", "Resources"], ["vacations", "Vacations"], ["log", "Log"], ["admin", "Users & permissions"]];
   var DOMAINS = ["PM", "Mobile", "Backend", "Frontend", "Full-stack", "Engineering", "QA", "UX / Design", "AI / ML", "Other"];
   var VTYPES = ["Annual leave", "Training", "Public holiday", "Other"];
   var slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "x";
@@ -8907,14 +8918,36 @@ a.jkchip:hover{text-decoration:underline}
     });
     return { ppp: num(c.ppp, DEFAULTS.ppp, 0, 100), reserve: num(c.reserve, DEFAULTS.reserve, 0, 0.9), buffer: num(c.buffer, DEFAULTS.buffer, 0, 0.9), leaving, lanes: LANES2.map((l) => ({ k: l.k, n: l.n, people: byK[l.k] || l.people })) };
   }
+  function personRaw(name, range, vacs, cfg4) {
+    const s = settings(cfg4), wd = Math.max(1, workdays(range.a, range.b)), until = s.leaving[name], end = until && until < range.b ? until : range.b;
+    return end < range.a ? 0 : s.ppp * Math.max(0, (workdays(range.a, end) - leaveDays(vacs, name, range.a, end)) / wd);
+  }
+  function personCap(name, range, vacs, cfg4) {
+    const s = settings(cfg4);
+    return Math.round(personRaw(name, range, vacs, cfg4) * (1 - s.reserve - s.buffer) * 10) / 10;
+  }
+  var whoOf = (l, k) => {
+    const w = l && l.who && l.who[k];
+    return w && typeof w === "object" ? w : {};
+  };
+  function personLoads(lines) {
+    const out = {};
+    (lines || []).forEach((l) => Object.keys(l && l.who || {}).forEach((k) => {
+      const w = whoOf(l, k);
+      Object.keys(w).forEach((n) => {
+        out[n] = (out[n] || 0) + Math.max(0, +w[n] || 0);
+      });
+    }));
+    return out;
+  }
   function laneCapacity(lane2, range, vacs, cfg4) {
-    const s = settings(cfg4), wd = Math.max(1, workdays(range.a, range.b));
+    const s = settings(cfg4);
     let raw = 0, here = 0;
     (lane2.people || []).forEach((p) => {
-      const until = s.leaving[p], end = until && until < range.b ? until : range.b;
-      if (end < range.a) return;
+      const until = s.leaving[p];
+      if (until && until < range.a) return;
       here++;
-      raw += s.ppp * Math.max(0, (workdays(range.a, end) - leaveDays(vacs, p, range.a, end)) / wd);
+      raw += personRaw(p, range, vacs, cfg4);
     });
     return { people: here, raw: Math.round(raw * 10) / 10, cap: Math.round(raw * (1 - s.reserve - s.buffer) * 10) / 10 };
   }
@@ -9012,7 +9045,10 @@ a.jkchip:hover{text-decoration:underline}
     const out = [], t = totalPts(l);
     if (t) {
       const s = el("span", "chip mdpts", t + " pts");
-      s.title = settings(cfg2()).lanes.filter((x) => ptsOf(l, x.k)).map((x) => x.n + " " + ptsOf(l, x.k)).join(" · ");
+      s.title = settings(cfg2()).lanes.filter((x) => ptsOf(l, x.k)).map((x) => {
+        const w = whoOf(l, x.k), ns = Object.keys(w).map((n) => n + " " + w[n]).join(", ");
+        return x.n + " " + ptsOf(l, x.k) + (ns ? " (" + ns + ")" : "");
+      }).join(" · ");
       out.push(s);
     }
     if (l.needs) {
@@ -9026,38 +9062,112 @@ a.jkchip:hover{text-decoration:underline}
     return out;
   }
   function openPoints(m, l, put2) {
-    openDlg("Points by role · " + cardId(l), (box2) => {
+    openDlg("Points · " + cardId(l), (box2) => {
+      box2.classList.add("ptsdlg");
       box2.append(el("div", "sub2", l.t));
-      const sels = {}, grid = el("div", "padd");
-      grid.style.gridTemplateColumns = "1fr";
-      settings(cfg2()).lanes.forEach((x) => {
-        const s = el("select");
-        SCALE.forEach((v) => {
-          const o = el("option", "", v ? String(v) : "–");
-          o.value = String(v);
-          s.append(o);
+      const st = settings(cfg2()), tracks = {}, pills = el("div", "ptpills");
+      box2.append(el("p", "sub", "Estimated by the team that does the work. First choose the tracks, then who works on it, then the points of each person."), el("h3", "", "1. Which tracks work on this card?"), pills);
+      st.lanes.forEach((x) => {
+        const cur2 = whoOf(l, x.k), legacy = !Object.keys(cur2).length && ptsOf(l, x.k) > 0, on = Object.keys(cur2).length > 0 || legacy;
+        const t = { k: x.k, n: x.n, on, rows: {} };
+        tracks[x.k] = t;
+        const pb = el("button", "pill ptrack", x.n);
+        pb.type = "button";
+        pb.dataset.k = x.k;
+        pb.setAttribute("aria-pressed", String(on));
+        pills.append(pb);
+        const sec = el("div", "ptsec");
+        sec.dataset.k = x.k;
+        sec.hidden = !on;
+        t.sec = sec;
+        sec.append(el("h3", "", "2. " + x.n + ": who works on it, and how many points each?"));
+        if (legacy) sec.append(el("p", "sub", "This track had " + ptsOf(l, x.k) + " points in total before. Choose the people and give each their points."));
+        const names = x.people.slice();
+        Object.keys(cur2).forEach((n) => {
+          if (!names.includes(n)) names.push(n);
         });
-        s.value = String(ptsOf(l, x.k));
-        s.setAttribute("aria-label", x.n + " points");
-        sels[x.k] = s;
-        grid.append(fld(x.n, s));
+        names.forEach((n) => {
+          const row2 = el("div", "pperson");
+          row2.dataset.track = x.k;
+          row2.dataset.name = n;
+          const cb = el("input");
+          cb.type = "checkbox";
+          cb.checked = n in cur2;
+          cb.setAttribute("aria-label", n + " works on this card");
+          const lab2 = el("label", "ppname");
+          lab2.append(cb, el("span", "", n));
+          const sel = el("select");
+          SCALE.forEach((v) => {
+            const o = el("option", "", v ? String(v) : "points");
+            o.value = String(v);
+            sel.append(o);
+          });
+          sel.value = String(+cur2[n] || 0);
+          sel.disabled = !cb.checked;
+          sel.setAttribute("aria-label", n + " points");
+          cb.addEventListener("change", () => {
+            sel.disabled = !cb.checked;
+            if (!cb.checked) sel.value = "0";
+            sum();
+          });
+          sel.addEventListener("change", sum);
+          row2.append(lab2, sel);
+          sec.append(row2);
+          t.rows[n] = { cb, sel };
+        });
+        t.tot = el("div", "pptot");
+        sec.append(t.tot);
+        box2.append(sec);
+        pb.addEventListener("click", () => {
+          t.on = !t.on;
+          pb.setAttribute("aria-pressed", String(t.on));
+          sec.hidden = !t.on;
+          sum();
+        });
       });
+      function sum() {
+        Object.keys(tracks).forEach((k) => {
+          const t = tracks[k];
+          t.tot.textContent = t.n + " total: " + Object.keys(t.rows).reduce((a, n) => a + (t.rows[n].cb.checked ? +t.rows[n].sel.value || 0 : 0), 0) + " points";
+        });
+      }
+      sum();
       const nd = el("input");
       nd.type = "text";
-      nd.placeholder = "Card id, for example BE card DC#12";
+      nd.placeholder = "Card id, for example DC#12";
       nd.value = l.needs ? fidLabel(l.needs) : "";
       nd.setAttribute("aria-label", "Needs card");
+      const nw = el("div", "padd");
+      nw.append(fld("Needs (a card that must be planned in the same month or earlier)", nd));
+      box2.append(nw);
       const msg = el("p", "sub");
       msg.setAttribute("aria-live", "polite");
       const ok = el("button", "btn primary", "Save"), no = el("button", "btn", "Cancel");
       ok.type = no.type = "button";
       no.addEventListener("click", closeDlg);
       ok.addEventListener("click", () => {
-        const pts = {};
-        Object.keys(sels).forEach((k) => {
-          const v = +sels[k].value;
-          if (v) pts[k] = v;
-        });
+        const who = {}, pts = {};
+        for (const k of Object.keys(tracks)) {
+          const t = tracks[k];
+          if (!t.on) continue;
+          const w = {};
+          for (const n of Object.keys(t.rows)) {
+            const r = t.rows[n];
+            if (!r.cb.checked) continue;
+            const v = +r.sel.value;
+            if (!v) {
+              msg.textContent = "Give " + n + " some points, or untick the name.";
+              return;
+            }
+            w[n] = v;
+          }
+          if (!Object.keys(w).length) {
+            msg.textContent = "Pick at least one person for " + t.n + ", or switch the track off.";
+            return;
+          }
+          who[k] = w;
+          pts[k] = Object.keys(w).reduce((a, n) => a + w[n], 0);
+        }
         let needs = "";
         if (nd.value.trim()) {
           needs = fidFromText(nd.value);
@@ -9071,11 +9181,11 @@ a.jkchip:hover{text-decoration:underline}
           }
         }
         closeDlg();
-        put2({ pts: Object.keys(pts).length ? pts : null, needs: needs || "" }, 'set the points of "' + l.t + '"');
+        put2({ pts: Object.keys(pts).length ? pts : null, who: Object.keys(who).length ? who : null, needs: needs || "" }, 'set the points of "' + l.t + '"');
       });
-      const row = el("div", "row");
+      const row = el("div", "row ptsfoot");
       row.append(ok, no);
-      box2.append(el("p", "sub", "Estimated by the team that does the work. Points are per role; a card needs points in each role it uses."), grid, fld("Needs (planned in the same month or earlier)", nd), msg, row);
+      box2.append(msg, row);
     });
   }
   function guardMove(line, to, go) {
@@ -9126,7 +9236,7 @@ a.jkchip:hover{text-decoration:underline}
   function openCapSettings(done2) {
     if (!canEdit()) return;
     const s = settings(cfg2());
-    openDlg("Capacity settings", (box2) => {
+    openDlg("Dashboard settings", (box2) => {
       box2.append(el("p", "sub", "Capacity of a role in a month = people x points per person, less their leave (from Vacations), less the reserve and buffer. Update the people each month."));
       const mk = (v, step2) => {
         const i = el("input");
@@ -9870,7 +9980,7 @@ a.jkchip:hover{text-decoration:underline}
         const b = more.getBoundingClientRect();
         openCtx(b.right - 200, b.bottom + 4, (mm) => {
           Object.keys(SIZES).forEach((k) => mi(mm, (l.sz === k ? "✓ " : "") + SIZES[k], () => put2({ sz: l.sz === k ? "" : k }, l.sz === k ? "removed the " + SIZES[k] + " flag" : 'flagged "' + l.t + '" as ' + SIZES[k])));
-          mi(mm, "Points by role…", () => openPoints(m, l, put2));
+          mi(mm, "Points and people…", () => openPoints(m, l, put2));
           if (m === BL) {
           } else if (onRoadmap(l)) mi(mm, "Show on roadmap", () => {
             if (l.rm) useRoadmap(l.rm);
@@ -10211,10 +10321,10 @@ a.jkchip:hover{text-decoration:underline}
     });
     tools.append(q, fp, ff);
     {
-      const cb = el("button", "btn sm", "Capacity");
+      const cb = el("button", "btn sm", "Dashboard");
       cb.type = "button";
       cb.id = "mdtocap";
-      cb.title = "Open the Capacity dashboard: what fits, what to fix, who is available";
+      cb.title = "Open the Dashboard: what fits, what to fix, who is available";
       cb.addEventListener("click", () => showPage("capacity"));
       tools.append(cb);
     }
@@ -10323,6 +10433,7 @@ a.jkchip:hover{text-decoration:underline}
   // src/esm/pages/capacity.js
   var cfg3 = () => S.ideas && S.ideas.capacity || {};
   var fmt2 = (n) => String(Math.round(n * 10) / 10);
+  var ui3 = { m: "" };
   var WORD = { ok: "Fits", warn: "Tight", over: "Over" };
   var short = (iso4) => fmtIso(iso4).replace(/ \d{4}$/, "");
   function capMonths() {
@@ -10367,6 +10478,14 @@ a.jkchip:hover{text-decoration:underline}
       if (none) it.tips.push("No later month has room for a card of this track. Cut some scope or add people.");
       items2.push(it);
     }));
+    const vac = vacList2(), seen = {};
+    rev.forEach((r) => {
+      const ld = personLoads(r.lines);
+      Object.keys(ld).forEach((n) => {
+        const cp = personCap(n, monthRange(r.m), vac, cfg3());
+        if (ld[n] > cp + 1e-9) items2.push({ sev: "warn", m: r.m, head: monthLabel(r.m) + " · " + n + " has too many points", body: n + " has " + fmt2(ld[n]) + " points planned and can take " + fmt2(cp) + " (after leave, reserve and buffer).", tips: [] });
+      });
+    });
     checkPlan(months).filter((c) => c.t !== "cap").forEach((c) => items2.push({ sev: "warn", m: c.m, head: monthLabel(c.m) + " · " + (c.t === "dep" ? "Card order" : "Roadmap date"), body: c.s, tips: [] }));
     if (!items2.length) {
       const ok = el("div", "cpok", "Nothing to fix. Every track fits in every month, cards are in a workable order and roadmap bars match their months.");
@@ -10411,8 +10530,9 @@ a.jkchip:hover{text-decoration:underline}
     wrap.append(t);
     return wrap;
   }
-  function team() {
-    const s = settings(cfg3()), today = todayIso(), vac = vacList2(), grid = el("div", "cpteam");
+  function team(months) {
+    if (!months.includes(ui3.m)) ui3.m = months[0];
+    const s = settings(cfg3()), today = todayIso(), vac = vacList2(), grid = el("div", "cpteam"), rg = monthRange(ui3.m), ld = personLoads(linesOf(ui3.m));
     const where = {};
     s.lanes.forEach((l) => l.people.forEach((p) => {
       (where[p] = where[p] || []).push(l.n);
@@ -10433,6 +10553,8 @@ a.jkchip:hover{text-decoration:underline}
         if (st.leaving) tags.append(el("span", "cptag " + (st.leaving.state === "later" ? "info" : "bad"), st.leaving.state === "left" ? "Left on " + short(st.leaving.date) : "Leaving " + short(st.leaving.date) + (st.leaving.state === "soon" ? " (soon)" : "")));
         if (st.onLeave) tags.append(el("span", "cptag warn", "On leave until " + short(st.leave.a1)));
         else if (st.leave) tags.append(el("span", "cptag info", "Leave " + short(st.leave.a0) + (st.leave.a1 > st.leave.a0 ? " to " + short(st.leave.a1) : "")));
+        const cp = personCap(p, rg, vac, cfg3()), pl = ld[p] || 0;
+        if (cp > 0 || pl > 0) tags.append(el("span", "cptag " + (pl > cp + 1e-9 ? "bad" : pl >= cp * 0.9 && pl > 0 ? "warn" : "info") + " cpload", fmt2(pl) + " / " + fmt2(cp) + " pts"));
         if (where[p].length > 1) tags.append(el("span", "cptag", "Also in " + where[p].filter((n) => n !== l.n).join(", ")));
         row.append(tags);
         c.append(row);
@@ -10451,13 +10573,13 @@ a.jkchip:hover{text-decoration:underline}
     mo.addEventListener("click", () => showPage("monthly"));
     tools.append(mo);
     if (canEdit()) {
-      const cs = el("button", "btn sm", "Capacity settings");
+      const cs = el("button", "btn sm", "Dashboard settings");
       cs.type = "button";
       cs.id = "cpsettings";
       cs.addEventListener("click", () => openCapSettings(renderCapacity));
       tools.append(cs);
     }
-    root.append(pageHead("Capacity", "Can the team deliver what each month promises? Points planned in Monthly are compared with what each track can take, after leave, a reserve for bugs and support, and a buffer.", tools));
+    root.append(pageHead("Dashboard", "Can the team deliver what each month promises? Points planned in Monthly are compared with what each track can take, after leave, a reserve for bugs and support, and a buffer.", tools));
     const sec = (id, t, sub) => {
       const c = el("section", "cpsec");
       c.id = id;
@@ -10469,7 +10591,21 @@ a.jkchip:hover{text-decoration:underline}
     sec("cp-glance", "The months at a glance").append(tiles(rev));
     sec("cp-fix", "What needs fixing", "If something is over, change the points or move a card in Monthly, then come back here.").append(fixes(rev, months));
     sec("cp-room", "Room left in each track", 'Used / can take, in points. "Free" is what a track can still add; this is what can be moved in.').append(room(rev));
-    sec("cp-team", "The team", "Who is in each track, who is on leave, and who has left or is about to leave (set in Capacity settings).").append(team());
+    const ts = sec("cp-team", "The team", "Who is in each track, what each person has planned in the month you pick (points planned / points they can take), who is on leave, and who has left or is about to leave (set in Dashboard settings).");
+    const mp = el("select");
+    mp.id = "cpmonth";
+    mp.setAttribute("aria-label", "Month");
+    months.forEach((m) => {
+      const o = el("option", "", monthLabel(m));
+      o.value = m;
+      o.selected = m === ui3.m;
+      mp.append(o);
+    });
+    mp.addEventListener("change", () => {
+      ui3.m = mp.value;
+      renderCapacity();
+    });
+    ts.append(mp, team(months));
   }
 
   // src/esm/ui/loading.js

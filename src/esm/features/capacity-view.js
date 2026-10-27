@@ -10,7 +10,7 @@ import { openDlg, closeDlg } from './safety.js';
 import { saveIdea } from '../pages/ideas.js';
 import { cardId, monthLabel, monthRange } from './month-model.js';
 import { allCards, cardByFid, fidFromText, fidLabel } from './feature-sync.js';
-import { SCALE, dependencyProblems, laneCapacity, loads, overAfter, ptsOf, settings, statusOf, totalPts } from './capacity.js';
+import { SCALE, whoOf, dependencyProblems, laneCapacity, loads, overAfter, ptsOf, settings, statusOf, totalPts } from './capacity.js';
 
 const cfg = () => (S.ideas && S.ideas.capacity) || {};
 const vacList = () => Object.keys(S.vacs || {}).map(id => S.vacs[id]).filter(v => v && v.a0);
@@ -24,27 +24,56 @@ const dependants = id => allCards().filter(c => c.l.needs === id).map(c => c.l);
 /** Short chips for a card: its points and what it needs. */
 export function ptsChips(l) {
   const out = [], t = totalPts(l);
-  if (t) { const s = el('span', 'chip mdpts', t + ' pts'); s.title = settings(cfg()).lanes.filter(x => ptsOf(l, x.k)).map(x => x.n + ' ' + ptsOf(l, x.k)).join(' · '); out.push(s); }
+  if (t) { const s = el('span', 'chip mdpts', t + ' pts'); s.title = settings(cfg()).lanes.filter(x => ptsOf(l, x.k)).map(x => { const w = whoOf(l, x.k), ns = Object.keys(w).map(n => n + ' ' + w[n]).join(', '); return x.n + ' ' + ptsOf(l, x.k) + (ns ? ' (' + ns + ')' : ''); }).join(' · '); out.push(s); }
   if (l.needs) { const n = fidLabel(l.needs); if (n) { const s = el('span', 'chip mdneeds', 'Needs ' + n); s.title = 'This card needs ' + n + ' planned in the same month or earlier.'; out.push(s); } }
   return out;
 }
 
-/** Points by role and the "needs" link of one card. put(patch, log) saves it. */
+/** Points of one card in three steps: which tracks work on it, who in each track, and points for each person.
+ *  Saves who = {track: {name: points}} and pts = the total per track (what the capacity meters use), plus `needs`. put(patch, log) saves it. */
 export function openPoints(m, l, put) {
-  openDlg('Points by role · ' + cardId(l), box => {
-    box.append(el('div', 'sub2', l.t));
-    const sels = {}, grid = el('div', 'padd'); grid.style.gridTemplateColumns = '1fr';
-    settings(cfg()).lanes.forEach(x => { const s = el('select'); SCALE.forEach(v => { const o = el('option', '', v ? String(v) : '–'); o.value = String(v); s.append(o); }); s.value = String(ptsOf(l, x.k)); s.setAttribute('aria-label', x.n + ' points'); sels[x.k] = s; grid.append(fld(x.n, s)); });
-    const nd = el('input'); nd.type = 'text'; nd.placeholder = 'Card id, for example BE card DC#12'; nd.value = l.needs ? fidLabel(l.needs) : ''; nd.setAttribute('aria-label', 'Needs card');
+  openDlg('Points · ' + cardId(l), box => {
+    box.classList.add('ptsdlg'); box.append(el('div', 'sub2', l.t));
+    const st = settings(cfg()), tracks = {}, pills = el('div', 'ptpills');
+    box.append(el('p', 'sub', 'Estimated by the team that does the work. First choose the tracks, then who works on it, then the points of each person.'), el('h3', '', '1. Which tracks work on this card?'), pills);
+    st.lanes.forEach(x => {
+      const cur = whoOf(l, x.k), legacy = !Object.keys(cur).length && ptsOf(l, x.k) > 0, on = Object.keys(cur).length > 0 || legacy;
+      const t = { k: x.k, n: x.n, on: on, rows: {} }; tracks[x.k] = t;
+      const pb = el('button', 'pill ptrack', x.n); pb.type = 'button'; pb.dataset.k = x.k; pb.setAttribute('aria-pressed', String(on)); pills.append(pb);
+      const sec = el('div', 'ptsec'); sec.dataset.k = x.k; sec.hidden = !on; t.sec = sec;
+      sec.append(el('h3', '', '2. ' + x.n + ': who works on it, and how many points each?'));
+      if (legacy) sec.append(el('p', 'sub', 'This track had ' + ptsOf(l, x.k) + ' points in total before. Choose the people and give each their points.'));
+      const names = x.people.slice(); Object.keys(cur).forEach(n => { if (!names.includes(n)) names.push(n); });
+      names.forEach(n => {
+        const row = el('div', 'pperson'); row.dataset.track = x.k; row.dataset.name = n;
+        const cb = el('input'); cb.type = 'checkbox'; cb.checked = n in cur; cb.setAttribute('aria-label', n + ' works on this card');
+        const lab = el('label', 'ppname'); lab.append(cb, el('span', '', n));
+        const sel = el('select'); SCALE.forEach(v => { const o = el('option', '', v ? String(v) : 'points'); o.value = String(v); sel.append(o); }); sel.value = String(+cur[n] || 0); sel.disabled = !cb.checked; sel.setAttribute('aria-label', n + ' points');
+        cb.addEventListener('change', () => { sel.disabled = !cb.checked; if (!cb.checked) sel.value = '0'; sum(); }); sel.addEventListener('change', sum);
+        row.append(lab, sel); sec.append(row); t.rows[n] = { cb: cb, sel: sel };
+      });
+      t.tot = el('div', 'pptot'); sec.append(t.tot); box.append(sec);
+      pb.addEventListener('click', () => { t.on = !t.on; pb.setAttribute('aria-pressed', String(t.on)); sec.hidden = !t.on; sum(); });
+    });
+    function sum() { Object.keys(tracks).forEach(k => { const t = tracks[k]; t.tot.textContent = t.n + ' total: ' + Object.keys(t.rows).reduce((a, n) => a + (t.rows[n].cb.checked ? +t.rows[n].sel.value || 0 : 0), 0) + ' points'; }); }
+    sum();
+    const nd = el('input'); nd.type = 'text'; nd.placeholder = 'Card id, for example DC#12'; nd.value = l.needs ? fidLabel(l.needs) : ''; nd.setAttribute('aria-label', 'Needs card');
+    const nw = el('div', 'padd'); nw.append(fld('Needs (a card that must be planned in the same month or earlier)', nd)); box.append(nw);
     const msg = el('p', 'sub'); msg.setAttribute('aria-live', 'polite');
     const ok = el('button', 'btn primary', 'Save'), no = el('button', 'btn', 'Cancel'); ok.type = no.type = 'button'; no.addEventListener('click', closeDlg);
     ok.addEventListener('click', () => {
-      const pts = {}; Object.keys(sels).forEach(k => { const v = +sels[k].value; if (v) pts[k] = v; });
+      const who = {}, pts = {};
+      for (const k of Object.keys(tracks)) {
+        const t = tracks[k]; if (!t.on) continue; const w = {};
+        for (const n of Object.keys(t.rows)) { const r = t.rows[n]; if (!r.cb.checked) continue; const v = +r.sel.value; if (!v) { msg.textContent = 'Give ' + n + ' some points, or untick the name.'; return; } w[n] = v; }
+        if (!Object.keys(w).length) { msg.textContent = 'Pick at least one person for ' + t.n + ', or switch the track off.'; return; }
+        who[k] = w; pts[k] = Object.keys(w).reduce((a, n) => a + w[n], 0);
+      }
       let needs = ''; if (nd.value.trim()) { needs = fidFromText(nd.value); if (!needs) { msg.textContent = 'No card with that id.'; return; } if (needs === l.id) { msg.textContent = 'A card cannot need itself.'; return; } }
-      closeDlg(); put({ pts: Object.keys(pts).length ? pts : null, needs: needs || '' }, 'set the points of "' + l.t + '"');
+      closeDlg(); put({ pts: Object.keys(pts).length ? pts : null, who: Object.keys(who).length ? who : null, needs: needs || '' }, 'set the points of "' + l.t + '"');
     });
-    const row = el('div', 'row'); row.append(ok, no);
-    box.append(el('p', 'sub', 'Estimated by the team that does the work. Points are per role; a card needs points in each role it uses.'), grid, fld('Needs (planned in the same month or earlier)', nd), msg, row);
+    const row = el('div', 'row ptsfoot'); row.append(ok, no);
+    box.append(msg, row);
   });
 }
 
@@ -79,7 +108,7 @@ export function checkPlan(months) {
 /** Points per person, reserve, buffer and who is in each role (editors). */
 export function openCapSettings(done) {
   if (!canEdit()) return; const s = settings(cfg());
-  openDlg('Capacity settings', box => {
+  openDlg('Dashboard settings', box => {
     box.append(el('p', 'sub', 'Capacity of a role in a month = people x points per person, less their leave (from Vacations), less the reserve and buffer. Update the people each month.'));
     const mk = (v, step) => { const i = el('input'); i.type = 'number'; i.step = step; i.value = v; return i; };
     const ppp = mk(s.ppp, '0.5'), rs = mk(Math.round(s.reserve * 100), '5'), bf = mk(Math.round(s.buffer * 100), '5');

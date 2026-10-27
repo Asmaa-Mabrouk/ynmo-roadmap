@@ -41,15 +41,22 @@ export function settings(cfg) {
   const leaving = {}; Object.keys(c.leaving && typeof c.leaving === 'object' ? c.leaving : {}).forEach(n => { if (/^\d{4}-\d{2}-\d{2}$/.test(c.leaving[n])) leaving[n] = c.leaving[n]; });
   return { ppp: num(c.ppp, DEFAULTS.ppp, 0, 100), reserve: num(c.reserve, DEFAULTS.reserve, 0, 0.9), buffer: num(c.buffer, DEFAULTS.buffer, 0, 0.9), leaving: leaving, lanes: LANES.map(l => ({ k: l.k, n: l.n, people: byK[l.k] || l.people })) };
 }
+/** Points one person can deliver in a month before reserve and buffer: ppp, less leave and the days after their last working day. */
+export function personRaw(name, range, vacs, cfg) {
+  const s = settings(cfg), wd = Math.max(1, workdays(range.a, range.b)), until = s.leaving[name], end = until && until < range.b ? until : range.b;
+  return end < range.a ? 0 : s.ppp * Math.max(0, (workdays(range.a, end) - leaveDays(vacs, name, range.a, end)) / wd);
+}
+/** Points one person can be planned for in a month (after reserve and buffer). */
+export function personCap(name, range, vacs, cfg) { const s = settings(cfg); return Math.round(personRaw(name, range, vacs, cfg) * (1 - s.reserve - s.buffer) * 10) / 10; }
+/** Who works on a card in a role: {name: points}. */
+export const whoOf = (l, k) => { const w = l && l.who && l.who[k]; return w && typeof w === 'object' ? w : {}; };
+/** Points of each person over a list of cards, all roles together: {name: points}. */
+export function personLoads(lines) { const out = {}; (lines || []).forEach(l => Object.keys((l && l.who) || {}).forEach(k => { const w = whoOf(l, k); Object.keys(w).forEach(n => { out[n] = (out[n] || 0) + Math.max(0, +w[n] || 0); }); })); return out; }
 /** Plannable points of one role in a month: people x points each, less their leave, less the days after their last working day,
  *  less reserve and buffer. `people` counts those still working at some point of the month. */
 export function laneCapacity(lane, range, vacs, cfg) {
-  const s = settings(cfg), wd = Math.max(1, workdays(range.a, range.b)); let raw = 0, here = 0;
-  (lane.people || []).forEach(p => {
-    const until = s.leaving[p], end = until && until < range.b ? until : range.b;
-    if (end < range.a) return; here++;
-    raw += s.ppp * Math.max(0, (workdays(range.a, end) - leaveDays(vacs, p, range.a, end)) / wd);
-  });
+  const s = settings(cfg); let raw = 0, here = 0;
+  (lane.people || []).forEach(p => { const until = s.leaving[p]; if (until && until < range.a) return; here++; raw += personRaw(p, range, vacs, cfg); });
   return { people: here, raw: Math.round(raw * 10) / 10, cap: Math.round(raw * (1 - s.reserve - s.buffer) * 10) / 10 };
 }
 export const ptsOf = (l, k) => Math.max(0, +(l && l.pts && l.pts[k]) || 0);

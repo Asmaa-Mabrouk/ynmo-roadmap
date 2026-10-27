@@ -261,7 +261,7 @@ function card(m, l, prods, ed) {
       e.stopPropagation(); const b = more.getBoundingClientRect();
       openCtx(b.right - 200, b.bottom + 4, mm => {
         Object.keys(SIZES).forEach(k => mi(mm, (l.sz === k ? '✓ ' : '') + SIZES[k], () => put({ sz: l.sz === k ? '' : k }, l.sz === k ? 'removed the ' + SIZES[k] + ' flag' : 'flagged "' + l.t + '" as ' + SIZES[k])));
-        mi(mm, 'Points by role…', () => openPoints(m, l, put));
+        mi(mm, 'Points and people…', () => openPoints(m, l, put));
         if (m === BL) { /* backlog cards are not scheduled yet */ } else if (onRoadmap(l)) mi(mm, 'Show on roadmap', () => { if (l.rm) useRoadmap(l.rm); showPage('roadmap'); }); else mi(mm, 'Add to roadmap…', () => addToRoadmap(m, l, p));
         mm.append(el('div', 'msep'));
         if (l.adhoc) mi(mm, 'Mark as planned (not ad hoc)', () => put({ adhoc: false }, 'marked as planned'));
@@ -368,7 +368,7 @@ export function renderMonthly() {
   const ff = el('select'); ff.setAttribute('aria-label', 'Filter by flag'); [['all', 'All cards'], ['hp', 'Business priority'], ['quick', 'Quick wins'], ['enh', 'Small enhancements']].forEach(x => { const o = el('option', '', x[1]); o.value = x[0]; o.selected = x[0] === ui.fl; ff.append(o); });
   ff.addEventListener('change', () => { ui.fl = ff.value; renderMonthly(); });
   tools.append(q, fp, ff);
-  { const cb = el('button', 'btn sm', 'Capacity'); cb.type = 'button'; cb.id = 'mdtocap'; cb.title = 'Open the Capacity dashboard: what fits, what to fix, who is available'; cb.addEventListener('click', () => showPage('capacity')); tools.append(cb); }
+  { const cb = el('button', 'btn sm', 'Dashboard'); cb.type = 'button'; cb.id = 'mdtocap'; cb.title = 'Open the Dashboard: what fits, what to fix, who is available'; cb.addEventListener('click', () => showPage('capacity')); tools.append(cb); }
   { const sb = el('button', 'btn sm mdsort' + (sortOn ? ' on' : ''), sortOn ? '✓ Sorted by product' : 'Sort by product'); sb.type = 'button'; sb.id = 'mdsort'; sb.setAttribute('aria-pressed', String(sortOn)); sb.title = 'In every column: ' + PRODUCT_ORDER.slice(0, 6).map(k => (TAGS.find(t => t.k === k) || {}).n).join(', then ') + '. Click again to go back to your own order.'; sb.addEventListener('click', () => { setSort(!sortOn); renderMonthly(); }); tools.append(sb); }
   if (ed) { const ub = el('button', 'btn sm mdundo', '↶ Undo'); ub.type = 'button'; ub.id = 'mdundo'; ub.disabled = !undoStack.length; ub.title = 'Undo the last change on this board (Ctrl+Z)'; ub.addEventListener('click', undoMonthly); tools.append(ub); }
   if (ed) { const n = [...lkMap.values()].reduce((a, r) => a + r.cmp.incoming.length, 0); if (n) { const cb = el('button', 'btn sm primary mdcheck', 'Check updates (' + n + ')'); cb.type = 'button'; cb.id = 'mdcheck'; cb.title = 'The roadmap changed some of your features. Check and apply them one by one.'; cb.addEventListener('click', () => openCheckUpdates('card', renderMonthly)); tools.append(cb); } }

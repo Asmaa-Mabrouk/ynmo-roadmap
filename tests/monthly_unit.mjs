@@ -69,4 +69,11 @@ import * as cap from '../src/esm/features/capacity.js';
   const sug = cap.suggestMoves(rev, o);
   ok('suggest: moves the smallest card that clears the excess to the first month with room', sug.length === 1 && sug[0].line.id === 'b' && sug[0].to === '2026-12');
   ok('suggest: says so when no later month has room', cap.suggestMoves(rev, Object.assign({}, o, { probsOf: () => ['blocked'] }))[0].none === true);
+  // per person (points dialog and Dashboard)
+  const R = { a: '2026-11-01', b: '2026-11-30' };
+  ok('person capacity: 8 points less 30% = 5.6', cap.personCap('Soliman', R, [], {}) === 5.6);
+  ok('person capacity: leave lowers it, a last day before the month makes it 0', cap.personCap('Soliman', R, [{ p: 'Soliman', a0: '2026-11-01', a1: '2026-11-11' }], {}) < 5.6 && cap.personCap('Soliman', R, [], { leaving: { Soliman: '2026-10-31' } }) === 0);
+  const pl = cap.personLoads([{ who: { be: { Soliman: 5, Hamid: 3 }, fe: { Soliman: 2 } } }, { who: { be: { Soliman: 1 } } }, { pts: { be: 4 } }]);
+  ok('person loads: points add up per person across tracks and cards (Soliman 8, Hamid 3)', pl.Soliman === 8 && pl.Hamid === 3 && Object.keys(pl).length === 2);
+  ok('who: a missing or bad value gives nobody', Object.keys(cap.whoOf({}, 'be')).length === 0 && Object.keys(cap.whoOf({ who: { be: 5 } }, 'be')).length === 0 && cap.whoOf({ who: { be: { A: 2 } } }, 'be').A === 2);
 }
