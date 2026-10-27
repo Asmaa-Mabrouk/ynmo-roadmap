@@ -5,6 +5,7 @@
  * Dependencies are explicit ES imports; shared mutable state lives in `S` (core/state.js).
  */
 import { S } from './state.js';
+import { refreshAll } from './supabase.js';
 import { $, H2_ID, base, canEdit, clone, items, state, todayK } from './model.js';
 import { netMark } from '../features/safety.js';
 import { notify, notifyFailOnce } from '../ui/notify.js';
@@ -25,6 +26,23 @@ const SAVE_TEXT = {
 };
 export function setSave(k) { $('save').textContent = SAVE_TEXT[k] || ''; if (k === 'error') netMark(false); else if (k === 'saved') netMark(true); progress(k === 'saving'); }
 const queue = {};
+/* ---------- outbox: edits not yet confirmed by the server survive a reload and are sent again ---------- */
+const OUT = 'ynmo-outbox';
+let outCache = null, outSeq = 0;
+const uidNow = () => (S.me && S.me.id) || '';
+function outLoad() { if (outCache) return outCache; try { outCache = JSON.parse(localStorage.getItem(OUT) || '{}') || {}; } catch (e) { outCache = {}; } return outCache; }
+function outSave() { try { const o = outLoad(); if (Object.keys(o).length) localStorage.setItem(OUT, JSON.stringify(o)); else localStorage.removeItem(OUT); } catch (e) { /* storage full or unavailable: the in-memory queue still retries */ } }
+/** Number of edits that the server has not confirmed yet (this person's). */
+export function unsavedCount() { const u = uidNow(), o = outLoad(); return Object.keys(o).filter(k => !o[k].u || o[k].u === u).length; }
+/** Send again whatever is still in the outbox and not already on its way (called at start and every 30 s). */
+export function replayOutbox() {
+  const u = uidNow(), o = outLoad();
+  Object.keys(o).forEach(path => { const e = o[path]; if ((e.u && e.u !== u) || pendingPaths.has(path)) return; write(path, e.copy, e.part, true); });
+}
+export function watchOutbox() {
+  replayOutbox(); setInterval(replayOutbox, 30000);
+  window.addEventListener('beforeunload', ev => { if (unsavedCount() > 0 || S.inflight > 0) { ev.preventDefault(); ev.returnValue = ''; return ''; } });
+}
 /** path -> number of writes not yet acknowledged; lets snapshot handlers keep local edits that are still in flight. */
 const pendingPaths = new Map();
 /**
@@ -36,9 +54,11 @@ const pendingPaths = new Map();
  */
 export function snapDocs(table, snap, local) {
   const n = {}; snap.docs.forEach(d => { n[d.id] = d.data(); });
-  pendingPaths.forEach((_, path) => {
+  new Set([...pendingPaths.keys(), ...Object.keys(outLoad())]).forEach(path => {
     if (!path.startsWith(table + '/')) return;
     const id = path.slice(table.length + 1);
+    const o = outLoad()[path];
+    if (o) { if (o.copy) n[id] = o.copy; else delete n[id]; return; }
     if (local[id] === undefined) delete n[id]; else n[id] = local[id];
   });
   return n;
@@ -50,19 +70,22 @@ export function snapDocs(table, snap, local) {
  * @param {?object} data full document, or null to delete
  * @param {?object} fields changed fields only (enables server-side merge)
  */
-export function write(path, data, fields) {
+export function write(path, data, fields, replay) {
   if (!S.db) { setSave('local'); return; }
-  const ref = S.db.doc(path), copy = data ? clone(data) : null, part = fields ? clone(fields) : null;
+  const ref = S.db.doc(path), copy = data ? clone(data) : null, part = fields ? clone(fields) : null, seq = ++outSeq;
+  if (!replay || !outLoad()[path]) { outLoad()[path] = { copy: copy, part: part, u: uidNow(), seq: seq, at: Date.now() }; outSave(); } else outLoad()[path].seq = seq;
   S.inflight++; pendingPaths.set(path, (pendingPaths.get(path) || 0) + 1); setSave('saving');
   queue[path] = (queue[path] || Promise.resolve()).then(async () => {
     for (let tryN = 0; tryN < 6; tryN++) {
       try {
         if (copy && part && ref.merge) await ref.merge(part, copy); else if (copy) await ref.set(copy); else await ref.delete();
+        { const o = outLoad(); if (o[path] && o[path].seq === seq) { delete o[path]; outSave(); } }
+        if (replay) refreshAll();
         setSave('saved'); break;
       } catch (e) {
-        if (e && e.code === 'missing_table') { S.setup[path.split('/')[0]] = true; $('save').textContent = 'Database setup needed (run SQL 06)'; notifyFailOnce('Not saved: the database is missing a table. Run supabase/sql/06-sprints-weekly-reports.sql.'); progress(false); break; }
-        if (e && e.code === 'invalid_argument') { S.denied = S.denied || {}; S.denied[state.page] = true; setSave('readonly'); notify('You have view-only access here, so this change was not saved.', 'err'); render(); break; }
-        setSave('error'); if (tryN === 0) notifyFailOnce('Could not save. Check your connection; we will keep retrying.'); if (tryN === 5) { notify('Still not saved after several tries. Your change is kept on this device; reload once you are online.', 'err'); break; }
+        if (e && e.code === 'missing_table') { { const o = outLoad(); if (o[path] && o[path].seq === seq) { delete o[path]; outSave(); } } S.setup[path.split('/')[0]] = true; $('save').textContent = 'Database setup needed (run SQL 06)'; notifyFailOnce('Not saved: the database is missing a table. Run supabase/sql/06-sprints-weekly-reports.sql.'); progress(false); break; }
+        if (e && e.code === 'invalid_argument') { { const o = outLoad(); if (o[path] && o[path].seq === seq) { delete o[path]; outSave(); } } S.denied = S.denied || {}; S.denied[state.page] = true; setSave('readonly'); notify('You have view-only access here, so this change was not saved.', 'err'); render(); break; }
+        setSave('error'); if (tryN === 0) notifyFailOnce('Could not save. Check your connection; we will keep retrying.'); if (tryN === 5) { notify('Still not saved after several tries. Your change is kept on this device and will be sent again automatically.', 'err'); break; }
         await new Promise(r => setTimeout(r, Math.min(15000, 1500 * Math.pow(2, tryN))));
       }
     }

@@ -25,7 +25,7 @@ import { buildOff, buildPicker, closePicker, fillPersons } from '../ui/people-pi
 import { hideLoading, showLoading } from '../ui/loading.js';
 import { makeDb, sb } from '../core/supabase.js';
 import { afterAuth, drawAvatar, loadProfile, within } from '../auth/profile.js';
-import { onSnap, setSave, snapDocs } from '../core/saving.js';
+import { onSnap, setSave, snapDocs, watchOutbox } from '../core/saving.js';
 import { startExtras } from './extras-wiring.js';
 import { LANDING, doLogout, gateCard, showLogin, showSetPw } from '../auth/gate.js';
 import { bootShared } from '../features/sharing.js';
@@ -103,7 +103,7 @@ export function start() {
   }
   S.db.collection('vacations').onSnapshot(s => { const n = snapDocs('vacations', s, S.vacs); if (same(n, S.vacs)) return; S.vacs = n; softRender(); if (state.page === 'vacations') renderVacations(); if (state.page === 'capacity') renderCapacity(); }, () => {});
   S.db.collection('activity').onSnapshot(s => { S.logs = s.docs.map(d => ({ id: d.id, data: d.data() })).sort((a, b) => a.data.at < b.data.at ? 1 : -1); if (!S.logsOld.length) S.logsMore = s.docs.length >= ACTIVE_LOG_PAGE; if (state.page === 'log') renderLog(); }, () => {});
-  setSave('ready'); fillRm(); startExtras();
+  setSave('ready'); fillRm(); startExtras(); watchOutbox();
   loadMembers(); setInterval(loadMembers, 20000);
   { const al = x => x === 'dashboard' ? 'capacity' : x, h = al((location.hash.match(/^#\/(\w+)/) || [])[1]), ok = x => PAGES.some(y => y[0] === x); showPage(ok(h) ? h : ok(al(LANDING)) ? al(LANDING) : 'roadmap'); }
 }
