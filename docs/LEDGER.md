@@ -42,6 +42,21 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-27 - Login screen stuck on loading
+```
+🔄 YNMO LEDGER UPDATE — 2026-10-27
+Request: the system keeps loading on the login screen, check the issue
+Surface: cross-cutting (Roadmaps tool, sign-in)
+Outcome: the screenshots showed sign-in succeeding but the admin's profile unapproved ("Waiting for admin approval"), so the cause is data, not a hang; fix is one SQL update (DEPLOYMENT troubleshooting); app also now times out into a recovery screen and a profile read error is shown instead of being treated as a missing profile
+New facts / decisions locked:
+  • Boot never waits on the server without a limit; the recovery screen offers Try again and Sign out and start fresh
+Corrections to this skill: none
+Open / flagged:
+  • Run the SQL update that approves the admin profile in YNMO_PM and confirm the login opens the tool
+Changelog: Login no longer hangs forever; recovery screen added.
+```
+Paste this into Section 11 of the ynmo-master skill to keep it current.
+
 ### 2026-10-26 - Link sprint tasks to Jira (search as you type)
 ```
 🔄 YNMO LEDGER UPDATE — 2026-10-26

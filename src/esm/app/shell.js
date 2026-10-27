@@ -22,7 +22,7 @@ import { closeCtx } from '../ui/editing.js';
 import { buildOff, buildPicker, closePicker, fillPersons } from '../ui/people-picker.js';
 import { hideLoading, showLoading } from '../ui/loading.js';
 import { makeDb, sb } from '../core/supabase.js';
-import { afterAuth, drawAvatar, loadProfile } from '../auth/profile.js';
+import { afterAuth, drawAvatar, loadProfile, within } from '../auth/profile.js';
 import { onSnap, setSave, snapDocs } from '../core/saving.js';
 import { startExtras } from './extras-wiring.js';
 import { LANDING, doLogout, gateCard, showLogin, showSetPw } from '../auth/gate.js';
@@ -103,15 +103,24 @@ export function start() {
   loadMembers(); setInterval(loadMembers, 20000);
   { const h = (location.hash.match(/^#\/(\w+)/) || [])[1], ok = x => PAGES.some(y => y[0] === x); showPage(ok(h) ? h : ok(LANDING) ? LANDING : 'roadmap'); }
 }
+/** The sign-in check or profile did not answer: show a way out instead of a spinner that never ends. */
+function showStuck(why) {
+  const c = gateCard('Taking longer than expected', why || 'We could not reach the server to check your sign-in. This is usually the network or a stale saved sign-in.');
+  const b1 = el('button', 'btn primary', 'Try again'); b1.type = 'button'; b1.addEventListener('click', () => location.reload());
+  const b2 = el('button', 'btn', 'Sign out and start fresh'); b2.type = 'button';
+  b2.addEventListener('click', async () => { try { await Promise.race([sb.auth.signOut({ scope: 'local' }), new Promise(r => setTimeout(r, 2500))]); } catch (e) { /* ignore */ } try { Object.keys(localStorage).filter(k => /^sb-.*-auth-token/.test(k)).forEach(k => localStorage.removeItem(k)); } catch (e) { /* ignore */ } location.reload(); });
+  c.append(b1, b2);
+}
 export async function boot() { showLoading(); try { await bootInner(); } finally { if (!started) hideLoading(); } }
 async function bootInner() {
   const shm = /^#\/share\/([A-Za-z0-9]{16,})/.exec(location.hash);
   if (shm) { await bootShared(shm[1]); return; }
   const invited = /type=(invite|recovery)/.test(location.hash), confirmed = /type=signup/.test(location.hash);
   let sess = null;
-  try { sess = (await sb.auth.getSession()).data.session; } catch (e) { /* offline */ }
+  let slow = false;
+  try { sess = (await within(sb.auth.getSession(), 10000, 'sign-in check')).data.session; } catch (e) { slow = true; /* offline or stuck */ }
   sb.auth.onAuthStateChange(ev => { if (ev === 'PASSWORD_RECOVERY' && !started) showSetPw(); });
   if (confirmed) { try { window.history.replaceState(null, '', location.pathname); } catch (e) { /* ignore */ } }
-  if (sess && invited) showSetPw(); else if (sess) { await afterAuth(sess); if (confirmed && !started) { const n = document.querySelector('#gate .meta'); if (n) n.textContent = 'Email confirmed. ' + n.textContent; } } else showLogin();
+  if (slow) showStuck(); else if (sess && invited) showSetPw(); else if (sess) { try { await afterAuth(sess); } catch (e) { showStuck(e && e.message); return; } if (confirmed && !started) { const n = document.querySelector('#gate .meta'); if (n) n.textContent = 'Email confirmed. ' + n.textContent; } } else showLogin();
 }
 

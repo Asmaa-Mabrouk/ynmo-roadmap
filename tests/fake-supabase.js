@@ -11,7 +11,7 @@ const gate=async()=>{ if(window.__net.delay) await new Promise(r=>setTimeout(r,w
 const mkUser=(email,md)=>({id:'u_'+email.replace(/\W/g,''),email,user_metadata:md||{}});
 const setSess=u=>{sess={user:u};sessionStorage.setItem('fs3',JSON.stringify(sess));return sess;};
 window.supabase={createClient:()=>({
- auth:{getSession:async()=>({data:{session:sess}}),
+ auth:{getSession:async()=>{ if(window.__authHang) return new Promise(()=>{}); return {data:{session:sess}}; },
   signInWithPassword:async({email,password})=>{ await gate(); const s=rd(); const p=s.profiles.find(x=>x.email===email); if(!p||password!==(p.__pw||'good1234')) return {error:{message:'Invalid login credentials'}}; return {data:{session:setSess(Object.assign(mkUser(email),{id:p.id}))}};},
   signUp:async({email,password,options})=>{ await gate(); const s=rd(); if(s.profiles.find(x=>x.email===email)) return {error:{message:'User already registered'}}; const u=mkUser(email,options&&options.data); const first=s.profiles.length===0; s.profiles.push({id:u.id,email,name:u.user_metadata.name,role:u.user_metadata.role,avatar:u.user_metadata.avatar,approved:first,is_admin:first,created_at:new Date().toISOString(),__pw:password});wr(s); if(window.__confirmEmail) return {data:{session:null,user:u}}; return {data:{session:setSess(u),user:u}};},
   signOut:async(o)=>{window.__signout=o||null;localStorage.setItem('fk3_signout',JSON.stringify(o||null));sess=null;sessionStorage.removeItem('fs3');return {};},

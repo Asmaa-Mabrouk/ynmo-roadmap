@@ -2,6 +2,8 @@
 
 ## Unreleased – Sprints + Weekly executive report
 
+- **Login screen no longer loads forever (2026-10-27):** the sign-in check and the profile lookup had no time limit, so when the server did not answer (network, paused or slow Supabase project, a stale saved sign-in) the page stayed on "Loading…". They now give up after 10-12 seconds and show **Taking longer than expected** with **Try again** and **Sign out and start fresh** (clears the saved sign-in on this browser). Test `login_hang.py` (6).
+
 - **Link a sprint task to Jira by searching (2026-10-26):** on a sprint plan, the line options (⋮⋮) of a scope or sub-section now have **Link to Jira…** (or **Change Jira link**). Type a few letters of the title, or a key like DYC-123, and pick the ticket from a live list (optionally limited to project keys, so each board can be searched on its own). The task then shows the Jira key as a link that opens the issue, takes the Jira status, and can be unlinked. Read-only: nothing is changed in Jira. New Edge Function **`jira-search`** (editors only, same three secrets as `jira-sync`, **must be deployed**); the Jira site address is remembered from Pull from Jira / search so keys become links. Tests: `jira_link.py` (14).
 
 - **Monthly is sorted by default (2026-10-26):** the board now opens already sorted by product (Tifli, AI, Daycare, Plan, SCHS, Warif). When someone **adds a card**, sorting switches **off** so the new card stays where it was added and can be dragged; clicking **Sort by product** again sorts it into place. The choice is remembered per browser.

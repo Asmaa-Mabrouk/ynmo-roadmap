@@ -79,3 +79,14 @@ Edit `SUPABASE_URL` / `SUPABASE_KEY` in `src/esm/core/supabase.js` (publishable 
 
 ## 7. Backups
 Supabase daily backups (plan dependent). Baselines are extra in-app checkpoints; CSV export exists for the roadmap; log export for audit.
+
+## Troubleshooting: an admin sees "Waiting for admin approval"
+
+Sign-in worked (Supabase Auth logs show Login 200) but the person's row in `public.profiles` is not approved. This happens when the Auth user was deleted and created again (a new profile row is made unapproved) or the row was removed. Fix in the Supabase SQL editor (runs as the database owner, so the protection trigger allows it):
+
+```sql
+update public.profiles set approved = true, is_admin = true where lower(email) = lower('<the admin email>');
+select id, email, approved, is_admin from public.profiles order by created_at;
+```
+
+If the select shows no row for that email, sign in once more (the app creates it), then run the update again.

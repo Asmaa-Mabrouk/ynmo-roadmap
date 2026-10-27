@@ -10201,6 +10201,26 @@ a.jkchip:hover{text-decoration:underline}
       showPage(ok(h) ? h : ok(LANDING) ? LANDING : "roadmap");
     }
   }
+  function showStuck(why3) {
+    const c = gateCard("Taking longer than expected", why3 || "We could not reach the server to check your sign-in. This is usually the network or a stale saved sign-in.");
+    const b1 = el("button", "btn primary", "Try again");
+    b1.type = "button";
+    b1.addEventListener("click", () => location.reload());
+    const b2 = el("button", "btn", "Sign out and start fresh");
+    b2.type = "button";
+    b2.addEventListener("click", async () => {
+      try {
+        await Promise.race([sb.auth.signOut({ scope: "local" }), new Promise((r) => setTimeout(r, 2500))]);
+      } catch (e) {
+      }
+      try {
+        Object.keys(localStorage).filter((k) => /^sb-.*-auth-token/.test(k)).forEach((k) => localStorage.removeItem(k));
+      } catch (e) {
+      }
+      location.reload();
+    });
+    c.append(b1, b2);
+  }
   async function boot() {
     showLoading();
     try {
@@ -10217,9 +10237,11 @@ a.jkchip:hover{text-decoration:underline}
     }
     const invited = /type=(invite|recovery)/.test(location.hash), confirmed = /type=signup/.test(location.hash);
     let sess = null;
+    let slow = false;
     try {
-      sess = (await sb.auth.getSession()).data.session;
+      sess = (await within(sb.auth.getSession(), 1e4, "sign-in check")).data.session;
     } catch (e) {
+      slow = true;
     }
     sb.auth.onAuthStateChange((ev) => {
       if (ev === "PASSWORD_RECOVERY" && !started) showSetPw();
@@ -10230,9 +10252,15 @@ a.jkchip:hover{text-decoration:underline}
       } catch (e) {
       }
     }
-    if (sess && invited) showSetPw();
+    if (slow) showStuck();
+    else if (sess && invited) showSetPw();
     else if (sess) {
-      await afterAuth(sess);
+      try {
+        await afterAuth(sess);
+      } catch (e) {
+        showStuck(e && e.message);
+        return;
+      }
       if (confirmed && !started) {
         const n = document.querySelector("#gate .meta");
         if (n) n.textContent = "Email confirmed. " + n.textContent;
@@ -10241,11 +10269,19 @@ a.jkchip:hover{text-decoration:underline}
   }
 
   // src/esm/auth/profile.js
+  function within(p, ms, what) {
+    let t;
+    const lim = new Promise((_, rej) => {
+      t = setTimeout(() => rej(new Error("The server is taking too long to answer (" + (what || "request") + "). Check the connection and try again.")), ms);
+    });
+    return Promise.race([Promise.resolve(p), lim]).finally(() => clearTimeout(t));
+  }
   async function loadProfile() {
-    const s = (await sb.auth.getSession()).data.session;
+    const s = (await within(sb.auth.getSession(), 1e4, "sign-in check")).data.session;
     if (!s) return null;
     const u = s.user, md = u.user_metadata || {};
-    let r = await sb.from("profiles").select("*").eq("id", u.id).maybeSingle();
+    let r = await within(sb.from("profiles").select("*").eq("id", u.id).maybeSingle(), 12e3, "your profile");
+    if (r.error) throw new Error("Could not read your profile: " + (r.error.message || "server error") + ". Nothing was changed.");
     let p = r.data;
     if (!p) {
       await sb.from("profiles").insert({ id: u.id, email: u.email, name: md.name || (u.email || "").split("@")[0], role: md.role || "", avatar: md.avatar || "" });

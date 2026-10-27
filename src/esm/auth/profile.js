@@ -13,10 +13,16 @@ import { avatarEl } from '../ui/avatars.js';
 import { signOutEverywhere } from '../features/safety.js';
 
 /* ---------- profile ---------- */
+/** Wait for a call to the server, but never forever: a stuck call becomes a clear error instead of an endless "Loading…". */
+export function within(p, ms, what) {
+  let t; const lim = new Promise((_, rej) => { t = setTimeout(() => rej(new Error('The server is taking too long to answer (' + (what || 'request') + '). Check the connection and try again.')), ms); });
+  return Promise.race([Promise.resolve(p), lim]).finally(() => clearTimeout(t));
+}
 export async function loadProfile() {
-  const s = (await sb.auth.getSession()).data.session; if (!s) return null;
+  const s = (await within(sb.auth.getSession(), 10000, 'sign-in check')).data.session; if (!s) return null;
   const u = s.user, md = u.user_metadata || {};
-  let r = await sb.from('profiles').select('*').eq('id', u.id).maybeSingle();
+  let r = await within(sb.from('profiles').select('*').eq('id', u.id).maybeSingle(), 12000, 'your profile');
+  if (r.error) throw new Error('Could not read your profile: ' + (r.error.message || 'server error') + '. Nothing was changed.');
   let p = r.data;
   if (!p) {
     await sb.from('profiles').insert({ id: u.id, email: u.email, name: md.name || (u.email || '').split('@')[0], role: md.role || '', avatar: md.avatar || '' });
