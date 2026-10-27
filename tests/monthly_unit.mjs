@@ -83,8 +83,9 @@ import * as cap from '../src/esm/features/capacity.js';
   ok('resources: Khalid Abdelfattah is the Design Khalid', cap.matchResource('Khalid Abdelfattah', RS, 'UX / Design') === 'Khalid');
   ok('resources: Khalid Nazim (PM) is not the Design Khalid', cap.matchResource('Khalid Nazim', RS, 'PM') === '');
   ok('resources: an unknown name matches nothing', cap.matchResource('Nobody', RS, 'PM') === '');
-  const rd = cap.resolveDefaults({}, RS), pm = rd.lanes.find(l => l.k === 'pm').people, des = rd.lanes.find(l => l.k === 'des').people, beP = rd.lanes.find(l => l.k === 'be').people;
-  ok('resources: defaults are resolved (PM keeps Khalid Nazim, Design uses Khalid, BE uses Hamid Shahin)', pm.includes('Khalid Nazim') && des.includes('Khalid') && !des.includes('Khalid Abdelfattah') && beP.includes('Hamid Shahin'));
+  const rd = cap.resolveDefaults({}, RS), des = rd.lanes.find(l => l.k === 'des').people, beP = rd.lanes.find(l => l.k === 'be').people;
+  ok('resources: defaults are resolved (Design uses Khalid, BE uses Hamid Shahin)', des.includes('Khalid') && !des.includes('Khalid Abdelfattah') && beP.includes('Hamid Shahin'));
   ok('resources: saved lanes are left exactly as saved', cap.resolveDefaults({ lanes: [{ k: 'be', people: ['Hamid'] }] }, RS).lanes.find(l => l.k === 'be').people.join() === 'Hamid');
-  const um = cap.unmatched(rd, RS); ok('resources: names Resources does not list are reported', um.some(x => x.name === 'Khalid Nazim') && !um.some(x => x.name === 'Saad'));
+  const um = cap.unmatched(rd, RS); ok('resources: names Resources does not list are reported', um.some(x => x.name === 'Altramsi') && !um.some(x => x.name === 'Saad'));
+  ok('PMs are not a Dashboard track and their old points are ignored', !cap.LANES.some(l => l.k === 'pm') && cap.totalPts({ pts: { be: 3, pm: 5 } }) === 3 && Object.keys(cap.personLoads([{ who: { pm: { Asmaa: 5 }, be: { Hamid: 2 } } }])).join() === 'Hamid');
 }

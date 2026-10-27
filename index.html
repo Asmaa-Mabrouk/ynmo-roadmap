@@ -8902,11 +8902,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     { k: "fe", n: "Full Stack FE", people: ["Amal", "Sayeh", "Abdelhamid"] },
     { k: "mob", n: "Full Stack Mobile", people: ["Aya Fathy", "Adnan"] },
     { k: "be", n: "BE", people: ["Soliman", "Wardany", "Hosieny", "Hamid"] },
-    { k: "pm", n: "PMs", people: ["Asmaa", "Engy", "Emad", "Khalid Nazim"] },
     { k: "des", n: "Design", people: ["Saad", "Khalid Abdelfattah"] },
     { k: "qa", n: "Quality", people: ["Mona", "Dina Mousa", "Zahran", "Dina Sam"] }
   ];
-  var DOMAIN_OF = { ai: "AI / ML", fe: "Frontend", mob: "Mobile", be: "Backend", pm: "PM", des: "UX / Design", qa: "QA" };
+  var DOMAIN_OF = { ai: "AI / ML", fe: "Frontend", mob: "Mobile", be: "Backend", des: "UX / Design", qa: "QA" };
   function matchResource(name, resources2, domain) {
     const f = fold3(name), list = resources2 || [], exact = list.find((r) => fold3(r.name) === f);
     if (exact) return exact.name;
@@ -8993,7 +8992,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   };
   function personLoads(lines) {
     const out = {};
-    (lines || []).forEach((l) => Object.keys(l && l.who || {}).forEach((k) => {
+    (lines || []).forEach((l) => Object.keys(l && l.who || {}).filter((k) => LANES2.some((x) => x.k === k)).forEach((k) => {
       const w = whoOf(l, k);
       Object.keys(w).forEach((n) => {
         out[n] = (out[n] || 0) + Math.max(0, +w[n] || 0);
@@ -9013,7 +9012,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     return { people: here, raw: Math.round(raw * 10) / 10, cap: Math.round(raw * (1 - s.reserve - s.buffer) * 10) / 10 };
   }
   var ptsOf = (l, k) => Math.max(0, +(l && l.pts && l.pts[k]) || 0);
-  var totalPts = (l) => Object.keys(l && l.pts || {}).reduce((a, k) => a + ptsOf(l, k), 0);
+  var totalPts = (l) => LANES2.reduce((a, x) => a + ptsOf(l, x.k), 0);
   function loads(lines) {
     const out = {};
     LANES2.forEach((l) => {

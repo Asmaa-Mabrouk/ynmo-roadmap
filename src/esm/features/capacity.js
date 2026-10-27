@@ -1,6 +1,6 @@
 /**
  * @module features/capacity
- * Monthly capacity in points, per role (lane). Pure functions: no state, no DOM.
+ * Monthly capacity in points, per role (lane). Tracks: AI, Full Stack FE, Full Stack Mobile, BE, Design, Quality (PMs are not planned on the Dashboard; old PM points on a card are ignored). Pure functions: no state, no DOM.
  * A card carries points per role (`l.pts = {fe: 5, be: 3}`); a month has a capacity per role from the people in that role,
  * their leave in the month, a points-per-person figure, and a reserve (bugs, support) plus a buffer.
  * `needs` on a card (the internal id of another card) says that card must be planned in the same month or earlier.
@@ -12,12 +12,11 @@ export const LANES = [
   { k: 'fe', n: 'Full Stack FE', people: ['Amal', 'Sayeh', 'Abdelhamid'] },
   { k: 'mob', n: 'Full Stack Mobile', people: ['Aya Fathy', 'Adnan'] },
   { k: 'be', n: 'BE', people: ['Soliman', 'Wardany', 'Hosieny', 'Hamid'] },
-  { k: 'pm', n: 'PMs', people: ['Asmaa', 'Engy', 'Emad', 'Khalid Nazim'] },
   { k: 'des', n: 'Design', people: ['Saad', 'Khalid Abdelfattah'] },
   { k: 'qa', n: 'Quality', people: ['Mona', 'Dina Mousa', 'Zahran', 'Dina Sam'] }
 ];
 /** The Resources domain of each track: where a person of that track is listed in Resources. */
-export const DOMAIN_OF = { ai: 'AI / ML', fe: 'Frontend', mob: 'Mobile', be: 'Backend', pm: 'PM', des: 'UX / Design', qa: 'QA' };
+export const DOMAIN_OF = { ai: 'AI / ML', fe: 'Frontend', mob: 'Mobile', be: 'Backend', des: 'UX / Design', qa: 'QA' };
 /** The name of the person in Resources (resources: [{name, domain}]) that `name` stands for, or ''.
  *  Exact match first; then a short name that starts a longer Resources name ("Hamid" for "Hamid Shahin"), told apart by the track's domain;
  *  a longer name for a shorter Resources name ("Khalid Nazim" for "Khalid") only when that person is listed in the track's domain. */
@@ -75,7 +74,7 @@ export function personCap(name, range, vacs, cfg) { const s = settings(cfg); ret
 /** Who works on a card in a role: {name: points}. */
 export const whoOf = (l, k) => { const w = l && l.who && l.who[k]; return w && typeof w === 'object' ? w : {}; };
 /** Points of each person over a list of cards, all roles together: {name: points}. */
-export function personLoads(lines) { const out = {}; (lines || []).forEach(l => Object.keys((l && l.who) || {}).forEach(k => { const w = whoOf(l, k); Object.keys(w).forEach(n => { out[n] = (out[n] || 0) + Math.max(0, +w[n] || 0); }); })); return out; }
+export function personLoads(lines) { const out = {}; (lines || []).forEach(l => Object.keys((l && l.who) || {}).filter(k => LANES.some(x => x.k === k)).forEach(k => { const w = whoOf(l, k); Object.keys(w).forEach(n => { out[n] = (out[n] || 0) + Math.max(0, +w[n] || 0); }); })); return out; }
 /** Plannable points of one role in a month: people x points each, less their leave, less the days after their last working day,
  *  less reserve and buffer. `people` counts those still working at some point of the month. */
 export function laneCapacity(lane, range, vacs, cfg) {
@@ -84,7 +83,7 @@ export function laneCapacity(lane, range, vacs, cfg) {
   return { people: here, raw: Math.round(raw * 10) / 10, cap: Math.round(raw * (1 - s.reserve - s.buffer) * 10) / 10 };
 }
 export const ptsOf = (l, k) => Math.max(0, +(l && l.pts && l.pts[k]) || 0);
-export const totalPts = l => Object.keys((l && l.pts) || {}).reduce((a, k) => a + ptsOf(l, k), 0);
+export const totalPts = l => LANES.reduce((a, x) => a + ptsOf(l, x.k), 0);
 /** Points of each role used by a list of cards: {ai: 3, fe: 5, ...} */
 export function loads(lines) { const out = {}; LANES.forEach(l => { out[l.k] = 0; }); (lines || []).forEach(x => LANES.forEach(l => { out[l.k] += ptsOf(x, l.k); })); return out; }
 /** ok / warn (above 90%) / over. A role with no capacity and no points is ok. */

@@ -42,6 +42,21 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-27 - PMs removed from the Dashboard
+```
+🔄 YNMO LEDGER UPDATE — 2026-10-27
+Request: remove PMs from the dashboard
+Surface: cross-cutting (Roadmaps tool)
+Outcome: Dashboard has six tracks (AI, Full Stack FE, Full Stack Mobile, BE, Design, Quality); PM people no longer listed
+New facts / decisions locked:
+  • PMs are not planned on the Dashboard; PM points already on cards are ignored
+Corrections to this skill: the November team list in earlier entries included PMs; the Dashboard now excludes them
+Open / flagged:
+  • Khalid Nazim is no longer needed on the Dashboard; only Khalid Abdelfattah (Design, listed as "Khalid" in Resources) remains
+Changelog: PMs removed from the Dashboard.
+```
+Paste this into Section 11 of the ynmo-master skill to keep it current.
+
 ### 2026-10-27 - Dashboard simpler; names follow Resources
 ```
 🔄 YNMO LEDGER UPDATE — 2026-10-27
