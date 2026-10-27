@@ -76,4 +76,15 @@ import * as cap from '../src/esm/features/capacity.js';
   const pl = cap.personLoads([{ who: { be: { Soliman: 5, Hamid: 3 }, fe: { Soliman: 2 } } }, { who: { be: { Soliman: 1 } } }, { pts: { be: 4 } }]);
   ok('person loads: points add up per person across tracks and cards (Soliman 8, Hamid 3)', pl.Soliman === 8 && pl.Hamid === 3 && Object.keys(pl).length === 2);
   ok('who: a missing or bad value gives nobody', Object.keys(cap.whoOf({}, 'be')).length === 0 && Object.keys(cap.whoOf({ who: { be: 5 } }, 'be')).length === 0 && cap.whoOf({ who: { be: { A: 2 } } }, 'be').A === 2);
+  // names follow Resources
+  const RS = [{ name: 'Hamid Shahin', domain: 'Engineering' }, { name: 'Khalid', domain: 'UX / Design' }, { name: 'Saad', domain: 'UX / Design' }, { name: 'Wardany', domain: 'Backend' }];
+  ok('resources: an exact name is kept', cap.matchResource('Saad', RS, 'UX / Design') === 'Saad');
+  ok('resources: a short name finds the longer Resources name (Hamid is Hamid Shahin)', cap.matchResource('Hamid', RS, 'Backend') === 'Hamid Shahin');
+  ok('resources: Khalid Abdelfattah is the Design Khalid', cap.matchResource('Khalid Abdelfattah', RS, 'UX / Design') === 'Khalid');
+  ok('resources: Khalid Nazim (PM) is not the Design Khalid', cap.matchResource('Khalid Nazim', RS, 'PM') === '');
+  ok('resources: an unknown name matches nothing', cap.matchResource('Nobody', RS, 'PM') === '');
+  const rd = cap.resolveDefaults({}, RS), pm = rd.lanes.find(l => l.k === 'pm').people, des = rd.lanes.find(l => l.k === 'des').people, beP = rd.lanes.find(l => l.k === 'be').people;
+  ok('resources: defaults are resolved (PM keeps Khalid Nazim, Design uses Khalid, BE uses Hamid Shahin)', pm.includes('Khalid Nazim') && des.includes('Khalid') && !des.includes('Khalid Abdelfattah') && beP.includes('Hamid Shahin'));
+  ok('resources: saved lanes are left exactly as saved', cap.resolveDefaults({ lanes: [{ k: 'be', people: ['Hamid'] }] }, RS).lanes.find(l => l.k === 'be').people.join() === 'Hamid');
+  const um = cap.unmatched(rd, RS); ok('resources: names Resources does not list are reported', um.some(x => x.name === 'Khalid Nazim') && !um.some(x => x.name === 'Saad'));
 }

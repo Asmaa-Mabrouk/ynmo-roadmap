@@ -6,17 +6,20 @@
  */
 import { S } from '../core/state.js';
 import { $, el, canEdit } from '../core/model.js';
-import { fmtIso, pageHead, todayIso } from '../core/shared.js';
+import { pageHead, todayIso } from '../core/shared.js';
 import { monthLabel, monthRange, nextMonth, isMonth, cardId } from '../features/month-model.js';
-import { personCap, personLoads, personState, review, settings, suggestMoves } from '../features/capacity.js';
-import { checkPlan, depProblemsFor, openCapSettings } from '../features/capacity-view.js';
+import { DOMAIN_OF, personCap, personLoads, resolveDefaults, review, suggestMoves } from '../features/capacity.js';
+import { checkPlan, depProblemsFor, missingInResources, openCapSettings, resources } from '../features/capacity-view.js';
+import { write } from '../core/saving.js';
+import { logAct } from '../core/shared.js';
+import { fillPersons } from '../ui/people-picker.js';
 import { showPage } from '../app/shell.js';
+import { barsTracks, columnsTrend, heatPeople, heatTracks, legend, tipHost, withTable } from './capacity-charts.js';
 
-const cfg = () => (S.ideas && S.ideas.capacity) || {};
+const cfg = () => resolveDefaults((S.ideas && S.ideas.capacity) || {}, resources());
 const fmt = n => String(Math.round(n * 10) / 10);
 const ui = { m: '' }; /* month shown in the team section */
 const WORD = { ok: 'Fits', warn: 'Tight', over: 'Over' };
-const short = iso => fmtIso(iso).replace(/ \d{4}$/, '');
 
 /** From this month to the last month that has a board (never fewer than four months). */
 export function capMonths() {
@@ -33,7 +36,7 @@ function tiles(rev) {
   const g = el('div', 'cpgrid');
   rev.forEach(r => {
     const bad = r.lanes.filter(x => x.st === 'over'), tight = r.lanes.filter(x => x.st === 'warn');
-    const t = el('div', 'cptile cp-' + r.st); t.dataset.mo = r.m;
+    const t = el('button', 'cptile cp-' + r.st + (r.m === ui.m ? ' sel' : '')); t.type = 'button'; t.dataset.mo = r.m; t.setAttribute('aria-pressed', String(r.m === ui.m)); t.title = 'Show ' + monthLabel(r.m) + ' in the bars below'; t.addEventListener('click', () => { ui.m = r.m; renderCapacity(); });
     const top = el('div', 'cptop'); top.append(el('strong', '', monthLabel(r.m)), el('span', 'cppill', WORD[r.st])); t.append(top);
     t.append(el('div', 'cpline', bad.length ? bad.map(x => x.n).join(', ') + (bad.length > 1 ? ' are over' : ' is over') : tight.length ? tight.map(x => x.n).join(', ') + (tight.length > 1 ? ' are almost full' : ' is almost full') : r.pts ? 'Everything fits' : 'Nothing planned yet'));
     t.append(el('div', 'cpsub', r.pts + ' points planned · ' + r.lines.length + ' card' + (r.lines.length === 1 ? '' : 's')));
@@ -53,7 +56,10 @@ function fixes(rev, months) {
     items.push(it);
   }));
   const vac = vacList(), seen = {};
-  rev.forEach(r => { const ld = personLoads(r.lines); Object.keys(ld).forEach(n => { const cp = personCap(n, monthRange(r.m), vac, cfg()); if (ld[n] > cp + 1e-9) items.push({ sev: 'warn', m: r.m, head: monthLabel(r.m) + ' · ' + n + ' has too many points', body: n + ' has ' + fmt(ld[n]) + ' points planned and can take ' + fmt(cp) + ' (after leave, reserve and buffer).', tips: [] }); }); });
+  rev.forEach(r => {
+    const ld = personLoads(r.lines), over = Object.keys(ld).map(n => ({ n: n, pl: ld[n], cp: personCap(n, monthRange(r.m), vac, cfg()) })).filter(x => x.pl > x.cp + 1e-9);
+    if (over.length) items.push({ sev: 'warn', m: r.m, head: monthLabel(r.m) + ' · ' + over.length + (over.length === 1 ? ' person has' : ' people have') + ' more points than they can take', body: over.map(x => x.n + ' ' + fmt(x.pl) + ' / ' + fmt(x.cp)).join(', ') + ' (planned / can take, after leave, reserve and buffer).', tips: [] });
+  });
   checkPlan(months).filter(c => c.t !== 'cap').forEach(c => items.push({ sev: 'warn', m: c.m, head: monthLabel(c.m) + ' · ' + (c.t === 'dep' ? 'Card order' : 'Roadmap date'), body: c.s, tips: [] }));
   if (!items.length) { const ok = el('div', 'cpok', 'Nothing to fix. Every track fits in every month, cards are in a workable order and roadmap bars match their months.'); ok.id = 'cpnone'; box.append(ok); return box; }
   items.forEach(it => {
@@ -63,39 +69,17 @@ function fixes(rev, months) {
   return box;
 }
 
-function room(rev) {
-  const wrap = el('div', 'cproomwrap'), t = el('table', 'cproom'); t.id = 'cproom';
-  const h = el('tr'); h.append(el('th', '', 'Track')); rev.forEach(r => h.append(el('th', '', monthLabel(r.m)))); t.append(el('thead')); t.firstChild.append(h);
-  const b = el('tbody'); rev[0].lanes.forEach((l, i) => {
-    const tr = el('tr'); tr.dataset.lane = l.k; tr.append(el('th', '', l.n));
-    rev.forEach(r => { const x = r.lanes[i], td = el('td', 'cp-' + x.st); td.append(el('b', '', fmt(x.used) + ' / ' + fmt(x.cap)), el('span', '', x.st === 'over' ? fmt(x.over) + ' over' : fmt(x.free) + ' free')); td.title = x.n + ', ' + monthLabel(r.m) + ': ' + x.people + ' people, ' + fmt(x.used) + ' points planned of ' + fmt(x.cap) + '.'; tr.append(td); });
-    b.append(tr);
-  });
-  t.append(b); wrap.append(t); return wrap;
-}
-
-function team(months) {
-  if (!months.includes(ui.m)) ui.m = months[0];
-  const s = settings(cfg()), today = todayIso(), vac = vacList(), grid = el('div', 'cpteam'), rg = monthRange(ui.m), ld = personLoads(linesOf(ui.m));
-  const where = {}; s.lanes.forEach(l => l.people.forEach(p => { (where[p] = where[p] || []).push(l.n); }));
-  s.lanes.forEach(l => {
-    const c = el('div', 'cpcard'); c.dataset.lane = l.k;
-    const away = l.people.filter(p => { const st = personState(p, today, vac, s.leaving); return st.onLeave || (st.leaving && st.leaving.state === 'left'); }).length;
-    c.append(el('h3', '', l.n), el('div', 'cpsub', l.people.length + ' people' + (away ? ' · ' + away + ' not available now' : '')));
-    l.people.forEach(p => {
-      const st = personState(p, today, vac, s.leaving), row = el('div', 'cpperson'); row.dataset.name = p; row.append(el('span', 'cpname', p));
-      const tags = el('span', 'cptags');
-      if (st.leaving) tags.append(el('span', 'cptag ' + (st.leaving.state === 'later' ? 'info' : 'bad'), st.leaving.state === 'left' ? 'Left on ' + short(st.leaving.date) : 'Leaving ' + short(st.leaving.date) + (st.leaving.state === 'soon' ? ' (soon)' : '')));
-      if (st.onLeave) tags.append(el('span', 'cptag warn', 'On leave until ' + short(st.leave.a1)));
-      else if (st.leave) tags.append(el('span', 'cptag info', 'Leave ' + short(st.leave.a0) + (st.leave.a1 > st.leave.a0 ? ' to ' + short(st.leave.a1) : '')));
-      const cp = personCap(p, rg, vac, cfg()), pl = ld[p] || 0;
-      if (cp > 0 || pl > 0) tags.append(el('span', 'cptag ' + (pl > cp + 1e-9 ? 'bad' : pl >= cp * 0.9 && pl > 0 ? 'warn' : 'info') + ' cpload', fmt(pl) + ' / ' + fmt(cp) + ' pts'));
-      if (where[p].length > 1) tags.append(el('span', 'cptag', 'Also in ' + where[p].filter(n => n !== l.n).join(', ')));
-      row.append(tags); c.append(row);
-    });
-    grid.append(c);
-  });
-  return grid;
+/** Names in the tracks that Resources does not list yet: say so, and (editors) add them. */
+function missingNote() {
+  const miss = missingInResources(); if (!miss.length) return null;
+  const box = el('div', 'cpitem cp-warn'); box.id = 'cpmissing';
+  box.append(el('strong', '', miss.length + (miss.length === 1 ? ' name is' : ' names are') + ' not in Resources yet'), el('div', '', miss.map(x => x.name + ' (' + x.track + ')').join(', ') + '. Leave from Vacations and the roadmap can only follow people who are listed in Resources.'));
+  if (canEdit()) {
+    const b = el('button', 'btn sm primary', 'Add them to Resources'); b.type = 'button'; b.id = 'cpaddres';
+    b.addEventListener('click', () => { miss.forEach(x => { const id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); S.extras[id] = { n: x.name, domain: DOMAIN_OF[x.k], sqs: ['tifli'] }; write('people/' + id, S.extras[id]); logAct('resource', 'added ' + x.name + ' (' + DOMAIN_OF[x.k] + ') from the Dashboard'); }); fillPersons(); renderCapacity(); });
+    box.append(b);
+  }
+  return box;
 }
 
 export function renderCapacity() {
@@ -104,12 +88,17 @@ export function renderCapacity() {
   const tools = el('div', 'row');
   const mo = el('button', 'btn sm', 'Open Monthly'); mo.type = 'button'; mo.addEventListener('click', () => showPage('monthly')); tools.append(mo);
   if (canEdit()) { const cs = el('button', 'btn sm', 'Dashboard settings'); cs.type = 'button'; cs.id = 'cpsettings'; cs.addEventListener('click', () => openCapSettings(renderCapacity)); tools.append(cs); }
-  root.append(pageHead('Dashboard', 'Can the team deliver what each month promises? Points planned in Monthly are compared with what each track can take, after leave, a reserve for bugs and support, and a buffer.', tools));
+  root.append(pageHead('Dashboard', 'Can the team deliver what each month promises? Green fits, red is over.', tools));
+  tipHost(root);
+  if (!months.includes(ui.m)) ui.m = (rev.find(r => r.pts > 0) || rev[0]).m;
   const sec = (id, t, sub) => { const c = el('section', 'cpsec'); c.id = id; c.append(el('h2', '', t)); if (sub) c.append(el('p', 'sub', sub)); root.append(c); return c; };
-  sec('cp-glance', 'The months at a glance').append(tiles(rev));
-  sec('cp-fix', 'What needs fixing', 'If something is over, change the points or move a card in Monthly, then come back here.').append(fixes(rev, months));
-  sec('cp-room', 'Room left in each track', 'Used / can take, in points. "Free" is what a track can still add; this is what can be moved in.').append(room(rev));
-  const ts = sec('cp-team', 'The team', 'Who is in each track, what each person has planned in the month you pick (points planned / points they can take), who is on leave, and who has left or is about to leave (set in Dashboard settings).');
-  const mp = el('select'); mp.id = 'cpmonth'; mp.setAttribute('aria-label', 'Month'); months.forEach(m => { const o = el('option', '', monthLabel(m)); o.value = m; o.selected = m === ui.m; mp.append(o); }); mp.addEventListener('change', () => { ui.m = mp.value; renderCapacity(); });
-  ts.append(mp, team(months));
+  const chartSec = (id, t, sub, ch, tbl, extra) => { const s2 = sec(id, t, sub); if (extra) s2.append(extra); s2.append(withTable(id + '-c', '', '', ch, tbl)); return s2; };
+  sec('cp-glance', 'The months at a glance', 'Click a month to see it track by track below.').append(tiles(rev));
+  const fx = sec('cp-fix', 'What needs fixing', 'If something is over, change the points or move a card in Monthly, then come back here.'); const mn = missingNote(); if (mn) fx.append(mn); fx.append(fixes(rev, months));
+  const h1 = heatTracks(rev); chartSec('cp-heat', 'How full is each track', 'Darker = fuller. Red with a triangle = over. Each box: share, then planned / can take (points).', h1.node, h1.table, legend());
+  const duo = el('div', 'cpduo'); root.append(duo);
+  const barSec = el('section', 'cpsec'); barSec.id = 'cp-bars'; barSec.append(el('h2', '', monthLabel(ui.m) + ', track by track'), el('p', 'sub', 'Pale = what the track can take. Green = planned. Red = past the limit.')); const h3 = barsTracks(rev[months.indexOf(ui.m)]); barSec.append(withTable('cp-bars-c', '', '', h3.node, h3.table));
+  const colsSec = el('section', 'cpsec'); colsSec.id = 'cp-cols'; colsSec.append(el('h2', '', 'Month by month'), el('p', 'sub', 'Columns = points planned. Dark tick = what all tracks can take.')); const h2 = columnsTrend(rev); colsSec.append(withTable('cp-cols-c', '', '', h2.node, h2.table));
+  duo.append(barSec, colsSec);
+  const h4 = heatPeople(rev, cfg(), vacList(), todayIso()); chartSec('cp-heatp', 'The team', 'Each person: points planned / what they can take, with leave and who has left or is leaving.', h4.node, h4.table, legend());
 }

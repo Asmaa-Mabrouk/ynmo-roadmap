@@ -1298,6 +1298,43 @@ a.jkchip:hover{text-decoration:underline}
 .cpload { margin-inline-start: auto; }
 #cpmonth { width: max-content; max-width: 100%; font: inherit; padding: 6px 10px; border: 1.5px solid var(--line); border-radius: 8px; background: var(--surface); }
 .ptsec[hidden] { display: none; }
+
+/* ---------- Dashboard charts ---------- */
+.cpfilter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 16px; font-weight: 700; font-size: 13px; }
+.cpchart { display: grid; gap: 8px; } .cpchead { display: flex; justify-content: space-between; align-items: start; gap: 8px; } .cpchead .btn { margin-inline-start: auto; }
+.cpleg { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 12px; color: var(--muted); }
+.cpscale { display: inline-block; width: 120px; height: 10px; border-radius: 5px; background: linear-gradient(90deg, #e6f3ee, #0a5c43); }
+.cpover { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 14px; border-radius: 4px; background: #d03b3b; color: #fff; font-style: normal; font-size: 10px; }
+.cpheat { display: grid; gap: 2px; overflow-x: auto; align-items: stretch; }
+.cphh { font-size: 12px; font-weight: 700; color: var(--muted); padding: 2px 4px; align-self: end; text-align: center; }
+.cprl { font-size: 13px; font-weight: 700; padding: 0 6px; display: grid; align-content: center; } .cprl small { font-weight: 400; color: var(--muted); font-size: 11px; }
+.cpcell { border-radius: 4px; padding: 6px 4px; display: grid; justify-items: center; gap: 0; min-height: 44px; align-content: center; outline-offset: 1px; cursor: default; }
+.cpcell:hover, .cpcell:focus-visible { outline: 2px solid var(--ink); }
+.cppct { font-size: 13px; } .cpnum { font-size: 11px; opacity: .92; }
+.cpcell.cpsmall { min-height: 30px; padding: 3px 2px; } .cpheatp .cpcell .cpnum { display: none; }
+.cpcell.na { background: repeating-linear-gradient(135deg, #eceef5 0 4px, #f8f9fc 4px 8px); color: var(--muted); }
+.cpduo { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px; margin-top: 22px; } .cpduo .cpsec { margin-top: 0; }
+.cpcols { width: 100%; height: auto; max-height: 280px; }
+.cpgrid { stroke: var(--line); stroke-width: 1; } .cpbase { stroke: #bfc4d6; stroke-width: 1; }
+.cpax { fill: var(--muted); font-size: 11px; } .cpval { fill: var(--ink); font-size: 11.5px; font-weight: 700; }
+.cpcolfill { fill: #0d8560; } .cpcol.over .cpcolfill { fill: #d03b3b; } .cpcap { stroke: var(--ink); stroke-width: 2; stroke-linecap: round; }
+.cpcol:hover .cpcolfill, .cpcol:focus .cpcolfill { opacity: .8; } .cpcol:focus { outline: none; }
+.cpbars { display: grid; gap: 8px; }
+.cpbrow { display: grid; grid-template-columns: 120px 1fr minmax(96px, auto); align-items: center; gap: 8px; padding: 2px 0; border-radius: 6px; }
+.cpbrow:hover, .cpbrow:focus-visible { background: var(--surface-2); outline: none; }
+.cpbtrack { position: relative; display: block; height: 14px; border-radius: 4px; background: #eceef5; }
+.cpbtrack::before { content: ''; position: absolute; inset: 0 auto 0 0; width: var(--cap); background: #cde6dc; border-radius: 4px; }
+.cpbfill, .cpbover { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 4px; } .cpbfill { background: #0d8560; } .cpbover { background: #d03b3b; border-radius: 0 4px 4px 0; }
+.cpblimit { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); border-radius: 1px; }
+.cpbval { font-size: 12.5px; font-weight: 700; white-space: nowrap; } .cpbval.bad { color: #b3261e; }
+.cptable { border-collapse: collapse; width: 100%; font-size: 13px; } .cptable th, .cptable td { text-align: start; padding: 4px 8px; border-bottom: 1px solid var(--line); }
+.cptip2 { position: fixed; z-index: 500; background: var(--ink); color: #fff; border-radius: 8px; padding: 6px 10px; font-size: 12.5px; pointer-events: none; display: grid; gap: 1px; max-width: 280px; box-shadow: 0 8px 24px rgba(10, 12, 30, .3); }
+.cptip2[hidden] { display: none; }
+.cpchart > [hidden] { display: none !important; }
+button.cptile { font: inherit; text-align: start; cursor: pointer; width: 100%; color: var(--ink); }
+button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 0 0 0 2px var(--ink); }
+.pill.nores { border-style: dashed; color: #8a5a00; }
+.cpheatp .cprl { padding: 4px 6px; } .cpheatp .cptags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 2px; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -3763,10 +3800,10 @@ a.jkchip:hover{text-decoration:underline}
         const my = y2 > y1 ? Math.max(ra.bottom, rb.top) - gr.top + 2 : Math.min(ra.top, rb.bottom) - gr.top - 2;
         d = "M" + x1 + " " + y1 + " H" + (x1 + 7) + " V" + my + " H" + (x2 - 7) + " V" + y2 + " H" + (x2 - 1);
       }
-      const tip2 = '"' + x.from.t + '" → "' + x.to.t + '": ' + (x.bad ? x.gap === -1 ? "starts the same day the first ends" : "starts " + (-x.gap - 1) + " day(s) before the first ends" : x.gap === 0 ? "starts the next day, no buffer" : x.gap + " day(s) of buffer");
+      const tip3 = '"' + x.from.t + '" → "' + x.to.t + '": ' + (x.bad ? x.gap === -1 ? "starts the same day the first ends" : "starts " + (-x.gap - 1) + " day(s) before the first ends" : x.gap === 0 ? "starts the next day, no buffer" : x.gap + " day(s) of buffer");
       const p = sv("path", { d, fill: "none", stroke: x.bad ? "#c0392b" : "#55608a", "stroke-width": x.bad ? "2" : "1.5", "marker-end": "url(#ar-" + (x.bad ? "bad" : "ok") + ")", class: "dep" + (x.bad ? " bad" : "") });
       const t = sv("title");
-      t.textContent = tip2;
+      t.textContent = tip3;
       p.append(t);
       svg.append(p);
     });
@@ -3845,7 +3882,7 @@ a.jkchip:hover{text-decoration:underline}
   var notesOf = (l) => l && Array.isArray(l.notes) ? l.notes : l && l.note ? [{ id: "n0", t: String(l.note), by: "", at: "" }] : [];
   var SIZES = { quick: "Quick win", enh: "Small enhancement" };
   var tagsOf = (l) => (l.hp ? " [BUSINESS PRIORITY]" : "") + (SIZES[l.sz] ? " [" + SIZES[l.sz].toUpperCase() + "]" : "");
-  function monthText(doc2, products, fmt3) {
+  function monthText(doc2, products, fmt4) {
     if (!doc2 || !live(doc2.lines).length) return [];
     const prog = monthProgress(doc2.lines), out = ["MONTHLY DELIVERABLES - " + monthLabel(doc2.mo) + (prog.pct === null ? "" : " - " + prog.pct + "% complete (" + prog.done + " of " + prog.n + " done)"), ""];
     notesOf(doc2).forEach((n) => out.push("Month note" + (n.by ? " (" + n.by + ")" : "") + ": " + String(n.t).replace(/\s+/g, " ")));
@@ -3862,7 +3899,7 @@ a.jkchip:hover{text-decoration:underline}
       });
       if (ad.length) {
         out.push("Ad hoc requests:");
-        ad.forEach((l) => out.push("- " + l.t + (l.by ? " (requested by " + l.by + (l.at && fmt3 ? ", " + fmt3(l.at) : "") + ")" : "") + ": " + clampPct(l.pct) + "%"));
+        ad.forEach((l) => out.push("- " + l.t + (l.by ? " (requested by " + l.by + (l.at && fmt4 ? ", " + fmt4(l.at) : "") + ")" : "") + ": " + clampPct(l.pct) + "%"));
       }
       out.push("");
     });
@@ -4445,10 +4482,10 @@ a.jkchip:hover{text-decoration:underline}
       st.cur.d0 = a;
       st.cur.d1 = b;
       {
-        const tip2 = $("dtip") || document.body.appendChild(Object.assign(document.createElement("div"), { id: "dtip", className: "dtip" }));
-        tip2.textContent = dlabel(a) + " → " + dlabel(b) + " · " + (b - a + 1) + " d" + (mode === "move" && state.view === "person" && st.cur.person && st.cur.person !== st.person && st.cur.person !== "__none" ? " · to " + st.cur.person : "");
-        tip2.style.left = e.clientX + 14 + "px";
-        tip2.style.top = e.clientY + 16 + "px";
+        const tip3 = $("dtip") || document.body.appendChild(Object.assign(document.createElement("div"), { id: "dtip", className: "dtip" }));
+        tip3.textContent = dlabel(a) + " → " + dlabel(b) + " · " + (b - a + 1) + " d" + (mode === "move" && state.view === "person" && st.cur.person && st.cur.person !== st.person && st.cur.person !== "__none" ? " · to " + st.cur.person : "");
+        tip3.style.left = e.clientX + 14 + "px";
+        tip3.style.top = e.clientY + 16 + "px";
       }
       bar4.style.gridColumn = a + 2 + " / " + (b + 3);
       if (mode === "move") {
@@ -4943,12 +4980,12 @@ a.jkchip:hover{text-decoration:underline}
       pv.forEach((v) => {
         const ra = kOfIso(v.a0), rb = kOfIso(v.a1 || v.a0);
         if (rb < 0 || ra > NDAYS - 1) return;
-        const a = Math.max(0, ra), b2 = Math.min(NDAYS - 1, rb), tip2 = p.name + ": " + v.t + ", " + fmtIso(v.a0) + (v.a1 > v.a0 ? " to " + fmtIso(v.a1) : "") + (v.n ? " (" + v.n + ")" : "");
+        const a = Math.max(0, ra), b2 = Math.min(NDAYS - 1, rb), tip3 = p.name + ": " + v.t + ", " + fmtIso(v.a0) + (v.a1 > v.a0 ? " to " + fmtIso(v.a1) : "") + (v.n ? " (" + v.n + ")" : "");
         const o = el("div", "vac");
-        o.title = tip2;
+        o.title = tip3;
         put2(o, r, a + 2 + " / " + (b2 + 3));
         const fl = el("div", "vflag", "⚑");
-        fl.title = tip2;
+        fl.title = tip3;
         put2(fl, r, a + 2 + " / " + (a + 3));
       });
       pnotes.out.forEach((x) => put2(noteNode(x.n, x.lane, "ribbon"), r, x.n.d0 + 2 + " / " + (x.n.d1 + 3)));
@@ -5940,8 +5977,8 @@ a.jkchip:hover{text-decoration:underline}
     });
     return n;
   }
-  function reportToText(rep, products, fmt3, monthDoc) {
-    const out = ["Weekly update - " + (fmt3 ? fmt3(rep.a) : rep.a) + (rep.b ? " to " + (fmt3 ? fmt3(rep.b) : rep.b) : "") + (rep.n ? " (Sprint " + rep.n + ")" : ""), ""];
+  function reportToText(rep, products, fmt4, monthDoc) {
+    const out = ["Weekly update - " + (fmt4 ? fmt4(rep.a) : rep.a) + (rep.b ? " to " + (fmt4 ? fmt4(rep.b) : rep.b) : "") + (rep.n ? " (Sprint " + rep.n + ")" : ""), ""];
     products.forEach((p) => {
       const d = (rep.prods || {})[p.k];
       if (!d) return;
@@ -5953,7 +5990,7 @@ a.jkchip:hover{text-decoration:underline}
       });
       out.push("");
     });
-    const mt = monthText(monthDoc, products, fmt3);
+    const mt = monthText(monthDoc, products, fmt4);
     if (mt.length) out.push("", ...mt);
     return out.join("\n").trim() + "\n";
   }
@@ -6372,14 +6409,14 @@ a.jkchip:hover{text-decoration:underline}
   }
 
   // src/esm/features/month-view.js
-  var bar = (pct2, big, label) => {
-    const b = el("div", "mbar pc-" + pctBand(pct2) + (big ? " big" : "")), f = el("i");
-    f.style.width = pct2 + "%";
+  var bar = (pct3, big, label) => {
+    const b = el("div", "mbar pc-" + pctBand(pct3) + (big ? " big" : "")), f = el("i");
+    f.style.width = pct3 + "%";
     b.append(f);
     b.setAttribute("role", "progressbar");
     b.setAttribute("aria-valuemin", "0");
     b.setAttribute("aria-valuemax", "100");
-    b.setAttribute("aria-valuenow", String(pct2));
+    b.setAttribute("aria-valuenow", String(pct3));
     b.setAttribute("aria-label", label);
     return b;
   };
@@ -6404,9 +6441,9 @@ a.jkchip:hover{text-decoration:underline}
   }
 
   // src/esm/features/report-print.js
-  var bar2 = (pct2) => {
-    const b = el("span", "pr-bar pc-" + pctBand(pct2)), f = el("i");
-    f.style.width = pct2 + "%";
+  var bar2 = (pct3) => {
+    const b = el("span", "pr-bar pc-" + pctBand(pct3)), f = el("i");
+    f.style.width = pct3 + "%";
     b.append(f);
     return b;
   };
@@ -7101,7 +7138,7 @@ a.jkchip:hover{text-decoration:underline}
     }
     const wrap = el("div", "splist");
     l.forEach((r) => {
-      const st = statsOf(r), sub = r.status === "submitted", pct2 = st.avg;
+      const st = statsOf(r), sub = r.status === "submitted", pct3 = st.avg;
       const card2 = el("div", "card spcard rpcard"), info = el("div");
       const a = el("a", "splink");
       a.href = "#/reports/" + r.id;
@@ -7118,7 +7155,7 @@ a.jkchip:hover{text-decoration:underline}
       top.append(el("span", "chip rpst " + (sub ? "sub" : "draft"), sub ? "Saved" : "Not saved yet"));
       prog.append(top, el("div", "meta", st.all ? st.all + " item" + (st.all === 1 ? "" : "s") + " · " + st.done + " done · " + st.avg + "% on average" : "No items yet"));
       const b0 = el("div", "bar0"), i0 = el("i");
-      i0.style.width = pct2 + "%";
+      i0.style.width = pct3 + "%";
       b0.append(i0);
       prog.append(b0);
       const more = el("button", "btn sm spmore", "⋯");
@@ -7936,7 +7973,7 @@ a.jkchip:hover{text-decoration:underline}
     }
     const wrap = el("div", "splist");
     l.forEach((sp) => {
-      const t = tree(sp.id), leaf = t.all.filter((i) => !t.kids[i.id]), done2 = leaf.filter((i) => i.st === "done").length, pct2 = leaf.length ? Math.round(100 * done2 / leaf.length) : 0;
+      const t = tree(sp.id), leaf = t.all.filter((i) => !t.kids[i.id]), done2 = leaf.filter((i) => i.st === "done").length, pct3 = leaf.length ? Math.round(100 * done2 / leaf.length) : 0;
       const secs = Object.keys(sp.secs || {}).concat(rows(sp.id).filter((i) => i.k === "h").map((i) => i.sq), t.tops.map((i) => i.squad)).filter((k, i, a2) => k && a2.indexOf(k) === i);
       const card2 = el("div", "card spcard"), info = el("div");
       const a = el("a", "splink");
@@ -7954,7 +7991,7 @@ a.jkchip:hover{text-decoration:underline}
       const prog = el("div", "spprog");
       prog.append(el("div", "meta", done2 + " of " + leaf.length + " done"));
       const b0 = el("div", "bar0"), i0 = el("i");
-      i0.style.width = pct2 + "%";
+      i0.style.width = pct3 + "%";
       b0.append(i0);
       prog.append(b0);
       const more = el("button", "btn sm spmore", "⋯");
@@ -8865,10 +8902,34 @@ a.jkchip:hover{text-decoration:underline}
     { k: "fe", n: "Full Stack FE", people: ["Amal", "Sayeh", "Abdelhamid"] },
     { k: "mob", n: "Full Stack Mobile", people: ["Aya Fathy", "Adnan"] },
     { k: "be", n: "BE", people: ["Soliman", "Wardany", "Hosieny", "Hamid"] },
-    { k: "pm", n: "PMs", people: ["Asmaa", "Engy", "Emad", "Khalid"] },
-    { k: "des", n: "Design", people: ["Saad", "Khalid"] },
+    { k: "pm", n: "PMs", people: ["Asmaa", "Engy", "Emad", "Khalid Nazim"] },
+    { k: "des", n: "Design", people: ["Saad", "Khalid Abdelfattah"] },
     { k: "qa", n: "Quality", people: ["Mona", "Dina Mousa", "Zahran", "Dina Sam"] }
   ];
+  var DOMAIN_OF = { ai: "AI / ML", fe: "Frontend", mob: "Mobile", be: "Backend", pm: "PM", des: "UX / Design", qa: "QA" };
+  function matchResource(name, resources2, domain) {
+    const f = fold3(name), list = resources2 || [], exact = list.find((r) => fold3(r.name) === f);
+    if (exact) return exact.name;
+    const near = list.filter((r) => sameName(r.name, name) && (fold3(r.name).startsWith(f + " ") || r.domain === domain));
+    const pick2 = near.length > 1 ? near.filter((r) => r.domain === domain) : near;
+    return pick2.length === 1 ? pick2[0].name : "";
+  }
+  function resolveDefaults(cfg4, resources2) {
+    const s = settings(cfg4), out = Object.assign({}, cfg4 || {});
+    const saved2 = {};
+    (cfg4 && cfg4.lanes || []).forEach((x) => {
+      if (x && x.k && Array.isArray(x.people)) saved2[x.k] = true;
+    });
+    out.lanes = s.lanes.map((l) => ({ k: l.k, people: saved2[l.k] ? l.people : l.people.map((n) => matchResource(n, resources2, DOMAIN_OF[l.k]) || n) }));
+    return out;
+  }
+  function unmatched(cfg4, resources2) {
+    const have = new Set((resources2 || []).map((r) => fold3(r.name))), out = [];
+    settings(cfg4).lanes.forEach((l) => l.people.forEach((n) => {
+      if (!have.has(fold3(n))) out.push({ k: l.k, track: l.n, name: n });
+    }));
+    return out;
+  }
   var DEFAULTS = { ppp: 8, reserve: 0.2, buffer: 0.1 };
   var SCALE = [0, 1, 2, 3, 5, 8, 13];
   var addIso = (iso4, n) => {
@@ -9030,7 +9091,8 @@ a.jkchip:hover{text-decoration:underline}
   }
 
   // src/esm/features/capacity-view.js
-  var cfg2 = () => S.ideas && S.ideas.capacity || {};
+  var resources = () => [...directory().values()].map((p) => ({ name: p.name, domain: p.domain }));
+  var cfg2 = () => resolveDefaults(S.ideas && S.ideas.capacity || {}, resources());
   var vacList = () => Object.keys(S.vacs || {}).map((id) => S.vacs[id]).filter((v) => v && v.a0);
   var fmt = (n) => String(Math.round(n * 10) / 10);
   var monthOfId = (id) => {
@@ -9235,9 +9297,15 @@ a.jkchip:hover{text-decoration:underline}
   }
   function openCapSettings(done2) {
     if (!canEdit()) return;
-    const s = settings(cfg2());
+    const st = settings(cfg2()), known2 = resources().map((r) => r.name).sort((a, b) => a.localeCompare(b));
+    const lanes = {};
+    st.lanes.forEach((l) => {
+      lanes[l.k] = l.people.slice();
+    });
+    const leaving = Object.assign({}, st.leaving);
     openDlg("Dashboard settings", (box2) => {
-      box2.append(el("p", "sub", "Capacity of a role in a month = people x points per person, less their leave (from Vacations), less the reserve and buffer. Update the people each month."));
+      box2.classList.add("ptsdlg");
+      box2.append(el("p", "sub", "People come from Resources. Capacity of a track in a month = its people x points per person, less their leave (Vacations), less the reserve and buffer."));
       const mk = (v, step2) => {
         const i = el("input");
         i.type = "number";
@@ -9245,51 +9313,106 @@ a.jkchip:hover{text-decoration:underline}
         i.value = v;
         return i;
       };
-      const ppp = mk(s.ppp, "0.5"), rs = mk(Math.round(s.reserve * 100), "5"), bf = mk(Math.round(s.buffer * 100), "5");
-      box2.append(fld("Points per person per month", ppp), fld("Reserve for bugs and support (%)", rs), fld("Buffer (%)", bf));
-      const ta = {};
-      s.lanes.forEach((l) => {
-        const t = el("input");
-        t.type = "text";
-        t.value = l.people.join(", ");
-        t.setAttribute("aria-label", l.n + " people");
-        ta[l.k] = t;
-        box2.append(fld(l.n + " (names, comma separated)", t));
-      });
-      const lv = el("input");
-      lv.type = "text";
-      lv.placeholder = "Adnan: 2026-12-15, Mona: 2027-01-31";
-      lv.value = Object.keys(s.leaving).map((n) => n + ": " + s.leaving[n]).join(", ");
-      lv.setAttribute("aria-label", "Leaving");
-      box2.append(fld("Leaving or left (name: last working day, comma separated)", lv));
-      const msg = el("p", "sub");
-      msg.setAttribute("aria-live", "polite");
-      box2.append(msg);
+      const ppp = mk(st.ppp, "0.5"), rs = mk(Math.round(st.reserve * 100), "5"), bf = mk(Math.round(st.buffer * 100), "5");
+      const nums = el("div", "padd");
+      nums.append(fld("Points per person per month", ppp), fld("Reserve for bugs and support (%)", rs), fld("Buffer (%)", bf));
+      box2.append(nums);
+      const body = el("div");
+      box2.append(body);
+      const draw = () => {
+        body.textContent = "";
+        st.lanes.forEach((l) => {
+          const sec = el("div", "ptsec");
+          sec.dataset.k = l.k;
+          sec.append(el("h3", "", l.n));
+          const chips = el("div", "ptpills");
+          lanes[l.k].forEach((n) => {
+            const c = el("button", "pill", n + "  ×");
+            c.type = "button";
+            c.dataset.name = n;
+            c.title = known2.includes(n) ? "Remove " + n : n + " is not in Resources. Click to remove.";
+            if (!known2.includes(n)) c.classList.add("nores");
+            c.addEventListener("click", () => {
+              lanes[l.k] = lanes[l.k].filter((x) => x !== n);
+              draw();
+            });
+            chips.append(c);
+          });
+          sec.append(chips);
+          const add = el("select");
+          add.setAttribute("aria-label", "Add a person to " + l.n);
+          const o0 = el("option", "", "Add a person…");
+          o0.value = "";
+          add.append(o0);
+          known2.filter((n) => !lanes[l.k].includes(n)).forEach((n) => {
+            const o = el("option", "", n);
+            o.value = n;
+            add.append(o);
+          });
+          add.addEventListener("change", () => {
+            if (add.value) {
+              lanes[l.k].push(add.value);
+              draw();
+            }
+          });
+          sec.append(add);
+          body.append(sec);
+        });
+        const lv = el("div", "ptsec");
+        lv.id = "leavesec";
+        lv.append(el("h3", "", "Leaving or left"), el("p", "sub", "The last working day. After it the person no longer counts."));
+        Object.keys(leaving).forEach((n) => {
+          const r = el("div", "pperson");
+          r.dataset.name = n;
+          const x = el("button", "pill", n + " · " + leaving[n] + "  ×");
+          x.type = "button";
+          x.addEventListener("click", () => {
+            delete leaving[n];
+            draw();
+          });
+          r.append(x);
+          lv.append(r);
+        });
+        const all = [...new Set([].concat(...Object.keys(lanes).map((k) => lanes[k])))].sort((a, b) => a.localeCompare(b));
+        const who = el("select");
+        who.setAttribute("aria-label", "Person leaving");
+        all.forEach((n) => {
+          const o = el("option", "", n);
+          o.value = n;
+          who.append(o);
+        });
+        const dt = el("input");
+        dt.type = "date";
+        dt.setAttribute("aria-label", "Last working day");
+        const ad = el("button", "btn sm", "Add");
+        ad.type = "button";
+        ad.id = "leaveadd";
+        ad.addEventListener("click", () => {
+          if (who.value && /^\d{4}-\d{2}-\d{2}$/.test(dt.value)) {
+            leaving[who.value] = dt.value;
+            draw();
+          }
+        });
+        const row2 = el("div", "padd");
+        row2.append(fld("Person", who), fld("Last working day", dt));
+        lv.append(row2, ad);
+        body.append(lv);
+      };
+      draw();
       const ok = el("button", "btn primary", "Save"), no = el("button", "btn", "Cancel");
       ok.type = no.type = "button";
       no.addEventListener("click", closeDlg);
       ok.addEventListener("click", () => {
-        const leaving = {}, all = [];
-        s.lanes.forEach((l) => ta[l.k].value.split(",").forEach((x) => {
-          if (x.trim()) all.push(x.trim());
-        }));
-        for (const part of lv.value.split(",").map((x) => x.trim()).filter(Boolean)) {
-          const i = part.lastIndexOf(":"), n = part.slice(0, i).trim(), d = part.slice(i + 1).trim();
-          if (i < 1 || !/^\d{4}-\d{2}-\d{2}$/.test(d) || !all.includes(n)) {
-            msg.textContent = '"' + part + '": write it as Name: 2026-12-15, and the name must be in a track above.';
-            return;
-          }
-          leaving[n] = d;
-        }
-        saveIdea("capacity", { cfg: true, leaving, ppp: +ppp.value, reserve: +rs.value / 100, buffer: +bf.value / 100, lanes: s.lanes.map((l) => ({ k: l.k, people: ta[l.k].value.split(",").map((x) => x.trim()).filter(Boolean) })) }, "report", "updated the capacity settings");
+        saveIdea("capacity", { cfg: true, leaving, ppp: +ppp.value, reserve: +rs.value / 100, buffer: +bf.value / 100, lanes: st.lanes.map((l) => ({ k: l.k, people: lanes[l.k] })) }, "report", "updated the dashboard settings");
         closeDlg();
         if (done2) done2();
       });
-      const row = el("div", "row");
+      const row = el("div", "row ptsfoot");
       row.append(ok, no);
       box2.append(row);
     });
   }
+  var missingInResources = () => unmatched(cfg2(), resources());
 
   // src/esm/features/month-undo.js
   var SKIP = /* @__PURE__ */ new Set(["lines", "by", "ts", "subAt", "subBy", "status", "pl", "mo"]);
@@ -9898,8 +10021,8 @@ a.jkchip:hover{text-decoration:underline}
     });
   }
   function card(m, l, prods, ed) {
-    const p = prods.find((x) => x.k === l.k) || { k: l.k, n: l.k, squads: [] }, c = colOf2(p), pct2 = clampPct(l.pct);
-    const r = el("div", "icard mdcard" + (l.adhoc ? " adhoc" : "") + (pct2 >= 100 ? " fin" : "") + (l.hp ? " hp" : ""));
+    const p = prods.find((x) => x.k === l.k) || { k: l.k, n: l.k, squads: [] }, c = colOf2(p), pct3 = clampPct(l.pct);
+    const r = el("div", "icard mdcard" + (l.adhoc ? " adhoc" : "") + (pct3 >= 100 ? " fin" : "") + (l.hp ? " hp" : ""));
     if (l.hp) r.append(el("div", "mdribbon", "⚑ Business priority"));
     r.style.setProperty("--c", c);
     r.dataset.id = l.id;
@@ -10004,8 +10127,8 @@ a.jkchip:hover{text-decoration:underline}
           }
         });
       });
-      if (m !== BL) foot.append(pctSelect(pct2, "Percent complete", (v) => put2({ pct: v, pe: true }, 'changed "' + l.t + '" to ' + v + "%")));
-    } else if (m !== BL) foot.append(el("span", "rvp pc-" + pctBand(pct2), pct2 + "%"));
+      if (m !== BL) foot.append(pctSelect(pct3, "Percent complete", (v) => put2({ pct: v, pe: true }, 'changed "' + l.t + '" to ' + v + "%")));
+    } else if (m !== BL) foot.append(el("span", "rvp pc-" + pctBand(pct3), pct3 + "%"));
     ptsChips(l).forEach((c2) => foot.append(c2));
     if (SIZES[l.sz]) {
       const z = el("span", "chip mdsz mdsz-" + l.sz);
@@ -10430,12 +10553,247 @@ a.jkchip:hover{text-decoration:underline}
     undoMonthly();
   });
 
-  // src/esm/pages/capacity.js
-  var cfg3 = () => S.ideas && S.ideas.capacity || {};
+  // src/esm/pages/capacity-charts.js
+  var LO = "#e6f3ee";
+  var HI = "#0a5c43";
+  var BAD = "#d03b3b";
+  var INK = "#1b1f33";
   var fmt2 = (n) => String(Math.round(n * 10) / 10);
+  var pct = (u) => Math.round(u * 100) + "%";
+  var util = (used, cap) => cap > 0 ? used / cap : used > 0 ? Infinity : 0;
+  var NS = "http://www.w3.org/2000/svg";
+  var sv2 = (tag, attrs, text) => {
+    const n = document.createElementNS(NS, tag);
+    Object.keys(attrs || {}).forEach((k) => n.setAttribute(k, attrs[k]));
+    if (text !== void 0) n.textContent = text;
+    return n;
+  };
+  function shade(node, u) {
+    node.classList.remove("over");
+    if (u > 1 + 1e-9) {
+      node.classList.add("over");
+      node.style.background = BAD;
+      node.style.color = "#fff";
+      return;
+    }
+    const k = Math.round(Math.max(0, Math.min(1, u)) * 100);
+    node.style.background = "color-mix(in srgb, " + HI + " " + k + "%, " + LO + ")";
+    node.style.color = u >= 0.7 ? "#fff" : INK;
+  }
+  var tipEl2 = null;
+  function tipHost(root) {
+    tipEl2 = el("div", "cptip2");
+    tipEl2.hidden = true;
+    tipEl2.setAttribute("role", "tooltip");
+    root.append(tipEl2);
+  }
+  function tip2(node, lines) {
+    node.tabIndex = 0;
+    const show = (x, y) => {
+      if (!tipEl2) return;
+      tipEl2.textContent = "";
+      lines.forEach((t, i) => tipEl2.append(el(i ? "div" : "strong", "", t)));
+      tipEl2.hidden = false;
+      const w = tipEl2.offsetWidth;
+      tipEl2.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, x + 12)) + "px";
+      tipEl2.style.top = Math.max(8, y - 8 - tipEl2.offsetHeight) + "px";
+    };
+    node.addEventListener("pointermove", (e) => show(e.clientX, e.clientY));
+    node.addEventListener("focus", () => {
+      const r = node.getBoundingClientRect();
+      show(r.left + r.width / 2, r.top);
+    });
+    const hide = () => {
+      if (tipEl2) tipEl2.hidden = true;
+    };
+    node.addEventListener("pointerleave", hide);
+    node.addEventListener("blur", hide);
+  }
+  function withTable(id, title, sub, chart, table) {
+    const box2 = el("div", "cpchart");
+    box2.id = id;
+    const head = el("div", "cpchead"), t = el("div");
+    if (title) t.append(el("h3", "", title));
+    if (sub) t.append(el("p", "sub", sub));
+    const btn2 = el("button", "btn sm", "Table");
+    btn2.type = "button";
+    btn2.setAttribute("aria-pressed", "false");
+    head.append(t, btn2);
+    const tb = el("table", "cptable");
+    const hr = el("tr");
+    table.head.forEach((h) => hr.append(el("th", "", h)));
+    tb.append(el("thead"));
+    tb.firstChild.append(hr);
+    const body = el("tbody");
+    table.rows.forEach((r) => {
+      const tr = el("tr");
+      r.forEach((c, i) => tr.append(el(i ? "td" : "th", "", c)));
+      body.append(tr);
+    });
+    tb.append(body);
+    tb.hidden = true;
+    btn2.addEventListener("click", () => {
+      const on = tb.hidden;
+      tb.hidden = !on;
+      chart.hidden = on;
+      btn2.textContent = on ? "Chart" : "Table";
+      btn2.setAttribute("aria-pressed", String(on));
+    });
+    box2.append(head, chart, tb);
+    return box2;
+  }
+  function legend() {
+    const l = el("div", "cpleg");
+    l.setAttribute("aria-label", "Colour scale");
+    l.append(el("span", "", "Empty"));
+    const bar4 = el("i", "cpscale");
+    l.append(bar4, el("span", "", "Full (100%)"));
+    const o = el("i", "cpover");
+    o.textContent = "▲";
+    l.append(o, el("span", "", "Over the limit"));
+    return l;
+  }
+  function heatTracks(rev) {
+    const g = el("div", "cpheat");
+    g.id = "cpheat";
+    g.style.gridTemplateColumns = "120px repeat(" + rev.length + ", minmax(84px, 1fr))";
+    g.append(el("span", "cphh"));
+    rev.forEach((r) => g.append(el("span", "cphh", monthLabel(r.m))));
+    const rows2 = [];
+    rev[0].lanes.forEach((l, i) => {
+      g.append(el("span", "cprl", l.n));
+      const row = [l.n];
+      rev.forEach((r) => {
+        const x = r.lanes[i], u = util(x.used, x.cap), c = el("div", "cpcell");
+        c.dataset.lane = l.k;
+        c.dataset.m = r.m;
+        c.append(el("b", "cppct", !x.cap && !x.used ? "–" : (u > 1 ? "▲ " : "") + (Number.isFinite(u) ? pct(u) : "over")), el("span", "cpnum", fmt2(x.used) + " / " + fmt2(x.cap)));
+        shade(c, u);
+        const lines = [x.n + ", " + monthLabel(r.m), fmt2(x.used) + " points planned of " + fmt2(x.cap) + " (" + x.people + " people)", x.st === "over" ? fmt2(x.over) + " points over" : fmt2(x.free) + " points free"];
+        c.setAttribute("aria-label", lines.join(". "));
+        tip2(c, lines);
+        g.append(c);
+        row.push(fmt2(x.used) + " / " + fmt2(x.cap) + (x.st === "over" ? " (over " + fmt2(x.over) + ")" : " (free " + fmt2(x.free) + ")"));
+      });
+      rows2.push(row);
+    });
+    return { node: g, table: { head: ["Track"].concat(rev.map((r) => monthLabel(r.m))), rows: rows2 } };
+  }
+  var short = (iso4) => fmtIso(iso4).replace(/ \d{4}$/, "");
+  function heatPeople(rev, cfg4, vacs, today) {
+    const s = settings(cfg4), seen = {}, people = [];
+    s.lanes.forEach((l) => l.people.forEach((p) => {
+      if (!seen[p]) {
+        seen[p] = { n: p, tracks: [] };
+        people.push(seen[p]);
+      }
+      seen[p].tracks.push(l.n);
+    }));
+    const loads2 = rev.map((r) => personLoads(r.lines));
+    const g = el("div", "cpheat cpheatp");
+    g.id = "cpheatp";
+    g.style.gridTemplateColumns = "190px repeat(" + rev.length + ", minmax(72px, 1fr))";
+    g.append(el("span", "cphh"));
+    rev.forEach((r) => g.append(el("span", "cphh", monthLabel(r.m))));
+    const rows2 = [];
+    people.forEach((p) => {
+      const lab2 = el("span", "cprl");
+      lab2.dataset.name = p.n;
+      lab2.append(el("b", "", p.n), el("small", "", p.tracks.join(" + ")));
+      const ps = personState(p.n, today, vacs, s.leaving), tg = el("span", "cptags");
+      if (ps.leaving) tg.append(el("span", "cptag " + (ps.leaving.state === "later" ? "info" : "bad"), ps.leaving.state === "left" ? "Left on " + short(ps.leaving.date) : "Leaving " + short(ps.leaving.date) + (ps.leaving.state === "soon" ? " (soon)" : "")));
+      if (ps.onLeave) tg.append(el("span", "cptag warn", "On leave until " + short(ps.leave.a1)));
+      else if (ps.leave) tg.append(el("span", "cptag info", "Leave " + short(ps.leave.a0) + (ps.leave.a1 > ps.leave.a0 ? " to " + short(ps.leave.a1) : "")));
+      if (tg.childNodes.length) lab2.append(tg);
+      g.append(lab2);
+      const row = [p.n + " (" + p.tracks.join(" + ") + ")"];
+      rev.forEach((r, i) => {
+        const cap = personCap(p.n, monthRange(r.m), vacs, cfg4), pl = loads2[i][p.n] || 0, u = util(pl, cap), c = el("div", "cpcell cpsmall");
+        c.dataset.name = p.n;
+        c.dataset.m = r.m;
+        if (!cap && !pl) {
+          c.classList.add("na");
+          c.append(el("b", "cppct", "–"));
+        } else {
+          c.append(el("b", "cppct", (u > 1 ? "▲ " : "") + (Number.isFinite(u) ? pct(u) : "over")), el("span", "cpnum", fmt2(pl) + " / " + fmt2(cap)));
+          shade(c, u);
+        }
+        const lines = [p.n + ", " + monthLabel(r.m), !cap && !pl ? "Not available this month (left, or on leave all month)" : fmt2(pl) + " points planned of " + fmt2(cap) + " they can take"];
+        c.setAttribute("aria-label", lines.join(". "));
+        tip2(c, lines);
+        g.append(c);
+        row.push(!cap && !pl ? "not available" : fmt2(pl) + " / " + fmt2(cap));
+      });
+      rows2.push(row);
+    });
+    return { node: g, table: { head: ["Person"].concat(rev.map((r) => monthLabel(r.m))), rows: rows2 } };
+  }
+  function barsTracks(r) {
+    const wrap = el("div", "cpbars");
+    wrap.id = "cpbars";
+    const max = Math.max(1, ...r.lanes.map((x) => Math.max(x.used, x.cap))), rows2 = [];
+    r.lanes.forEach((x) => {
+      const row = el("div", "cpbrow");
+      row.dataset.lane = x.k;
+      row.append(el("span", "cprl", x.n));
+      const track = el("span", "cpbtrack"), pc = x.cap / max * 100, within2 = Math.min(x.used, x.cap) / max * 100, past = Math.max(0, x.used - x.cap) / max * 100;
+      track.style.setProperty("--cap", pc + "%");
+      const a = el("i", "cpbfill");
+      a.style.width = within2 + "%";
+      track.append(a);
+      if (past > 0) {
+        const b = el("i", "cpbover");
+        b.style.left = within2 + "%";
+        b.style.width = past + "%";
+        track.append(b);
+      }
+      const lim = el("i", "cpblimit");
+      lim.style.left = pc + "%";
+      track.append(lim);
+      const v = el("span", "cpbval", fmt2(x.used) + " / " + fmt2(x.cap) + (x.st === "over" ? "  ▲ " + fmt2(x.over) + " over" : ""));
+      if (x.st === "over") v.classList.add("bad");
+      row.append(track, v);
+      const lines = [x.n + ", " + monthLabel(r.m), fmt2(x.used) + " points planned of " + fmt2(x.cap), x.st === "over" ? fmt2(x.over) + " over" : fmt2(x.free) + " free"];
+      row.setAttribute("aria-label", lines.join(". "));
+      tip2(row, lines);
+      wrap.append(row);
+      rows2.push([x.n, fmt2(x.used), fmt2(x.cap), x.st === "over" ? "over by " + fmt2(x.over) : "free " + fmt2(x.free)]);
+    });
+    return { node: wrap, table: { head: ["Track", "Planned", "Can take", "Room"], rows: rows2 } };
+  }
+  function columnsTrend(rev) {
+    const W = 120 + rev.length * 96, H3 = 230, pl = 44, pb = 30, pt = 18, ph = H3 - pb - pt;
+    const svg = sv2("svg", { viewBox: "0 0 " + W + " " + H3, class: "cpcols", role: "img", "aria-label": "Points planned each month against the capacity of all tracks" });
+    svg.id = "cpcols";
+    const tot = rev.map((r) => ({ m: r.m, used: r.lanes.reduce((a, x) => a + x.used, 0), cap: r.lanes.reduce((a, x) => a + x.cap, 0) }));
+    const top = Math.max(10, ...tot.map((t) => Math.max(t.used, t.cap))), step2 = top <= 50 ? 10 : top <= 120 ? 20 : top <= 300 ? 50 : 100, maxY = Math.ceil(top / step2) * step2, y = (v) => pt + ph - v / maxY * ph;
+    for (let v = 0; v <= maxY; v += step2) {
+      svg.append(sv2("line", { x1: pl, x2: W - 8, y1: y(v), y2: y(v), class: v ? "cpgrid" : "cpbase" }), sv2("text", { x: pl - 6, y: y(v) + 4, "text-anchor": "end", class: "cpax" }, String(v)));
+    }
+    const slot = (W - pl - 8) / rev.length, bw = Math.min(24, slot * 0.5), rows2 = [];
+    tot.forEach((t, i) => {
+      const cx = pl + slot * i + slot / 2, over = t.used > t.cap + 1e-9, h = Math.max(0, ph - (y(t.used) - pt));
+      const g = sv2("g", { class: "cpcol" + (over ? " over" : ""), "data-m": t.m });
+      if (h > 0) g.append(sv2("path", { d: "M" + (cx - bw / 2) + "," + (pt + ph) + "V" + (y(t.used) + 4) + "a4,4 0 0 1 4,-4h" + (bw - 8) + "a4,4 0 0 1 4,4V" + (pt + ph) + "Z", class: "cpcolfill" }));
+      g.append(sv2("line", { x1: cx - bw / 2 - 8, x2: cx + bw / 2 + 8, y1: y(t.cap), y2: y(t.cap), class: "cpcap" }));
+      if (t.used > 0) g.append(sv2("text", { x: cx, y: Math.min(y(t.used), y(t.cap)) - 6, "text-anchor": "middle", class: "cpval" }, (over ? "▲ " : "") + fmt2(t.used)));
+      g.append(sv2("text", { x: cx, y: H3 - 10, "text-anchor": "middle", class: "cpax" }, monthLabel(t.m).replace(/ \d{2}(\d{2})$/, " $1")));
+      const hit = sv2("rect", { x: cx - slot / 2, y: pt, width: slot, height: ph + pb, fill: "transparent" });
+      g.append(hit);
+      const lines = [monthLabel(t.m), fmt2(t.used) + " points planned of " + fmt2(t.cap) + " (all tracks)", over ? fmt2(t.used - t.cap) + " over in total" : fmt2(t.cap - t.used) + " free in total"];
+      g.setAttribute("aria-label", lines.join(". "));
+      tip2(g, lines);
+      svg.append(g);
+      rows2.push([monthLabel(t.m), fmt2(t.used), fmt2(t.cap), over ? "over by " + fmt2(t.used - t.cap) : "free " + fmt2(t.cap - t.used)]);
+    });
+    return { node: svg, table: { head: ["Month", "Planned", "Can take (all tracks)", "Room"], rows: rows2 } };
+  }
+
+  // src/esm/pages/capacity.js
+  var cfg3 = () => resolveDefaults(S.ideas && S.ideas.capacity || {}, resources());
+  var fmt3 = (n) => String(Math.round(n * 10) / 10);
   var ui3 = { m: "" };
   var WORD = { ok: "Fits", warn: "Tight", over: "Over" };
-  var short = (iso4) => fmtIso(iso4).replace(/ \d{4}$/, "");
   function capMonths() {
     const cur2 = todayIso().slice(0, 7);
     let last = cur2;
@@ -10457,8 +10815,15 @@ a.jkchip:hover{text-decoration:underline}
     const g = el("div", "cpgrid");
     rev.forEach((r) => {
       const bad = r.lanes.filter((x) => x.st === "over"), tight = r.lanes.filter((x) => x.st === "warn");
-      const t = el("div", "cptile cp-" + r.st);
+      const t = el("button", "cptile cp-" + r.st + (r.m === ui3.m ? " sel" : ""));
+      t.type = "button";
       t.dataset.mo = r.m;
+      t.setAttribute("aria-pressed", String(r.m === ui3.m));
+      t.title = "Show " + monthLabel(r.m) + " in the bars below";
+      t.addEventListener("click", () => {
+        ui3.m = r.m;
+        renderCapacity();
+      });
       const top = el("div", "cptop");
       top.append(el("strong", "", monthLabel(r.m)), el("span", "cppill", WORD[r.st]));
       t.append(top);
@@ -10473,18 +10838,15 @@ a.jkchip:hover{text-decoration:underline}
     const sug = suggestMoves(rev, { rangeOf: monthRange, vacs: vacList2(), cfg: cfg3(), probsOf: depProblemsFor });
     rev.forEach((r) => r.lanes.filter((x) => x.st === "over").forEach((x) => {
       const mv = sug.filter((s) => s.m === r.m && s.k === x.k && !s.none), none = sug.some((s) => s.m === r.m && s.k === x.k && s.none);
-      const it = { sev: "over", m: r.m, head: monthLabel(r.m) + " · " + x.n + " is over by " + fmt2(x.over) + " points", body: x.n + " has " + fmt2(x.used) + " points planned and can take " + fmt2(x.cap) + ".", tips: [] };
+      const it = { sev: "over", m: r.m, head: monthLabel(r.m) + " · " + x.n + " is over by " + fmt3(x.over) + " points", body: x.n + " has " + fmt3(x.used) + " points planned and can take " + fmt3(x.cap) + ".", tips: [] };
       mv.forEach((s) => it.tips.push('You could move "' + s.line.t + '" (' + cardId(s.line) + ", " + s.pts + " " + x.n + " points) to " + monthLabel(s.to) + ". It fits there."));
       if (none) it.tips.push("No later month has room for a card of this track. Cut some scope or add people.");
       items2.push(it);
     }));
     const vac = vacList2(), seen = {};
     rev.forEach((r) => {
-      const ld = personLoads(r.lines);
-      Object.keys(ld).forEach((n) => {
-        const cp = personCap(n, monthRange(r.m), vac, cfg3());
-        if (ld[n] > cp + 1e-9) items2.push({ sev: "warn", m: r.m, head: monthLabel(r.m) + " · " + n + " has too many points", body: n + " has " + fmt2(ld[n]) + " points planned and can take " + fmt2(cp) + " (after leave, reserve and buffer).", tips: [] });
-      });
+      const ld = personLoads(r.lines), over = Object.keys(ld).map((n) => ({ n, pl: ld[n], cp: personCap(n, monthRange(r.m), vac, cfg3()) })).filter((x) => x.pl > x.cp + 1e-9);
+      if (over.length) items2.push({ sev: "warn", m: r.m, head: monthLabel(r.m) + " · " + over.length + (over.length === 1 ? " person has" : " people have") + " more points than they can take", body: over.map((x) => x.n + " " + fmt3(x.pl) + " / " + fmt3(x.cp)).join(", ") + " (planned / can take, after leave, reserve and buffer).", tips: [] });
     });
     checkPlan(months).filter((c) => c.t !== "cap").forEach((c) => items2.push({ sev: "warn", m: c.m, head: monthLabel(c.m) + " · " + (c.t === "dep" ? "Card order" : "Roadmap date"), body: c.s, tips: [] }));
     if (!items2.length) {
@@ -10505,63 +10867,29 @@ a.jkchip:hover{text-decoration:underline}
     });
     return box2;
   }
-  function room(rev) {
-    const wrap = el("div", "cproomwrap"), t = el("table", "cproom");
-    t.id = "cproom";
-    const h = el("tr");
-    h.append(el("th", "", "Track"));
-    rev.forEach((r) => h.append(el("th", "", monthLabel(r.m))));
-    t.append(el("thead"));
-    t.firstChild.append(h);
-    const b = el("tbody");
-    rev[0].lanes.forEach((l, i) => {
-      const tr = el("tr");
-      tr.dataset.lane = l.k;
-      tr.append(el("th", "", l.n));
-      rev.forEach((r) => {
-        const x = r.lanes[i], td = el("td", "cp-" + x.st);
-        td.append(el("b", "", fmt2(x.used) + " / " + fmt2(x.cap)), el("span", "", x.st === "over" ? fmt2(x.over) + " over" : fmt2(x.free) + " free"));
-        td.title = x.n + ", " + monthLabel(r.m) + ": " + x.people + " people, " + fmt2(x.used) + " points planned of " + fmt2(x.cap) + ".";
-        tr.append(td);
+  function missingNote() {
+    const miss = missingInResources();
+    if (!miss.length) return null;
+    const box2 = el("div", "cpitem cp-warn");
+    box2.id = "cpmissing";
+    box2.append(el("strong", "", miss.length + (miss.length === 1 ? " name is" : " names are") + " not in Resources yet"), el("div", "", miss.map((x) => x.name + " (" + x.track + ")").join(", ") + ". Leave from Vacations and the roadmap can only follow people who are listed in Resources."));
+    if (canEdit()) {
+      const b = el("button", "btn sm primary", "Add them to Resources");
+      b.type = "button";
+      b.id = "cpaddres";
+      b.addEventListener("click", () => {
+        miss.forEach((x) => {
+          const id = "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+          S.extras[id] = { n: x.name, domain: DOMAIN_OF[x.k], sqs: ["tifli"] };
+          write("people/" + id, S.extras[id]);
+          logAct("resource", "added " + x.name + " (" + DOMAIN_OF[x.k] + ") from the Dashboard");
+        });
+        fillPersons();
+        renderCapacity();
       });
-      b.append(tr);
-    });
-    t.append(b);
-    wrap.append(t);
-    return wrap;
-  }
-  function team(months) {
-    if (!months.includes(ui3.m)) ui3.m = months[0];
-    const s = settings(cfg3()), today = todayIso(), vac = vacList2(), grid = el("div", "cpteam"), rg = monthRange(ui3.m), ld = personLoads(linesOf(ui3.m));
-    const where = {};
-    s.lanes.forEach((l) => l.people.forEach((p) => {
-      (where[p] = where[p] || []).push(l.n);
-    }));
-    s.lanes.forEach((l) => {
-      const c = el("div", "cpcard");
-      c.dataset.lane = l.k;
-      const away = l.people.filter((p) => {
-        const st = personState(p, today, vac, s.leaving);
-        return st.onLeave || st.leaving && st.leaving.state === "left";
-      }).length;
-      c.append(el("h3", "", l.n), el("div", "cpsub", l.people.length + " people" + (away ? " · " + away + " not available now" : "")));
-      l.people.forEach((p) => {
-        const st = personState(p, today, vac, s.leaving), row = el("div", "cpperson");
-        row.dataset.name = p;
-        row.append(el("span", "cpname", p));
-        const tags = el("span", "cptags");
-        if (st.leaving) tags.append(el("span", "cptag " + (st.leaving.state === "later" ? "info" : "bad"), st.leaving.state === "left" ? "Left on " + short(st.leaving.date) : "Leaving " + short(st.leaving.date) + (st.leaving.state === "soon" ? " (soon)" : "")));
-        if (st.onLeave) tags.append(el("span", "cptag warn", "On leave until " + short(st.leave.a1)));
-        else if (st.leave) tags.append(el("span", "cptag info", "Leave " + short(st.leave.a0) + (st.leave.a1 > st.leave.a0 ? " to " + short(st.leave.a1) : "")));
-        const cp = personCap(p, rg, vac, cfg3()), pl = ld[p] || 0;
-        if (cp > 0 || pl > 0) tags.append(el("span", "cptag " + (pl > cp + 1e-9 ? "bad" : pl >= cp * 0.9 && pl > 0 ? "warn" : "info") + " cpload", fmt2(pl) + " / " + fmt2(cp) + " pts"));
-        if (where[p].length > 1) tags.append(el("span", "cptag", "Also in " + where[p].filter((n) => n !== l.n).join(", ")));
-        row.append(tags);
-        c.append(row);
-      });
-      grid.append(c);
-    });
-    return grid;
+      box2.append(b);
+    }
+    return box2;
   }
   function renderCapacity() {
     const root = $("pg-capacity");
@@ -10579,7 +10907,9 @@ a.jkchip:hover{text-decoration:underline}
       cs.addEventListener("click", () => openCapSettings(renderCapacity));
       tools.append(cs);
     }
-    root.append(pageHead("Dashboard", "Can the team deliver what each month promises? Points planned in Monthly are compared with what each track can take, after leave, a reserve for bugs and support, and a buffer.", tools));
+    root.append(pageHead("Dashboard", "Can the team deliver what each month promises? Green fits, red is over.", tools));
+    tipHost(root);
+    if (!months.includes(ui3.m)) ui3.m = (rev.find((r) => r.pts > 0) || rev[0]).m;
     const sec = (id, t, sub) => {
       const c = el("section", "cpsec");
       c.id = id;
@@ -10588,24 +10918,34 @@ a.jkchip:hover{text-decoration:underline}
       root.append(c);
       return c;
     };
-    sec("cp-glance", "The months at a glance").append(tiles(rev));
-    sec("cp-fix", "What needs fixing", "If something is over, change the points or move a card in Monthly, then come back here.").append(fixes(rev, months));
-    sec("cp-room", "Room left in each track", 'Used / can take, in points. "Free" is what a track can still add; this is what can be moved in.').append(room(rev));
-    const ts = sec("cp-team", "The team", "Who is in each track, what each person has planned in the month you pick (points planned / points they can take), who is on leave, and who has left or is about to leave (set in Dashboard settings).");
-    const mp = el("select");
-    mp.id = "cpmonth";
-    mp.setAttribute("aria-label", "Month");
-    months.forEach((m) => {
-      const o = el("option", "", monthLabel(m));
-      o.value = m;
-      o.selected = m === ui3.m;
-      mp.append(o);
-    });
-    mp.addEventListener("change", () => {
-      ui3.m = mp.value;
-      renderCapacity();
-    });
-    ts.append(mp, team(months));
+    const chartSec = (id, t, sub, ch, tbl, extra) => {
+      const s2 = sec(id, t, sub);
+      if (extra) s2.append(extra);
+      s2.append(withTable(id + "-c", "", "", ch, tbl));
+      return s2;
+    };
+    sec("cp-glance", "The months at a glance", "Click a month to see it track by track below.").append(tiles(rev));
+    const fx = sec("cp-fix", "What needs fixing", "If something is over, change the points or move a card in Monthly, then come back here.");
+    const mn = missingNote();
+    if (mn) fx.append(mn);
+    fx.append(fixes(rev, months));
+    const h1 = heatTracks(rev);
+    chartSec("cp-heat", "How full is each track", "Darker = fuller. Red with a triangle = over. Each box: share, then planned / can take (points).", h1.node, h1.table, legend());
+    const duo = el("div", "cpduo");
+    root.append(duo);
+    const barSec = el("section", "cpsec");
+    barSec.id = "cp-bars";
+    barSec.append(el("h2", "", monthLabel(ui3.m) + ", track by track"), el("p", "sub", "Pale = what the track can take. Green = planned. Red = past the limit."));
+    const h3 = barsTracks(rev[months.indexOf(ui3.m)]);
+    barSec.append(withTable("cp-bars-c", "", "", h3.node, h3.table));
+    const colsSec = el("section", "cpsec");
+    colsSec.id = "cp-cols";
+    colsSec.append(el("h2", "", "Month by month"), el("p", "sub", "Columns = points planned. Dark tick = what all tracks can take."));
+    const h2 = columnsTrend(rev);
+    colsSec.append(withTable("cp-cols-c", "", "", h2.node, h2.table));
+    duo.append(barSec, colsSec);
+    const h4 = heatPeople(rev, cfg3(), vacList2(), todayIso());
+    chartSec("cp-heatp", "The team", "Each person: points planned / what they can take, with leave and who has left or is leaving.", h4.node, h4.table, legend());
   }
 
   // src/esm/ui/loading.js
@@ -11778,8 +12118,8 @@ a.jkchip:hover{text-decoration:underline}
   // src/esm/ui/export-pdf.js
   var H = 30;
   var NH = 17;
-  var pct = (n) => (n / NDAYS * 100).toFixed(3) + "%";
-  function legend(list) {
+  var pct2 = (n) => (n / NDAYS * 100).toFixed(3) + "%";
+  function legend2(list) {
     const lg = el("div", "prm-legend");
     const used = new Set(list.map((i) => i.sq));
     LANES.filter((l) => used.has(l.k)).forEach((l) => {
@@ -11800,8 +12140,8 @@ a.jkchip:hover{text-decoration:underline}
   }
   function noteEl(n, laneIdx, chip) {
     const b = el("div", "prm-note " + (chip ? "prm-chip" : "prm-rib"));
-    b.style.left = pct(n.d0);
-    b.style.width = pct(n.d1 - n.d0 + 1);
+    b.style.left = pct2(n.d0);
+    b.style.width = pct2(n.d1 - n.d0 + 1);
     b.style.top = laneIdx * NH + 2 + "px";
     b.style.setProperty("--c", /^#[0-9a-f]{6}$/i.test(n.c || "") ? n.c : DEFAULT_COLOR[n.k]);
     b.append(el("span", "prm-t", n.t));
@@ -11809,8 +12149,8 @@ a.jkchip:hover{text-decoration:underline}
   }
   function bar3(it, laneIdx, top0) {
     const l = LANES.find((x) => x.k === it.sq) || LANES[0], col = l.c, b = el("div", "prm-bar prm-st-" + it.st + (it.ms ? " prm-ms" : ""));
-    b.style.left = pct(it.d0);
-    b.style.width = pct(it.d1 - it.d0 + 1);
+    b.style.left = pct2(it.d0);
+    b.style.width = pct2(it.d1 - it.d0 + 1);
     b.style.top = (top0 || 0) + laneIdx * H + 3 + "px";
     b.style.height = H - 6 + "px";
     b.style.setProperty("--c", col);
@@ -11836,7 +12176,7 @@ a.jkchip:hover{text-decoration:underline}
     const sq = LANES.filter((l) => !state.sq.has(l.k)).map((l) => l.n);
     const notes = [state.person !== "all" ? "Person: " + state.person : "", state.status !== "all" ? "Status: " + (STATUS[state.status] || state.status) : "", state.q.trim() ? "Search: " + state.q.trim() : "", sq.length ? "Hidden products: " + sq.join(", ") : ""].filter(Boolean);
     if (notes.length) root.append(el("p", "prm-filter", "Filtered view · " + notes.join(" · ")));
-    root.append(legend(list));
+    root.append(legend2(list));
     const dir = directory(), map = /* @__PURE__ */ new Map();
     list.forEach((it) => {
       if (!it.res.length) {
@@ -11855,15 +12195,15 @@ a.jkchip:hover{text-decoration:underline}
     const months = el("div", "prm-months"), weeks = el("div", "prm-weeks");
     MGROUPS.forEach((m) => {
       const d = el("div", "prm-mo");
-      d.style.left = pct(m.from);
-      d.style.width = pct(m.to - m.from + 1);
+      d.style.left = pct2(m.from);
+      d.style.width = pct2(m.to - m.from + 1);
       d.append(el("span", "", m.n));
       months.append(d);
     });
     DAYS.forEach((x) => {
       if (x.dow === 0) {
         const w = el("div", "prm-wk", String(x.d.getUTCDate()));
-        w.style.left = pct(x.k);
+        w.style.left = pct2(x.k);
         weeks.append(w);
       }
     });
@@ -11874,8 +12214,8 @@ a.jkchip:hover{text-decoration:underline}
     const body = el("tbody"), periods = packNotes(notesHere("period")), bands = periods.out.map((x) => x.n);
     const addBands = (cell) => bands.forEach((n) => {
       const d = el("i", "prm-band");
-      d.style.left = pct(n.d0);
-      d.style.width = pct(n.d1 - n.d0 + 1);
+      d.style.left = pct2(n.d0);
+      d.style.width = pct2(n.d1 - n.d0 + 1);
       d.style.setProperty("--c", /^#[0-9a-f]{6}$/i.test(n.c || "") ? n.c : DEFAULT_COLOR.period);
       cell.append(d);
     });
@@ -11885,8 +12225,8 @@ a.jkchip:hover{text-decoration:underline}
       cell.style.height = Math.max(1, periods.lanes) * NH + 16 + "px";
       leaveRuns().forEach((r) => {
         const d = el("i", "prm-heat");
-        d.style.left = pct(r.d0);
-        d.style.width = pct(r.d1 - r.d0 + 1);
+        d.style.left = pct2(r.d0);
+        d.style.width = pct2(r.d1 - r.d0 + 1);
         d.style.opacity = String(0.35 + 0.65 * Math.min(1, r.n / 4));
         d.title = r.who.join(", ");
         if (r.d1 > r.d0) d.textContent = String(r.n);
@@ -11907,13 +12247,13 @@ a.jkchip:hover{text-decoration:underline}
       DAYS.forEach((x) => {
         if (x.dow === 0) {
           const g = el("i", "prm-grid");
-          g.style.left = pct(x.k);
+          g.style.left = pct2(x.k);
           cell.append(g);
         }
       });
       if (todayK >= 0) {
         const t = el("i", "prm-today");
-        t.style.left = pct(todayK);
+        t.style.left = pct2(todayK);
         cell.append(t);
       }
       pn.out.forEach((x) => cell.append(noteEl(x.n, x.lane, false)));

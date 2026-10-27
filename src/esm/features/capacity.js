@@ -12,10 +12,34 @@ export const LANES = [
   { k: 'fe', n: 'Full Stack FE', people: ['Amal', 'Sayeh', 'Abdelhamid'] },
   { k: 'mob', n: 'Full Stack Mobile', people: ['Aya Fathy', 'Adnan'] },
   { k: 'be', n: 'BE', people: ['Soliman', 'Wardany', 'Hosieny', 'Hamid'] },
-  { k: 'pm', n: 'PMs', people: ['Asmaa', 'Engy', 'Emad', 'Khalid'] },
-  { k: 'des', n: 'Design', people: ['Saad', 'Khalid'] },
+  { k: 'pm', n: 'PMs', people: ['Asmaa', 'Engy', 'Emad', 'Khalid Nazim'] },
+  { k: 'des', n: 'Design', people: ['Saad', 'Khalid Abdelfattah'] },
   { k: 'qa', n: 'Quality', people: ['Mona', 'Dina Mousa', 'Zahran', 'Dina Sam'] }
 ];
+/** The Resources domain of each track: where a person of that track is listed in Resources. */
+export const DOMAIN_OF = { ai: 'AI / ML', fe: 'Frontend', mob: 'Mobile', be: 'Backend', pm: 'PM', des: 'UX / Design', qa: 'QA' };
+/** The name of the person in Resources (resources: [{name, domain}]) that `name` stands for, or ''.
+ *  Exact match first; then a short name that starts a longer Resources name ("Hamid" for "Hamid Shahin"), told apart by the track's domain;
+ *  a longer name for a shorter Resources name ("Khalid Nazim" for "Khalid") only when that person is listed in the track's domain. */
+export function matchResource(name, resources, domain) {
+  const f = fold(name), list = resources || [], exact = list.find(r => fold(r.name) === f); if (exact) return exact.name;
+  const near = list.filter(r => sameName(r.name, name) && (fold(r.name).startsWith(f + ' ') || r.domain === domain));
+  const pick = near.length > 1 ? near.filter(r => r.domain === domain) : near;
+  return pick.length === 1 ? pick[0].name : '';
+}
+/** cfg with the people of every track spelled as Resources spells them (names Resources does not know stay as written). */
+export function resolveDefaults(cfg, resources) {
+  const s = settings(cfg), out = Object.assign({}, cfg || {});
+  const saved = {}; ((cfg && cfg.lanes) || []).forEach(x => { if (x && x.k && Array.isArray(x.people)) saved[x.k] = true; });
+  out.lanes = s.lanes.map(l => ({ k: l.k, people: saved[l.k] ? l.people : l.people.map(n => matchResource(n, resources, DOMAIN_OF[l.k]) || n) }));
+  return out;
+}
+/** Names in the tracks that Resources does not list: [{k, track, name}] */
+export function unmatched(cfg, resources) {
+  const have = new Set((resources || []).map(r => fold(r.name))), out = [];
+  settings(cfg).lanes.forEach(l => l.people.forEach(n => { if (!have.has(fold(n))) out.push({ k: l.k, track: l.n, name: n }); }));
+  return out;
+}
 /** Points one person delivers in a month before the reserve; reserve and buffer are shares of the total kept free. */
 export const DEFAULTS = { ppp: 8, reserve: 0.2, buffer: 0.1 };
 /** Allowed point values for one role of one card. */

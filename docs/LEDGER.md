@@ -42,6 +42,42 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-27 - Dashboard simpler; names follow Resources
+```
+🔄 YNMO LEDGER UPDATE — 2026-10-27
+Request: very simple and easy to understand; Khalid Nazim is the PM, Khalid Abdelfattah is in Design; names must match Resources
+Surface: cross-cutting (Roadmaps tool)
+Outcome: track people picked from Resources, defaults matched to Resources names, missing names called out with an add button, clickable month cards, team merged into the people heat map
+New facts / decisions locked:
+  • Khalid Nazim (PMs) and Khalid Abdelfattah (Design) are two different people
+  • Dashboard names must be Resources names; leave (Vacations) and the roadmap follow Resources spelling
+Corrections to this skill: the earlier note "Khalid is one person counted twice" is wrong; they are two people
+Open / flagged:
+  • Resources lists Design's Khalid as "Khalid": rename him "Khalid Abdelfattah" in Resources, then re-pick him in Dashboard settings
+  • Resources spellings differ from the November list for some people (Tramsi / Altramsi, Sahdy / Shady, Waradny / Wardany): choose the right ones in Dashboard settings
+  • Card points saved before names changed keep the old name until the card is reopened and saved
+Changelog: Dashboard simplified; names follow Resources; two Khalids.
+```
+Paste this into Section 11 of the ynmo-master skill to keep it current.
+
+### 2026-10-27 - Dashboard charts
+```
+🔄 YNMO LEDGER UPDATE — 2026-10-27
+Request: charts and bars, like a heat map, on the dashboard
+Surface: cross-cutting (Roadmaps tool)
+Outcome: heat map of tracks by month, heat map of people by month, columns planned vs capacity, bars per track for a chosen month; month filter, tooltips, Table view for each
+New facts / decisions locked:
+  • Fullness = one green ramp; over the limit = red with a triangle and the word; no other colours carry meaning
+  • Every chart has a table twin and a tooltip; labels set as text only
+  • The month filter (default: first month with planned cards) drives the bars and the team
+Corrections to this skill: none
+Open / flagged:
+  • Per-person capacity (default 8 points less reserve and buffer = 5.6) makes many people show over when a card gives one person 8 points: calibrate points per person
+  • Charts not yet checked on the live site with real data
+Changelog: Dashboard charts: two heat maps, columns, bars.
+```
+Paste this into Section 11 of the ynmo-master skill to keep it current.
+
 ### 2026-10-27 - Points per person; module renamed Dashboard
 ```
 🔄 YNMO LEDGER UPDATE — 2026-10-27

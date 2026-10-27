@@ -4,15 +4,17 @@
  * the "Check plan" list and the capacity settings. All rules live in capacity.js (pure); this file only draws and asks.
  */
 import { S } from '../core/state.js';
-import { el, canEdit } from '../core/model.js';
+import { el, canEdit, directory } from '../core/model.js';
 import { fld, kOfIso } from '../core/shared.js';
 import { openDlg, closeDlg } from './safety.js';
 import { saveIdea } from '../pages/ideas.js';
 import { cardId, monthLabel, monthRange } from './month-model.js';
 import { allCards, cardByFid, fidFromText, fidLabel } from './feature-sync.js';
-import { SCALE, whoOf, dependencyProblems, laneCapacity, loads, overAfter, ptsOf, settings, statusOf, totalPts } from './capacity.js';
+import { SCALE, resolveDefaults, unmatched, whoOf, dependencyProblems, laneCapacity, loads, overAfter, ptsOf, settings, statusOf, totalPts } from './capacity.js';
 
-const cfg = () => (S.ideas && S.ideas.capacity) || {};
+/** The saved settings, with the default people spelled as Resources spells them. */
+export const resources = () => [...directory().values()].map(p => ({ name: p.name, domain: p.domain }));
+const cfg = () => resolveDefaults((S.ideas && S.ideas.capacity) || {}, resources());
 const vacList = () => Object.keys(S.vacs || {}).map(id => S.vacs[id]).filter(v => v && v.a0);
 const fmt = n => String(Math.round(n * 10) / 10);
 const monthOfId = id => { const x = allCards().find(c => c.l.id === id); const d = x && S.reports[x.did]; return d && d.mo && d.mo !== 'backlog' ? d.mo : ''; };
@@ -105,23 +107,41 @@ export function checkPlan(months) {
   });
   return out;
 }
-/** Points per person, reserve, buffer and who is in each role (editors). */
+/** Points per person, reserve and buffer, who is in each track (picked from Resources) and who is leaving (editors). */
 export function openCapSettings(done) {
-  if (!canEdit()) return; const s = settings(cfg());
+  if (!canEdit()) return; const st = settings(cfg()), known = resources().map(r => r.name).sort((a, b) => a.localeCompare(b));
+  const lanes = {}; st.lanes.forEach(l => { lanes[l.k] = l.people.slice(); }); const leaving = Object.assign({}, st.leaving);
   openDlg('Dashboard settings', box => {
-    box.append(el('p', 'sub', 'Capacity of a role in a month = people x points per person, less their leave (from Vacations), less the reserve and buffer. Update the people each month.'));
+    box.classList.add('ptsdlg');
+    box.append(el('p', 'sub', 'People come from Resources. Capacity of a track in a month = its people x points per person, less their leave (Vacations), less the reserve and buffer.'));
     const mk = (v, step) => { const i = el('input'); i.type = 'number'; i.step = step; i.value = v; return i; };
-    const ppp = mk(s.ppp, '0.5'), rs = mk(Math.round(s.reserve * 100), '5'), bf = mk(Math.round(s.buffer * 100), '5');
-    box.append(fld('Points per person per month', ppp), fld('Reserve for bugs and support (%)', rs), fld('Buffer (%)', bf));
-    const ta = {}; s.lanes.forEach(l => { const t = el('input'); t.type = 'text'; t.value = l.people.join(', '); t.setAttribute('aria-label', l.n + ' people'); ta[l.k] = t; box.append(fld(l.n + ' (names, comma separated)', t)); });
-    const lv = el('input'); lv.type = 'text'; lv.placeholder = 'Adnan: 2026-12-15, Mona: 2027-01-31'; lv.value = Object.keys(s.leaving).map(n => n + ': ' + s.leaving[n]).join(', '); lv.setAttribute('aria-label', 'Leaving');
-    box.append(fld('Leaving or left (name: last working day, comma separated)', lv));
-    const msg = el('p', 'sub'); msg.setAttribute('aria-live', 'polite'); box.append(msg);
+    const ppp = mk(st.ppp, '0.5'), rs = mk(Math.round(st.reserve * 100), '5'), bf = mk(Math.round(st.buffer * 100), '5');
+    const nums = el('div', 'padd'); nums.append(fld('Points per person per month', ppp), fld('Reserve for bugs and support (%)', rs), fld('Buffer (%)', bf)); box.append(nums);
+    const body = el('div'); box.append(body);
+    const draw = () => {
+      body.textContent = '';
+      st.lanes.forEach(l => {
+        const sec = el('div', 'ptsec'); sec.dataset.k = l.k; sec.append(el('h3', '', l.n));
+        const chips = el('div', 'ptpills'); lanes[l.k].forEach(n => { const c = el('button', 'pill', n + '  ×'); c.type = 'button'; c.dataset.name = n; c.title = known.includes(n) ? 'Remove ' + n : n + ' is not in Resources. Click to remove.'; if (!known.includes(n)) c.classList.add('nores'); c.addEventListener('click', () => { lanes[l.k] = lanes[l.k].filter(x => x !== n); draw(); }); chips.append(c); }); sec.append(chips);
+        const add = el('select'); add.setAttribute('aria-label', 'Add a person to ' + l.n); const o0 = el('option', '', 'Add a person…'); o0.value = ''; add.append(o0);
+        known.filter(n => !lanes[l.k].includes(n)).forEach(n => { const o = el('option', '', n); o.value = n; add.append(o); }); add.addEventListener('change', () => { if (add.value) { lanes[l.k].push(add.value); draw(); } });
+        sec.append(add); body.append(sec);
+      });
+      const lv = el('div', 'ptsec'); lv.id = 'leavesec'; lv.append(el('h3', '', 'Leaving or left'), el('p', 'sub', 'The last working day. After it the person no longer counts.'));
+      Object.keys(leaving).forEach(n => { const r = el('div', 'pperson'); r.dataset.name = n; const x = el('button', 'pill', n + ' · ' + leaving[n] + '  ×'); x.type = 'button'; x.addEventListener('click', () => { delete leaving[n]; draw(); }); r.append(x); lv.append(r); });
+      const all = [...new Set([].concat(...Object.keys(lanes).map(k => lanes[k])))].sort((a, b) => a.localeCompare(b));
+      const who = el('select'); who.setAttribute('aria-label', 'Person leaving'); all.forEach(n => { const o = el('option', '', n); o.value = n; who.append(o); });
+      const dt = el('input'); dt.type = 'date'; dt.setAttribute('aria-label', 'Last working day');
+      const ad = el('button', 'btn sm', 'Add'); ad.type = 'button'; ad.id = 'leaveadd'; ad.addEventListener('click', () => { if (who.value && /^\d{4}-\d{2}-\d{2}$/.test(dt.value)) { leaving[who.value] = dt.value; draw(); } });
+      const row = el('div', 'padd'); row.append(fld('Person', who), fld('Last working day', dt)); lv.append(row, ad); body.append(lv);
+    };
+    draw();
     const ok = el('button', 'btn primary', 'Save'), no = el('button', 'btn', 'Cancel'); ok.type = no.type = 'button'; no.addEventListener('click', closeDlg);
     ok.addEventListener('click', () => {
-      const leaving = {}, all = []; s.lanes.forEach(l => ta[l.k].value.split(',').forEach(x => { if (x.trim()) all.push(x.trim()); }));
-      for (const part of lv.value.split(',').map(x => x.trim()).filter(Boolean)) { const i = part.lastIndexOf(':'), n = part.slice(0, i).trim(), d = part.slice(i + 1).trim(); if (i < 1 || !/^\d{4}-\d{2}-\d{2}$/.test(d) || !all.includes(n)) { msg.textContent = '"' + part + '": write it as Name: 2026-12-15, and the name must be in a track above.'; return; } leaving[n] = d; }
-      saveIdea('capacity', { cfg: true, leaving: leaving, ppp: +ppp.value, reserve: (+rs.value) / 100, buffer: (+bf.value) / 100, lanes: s.lanes.map(l => ({ k: l.k, people: ta[l.k].value.split(',').map(x => x.trim()).filter(Boolean) })) }, 'report', 'updated the capacity settings'); closeDlg(); if (done) done(); });
-    const row = el('div', 'row'); row.append(ok, no); box.append(row);
+      saveIdea('capacity', { cfg: true, leaving: leaving, ppp: +ppp.value, reserve: (+rs.value) / 100, buffer: (+bf.value) / 100, lanes: st.lanes.map(l => ({ k: l.k, people: lanes[l.k] })) }, 'report', 'updated the dashboard settings'); closeDlg(); if (done) done();
+    });
+    const row = el('div', 'row ptsfoot'); row.append(ok, no); box.append(row);
   });
 }
+/** Names in the tracks that Resources does not list. */
+export const missingInResources = () => unmatched(cfg(), resources());
