@@ -100,3 +100,11 @@ every mutation begins with `canWrite()`, every mutation calls `logAct`, UI strin
 - **Colours:** roadmap bars are always drawn in their product (lane) colour; the per-bar `c` field is kept in old data but ignored. A bar's product is set in the bar menu (`squadPatch`).
 - **Jira:** `features/jira-merge.js` (pure merge of tickets into the sprint outline, dedupe by `jk`), `features/jira-pull.js` (dialog and apply), Edge Function `jira-sync` (read-only Jira Cloud search; secrets only in Supabase). `features/jira-link.js` + Edge Function `jira-search` link one task to a ticket by live search (stores `jk`).
 - **Google Docs:** `features/sprint-export.js` (`sprintDoc` builds the formatted copy, `docUrl` validates a link, `copyRich` writes HTML + text to the clipboard) and `features/google-drive.js` (Google Identity Services token client, Drive multipart upload converted to a native Doc, updates only docs the tool created). The OAuth Client ID is stored once by an admin in `ideas/googlecfg`; there is no client secret in this flow.
+
+
+## 11. Reliability (2026-10-27)
+- **Boot / sign-in:** `auth/profile.js` `within(promise, ms)` bounds the sign-in check (10 s) and the profile read (12 s); `app/shell.js` `showStuck()` shows "Taking longer than expected" and retries every 15 s. A profile read **error** is thrown, never treated as "no profile".
+- **Monthly saves:** `pages/monthly.js` `writeMonth` reads the stored month first and keeps cards the screen has never seen; saves of one month are queued.
+- **Sort by product:** `features/month-model.js` `sortByProduct` / `PRODUCT_ORDER`; display-only, on by default, localStorage `ynmo-month-sort` (turned off when a card is added).
+- **Jira link:** `features/jira-link.js` + Edge Function `jira-search` (read-only, editors only).
+- **Outage handling (branch `fix/outage-outbox`, not on `main` yet):** PGRST002/503 treated as temporary, browser outbox `ynmo-outbox`, tab-close prompt. Runbook for a data-API outage: `docs/DEPLOYMENT.md`.

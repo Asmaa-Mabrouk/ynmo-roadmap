@@ -42,6 +42,22 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-27 - Docs and skill brought up to date
+```
+🔄 YNMO LEDGER UPDATE — 2026-10-27
+Request: update all skills and docs needed
+Surface: cross-cutting (Roadmaps tool)
+Outcome: BUSINESS and ARCHITECTURE updated (sort, details, Jira link, reliability); the outbox fix is pushed on branch fix/outage-outbox (not main, awaiting the owner's choice vs the extension patches); ynmo-master v1.3 proposed
+New facts / decisions locked:
+  • Main has: sorted-by-default Monthly, Jira link, login retry, merge-safe Monthly saves; the outbox is only on the branch
+Corrections to this skill: none
+Open / flagged:
+  • Choose: regenerate the extension patches against main, or open a PR from fix/outage-outbox
+  • Restored cards TF#108..DC#112: comments of TF#108 and PL#109 still missing
+Changelog: Docs and skill updated; outbox on a branch.
+```
+Paste this into Section 11 of the ynmo-master skill to keep it current.
+
 ### 2026-10-27 - Cards added by the CTO yesterday not found
 ```
 🔄 YNMO LEDGER UPDATE — 2026-10-27
