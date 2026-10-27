@@ -108,3 +108,4 @@ every mutation begins with `canWrite()`, every mutation calls `logAct`, UI strin
 - **Sort by product:** `features/month-model.js` `sortByProduct` / `PRODUCT_ORDER`; display-only, on by default, localStorage `ynmo-month-sort` (turned off when a card is added).
 - **Jira link:** `features/jira-link.js` + Edge Function `jira-search` (read-only, editors only).
 - **Outage handling (branch `fix/outage-outbox`, not on `main` yet):** PGRST002/503 treated as temporary, browser outbox `ynmo-outbox`, tab-close prompt. Runbook for a data-API outage: `docs/DEPLOYMENT.md`.
+- **Capacity:** `features/capacity.js` (pure: roles, working days Sun-Thu, leave, capacity, loads, over-capacity and order checks), `features/capacity-view.js` (meters, points dialog, move warning, Check plan, settings). Card fields `pts` {role: points} and `needs` (internal card id); settings doc `ideas/capacity`.

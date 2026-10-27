@@ -42,6 +42,25 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-27 - Monthly capacity by role
+```
+🔄 YNMO LEDGER UPDATE — 2026-10-27
+Request: capacity planning in points for the business, with November availability by role (AI, Full Stack FE, Full Stack Mobile, BE, PMs, Design, Quality)
+Surface: cross-cutting (Roadmaps tool, Monthly)
+Outcome: points by role on cards, capacity meters per month, move warnings, needs (order), Check plan (capacity, order, roadmap dates), settings
+New facts / decisions locked:
+  • Capacity is per role; default 8 points per person per month, 20% reserve, 10% buffer, working week Sunday to Thursday, leave from Vacations
+  • November 2026 people per role: AI (Altramsi, Aliaa, Shady); FE (Amal, Sayeh, Abdelhamid); Mobile (Aya Fathy, Adnan); BE (Soliman, Wardany, Hosieny, Hamid); PMs (Asmaa, Engy, Emad, Khalid); Design (Saad, Khalid); Quality (Mona, Dina Mousa, Zahran, Dina Sam)
+Corrections to this skill: none
+Open / flagged:
+  • Khalid is listed in both PMs and Design; confirm whether it is one person (then count once) or two
+  • Points per person is a default, calibrate from delivered points over 3 months
+  • The same people list applies to every month until edited in Capacity settings
+  • AI review of conflicts was discussed and not built: rule-based Check plan first
+Changelog: Monthly capacity in points per role with meters and checks.
+```
+Paste this into Section 11 of the ynmo-master skill to keep it current.
+
 ### 2026-10-27 - Docs and skill brought up to date
 ```
 🔄 YNMO LEDGER UPDATE — 2026-10-27

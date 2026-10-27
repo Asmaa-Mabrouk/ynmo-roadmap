@@ -820,3 +820,18 @@ a.jkchip:hover{text-decoration:underline}
 .jkopt{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;text-align:start;padding:6px 8px;border:1px solid var(--line,#d9dde3);border-radius:8px;background:transparent;cursor:pointer;font:inherit}
 .jkopt:hover,.jkopt:focus-visible{background:#eef3ff}
 .jkopt .jks{grid-column:2;font-size:11px;opacity:.7}
+
+/* Monthly capacity */
+.mdcap{margin:4px 0 8px;font-size:12px}
+.mdcap summary{cursor:pointer;font-weight:600;padding:2px 0}
+.mdcap summary.bad{color:#b3261e}
+.caprow{display:grid;grid-template-columns:96px 1fr 76px;align-items:center;gap:6px;padding:1px 0}
+.capn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.capbar{height:6px;border-radius:3px;background:rgba(0,0,0,.1);overflow:hidden;display:block}
+.capbar i{display:block;height:100%;background:#2e7d4f}
+.cap-warn .capbar i{background:#d98e04}
+.cap-over .capbar i{background:#b3261e}
+.cap-over .capv{color:#b3261e;font-weight:700}
+.capv{text-align:end;font-variant-numeric:tabular-nums}
+.mdpts{background:#eef3ff;color:#1a56c4}
+.mdneeds{background:#fff3e0;color:#8a5200}

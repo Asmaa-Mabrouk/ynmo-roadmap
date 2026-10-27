@@ -1243,6 +1243,21 @@ a.jkchip:hover{text-decoration:underline}
 .jkopt{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;text-align:start;padding:6px 8px;border:1px solid var(--line,#d9dde3);border-radius:8px;background:transparent;cursor:pointer;font:inherit}
 .jkopt:hover,.jkopt:focus-visible{background:#eef3ff}
 .jkopt .jks{grid-column:2;font-size:11px;opacity:.7}
+
+/* Monthly capacity */
+.mdcap{margin:4px 0 8px;font-size:12px}
+.mdcap summary{cursor:pointer;font-weight:600;padding:2px 0}
+.mdcap summary.bad{color:#b3261e}
+.caprow{display:grid;grid-template-columns:96px 1fr 76px;align-items:center;gap:6px;padding:1px 0}
+.capn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.capbar{height:6px;border-radius:3px;background:rgba(0,0,0,.1);overflow:hidden;display:block}
+.capbar i{display:block;height:100%;background:#2e7d4f}
+.cap-warn .capbar i{background:#d98e04}
+.cap-over .capbar i{background:#b3261e}
+.cap-over .capv{color:#b3261e;font-weight:700}
+.capv{text-align:end;font-variant-numeric:tabular-nums}
+.mdpts{background:#eef3ff;color:#1a56c4}
+.mdneeds{background:#fff3e0;color:#8a5200}
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -3789,7 +3804,7 @@ a.jkchip:hover{text-decoration:underline}
   var notesOf = (l) => l && Array.isArray(l.notes) ? l.notes : l && l.note ? [{ id: "n0", t: String(l.note), by: "", at: "" }] : [];
   var SIZES = { quick: "Quick win", enh: "Small enhancement" };
   var tagsOf = (l) => (l.hp ? " [BUSINESS PRIORITY]" : "") + (SIZES[l.sz] ? " [" + SIZES[l.sz].toUpperCase() + "]" : "");
-  function monthText(doc2, products, fmt) {
+  function monthText(doc2, products, fmt2) {
     if (!doc2 || !live(doc2.lines).length) return [];
     const prog = monthProgress(doc2.lines), out = ["MONTHLY DELIVERABLES - " + monthLabel(doc2.mo) + (prog.pct === null ? "" : " - " + prog.pct + "% complete (" + prog.done + " of " + prog.n + " done)"), ""];
     notesOf(doc2).forEach((n) => out.push("Month note" + (n.by ? " (" + n.by + ")" : "") + ": " + String(n.t).replace(/\s+/g, " ")));
@@ -3806,7 +3821,7 @@ a.jkchip:hover{text-decoration:underline}
       });
       if (ad.length) {
         out.push("Ad hoc requests:");
-        ad.forEach((l) => out.push("- " + l.t + (l.by ? " (requested by " + l.by + (l.at && fmt ? ", " + fmt(l.at) : "") + ")" : "") + ": " + clampPct(l.pct) + "%"));
+        ad.forEach((l) => out.push("- " + l.t + (l.by ? " (requested by " + l.by + (l.at && fmt2 ? ", " + fmt2(l.at) : "") + ")" : "") + ": " + clampPct(l.pct) + "%"));
       }
       out.push("");
     });
@@ -5784,8 +5799,8 @@ a.jkchip:hover{text-decoration:underline}
   }
   var esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   var uid2 = () => "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-  function productsOf(cfg2) {
-    const p = cfg2 && Array.isArray(cfg2.products) && cfg2.products.length ? cfg2.products : DEFAULT_PRODUCTS;
+  function productsOf(cfg3) {
+    const p = cfg3 && Array.isArray(cfg3.products) && cfg3.products.length ? cfg3.products : DEFAULT_PRODUCTS;
     return p.map((x) => ({ k: String(x.k), n: String(x.n || x.k), squads: (x.squads || []).map(String) }));
   }
   function jiraUrl(base3, key) {
@@ -5884,8 +5899,8 @@ a.jkchip:hover{text-decoration:underline}
     });
     return n;
   }
-  function reportToText(rep, products, fmt, monthDoc) {
-    const out = ["Weekly update - " + (fmt ? fmt(rep.a) : rep.a) + (rep.b ? " to " + (fmt ? fmt(rep.b) : rep.b) : "") + (rep.n ? " (Sprint " + rep.n + ")" : ""), ""];
+  function reportToText(rep, products, fmt2, monthDoc) {
+    const out = ["Weekly update - " + (fmt2 ? fmt2(rep.a) : rep.a) + (rep.b ? " to " + (fmt2 ? fmt2(rep.b) : rep.b) : "") + (rep.n ? " (Sprint " + rep.n + ")" : ""), ""];
     products.forEach((p) => {
       const d = (rep.prods || {})[p.k];
       if (!d) return;
@@ -5897,7 +5912,7 @@ a.jkchip:hover{text-decoration:underline}
       });
       out.push("");
     });
-    const mt = monthText(monthDoc, products, fmt);
+    const mt = monthText(monthDoc, products, fmt2);
     if (mt.length) out.push("", ...mt);
     return out.join("\n").trim() + "\n";
   }
@@ -8803,6 +8818,311 @@ a.jkchip:hover{text-decoration:underline}
     if (state.page === "sprints") renderSprints();
   });
 
+  // src/esm/features/capacity.js
+  var LANES2 = [
+    { k: "ai", n: "AI", people: ["Altramsi", "Aliaa", "Shady"] },
+    { k: "fe", n: "Full Stack FE", people: ["Amal", "Sayeh", "Abdelhamid"] },
+    { k: "mob", n: "Full Stack Mobile", people: ["Aya Fathy", "Adnan"] },
+    { k: "be", n: "BE", people: ["Soliman", "Wardany", "Hosieny", "Hamid"] },
+    { k: "pm", n: "PMs", people: ["Asmaa", "Engy", "Emad", "Khalid"] },
+    { k: "des", n: "Design", people: ["Saad", "Khalid"] },
+    { k: "qa", n: "Quality", people: ["Mona", "Dina Mousa", "Zahran", "Dina Sam"] }
+  ];
+  var DEFAULTS = { ppp: 8, reserve: 0.2, buffer: 0.1 };
+  var SCALE = [0, 1, 2, 3, 5, 8, 13];
+  var addDays2 = (iso4, n) => {
+    const d = /* @__PURE__ */ new Date(iso4 + "T00:00:00Z");
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().slice(0, 10);
+  };
+  function workdays(a, b) {
+    let n = 0;
+    for (let d = a; d <= b; d = addDays2(d, 1)) {
+      const w = (/* @__PURE__ */ new Date(d + "T00:00:00Z")).getUTCDay();
+      if (w !== 5 && w !== 6) n++;
+    }
+    return n;
+  }
+  var fold3 = (s) => String(s || "").toLowerCase().trim().replace(/\s+/g, " ");
+  var sameName = (leaveName, name) => {
+    const a = fold3(leaveName), b = fold3(name);
+    return !!a && !!b && (a === b || a.startsWith(b + " ") || b.startsWith(a + " "));
+  };
+  function leaveDays(vacs, name, a, b) {
+    let n = 0;
+    (vacs || []).forEach((v) => {
+      if (!sameName(v.p, name) || !v.a0) return;
+      const s = v.a0 > a ? v.a0 : a, e = (v.a1 || v.a0) < b ? v.a1 || v.a0 : b;
+      if (s <= e) n += workdays(s, e);
+    });
+    return n;
+  }
+  function settings(cfg3) {
+    const c = cfg3 || {}, byK = {};
+    (c.lanes || []).forEach((x) => {
+      if (x && x.k && Array.isArray(x.people)) byK[x.k] = x.people.map(String).filter(Boolean);
+    });
+    const num = (v, d, lo, hi) => {
+      const n = +v;
+      return Number.isFinite(n) && n >= lo && n <= hi ? n : d;
+    };
+    return { ppp: num(c.ppp, DEFAULTS.ppp, 0, 100), reserve: num(c.reserve, DEFAULTS.reserve, 0, 0.9), buffer: num(c.buffer, DEFAULTS.buffer, 0, 0.9), lanes: LANES2.map((l) => ({ k: l.k, n: l.n, people: byK[l.k] || l.people })) };
+  }
+  function laneCapacity(lane2, range, vacs, cfg3) {
+    const s = settings(cfg3), wd = Math.max(1, workdays(range.a, range.b));
+    let raw = 0;
+    (lane2.people || []).forEach((p) => {
+      raw += s.ppp * Math.max(0, 1 - leaveDays(vacs, p, range.a, range.b) / wd);
+    });
+    return { people: (lane2.people || []).length, raw: Math.round(raw * 10) / 10, cap: Math.round(raw * (1 - s.reserve - s.buffer) * 10) / 10 };
+  }
+  var ptsOf = (l, k) => Math.max(0, +(l && l.pts && l.pts[k]) || 0);
+  var totalPts = (l) => Object.keys(l && l.pts || {}).reduce((a, k) => a + ptsOf(l, k), 0);
+  function loads(lines) {
+    const out = {};
+    LANES2.forEach((l) => {
+      out[l.k] = 0;
+    });
+    (lines || []).forEach((x) => LANES2.forEach((l) => {
+      out[l.k] += ptsOf(x, l.k);
+    }));
+    return out;
+  }
+  var statusOf2 = (used, cap) => used > cap + 1e-9 ? "over" : cap > 0 && used >= cap * 0.9 ? "warn" : "ok";
+  function overAfter(line, lines, range, vacs, cfg3) {
+    const s = settings(cfg3), base3 = loads((lines || []).filter((x) => x.id !== line.id)), out = [];
+    s.lanes.forEach((l) => {
+      const add = ptsOf(line, l.k);
+      if (!add) return;
+      const cap = laneCapacity(l, range, vacs, cfg3).cap, used = base3[l.k] + add;
+      if (used > cap + 1e-9) out.push({ k: l.k, n: l.n, used, cap });
+    });
+    return out;
+  }
+  function dependencyProblems(line, to, monthOf, labelOf2, dependants2) {
+    const out = [];
+    if (line.needs) {
+      const pm = monthOf(line.needs);
+      if (!pm) out.push("It needs " + labelOf2(line.needs) + ", which is not planned in a month yet.");
+      else if (pm > to) out.push("It needs " + labelOf2(line.needs) + ", which is planned later (" + pm + ").");
+    }
+    (dependants2 || []).forEach((d) => {
+      const dm = monthOf(d.id);
+      if (dm && dm < to) out.push(labelOf2(d.id) + " needs this card and is planned earlier (" + dm + ").");
+    });
+    return out;
+  }
+
+  // src/esm/features/capacity-view.js
+  var cfg2 = () => S.ideas && S.ideas.capacity || {};
+  var vacList = () => Object.keys(S.vacs || {}).map((id) => S.vacs[id]).filter((v) => v && v.a0);
+  var fmt = (n) => String(Math.round(n * 10) / 10);
+  var monthOfId = (id) => {
+    const x = allCards().find((c) => c.l.id === id);
+    const d = x && S.reports[x.did];
+    return d && d.mo && d.mo !== "backlog" ? d.mo : "";
+  };
+  var labelOf = (id) => fidLabel(id) || "another card";
+  var dependants = (id) => allCards().filter((c) => c.l.needs === id).map((c) => c.l);
+  function ptsChips(l) {
+    const out = [], t = totalPts(l);
+    if (t) {
+      const s = el("span", "chip mdpts", t + " pts");
+      s.title = settings(cfg2()).lanes.filter((x) => ptsOf(l, x.k)).map((x) => x.n + " " + ptsOf(l, x.k)).join(" · ");
+      out.push(s);
+    }
+    if (l.needs) {
+      const n = fidLabel(l.needs);
+      if (n) {
+        const s = el("span", "chip mdneeds", "Needs " + n);
+        s.title = "This card needs " + n + " planned in the same month or earlier.";
+        out.push(s);
+      }
+    }
+    return out;
+  }
+  function capBlock(m, lines) {
+    const rg = monthRange(m), s = settings(cfg2()), vac = vacList(), ld = loads(lines);
+    const rows2 = s.lanes.map((l) => {
+      const c = laneCapacity(l, rg, vac, cfg2());
+      return { l, used: ld[l.k], cap: c.cap, st: statusOf2(ld[l.k], c.cap), people: c.people };
+    });
+    const over = rows2.filter((r) => r.st === "over").length, tot = rows2.reduce((a, r) => a + r.used, 0);
+    const det = el("details", "mdcap");
+    det.open = true;
+    const sum = el("summary", "", "Capacity · " + (over ? over + " over" : "within limits") + (tot ? " · " + tot + " pts planned" : ""));
+    if (over) sum.classList.add("bad");
+    det.append(sum);
+    rows2.forEach((r) => {
+      const row = el("div", "caprow cap-" + r.st);
+      row.dataset.lane = r.l.k;
+      const bar4 = el("span", "capbar"), fill = el("i");
+      fill.style.width = Math.min(100, r.cap > 0 ? r.used / r.cap * 100 : r.used ? 100 : 0) + "%";
+      bar4.append(fill);
+      row.append(el("span", "capn", r.l.n), bar4, el("span", "capv", fmt(r.used) + " / " + fmt(r.cap)));
+      row.title = r.l.n + ": " + fmt(r.used) + " points planned, " + fmt(r.cap) + " can be planned (" + r.people + " people, after leave, reserve and buffer).";
+      det.append(row);
+    });
+    return det;
+  }
+  function openPoints(m, l, put2) {
+    openDlg("Points by role · " + cardId(l), (box2) => {
+      box2.append(el("div", "sub2", l.t));
+      const sels = {}, grid = el("div", "padd");
+      grid.style.gridTemplateColumns = "1fr";
+      settings(cfg2()).lanes.forEach((x) => {
+        const s = el("select");
+        SCALE.forEach((v) => {
+          const o = el("option", "", v ? String(v) : "–");
+          o.value = String(v);
+          s.append(o);
+        });
+        s.value = String(ptsOf(l, x.k));
+        s.setAttribute("aria-label", x.n + " points");
+        sels[x.k] = s;
+        grid.append(fld(x.n, s));
+      });
+      const nd = el("input");
+      nd.type = "text";
+      nd.placeholder = "Card id, for example BE card DC#12";
+      nd.value = l.needs ? fidLabel(l.needs) : "";
+      nd.setAttribute("aria-label", "Needs card");
+      const msg = el("p", "sub");
+      msg.setAttribute("aria-live", "polite");
+      const ok = el("button", "btn primary", "Save"), no = el("button", "btn", "Cancel");
+      ok.type = no.type = "button";
+      no.addEventListener("click", closeDlg);
+      ok.addEventListener("click", () => {
+        const pts = {};
+        Object.keys(sels).forEach((k) => {
+          const v = +sels[k].value;
+          if (v) pts[k] = v;
+        });
+        let needs = "";
+        if (nd.value.trim()) {
+          needs = fidFromText(nd.value);
+          if (!needs) {
+            msg.textContent = "No card with that id.";
+            return;
+          }
+          if (needs === l.id) {
+            msg.textContent = "A card cannot need itself.";
+            return;
+          }
+        }
+        closeDlg();
+        put2({ pts: Object.keys(pts).length ? pts : null, needs: needs || "" }, 'set the points of "' + l.t + '"');
+      });
+      const row = el("div", "row");
+      row.append(ok, no);
+      box2.append(el("p", "sub", "Estimated by the team that does the work. Points are per role; a card needs points in each role it uses."), grid, fld("Needs (planned in the same month or earlier)", nd), msg, row);
+    });
+  }
+  function guardMove(line, to, go) {
+    if (!to || to === "backlog" || !(totalPts(line) || line.needs || dependants(line.id).length)) {
+      go();
+      return;
+    }
+    const rg = monthRange(to), dest = (S.reports["mo" + to.replace("-", "")] || { lines: [] }).lines || [];
+    const probs = overAfter(line, dest, rg, vacList(), cfg2()).map((o) => o.n + " would be " + fmt(o.used) + " of " + fmt(o.cap) + " points in " + monthLabel(to) + ".").concat(dependencyProblems(line, to, monthOfId, labelOf, dependants(line.id)));
+    if (!probs.length) {
+      go();
+      return;
+    }
+    openDlg("This move needs a look", (box2) => {
+      const ul = el("ul");
+      probs.forEach((p) => ul.append(el("li", "", p)));
+      const ok = el("button", "btn danger", "Move anyway"), no = el("button", "btn", "Cancel");
+      ok.type = no.type = "button";
+      no.addEventListener("click", closeDlg);
+      ok.addEventListener("click", () => {
+        closeDlg();
+        go();
+      });
+      const row = el("div", "row");
+      row.append(ok, no);
+      box2.append(el("p", "", '"' + line.t + '"'), ul, row);
+    });
+  }
+  function checkPlan(months) {
+    const out = [], vac = vacList();
+    months.forEach((m) => {
+      const d = S.reports["mo" + m.replace("-", "")], lines = (d && d.lines || []).filter((l) => String(l.t || "").trim()), rg = monthRange(m), ld = loads(lines);
+      settings(cfg2()).lanes.forEach((l) => {
+        const c = laneCapacity(l, rg, vac, cfg2());
+        if (statusOf2(ld[l.k], c.cap) === "over") out.push({ m, t: "cap", s: l.n + ": " + fmt(ld[l.k]) + " points planned, " + fmt(c.cap) + " can be planned." });
+      });
+      lines.forEach((l) => {
+        dependencyProblems(l, m, monthOfId, labelOf, []).forEach((p) => out.push({ m, t: "dep", s: cardId(l) + " · " + l.t + ": " + p }));
+        const bar4 = l.rid && S.over[l.rid];
+        if (bar4 && !bar4.x && Number.isFinite(bar4.d0) && Number.isFinite(bar4.d1)) {
+          const a = kOfIso(rg.a), b = kOfIso(rg.b);
+          if (bar4.d1 < a || bar4.d0 > b) out.push({ m, t: "gantt", s: cardId(l) + " · " + l.t + ": its roadmap bar is outside " + monthLabel(m) + "." });
+        }
+      });
+    });
+    return out;
+  }
+  function openCheckPlan(months) {
+    const res = checkPlan(months);
+    openDlg("Check plan", (box2) => {
+      if (!res.length) box2.append(el("p", "", "Everything fits: no role is over capacity, cards are in a workable order, and roadmap bars match their months."));
+      else {
+        const names = { cap: "Capacity", dep: "Order", gantt: "Roadmap dates" };
+        ["cap", "dep", "gantt"].forEach((t) => {
+          const r = res.filter((x) => x.t === t);
+          if (!r.length) return;
+          box2.append(el("h3", "", names[t] + " (" + r.length + ")"));
+          const ul = el("ul");
+          r.forEach((x) => ul.append(el("li", "", monthLabel(x.m) + " · " + x.s)));
+          box2.append(ul);
+        });
+      }
+      const c = el("button", "btn", "Close");
+      c.type = "button";
+      c.addEventListener("click", closeDlg);
+      const row = el("div", "row");
+      row.append(c);
+      box2.append(row);
+    });
+  }
+  function openCapSettings(done2) {
+    if (!canEdit()) return;
+    const s = settings(cfg2());
+    openDlg("Capacity settings", (box2) => {
+      box2.append(el("p", "sub", "Capacity of a role in a month = people x points per person, less their leave (from Vacations), less the reserve and buffer. Update the people each month."));
+      const mk = (v, step2) => {
+        const i = el("input");
+        i.type = "number";
+        i.step = step2;
+        i.value = v;
+        return i;
+      };
+      const ppp = mk(s.ppp, "0.5"), rs = mk(Math.round(s.reserve * 100), "5"), bf = mk(Math.round(s.buffer * 100), "5");
+      box2.append(fld("Points per person per month", ppp), fld("Reserve for bugs and support (%)", rs), fld("Buffer (%)", bf));
+      const ta = {};
+      s.lanes.forEach((l) => {
+        const t = el("input");
+        t.type = "text";
+        t.value = l.people.join(", ");
+        t.setAttribute("aria-label", l.n + " people");
+        ta[l.k] = t;
+        box2.append(fld(l.n + " (names, comma separated)", t));
+      });
+      const ok = el("button", "btn primary", "Save"), no = el("button", "btn", "Cancel");
+      ok.type = no.type = "button";
+      no.addEventListener("click", closeDlg);
+      ok.addEventListener("click", () => {
+        saveIdea("capacity", { cfg: true, ppp: +ppp.value, reserve: +rs.value / 100, buffer: +bf.value / 100, lanes: s.lanes.map((l) => ({ k: l.k, people: ta[l.k].value.split(",").map((x) => x.trim()).filter(Boolean) })) }, "report", "updated the capacity settings");
+        closeDlg();
+        if (done2) done2();
+      });
+      const row = el("div", "row");
+      row.append(ok, no);
+      box2.append(row);
+    });
+  }
+
   // src/esm/features/month-undo.js
   var SKIP = /* @__PURE__ */ new Set(["lines", "by", "ts", "subAt", "subBy", "status", "pl", "mo"]);
   var same2 = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -9165,10 +9485,14 @@ a.jkchip:hover{text-decoration:underline}
     const txt = monthText(docOf(m), boardProducts(), fmtIso).join("\n") || lab(m) + "\nNo deliverables yet.";
     (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify("Month text copied to the clipboard"), () => notify("Could not copy. Select the text and copy it manually.", "err"));
   };
-  var moveCard = (from, id, to, before) => {
+  var moveCard = (from, id, to, before, guarded) => {
     if (from === to && before === id) return;
     const src = docOf(from), line = src && src.lines.find((l) => l.id === id);
     if (!line) return;
+    if (from !== to && !guarded) {
+      guardMove(line, to, () => moveCard(from, id, to, before, true));
+      return;
+    }
     const copy = JSON.parse(JSON.stringify(line));
     const put2 = (d) => {
       const i = before ? d.lines.findIndex((l) => l.id === before) : -1;
@@ -9488,6 +9812,7 @@ a.jkchip:hover{text-decoration:underline}
         const b = more.getBoundingClientRect();
         openCtx(b.right - 200, b.bottom + 4, (mm) => {
           Object.keys(SIZES).forEach((k) => mi(mm, (l.sz === k ? "✓ " : "") + SIZES[k], () => put2({ sz: l.sz === k ? "" : k }, l.sz === k ? "removed the " + SIZES[k] + " flag" : 'flagged "' + l.t + '" as ' + SIZES[k])));
+          mi(mm, "Points by role…", () => openPoints(m, l, put2));
           if (m === BL) {
           } else if (onRoadmap(l)) mi(mm, "Show on roadmap", () => {
             if (l.rm) useRoadmap(l.rm);
@@ -9513,6 +9838,7 @@ a.jkchip:hover{text-decoration:underline}
       });
       if (m !== BL) foot.append(pctSelect(pct2, "Percent complete", (v) => put2({ pct: v, pe: true }, 'changed "' + l.t + '" to ' + v + "%")));
     } else if (m !== BL) foot.append(el("span", "rvp pc-" + pctBand(pct2), pct2 + "%"));
+    ptsChips(l).forEach((c2) => foot.append(c2));
     if (SIZES[l.sz]) {
       const z = el("span", "chip mdsz mdsz-" + l.sz);
       z.innerHTML = (l.sz === "enh" ? STAR + " " : "") + SIZES[l.sz];
@@ -9705,6 +10031,7 @@ a.jkchip:hover{text-decoration:underline}
       hb.style.marginInlineStart = "auto";
     }
     col.append(h);
+    if (!isBl) col.append(capBlock(m, lines));
     if (isBl) {
       col.append(el("p", "hint mdblhint", ed ? "Ideas and requests not planned yet. Drag a card into a month, or use ⋯ → Plan in month." : "Ideas and requests not planned yet."));
     }
@@ -9826,6 +10153,21 @@ a.jkchip:hover{text-decoration:underline}
       renderMonthly();
     });
     tools.append(q, fp, ff);
+    {
+      const cb = el("button", "btn sm", "Check plan");
+      cb.type = "button";
+      cb.id = "mdcheckplan";
+      cb.title = "Capacity per role, card order and roadmap dates";
+      cb.addEventListener("click", () => openCheckPlan(visibleMonths().filter((x) => x !== BL)));
+      tools.append(cb);
+      if (ed) {
+        const cs = el("button", "btn sm", "Capacity settings");
+        cs.type = "button";
+        cs.id = "mdcapset";
+        cs.addEventListener("click", () => openCapSettings(renderMonthly));
+        tools.append(cs);
+      }
+    }
     {
       const sb2 = el("button", "btn sm mdsort" + (sortOn ? " on" : ""), sortOn ? "✓ Sorted by product" : "Sort by product");
       sb2.type = "button";

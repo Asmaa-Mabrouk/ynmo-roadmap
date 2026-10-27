@@ -1,0 +1,51 @@
+import sys, os; sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__)))); os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))+"/out")
+from h18 import *
+"""Monthly capacity: points per role, meters per month, warning before a move, Check plan, order (needs), settings, executive view. Fake database only."""
+R=[]
+def ok(n,c): R.append((n,bool(c))); print(('PASS ' if c else 'FAIL ')+n)
+def add(P,mo,text):
+    c=P.locator('.mdcol[data-mo="%s"]'%mo); c.locator('.mdopen').click(); ta=c.locator('.mdadd textarea'); ta.fill(text); ta.press('Enter'); P.wait_for_timeout(500); P.keyboard.press('Escape'); P.wait_for_timeout(250)
+def card(P,t): return P.locator('.mdcard:has-text("%s")'%t).first
+def points(P,t,vals,needs=None):
+    card(P,t).locator('.kebab').click(); P.locator('#ctx .mi:has-text("Points by role")').click(); P.wait_for_timeout(300)
+    for k,v in vals.items(): P.select_option('#xdlg select[aria-label="%s points"]'%k,str(v))
+    if needs is not None: P.locator('#xdlg input[aria-label="Needs card"]').fill(needs)
+    P.click('#xdlg button:text-is("Save")'); P.wait_for_timeout(500)
+def meter(P,mo,lane): return P.locator('.mdcol[data-mo="%s"] .caprow[data-lane="%s"] .capv'%(mo,lane)).inner_text().strip()
+with sync_playwright() as pw:
+    b=pw.chromium.launch(); ctx=mkctx(b); ctx.clock.set_fixed_time("2026-10-20T10:00:00"); errs=[]
+    A=newpage(ctx,errs); signup(A,'Admin','adm@x.com'); E=newpage(ctx,errs); signup(E,'Exec','exec@x.com')
+    A.click('#nav button[data-p="admin"]'); A.wait_for_timeout(700); A.locator('#permissions .permuser:has-text("Exec")').click(); A.wait_for_timeout(300)
+    A.click('#permissions button:text-is("Approve with these permissions")'); A.wait_for_timeout(800)
+    A.click('#nav button[data-p="monthly"]'); A.wait_for_timeout(900)
+    add(A,'2026-11','alpha'); add(A,'2026-11','beta'); add(A,'2026-10','gamma')
+    ok('C1 every month shows the seven roles', A.locator('.mdcol[data-mo="2026-11"] .caprow').count()==7 and A.locator('.mdcol[data-mo="2026-11"] .caprow .capn').all_inner_texts()==['AI','Full Stack FE','Full Stack Mobile','BE','PMs','Design','Quality'])
+    ok('C2 BE capacity of November = 4 people x 8 less 30% = 22.4', meter(A,'2026-11','be')=='0 / 22.4')
+    points(A,'alpha',{'BE':13,'Full Stack FE':5}); points(A,'beta',{'BE':8}); points(A,'gamma',{'BE':8})
+    ok('C3 meters add up the points of the cards (21 of 22.4)', meter(A,'2026-11','be')=='21 / 22.4' and meter(A,'2026-11','fe')=='5 / 16.8')
+    ok('C4 the card shows its points', card(A,'alpha').locator('.mdpts').inner_text()=='18 pts')
+    card(A,'gamma').locator('.kebab').click(); A.locator('#ctx .mi:text-is("November 2026")').click(); A.wait_for_timeout(500)
+    ok('C5 moving a card that breaks BE capacity warns first', 'BE would be 29 of 22.4' in A.locator('#xdlg').inner_text())
+    A.click('#xdlg button:text-is("Cancel")'); A.wait_for_timeout(300)
+    ok('C6 Cancel leaves the card where it was', A.locator('.mdcol[data-mo="2026-10"] .mdcard:has-text("gamma")').count()==1)
+    card(A,'gamma').locator('.kebab').click(); A.locator('#ctx .mi:text-is("November 2026")').click(); A.wait_for_timeout(400); A.click('#xdlg button:text-is("Move anyway")'); A.wait_for_timeout(600)
+    ok('C7 Move anyway moves it and the meter shows over', A.locator('.mdcol[data-mo="2026-11"] .mdcard:has-text("gamma")').count()==1 and meter(A,'2026-11','be')=='29 / 22.4' and A.locator('.mdcol[data-mo="2026-11"] .caprow.cap-over').count()==1)
+    A.click('#mdcheckplan'); A.wait_for_timeout(300); t=A.locator('#xdlg').inner_text()
+    ok('C8 Check plan lists the over-capacity role', 'BE: 29 points planned' in t); A.click('#xdlg button:text-is("Close")'); A.wait_for_timeout(200)
+    # order: delta (October) needs beta (November)
+    add(A,'2026-10','delta')
+    beta_id=A.evaluate("()=>{const d=JSON.parse(localStorage.getItem('fk3')).reports.mo202611; const l=d.lines.find(x=>x.t==='beta'); return (l.k==='daycare'?'DC':'??')+'#'+l.no}")
+    points(A,'delta',{'Quality':2},needs=beta_id)
+    ok('C9 a card shows what it needs', 'Needs' in card(A,'delta').inner_text())
+    A.click('#mdcheckplan'); A.wait_for_timeout(300); t=A.locator('#xdlg').inner_text()
+    ok('C10 Check plan lists an order problem (needs a card planned later)', 'Order' in t and 'planned later' in t); A.click('#xdlg button:text-is("Close")'); A.wait_for_timeout(200)
+    card(A,'beta').locator('.kebab').click(); A.locator('#ctx .mi:text-is("Back to backlog")').click(); A.wait_for_timeout(500)
+    ok('C11 moving the needed card to the backlog needs no capacity warning (not a month)', 'beta' in A.evaluate("()=>JSON.stringify(JSON.parse(localStorage.getItem('fk3')).reports.mobacklog||{})"))
+    if A.locator('#xdlg').count(): A.click('#xdlg button:text-is("Cancel")')
+    # settings
+    A.click('#mdcapset'); A.wait_for_timeout(300); A.locator('#xdlg input[type=number]').first.fill('10'); A.click('#xdlg button:text-is("Save")'); A.wait_for_timeout(700)
+    ok('C12 changing points per person updates the capacity (4 x 10 x 70% = 28)', meter(A,'2026-11','be').endswith('/ 28'))
+    E.reload(); E.wait_for_timeout(1500); E.click('#nav button[data-p="monthly"]'); E.wait_for_timeout(900)
+    ok('C13 executives see the meters and Check plan, but cannot change settings', E.locator('.mdcol[data-mo="2026-11"] .caprow').count()==7 and E.locator('#mdcheckplan').count()==1 and E.locator('#mdcapset').count()==0)
+    ok('C14 executives see the points on cards but no Points menu', E.locator('.mdcard .mdpts').count()>=1 and E.locator('.mdcard .kebab').count()==0)
+    ok('no page errors', errs==[]); print('errors:',errs[:3]); print(sum(1 for _,c in R if c),'/',len(R))

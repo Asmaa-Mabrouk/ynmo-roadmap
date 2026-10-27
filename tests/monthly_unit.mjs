@@ -31,3 +31,24 @@ const srt = sortByProduct([mk('w', 'warif'), mk('p1', 'plan'), mk('d', 'daycare'
 ok('sort by product: Tifli, AI, Daycare, Plan, SCHS, Warif, then the others', srt.map(l => l.id).join() === 't,a,d,p1,p2,s,w,f,x' && PRODUCT_ORDER.slice(0, 6).join() === 'tifli,ai,daycare,plan,schs,warif');
 const inp = [mk('b', 'plan'), mk('a', 'plan')]; sortByProduct(inp);
 ok('sorting does not change the original list and keeps the order inside a product', inp[0].id === 'b' && sortByProduct(inp).map(l => l.id).join() === 'b,a');
+import * as cap from '../src/esm/features/capacity.js';
+{
+  const rg = { a: '2026-11-01', b: '2026-11-30' };
+  ok('capacity: working days are Sunday to Thursday (Nov 2026 = 22)', cap.workdays(rg.a, rg.b) === 22);
+  const be = cap.LANES.find(l => l.k === 'be'), c0 = cap.laneCapacity(be, rg, [], {});
+  ok('capacity: 4 BE people x 8 points less 30% = 22.4', c0.people === 4 && c0.raw === 32 && c0.cap === 22.4);
+  const c1 = cap.laneCapacity(be, rg, [{ p: 'Soliman Ahmed', a0: '2026-11-01', a1: '2026-11-12' }], {});
+  ok('capacity: leave reduces the capacity (8 working days of 21)', c1.raw < 32 && c1.raw > 25);
+  ok('capacity: a full-name leave entry matches the short name', cap.sameName('Aya Fathy Ali', 'Aya Fathy') && !cap.sameName('Amal Hassan', 'Aya Fathy'));
+  const lines = [{ id: 'a', pts: { be: 10, fe: 5 } }, { id: 'b', pts: { be: 8 } }];
+  ok('capacity: loads add the points per role', JSON.stringify(cap.loads(lines)).includes('"be":18') && cap.loads(lines).fe === 5);
+  ok('capacity: status ok / warn / over', cap.statusOf(5, 20) === 'ok' && cap.statusOf(19, 20) === 'warn' && cap.statusOf(21, 20) === 'over');
+  const ov = cap.overAfter({ id: 'n', pts: { be: 6 } }, lines, rg, [], {});
+  ok('capacity: a card that pushes BE past 22.4 is reported', ov.length === 1 && ov[0].k === 'be' && ov[0].used === 24);
+  ok('capacity: a card that fits is not reported', cap.overAfter({ id: 'n', pts: { be: 3 } }, lines, rg, [], {}).length === 0);
+  const monthOf = id => ({ p: '2026-12', q: '' }[id] || '2026-11'), lab = id => 'X#' + id;
+  ok('dependency: needing a card planned later is a problem', cap.dependencyProblems({ id: 'z', needs: 'p' }, '2026-11', monthOf, lab, []).length === 1);
+  ok('dependency: a prerequisite planned earlier or the same month is fine', cap.dependencyProblems({ id: 'z', needs: 'a' }, '2026-11', monthOf, lab, []).length === 0);
+  ok('dependency: moving a card later than one that needs it is a problem', cap.dependencyProblems({ id: 'a' }, '2026-12', monthOf, lab, [{ id: 'z' }]).length === 1);
+  ok('capacity: settings can be overridden and bad values fall back', cap.settings({ ppp: 10, reserve: 5 }).ppp === 10 && cap.settings({ reserve: 5 }).reserve === 0.2);
+}
