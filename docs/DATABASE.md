@@ -66,3 +66,7 @@ Note (sprint document): `sprint_items` docs are now blocks `{sp,k,sq,t,st,dn,tag
 
 ### Concurrent edits of one month (2026-10-27)
 A month is one document (`reports/mo<yyyymm>`). Each save reads the stored month first and keeps cards the screen has never seen (`writeMonth` in `pages/monthly.js`). Two people editing the **same card** at the same moment is still last-writer-wins; per-card documents would remove that and are not built. Free-tier Supabase has no point-in-time recovery, so a card lost before this change cannot be restored from the database (see the recovery steps in LEDGER 2026-10-27).
+
+
+### Browser outbox (2026-10-27)
+`localStorage` key `ynmo-outbox` holds writes the server has not confirmed yet ({path: {copy, part, u, seq, at}}). Entries are removed once the server confirms, when the table is missing or the person has view-only access. `replayOutbox()` sends them again at start and every 30 s. Error classes (`core/supabase.js`): `temporary` (PGRST002, 503, "schema cache ... Retrying") is retried; `missing_table` only for PGRST205 / 42P01 / "Could not find the table".

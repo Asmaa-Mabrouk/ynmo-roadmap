@@ -2,6 +2,8 @@
 
 ## Unreleased – Sprints + Weekly executive report
 
+- **Edits survive a data-API outage (2026-10-27):** during the outage the app took Supabase's message "Could not query the database for the schema cache" (PGRST002 / 503) for a missing table and gave up on every save at once. That message is now treated as **temporary** and the save is retried. Every edit (and activity-log entry) is also kept in an **outbox in the browser** until the server confirms it: it survives a reload, is sent again automatically at start and every 30 s, server refreshes no longer overwrite it, and closing the tab with unsaved edits asks for confirmation. Test `outage_outbox.py` (11).
+
 - **A save can no longer wipe cards added by someone else (2026-10-27):** each Monthly save used to write the whole month from the screen's own copy, so a screen that had not refreshed (or was offline during the data-API outage) could overwrite cards another person added. Now, before every save, the stored month is read and **cards the screen has never seen are kept** (a message says how many), and saves of the same month go one after another. Edits to the same card are still last-writer-wins. Test `monthly_merge_save.py` (5). No database change.
 
 - **Recovery from a data-API outage (2026-10-27):** the login stall was Supabase's data API (PostgREST) returning 503 PGRST002 with the database healthy; fixed by restarting the project. The "Taking longer than expected" screen now **retries by itself every 15 s** and opens the tool as soon as the server answers, so nobody has to refresh. New runbook and prevention list in `docs/DEPLOYMENT.md` (uptime monitor on the API, Supabase alerts, plan upgrade, pre-demo check). Test `login_hang.py` now 9 checks.

@@ -42,6 +42,23 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-27 - Missing cards restored; outbox against outages
+```
+🔄 YNMO LEDGER UPDATE — 2026-10-27
+Request: the five CTO cards were restored in the live database (TF#108, PL#109, DC#110, PL#111, DC#112 in November 2026, counter 112, five log entries); the app fix could not be pushed from the extension session
+Surface: cross-cutting (Roadmaps tool, saving)
+Outcome: rebuilt the fix here: outage message treated as temporary and retried; browser outbox keeps unconfirmed edits across reloads; tab-close prompt; deployed from this session
+New facts / decisions locked:
+  • Cause of the lost saves: the app mistook the PGRST002 outage message for a missing table and dropped every save
+  • Restored cards carry today's timestamp and the entry note "restored after the outage"; comments on TF#108 and PL#109 were not recoverable
+Corrections to this skill: none
+Open / flagged:
+  • Ask Dr Abdullah or the team to paste the comments of TF#108 and PL#109 so they can be re-added
+  • The activity log is not outbox-protected for the page-level log list (entries are re-sent, shown after the next refresh)
+Changelog: Saves retry through outages; unsaved edits kept in the browser.
+```
+Paste this into Section 11 of the ynmo-master skill to keep it current.
+
 ### 2026-10-27 - Cards added by the CTO yesterday not found
 ```
 🔄 YNMO LEDGER UPDATE — 2026-10-27
