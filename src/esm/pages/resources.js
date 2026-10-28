@@ -20,6 +20,9 @@ import { renderPermissions } from './permissions.js';
 import { notify } from '../ui/notify.js';
 import { requestsCard, pendingCount } from '../features/feature-sync.js';
 import { applyAccessChange } from '../app/shell.js';
+import { leaverWork, leavingMap, renameInDashboard, setLeaving } from '../features/leavers.js';
+import { confirmDlg } from '../ui/confirm.js';
+import { fmtIso, todayIso } from '../core/shared.js';
 
 /* ---------- resources ---------- */
 function personDocId(name) { return Object.keys(S.extras).find(i => S.extras[i] && S.extras[i].n === name && !S.extras[i].hidden); }
@@ -33,27 +36,30 @@ function savePerson(name, patch, sum) {
 }
 
 /** Rename a team member everywhere the name is used: the person record, features on every roadmap, vacations, sprint plans and saved row order. */
-function renamePerson(old, nw) {
+function renamePerson(old, nw, merge) {
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   nw = String(nw || '').trim().replace(/\s+/g, ' ').slice(0, 60);
   if (!nw || nw === old) return false;
-  if ([...directory().keys()].some(n => n !== old && n.toLowerCase() === nw.toLowerCase())) { notify(nw + ' is already in the team', 'err'); return false; }
+  const exists = [...directory().keys()].some(n => n !== old && n.toLowerCase() === nw.toLowerCase());
+  if (merge) { if (!directory().has(nw) || nw === old) return false; } else if (exists) { notify(nw + ' is already in the team', 'err'); return false; }
   const d = directory().get(old) || { sqs: new Set(['tifli']), domain: 'Other' }, id = personDocId(old);
   const base0 = Object.keys(TEAMS).some(sq => ['pm', 'dev', 'qa', 'ux'].some(r => (TEAMS[sq][r] || []).includes(old)));
-  if (id && !base0) { S.extras[id] = Object.assign({}, S.extras[id], { n: nw }); write('people/' + id, S.extras[id]); }
+  if (merge) { const hid = id || ('ov-' + slug(old)); S.extras[hid] = { n: old, hidden: true }; write('people/' + hid, S.extras[hid]); }   // merged: the old row is hidden (an editor may change but not delete)
+  else if (id && !base0) { S.extras[id] = Object.assign({}, S.extras[id], { n: nw }); write('people/' + id, S.extras[id]); }
   else {
     let nid = 'ov-' + slug(nw); const hid = id || ('ov-' + slug(old)); if (nid === hid || S.extras[nid]) nid += '-' + Date.now().toString(36);
     S.extras[nid] = { n: nw, over: true, domain: d.domain || 'Other', sqs: [...d.sqs] }; write('people/' + nid, S.extras[nid]);
     S.extras[hid] = { n: old, hidden: true }; write('people/' + hid, S.extras[hid]);
   }
   let feats = 0;
-  allRoadmaps().forEach(rm => withRm(rm.id, () => items().forEach(it => { if (it.res.includes(old)) { const patch = { res: it.res.map(x => (x === old ? nw : x)) }; if (it.pd && it.pd[old]) { patch.pd = Object.assign({}, it.pd); patch.pd[nw] = patch.pd[old]; delete patch.pd[old]; } S.over[it.id] = Object.assign({}, S.over[it.id] || {}, patch); persist(it.id); feats++; } })));
+  allRoadmaps().forEach(rm => withRm(rm.id, () => items().forEach(it => { if (it.res.includes(old)) { const patch = { res: [...new Set(it.res.map(x => (x === old ? nw : x)))] }; if (it.pd && it.pd[old]) { patch.pd = Object.assign({}, it.pd); if (!patch.pd[nw]) patch.pd[nw] = patch.pd[old]; delete patch.pd[old]; } S.over[it.id] = Object.assign({}, S.over[it.id] || {}, patch); persist(it.id); feats++; } })));
   Object.keys(S.vacs).forEach(v => { if (S.vacs[v] && S.vacs[v].p === old) { S.vacs[v] = Object.assign({}, S.vacs[v], { p: nw }); write('vacations/' + v, S.vacs[v]); } });
   Object.keys(S.sitems).forEach(i => { const x = S.sitems[i]; if (x && x.k === 'p' && x.t === old) { S.sitems[i] = Object.assign({}, x, { t: nw }); write('sprint_items/' + i, S.sitems[i]); } else if (x && !x.k && x.person === old) { S.sitems[i] = Object.assign({}, x, { person: nw }); write('sprint_items/' + i, S.sitems[i]); } });
   Object.keys(S.ideas).forEach(iid => { const x = S.ideas[iid]; if (x && x.tn && x.p === old) saveIdea(iid, { p: nw }); });   // timeline notes about this person
-  const po = S.ideas.peopleorder; if (po && (po.ord || []).includes(old)) saveIdea('peopleorder', { cfg: true, ord: po.ord.map(x => (x === old ? nw : x)) });
-  const ph = S.ideas.peoplehide; if (ph && ph.byRm && Object.keys(ph.byRm).some(k => ph.byRm[k].includes(old))) { const by = {}; Object.keys(ph.byRm).forEach(k => { by[k] = ph.byRm[k].map(x => (x === old ? nw : x)); }); saveIdea('peoplehide', { cfg: true, byRm: by }); }
-  logAct('resource', 'renamed ' + old + ' to ' + nw + (feats ? ' (' + feats + ' feature' + (feats === 1 ? '' : 's') + ' updated)' : ''));
+  const po = S.ideas.peopleorder; if (po && (po.ord || []).includes(old)) saveIdea('peopleorder', { cfg: true, ord: [...new Set(po.ord.map(x => (x === old ? nw : x)))] });
+  const ph = S.ideas.peoplehide; if (ph && ph.byRm && Object.keys(ph.byRm).some(k => ph.byRm[k].includes(old))) { const by = {}; Object.keys(ph.byRm).forEach(k => { by[k] = [...new Set(ph.byRm[k].map(x => (x === old ? nw : x)))]; }); saveIdea('peoplehide', { cfg: true, byRm: by }); }
+  const dash = renameInDashboard(old, nw);
+  logAct('resource', (merge ? 'merged ' : 'renamed ') + old + (merge ? ' into ' : ' to ') + nw + (feats ? ' (' + feats + ' feature' + (feats === 1 ? '' : 's') + ' updated)' : ''));
   fillPersons(); render(); renderResources(); notify(old + ' is now ' + nw + (feats ? '. ' + feats + ' feature' + (feats === 1 ? '' : 's') + ' updated.' : '.'));
   return true;
 }
@@ -129,6 +135,46 @@ function warnAssigned(name, work) {
     const ok = el('button', 'btn', 'Close'); ok.type = 'button'; ok.addEventListener('click', closeDlg); box.append(ok);
   });
 }
+/** One person: name, same person as another row (merge), and left the company (last working day), with the features that then need a new owner. */
+function openPerson(name) {
+  openDlg(name, box => {
+    box.classList.add('pmdlg');
+    const draw = () => {
+      box.querySelectorAll('.pmbody').forEach(x => x.remove());
+      const body = el('div', 'pmbody');
+      const nm = el('input'); nm.type = 'text'; nm.maxLength = 60; nm.value = name; nm.id = 'pmname'; nm.setAttribute('aria-label', 'Name');
+      const sv = el('button', 'btn sm primary', 'Save name'); sv.type = 'button'; sv.id = 'pmsave'; sv.addEventListener('click', () => { if (renamePerson(name, nm.value)) closeDlg(); });
+      const r1 = el('div', 'formrow'); r1.append(nm, sv); body.append(el('h3', '', '1. Name'), el('p', 'hint', 'The name changes everywhere: roadmaps, vacations, sprints, the Dashboard and the people on cards.'), r1);
+      const sel = el('select'); sel.id = 'pmmerge'; sel.setAttribute('aria-label', 'Same person as'); const o0 = el('option', '', 'Choose the name to keep…'); o0.value = ''; sel.append(o0);
+      [...directory().keys()].filter(n => n !== name).sort((a, b) => a.localeCompare(b)).forEach(n => { const o = el('option', '', n); o.value = n; sel.append(o); });
+      const mg = el('button', 'btn sm', 'Merge'); mg.type = 'button'; mg.id = 'pmdo';
+      mg.addEventListener('click', () => { const to = sel.value; if (!to) return; confirmDlg('Merge ' + name + ' into ' + to + '?', name + ' disappears from the team list. Everything of ' + name + ' (features, vacations, sprint rows, Dashboard points) moves to ' + to + '. This does not delete any data.', 'Merge', () => { renamePerson(name, to, true); }); });
+      const r2 = el('div', 'formrow'); r2.append(sel, mg); body.append(el('h3', '', '2. Same person as another row?'), el('p', 'hint', 'Use it for a spelling that was added twice (for example Tramsi and Altramsi).'), r2);
+      const cur = leavingMap()[name] || '', dt = el('input'); dt.type = 'date'; dt.value = cur; dt.id = 'pmleft'; dt.setAttribute('aria-label', 'Last working day');
+      const lv = el('button', 'btn sm primary', cur ? 'Change the day' : 'Mark as left'); lv.type = 'button'; lv.id = 'pmleave';
+      lv.addEventListener('click', () => { if (!/^\d{4}-\d{2}-\d{2}$/.test(dt.value)) { notify('Pick the last working day first', 'err'); return; } setLeaving(name, dt.value, 'resource', 'marked ' + name + ' as ' + (dt.value < todayIso() ? 'left on ' : 'leaving on ') + dt.value); notify(name + ': last working day ' + fmtIso(dt.value)); draw(); renderResources(); });
+      const r3 = el('div', 'formrow'); r3.append(dt, lv);
+      if (cur) { const un = el('button', 'btn sm', 'Back in the team'); un.type = 'button'; un.id = 'pmclear'; un.addEventListener('click', () => { setLeaving(name, '', 'resource', name + ' is not leaving any more'); draw(); renderResources(); }); r3.append(un); }
+      body.append(el('h3', '', '3. Left the company, or leaving?'), el('p', 'hint', 'From the last working day the Dashboard stops counting this person, and the features they still own after it are flagged on the roadmap and on the Dashboard until you give them a new owner.'), r3);
+      const w = cur ? leaverWork(name, allRoadmaps, withRm) : [];
+      if (cur) {
+        const bx = el('div', 'pmwork'); bx.id = 'pmwork';
+        if (!w.length) bx.append(el('p', '', 'No feature of ' + name + ' runs after ' + fmtIso(cur) + '.'));
+        else {
+          bx.append(el('strong', '', w.length + (w.length === 1 ? ' feature needs' : ' features need') + ' a new owner (they run after ' + fmtIso(cur) + '):'));
+          const ul = el('ul'); w.slice(0, 8).forEach(x => ul.append(el('li', '', x.t + ' · ' + x.rmName))); if (w.length > 8) ul.append(el('li', '', '… and ' + (w.length - 8) + ' more')); bx.append(ul);
+          const go = el('button', 'btn sm primary', 'Plan them on the roadmap'); go.type = 'button'; go.id = 'pmplan'; go.addEventListener('click', () => { closeDlg(); planLeaver(name, w[0].rm); }); bx.append(go);
+        }
+        body.append(bx);
+      }
+      box.append(body);
+    };
+    draw();
+    const ok = el('button', 'btn', 'Close'); ok.type = 'button'; ok.addEventListener('click', closeDlg); box.append(ok);
+  });
+}
+/** Opens the roadmap on the row of this person, to give their features a new owner. */
+function planLeaver(name, rmId) { useRoadmap(rmId); state.person = name; fillPersons(); render(); const nb = document.querySelector('#nav button[data-p="roadmap"]'); if (nb) nb.click(); }
 export function removePerson2(name) {
   const id = personDocId(name), base0 = Object.keys(TEAMS).some(sq => ['pm', 'dev', 'qa', 'ux'].some(r => (TEAMS[sq][r] || []).includes(name)));
   if (id && !base0) { delete S.extras[id]; write('people/' + id, null); }
@@ -225,7 +271,9 @@ export function renderResources() {
         inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); fin(true); } else if (e.key === 'Escape') fin(false); }); inp.addEventListener('blur', () => fin(true));
       });
       w.append(ed);
+      const mgb = el('button', 'btn sm iconbtn', '⋯'); mgb.type = 'button'; mgb.title = 'Name, merge, left the company: ' + p.name; mgb.setAttribute('aria-label', 'Manage ' + p.name); mgb.dataset.manage = p.name; mgb.addEventListener('click', () => openPerson(p.name)); w.append(mgb);
     }
+    { const lvd = leavingMap()[p.name]; if (lvd) { const n = leaverWork(p.name, allRoadmaps, withRm).length, t = el('span', 'pmtag ' + (lvd < todayIso() ? 'left' : 'soon'), (lvd < todayIso() ? 'Left ' : 'Leaving ') + fmtIso(lvd) + (n ? ' · ' + n + ' to plan' : '')); t.dataset.left = p.name; t.title = n ? n + ' feature' + (n === 1 ? '' : 's') + ' of ' + p.name + ' run after the last working day and need a new owner' : 'No feature runs after the last working day'; w.append(t); } }
     c1.append(w);
     const c2 = el('td'), ds = selOf(DOMAINS, p.domain); ds.disabled = !canEdit(); ds.setAttribute('aria-label', 'Domain of ' + p.name);
     ds.addEventListener('change', () => savePerson(p.name, { domain: ds.value }, 'changed domain of ' + p.name + ' to ' + ds.value)); c2.append(ds);

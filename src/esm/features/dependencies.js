@@ -20,6 +20,10 @@ function depIssues(all) {
     const gap = s.d0 - p.d1 - 1;
     out.push({ from: p, to: s, gap: gap, bad: s.d0 <= p.d1 });
   }));
+  /* a Monthly card that "needs" another card also links their roadmap bars (drawn dashed, set on the card, not on the bar) */
+  const seen = new Set(out.map(x => x.from.id + '>' + x.to.id)), cards = new Map();
+  Object.keys(S.reports || {}).filter(k => /^mo\d{6}$/.test(k)).forEach(k => ((S.reports[k] || {}).lines || []).forEach(l => { if (l && l.id) cards.set(l.id, l); }));
+  cards.forEach(l => { if (!l.needs || !l.rid) return; const n = cards.get(l.needs), s = byId.get(l.rid), p = n && byId.get(n.rid); if (!s || !p || s === p || seen.has(p.id + '>' + s.id)) return; seen.add(p.id + '>' + s.id); out.push({ from: p, to: s, gap: s.d0 - p.d1 - 1, bad: s.d0 <= p.d1, card: true }); });
   return out;
 }
 export function openDeps(it) {
@@ -76,8 +80,8 @@ function drawOverlay() {
     let d;
     if (x2 >= x1 + 14) d = 'M' + x1 + ' ' + y1 + ' H' + (x1 + 7) + ' V' + y2 + ' H' + (x2 - 1);
     else { const my = y2 > y1 ? Math.max(ra.bottom, rb.top) - gr.top + 2 : Math.min(ra.top, rb.bottom) - gr.top - 2; d = 'M' + x1 + ' ' + y1 + ' H' + (x1 + 7) + ' V' + my + ' H' + (x2 - 7) + ' V' + y2 + ' H' + (x2 - 1); }
-    const tip = '"' + x.from.t + '" → "' + x.to.t + '": ' + (x.bad ? (x.gap === -1 ? 'starts the same day the first ends' : 'starts ' + (-x.gap - 1) + ' day(s) before the first ends') : (x.gap === 0 ? 'starts the next day, no buffer' : x.gap + ' day(s) of buffer'));
-    const p = sv('path', { d: d, fill: 'none', stroke: x.bad ? '#c0392b' : '#55608a', 'stroke-width': x.bad ? '2' : '1.5', 'marker-end': 'url(#ar-' + (x.bad ? 'bad' : 'ok') + ')', class: 'dep' + (x.bad ? ' bad' : '') });
+    const tip = (x.card ? 'Set on the cards (Needs card): ' : '') + '"' + x.from.t + '" → "' + x.to.t + '": ' + (x.bad ? (x.gap === -1 ? 'starts the same day the first ends' : 'starts ' + (-x.gap - 1) + ' day(s) before the first ends') : (x.gap === 0 ? 'starts the next day, no buffer' : x.gap + ' day(s) of buffer'));
+    const p = sv('path', { d: d, fill: 'none', stroke: x.bad ? '#c0392b' : '#55608a', 'stroke-width': x.bad ? '2' : '1.5', 'marker-end': 'url(#ar-' + (x.bad ? 'bad' : 'ok') + ')', class: 'dep' + (x.bad ? ' bad' : '') + (x.card ? ' card' : ''), 'stroke-dasharray': x.card ? '6 4' : '' });
     const t = sv('title'); t.textContent = tip; p.append(t); svg.append(p);
   });
   g.append(svg);

@@ -42,6 +42,23 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-28 - Resources Manage pop-up, leavers, Gantt lines for linked cards
+```
+🔄 YNMO LEDGER UPDATE - 2026-10-28
+Request: a small pop-up per resource to unify names or mark him as left; reflect on his assigned features and remind to plan them; a line between dependent features on the Gantt chart
+Surface: Ynmo Roadmaps tool (Resources, Roadmap, Dashboard)
+Outcome: Manage pop-up (name, merge, last working day); leavers' features flagged on the Gantt, Resources and Dashboard until reassigned; dashed Gantt line between bars of cards linked with Needs card
+New facts / decisions locked:
+  - The last working day is stored in the Dashboard settings (ideas/capacity > leaving); a leaver stays in the list (history kept) and is not deleted
+  - The reminder is in the tool: it stays on the Dashboard under What needs fixing until the features have a new owner
+  - A merge hides the duplicate row (editors cannot delete in people) and moves everything to the kept name
+Corrections to this skill: none
+Open / flagged:
+  - Reassigning is still done on the roadmap (Plan them opens the person's row); no bulk reassign
+  - Seed names from the code (Tramsi, Sahdy, Waradny) come back as seeds if their hidden record is removed
+Changelog: Resources manage pop-up; leavers flagged; Gantt lines for linked cards.
+```
+
 ### 2026-10-28 - Not-on-roadmap flag, log names, Dashboard address
 ```
 🔄 YNMO LEDGER UPDATE - 2026-10-28

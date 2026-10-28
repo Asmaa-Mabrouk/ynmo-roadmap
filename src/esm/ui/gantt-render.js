@@ -4,6 +4,7 @@
  * Summary strip, filters, zoom, bar construction (buildBar), row packing so bars do not overlap (pack) and the by-person view.
  * Dependencies are explicit ES imports; shared mutable state lives in `S` (core/state.js).
  */
+import { afterLast, leavingMap } from '../features/leavers.js';
 import { S } from '../core/state.js';
 import { $, DAYS, H2_ID, LANES, LOWPRI, MGROUPS, NDAYS, STARTDOW, STATUS, canEdit, directory, dlabel,  eff, rangePatch, el, state, todayK, visible } from '../core/model.js';
 import { finishEdit, openAddPerson, startEdit } from './editing.js';
@@ -55,6 +56,7 @@ function buildBar(it, owner) {
   bar.tabIndex = 0; bar.setAttribute('role', 'button'); 
   bar.setAttribute('aria-label', it.t + ', ' + dlabel(it.d0) + ' to ' + dlabel(it.d1) + ', ' + STATUS[it.st]);
   bar.dataset.tip = it.t; bar.dataset.tipSub = l.n + ' · ' + dlabel(it.d0) + ' to ' + dlabel(it.d1) + ' · ' + STATUS[it.st];
+  if (owner && afterLast(it, owner)) { bar.classList.add('ownerleft'); bar.dataset.tipSub += ' · ⚠ ' + owner + ' leaves on ' + fmtIso(leavingMap()[owner]) + ': needs a new owner'; bar.setAttribute('aria-label', bar.getAttribute('aria-label') + ', owner leaves ' + fmtIso(leavingMap()[owner])); }
   const editing = state.edit === it.id + '|' + (owner || '');
   if (editing) {
     bar.classList.add('editing');

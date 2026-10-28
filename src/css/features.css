@@ -968,3 +968,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 /* a month card that is not planned on the roadmap stands out */
 .mdcard.noroad { box-shadow: 0 0 0 2px #e0a400 inset; background-image: linear-gradient(180deg, rgba(255, 196, 0, .10), rgba(255, 196, 0, 0) 55%); }
 .mdnoroad { font-size: .72rem; padding: 1px 8px; background: #fff3cc; color: #7a5200; border: 1px solid #e0a400; font-weight: 700; }
+
+/* people: manage dialog, left / leaving tag, a feature whose owner has left */
+.pmdlg { display: grid; gap: 8px; min-width: min(560px, 92vw); } .pmbody { display: grid; gap: 6px; } .pmbody h3 { margin: 8px 0 0; font-size: 1.05rem; } .pmbody .hint { margin: 0; }
+.pmtag { font-size: .72rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid #e0a400; background: #fff3cc; color: #7a5200; }
+.pmtag.left { border-color: #d03b3b; background: #fbe0de; color: #8c1d18; }
+.pmwork { background: #fffaf0; border: 1px solid #e0a400; border-radius: 12px; padding: 10px 14px; display: grid; gap: 6px; } .pmwork ul { margin: 0; padding-inline-start: 18px; }
+.bar.ownerleft { outline: 2px dashed #d03b3b; outline-offset: 1px; }

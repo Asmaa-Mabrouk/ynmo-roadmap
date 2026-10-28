@@ -1391,6 +1391,13 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 /* a month card that is not planned on the roadmap stands out */
 .mdcard.noroad { box-shadow: 0 0 0 2px #e0a400 inset; background-image: linear-gradient(180deg, rgba(255, 196, 0, .10), rgba(255, 196, 0, 0) 55%); }
 .mdnoroad { font-size: .72rem; padding: 1px 8px; background: #fff3cc; color: #7a5200; border: 1px solid #e0a400; font-weight: 700; }
+
+/* people: manage dialog, left / leaving tag, a feature whose owner has left */
+.pmdlg { display: grid; gap: 8px; min-width: min(560px, 92vw); } .pmbody { display: grid; gap: 6px; } .pmbody h3 { margin: 8px 0 0; font-size: 1.05rem; } .pmbody .hint { margin: 0; }
+.pmtag { font-size: .72rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid #e0a400; background: #fff3cc; color: #7a5200; }
+.pmtag.left { border-color: #d03b3b; background: #fbe0de; color: #8c1d18; }
+.pmwork { background: #fffaf0; border: 1px solid #e0a400; border-radius: 12px; padding: 10px 14px; display: grid; gap: 6px; } .pmwork ul { margin: 0; padding-inline-start: 18px; }
+.bar.ownerleft { outline: 2px dashed #d03b3b; outline-offset: 1px; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -2791,6 +2798,273 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     return parts.join("; ");
   }
 
+  // src/esm/ui/notify.js
+  var box = null;
+  function host() {
+    if (box && document.body.contains(box)) return box;
+    box = document.createElement("div");
+    box.id = "toasts";
+    box.setAttribute("aria-live", "polite");
+    document.body.append(box);
+    return box;
+  }
+  function notify(msg, kind, ms) {
+    kind = kind || "ok";
+    const t = document.createElement("div");
+    t.className = "toast " + kind;
+    t.setAttribute("role", kind === "err" ? "alert" : "status");
+    const ic = document.createElement("span");
+    ic.className = "ti";
+    ic.textContent = kind === "err" ? "!" : kind === "ok" ? "✓" : "i";
+    ic.setAttribute("aria-hidden", "true");
+    const tx = document.createElement("span");
+    tx.className = "tt";
+    tx.textContent = msg;
+    const x = document.createElement("button");
+    x.type = "button";
+    x.className = "tx";
+    x.textContent = "×";
+    x.setAttribute("aria-label", "Dismiss");
+    const gone = () => {
+      t.classList.add("out");
+      setTimeout(() => t.remove(), 200);
+    };
+    x.addEventListener("click", gone);
+    t.append(ic, tx, x);
+    const h = host();
+    h.append(t);
+    while (h.children.length > 3) h.firstChild.remove();
+    setTimeout(gone, ms || (kind === "err" ? 7e3 : 3500));
+  }
+  var lastFail = 0;
+  function notifyFailOnce(msg) {
+    const n = Date.now();
+    if (n - lastFail < 8e3) return;
+    lastFail = n;
+    notify(msg, "err");
+  }
+
+  // src/esm/ui/confirm.js
+  function confirmDlg(title, msg, yes, onYes) {
+    openDlg(title, (box2) => {
+      const ok = el("button", "btn danger", yes), no = el("button", "btn", "Cancel");
+      ok.type = no.type = "button";
+      ok.addEventListener("click", () => {
+        closeDlg();
+        onYes();
+      });
+      no.addEventListener("click", closeDlg);
+      const row = el("div", "row");
+      row.append(ok, no);
+      box2.append(el("p", "", msg), row);
+    });
+  }
+
+  // src/esm/pages/monthly-history.js
+  function keepVersion(m, doc2, named, name, who2) {
+    S.hist = S.hist || {};
+    const vs = versionsOf(S.hist, m), at = +doc2.ts || 0;
+    if (!named && at && vs.some((v) => !v.named && v.at === at)) return "";
+    const mk = makeVersion(m, doc2, named, name, who2, Date.now(), named ? 0 : autoSlot(vs));
+    mk.v._p = Date.now();
+    if (S.hist[mk.id] && S.hist[mk.id].at === mk.v.at) return mk.id;
+    S.hist[mk.id] = mk.v;
+    const w = Object.assign({}, mk.v);
+    delete w._p;
+    write("reports/" + mk.id, w);
+    return mk.id;
+  }
+  var who = () => S.me && (S.me.name || S.me.email) || "";
+  function openHistory(m, cb) {
+    let sel = "";
+    openDlg("Version history · " + cb.label(m), (box2) => {
+      box2.classList.add("vhdlg");
+      const top = el("div", "vhtop"), inp = el("input");
+      inp.id = "vhname";
+      inp.type = "text";
+      inp.maxLength = 60;
+      inp.placeholder = "Name this version, for example Before the exec review";
+      inp.setAttribute("aria-label", "Name of the version");
+      const sv3 = el("button", "btn pri sm", "Save a version");
+      sv3.type = "button";
+      sv3.id = "vhsave";
+      sv3.addEventListener("click", () => {
+        const cur2 = cb.docOf(m);
+        keepVersion(m, cur2, true, inp.value.trim() || "Saved version", who());
+        inp.value = "";
+        notify("Version saved. It is kept until you remove it.");
+        draw();
+      });
+      top.append(inp, sv3);
+      const body = el("div", "vhbody"), list = el("div", "vhlist"), det = el("div", "vhdetail");
+      list.id = "vhlist";
+      det.id = "vhdetail";
+      list.setAttribute("role", "listbox");
+      list.setAttribute("aria-label", "Versions");
+      body.append(list, det);
+      box2.append(el("p", "hint", "Every change to a month is kept as a version. The board always shows the latest one. Pick a version to see what is different from now."), top, body);
+      function draw() {
+        const cur2 = cb.docOf(m), vs = versionsOf(S.hist, m);
+        list.textContent = "";
+        det.textContent = "";
+        const cb0 = el("button", "vhitem" + (sel ? "" : " on"), "");
+        cb0.type = "button";
+        cb0.dataset.id = "";
+        cb0.append(el("strong", "", "Now (latest)"), el("span", "", cardCount(cur2) + " cards"));
+        cb0.addEventListener("click", () => {
+          sel = "";
+          draw();
+        });
+        list.append(cb0);
+        if (!vs.length) list.append(el("p", "hint vhnone", "No earlier versions yet. One is kept automatically when the month changes."));
+        vs.forEach((v2) => {
+          const b = el("button", "vhitem" + (sel === v2.id ? " on" : "") + (v2.named ? " named" : ""), "");
+          b.type = "button";
+          b.dataset.id = v2.id;
+          b.setAttribute("role", "option");
+          b.setAttribute("aria-selected", sel === v2.id ? "true" : "false");
+          b.append(el("strong", "", v2.named ? "★ " + (v2.name || "Saved version") : stampOf(v2.at)), el("span", "", (v2.named ? stampOf(v2.at) + " · " : "") + (v2.by || "someone") + " · " + v2.n + " cards"));
+          b.addEventListener("click", () => {
+            sel = v2.id;
+            draw();
+          });
+          list.append(b);
+        });
+        const v = vs.find((x) => x.id === sel);
+        if (!v) {
+          det.append(el("p", "hint", "This is the version you see on the board."));
+          return;
+        }
+        const d = compare(v, cur2), sec = (title, arr, cls) => {
+          if (!arr.length) return;
+          const s = el("div", "vhsec " + cls);
+          s.append(el("strong", "", title + " (" + arr.length + ")"));
+          const ul = el("ul");
+          arr.slice(0, 40).forEach((c) => ul.append(el("li", "", c.t)));
+          if (arr.length > 40) ul.append(el("li", "", "… and " + (arr.length - 40) + " more"));
+          s.append(ul);
+          det.append(s);
+        };
+        det.append(el("p", "vhsum", (v.named ? "★ " + v.name + " · " : "") + stampOf(v.at) + " · " + (v.by || "someone") + " · " + v.n + " cards. Compared with now:"));
+        sec("Missing now (in this version, not on the board)", d.missing, "miss");
+        sec("Added since", d.newer, "add");
+        sec("Changed since", d.changed, "mod");
+        if (!d.missing.length && !d.newer.length && !d.changed.length) det.append(el("p", "hint", "Same as now."));
+        const bar4 = el("div", "vhbtns"), rb = el("button", "btn sm", "Restore this version"), bb = el("button", "btn pri sm", "Bring back only the missing cards" + (d.missing.length ? " (" + d.missing.length + ")" : ""));
+        rb.type = "button";
+        rb.id = "vhrestore";
+        bb.type = "button";
+        bb.id = "vhbring";
+        bb.disabled = !d.missing.length;
+        if (!d.missing.length) bb.title = "Nothing is missing";
+        bb.addEventListener("click", () => {
+          keepVersion(m, cb.docOf(m), true, "Before bringing cards back", who());
+          const add = bringBack(cb.docOf(m), v);
+          cb.save(m, (dd) => {
+            dd.lines = add.lines;
+          }, "brought back " + d.missing.length + " card" + (d.missing.length === 1 ? "" : "s") + " to " + cb.label(m) + " from the version of " + stampOf(v.at), false, true);
+          notify(d.missing.length + " card" + (d.missing.length === 1 ? "" : "s") + " brought back. Nothing else changed.");
+          cb.render();
+          sel = "";
+          draw();
+        });
+        rb.addEventListener("click", () => confirmDlg("Restore this version?", cb.label(m) + " goes back to the version of " + stampOf(v.at) + " (" + v.n + " cards). Cards added since are removed from the board. The board as it is now is kept as a version first, so you can come back.", "Restore", () => {
+          keepVersion(m, cb.docOf(m), true, "Before restoring " + stampOf(v.at), who());
+          const r = restoreOf(cb.docOf(m), v);
+          cb.save(m, (dd) => {
+            Object.keys(dd).forEach((k) => {
+              if (!(k in r) && !["by", "ts", "subAt", "subBy", "status", "pl", "mo", "lines"].includes(k)) delete dd[k];
+            });
+            Object.keys(r).forEach((k) => {
+              if (!["by", "ts", "subAt", "subBy", "status", "pl", "mo"].includes(k)) dd[k] = r[k];
+            });
+          }, "restored " + cb.label(m) + " to the version of " + stampOf(v.at), false, true);
+          notify("Restored.");
+          cb.render();
+          sel = "";
+          closeDlg();
+        }));
+        bar4.append(rb, bb);
+        det.append(bar4);
+      }
+      draw();
+    });
+  }
+
+  // src/esm/features/leavers.js
+  var leavingMap = () => S.ideas.capacity && S.ideas.capacity.leaving || {};
+  function afterLast(it, name) {
+    const last = leavingMap()[name];
+    if (!last || !it || !(it.res || []).includes(name)) return false;
+    const k = kOfIso(last);
+    return !isNaN(k) && rangeOf(it, name)[1] > k;
+  }
+  function leaverWork(name, allRoadmaps2, withRm2) {
+    const out = [];
+    if (!leavingMap()[name]) return out;
+    allRoadmaps2().forEach((rm) => withRm2(rm.id, () => items().forEach((it) => {
+      if (afterLast(it, name)) out.push({ rm: rm.id, rmName: rm.n, id: it.id, t: it.t });
+    })));
+    return out;
+  }
+  function setLeaving(name, date, act, sum) {
+    const lv = Object.assign({}, leavingMap());
+    if (date) lv[name] = date;
+    else delete lv[name];
+    saveIdea("capacity", { cfg: true, leaving: lv }, act, sum);
+  }
+  function renameInDashboard(old, nw) {
+    let n = 0;
+    const c = S.ideas.capacity;
+    if (c) {
+      const patch = {};
+      if (Array.isArray(c.lanes)) {
+        const ls = c.lanes.map((l) => Object.assign({}, l, { people: [...new Set((l.people || []).map((x) => x === old ? nw : x))] }));
+        if (JSON.stringify(ls) !== JSON.stringify(c.lanes)) patch.lanes = ls;
+      }
+      if (c.leaving && c.leaving[old]) {
+        const lv = Object.assign({}, c.leaving);
+        if (!lv[nw]) lv[nw] = lv[old];
+        delete lv[old];
+        patch.leaving = lv;
+      }
+      if (Object.keys(patch).length) {
+        saveIdea("capacity", patch);
+        n++;
+      }
+    }
+    Object.keys(S.reports || {}).filter((k) => /^mo\d{6}$/.test(k)).forEach((k) => {
+      const d = S.reports[k];
+      if (!d || !Array.isArray(d.lines)) return;
+      let changed = false;
+      const lines = d.lines.map((l) => {
+        if (!l || !l.who) return l;
+        let w = null;
+        Object.keys(l.who).forEach((t) => {
+          const m = l.who[t];
+          if (m && typeof m === "object" && old in m) {
+            w = w || JSON.parse(JSON.stringify(l.who));
+            w[t][nw] = (w[t][nw] || 0) + (+w[t][old] || 0);
+            delete w[t][old];
+          }
+        });
+        if (!w) return l;
+        changed = true;
+        return Object.assign({}, l, { who: w });
+      });
+      if (changed) {
+        try {
+          keepVersion(d.mo, d, true, "Before renaming " + old, "");
+        } catch (e) {
+        }
+        S.reports[k] = Object.assign({}, d, { lines, ts: Date.now() });
+        write("reports/" + k, S.reports[k]);
+        n++;
+      }
+    });
+    return n;
+  }
+
   // src/esm/pages/vacations.js
   var vacsOf = (name) => Object.keys(S.vacs).map((id) => Object.assign({ id }, S.vacs[id])).filter((v) => v.p === name && v.a0);
   function affectedBy(v) {
@@ -3040,52 +3314,6 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       card2.append(sc);
     }
     root.append(card2);
-  }
-
-  // src/esm/ui/notify.js
-  var box = null;
-  function host() {
-    if (box && document.body.contains(box)) return box;
-    box = document.createElement("div");
-    box.id = "toasts";
-    box.setAttribute("aria-live", "polite");
-    document.body.append(box);
-    return box;
-  }
-  function notify(msg, kind, ms) {
-    kind = kind || "ok";
-    const t = document.createElement("div");
-    t.className = "toast " + kind;
-    t.setAttribute("role", kind === "err" ? "alert" : "status");
-    const ic = document.createElement("span");
-    ic.className = "ti";
-    ic.textContent = kind === "err" ? "!" : kind === "ok" ? "✓" : "i";
-    ic.setAttribute("aria-hidden", "true");
-    const tx = document.createElement("span");
-    tx.className = "tt";
-    tx.textContent = msg;
-    const x = document.createElement("button");
-    x.type = "button";
-    x.className = "tx";
-    x.textContent = "×";
-    x.setAttribute("aria-label", "Dismiss");
-    const gone = () => {
-      t.classList.add("out");
-      setTimeout(() => t.remove(), 200);
-    };
-    x.addEventListener("click", gone);
-    t.append(ic, tx, x);
-    const h = host();
-    h.append(t);
-    while (h.children.length > 3) h.firstChild.remove();
-    setTimeout(gone, ms || (kind === "err" ? 7e3 : 3500));
-  }
-  var lastFail = 0;
-  function notifyFailOnce(msg) {
-    const n = Date.now();
-    if (n - lastFail < 8e3) return;
-    lastFail = n;
-    notify(msg, "err");
   }
 
   // src/esm/features/timeline-notes.js
@@ -3924,6 +4152,17 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       const gap = s.d0 - p.d1 - 1;
       out.push({ from: p, to: s, gap, bad: s.d0 <= p.d1 });
     }));
+    const seen = new Set(out.map((x) => x.from.id + ">" + x.to.id)), cards2 = /* @__PURE__ */ new Map();
+    Object.keys(S.reports || {}).filter((k) => /^mo\d{6}$/.test(k)).forEach((k) => ((S.reports[k] || {}).lines || []).forEach((l) => {
+      if (l && l.id) cards2.set(l.id, l);
+    }));
+    cards2.forEach((l) => {
+      if (!l.needs || !l.rid) return;
+      const n = cards2.get(l.needs), s = byId.get(l.rid), p = n && byId.get(n.rid);
+      if (!s || !p || s === p || seen.has(p.id + ">" + s.id)) return;
+      seen.add(p.id + ">" + s.id);
+      out.push({ from: p, to: s, gap: s.d0 - p.d1 - 1, bad: s.d0 <= p.d1, card: true });
+    });
     return out;
   }
   function openDeps(it) {
@@ -4032,8 +4271,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         const my = y2 > y1 ? Math.max(ra.bottom, rb.top) - gr.top + 2 : Math.min(ra.top, rb.bottom) - gr.top - 2;
         d = "M" + x1 + " " + y1 + " H" + (x1 + 7) + " V" + my + " H" + (x2 - 7) + " V" + y2 + " H" + (x2 - 1);
       }
-      const tip3 = '"' + x.from.t + '" → "' + x.to.t + '": ' + (x.bad ? x.gap === -1 ? "starts the same day the first ends" : "starts " + (-x.gap - 1) + " day(s) before the first ends" : x.gap === 0 ? "starts the next day, no buffer" : x.gap + " day(s) of buffer");
-      const p = sv("path", { d, fill: "none", stroke: x.bad ? "#c0392b" : "#55608a", "stroke-width": x.bad ? "2" : "1.5", "marker-end": "url(#ar-" + (x.bad ? "bad" : "ok") + ")", class: "dep" + (x.bad ? " bad" : "") });
+      const tip3 = (x.card ? "Set on the cards (Needs card): " : "") + '"' + x.from.t + '" → "' + x.to.t + '": ' + (x.bad ? x.gap === -1 ? "starts the same day the first ends" : "starts " + (-x.gap - 1) + " day(s) before the first ends" : x.gap === 0 ? "starts the next day, no buffer" : x.gap + " day(s) of buffer");
+      const p = sv("path", { d, fill: "none", stroke: x.bad ? "#c0392b" : "#55608a", "stroke-width": x.bad ? "2" : "1.5", "marker-end": "url(#ar-" + (x.bad ? "bad" : "ok") + ")", class: "dep" + (x.bad ? " bad" : "") + (x.card ? " card" : ""), "stroke-dasharray": x.card ? "6 4" : "" });
       const t = sv("title");
       t.textContent = tip3;
       p.append(t);
@@ -4979,6 +5218,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     bar4.setAttribute("aria-label", it.t + ", " + dlabel(it.d0) + " to " + dlabel(it.d1) + ", " + STATUS[it.st]);
     bar4.dataset.tip = it.t;
     bar4.dataset.tipSub = l.n + " · " + dlabel(it.d0) + " to " + dlabel(it.d1) + " · " + STATUS[it.st];
+    if (owner && afterLast(it, owner)) {
+      bar4.classList.add("ownerleft");
+      bar4.dataset.tipSub += " · ⚠ " + owner + " leaves on " + fmtIso(leavingMap()[owner]) + ": needs a new owner";
+      bar4.setAttribute("aria-label", bar4.getAttribute("aria-label") + ", owner leaves " + fmtIso(leavingMap()[owner]));
+    }
     const editing = state.edit === it.id + "|" + (owner || "");
     if (editing) {
       bar4.classList.add("editing");
@@ -5311,22 +5555,6 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     listeners.forEach((f) => f());
   }
 
-  // src/esm/ui/confirm.js
-  function confirmDlg(title, msg, yes, onYes) {
-    openDlg(title, (box2) => {
-      const ok = el("button", "btn danger", yes), no = el("button", "btn", "Cancel");
-      ok.type = no.type = "button";
-      ok.addEventListener("click", () => {
-        closeDlg();
-        onYes();
-      });
-      no.addEventListener("click", closeDlg);
-      const row = el("div", "row");
-      row.append(ok, no);
-      box2.append(el("p", "", msg), row);
-    });
-  }
-
   // src/esm/pages/permissions.js
   var ui = { sel: "", draft: null };
   var nameOf = (m) => m.name || m.email || "this person";
@@ -5512,17 +5740,24 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     render();
     renderResources();
   }
-  function renamePerson(old, nw) {
+  function renamePerson(old, nw, merge) {
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     nw = String(nw || "").trim().replace(/\s+/g, " ").slice(0, 60);
     if (!nw || nw === old) return false;
-    if ([...directory().keys()].some((n) => n !== old && n.toLowerCase() === nw.toLowerCase())) {
+    const exists = [...directory().keys()].some((n) => n !== old && n.toLowerCase() === nw.toLowerCase());
+    if (merge) {
+      if (!directory().has(nw) || nw === old) return false;
+    } else if (exists) {
       notify(nw + " is already in the team", "err");
       return false;
     }
     const d = directory().get(old) || { sqs: /* @__PURE__ */ new Set(["tifli"]), domain: "Other" }, id = personDocId(old);
     const base0 = Object.keys(TEAMS).some((sq) => ["pm", "dev", "qa", "ux"].some((r) => (TEAMS[sq][r] || []).includes(old)));
-    if (id && !base0) {
+    if (merge) {
+      const hid = id || "ov-" + slug(old);
+      S.extras[hid] = { n: old, hidden: true };
+      write("people/" + hid, S.extras[hid]);
+    } else if (id && !base0) {
       S.extras[id] = Object.assign({}, S.extras[id], { n: nw });
       write("people/" + id, S.extras[id]);
     } else {
@@ -5537,10 +5772,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     let feats = 0;
     allRoadmaps().forEach((rm) => withRm(rm.id, () => items().forEach((it) => {
       if (it.res.includes(old)) {
-        const patch = { res: it.res.map((x) => x === old ? nw : x) };
+        const patch = { res: [...new Set(it.res.map((x) => x === old ? nw : x))] };
         if (it.pd && it.pd[old]) {
           patch.pd = Object.assign({}, it.pd);
-          patch.pd[nw] = patch.pd[old];
+          if (!patch.pd[nw]) patch.pd[nw] = patch.pd[old];
           delete patch.pd[old];
         }
         S.over[it.id] = Object.assign({}, S.over[it.id] || {}, patch);
@@ -5569,16 +5804,17 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       if (x && x.tn && x.p === old) saveIdea(iid, { p: nw });
     });
     const po = S.ideas.peopleorder;
-    if (po && (po.ord || []).includes(old)) saveIdea("peopleorder", { cfg: true, ord: po.ord.map((x) => x === old ? nw : x) });
+    if (po && (po.ord || []).includes(old)) saveIdea("peopleorder", { cfg: true, ord: [...new Set(po.ord.map((x) => x === old ? nw : x))] });
     const ph = S.ideas.peoplehide;
     if (ph && ph.byRm && Object.keys(ph.byRm).some((k) => ph.byRm[k].includes(old))) {
       const by = {};
       Object.keys(ph.byRm).forEach((k) => {
-        by[k] = ph.byRm[k].map((x) => x === old ? nw : x);
+        by[k] = [...new Set(ph.byRm[k].map((x) => x === old ? nw : x))];
       });
       saveIdea("peoplehide", { cfg: true, byRm: by });
     }
-    logAct("resource", "renamed " + old + " to " + nw + (feats ? " (" + feats + " feature" + (feats === 1 ? "" : "s") + " updated)" : ""));
+    const dash = renameInDashboard(old, nw);
+    logAct("resource", (merge ? "merged " : "renamed ") + old + (merge ? " into " : " to ") + nw + (feats ? " (" + feats + " feature" + (feats === 1 ? "" : "s") + " updated)" : ""));
     fillPersons();
     render();
     renderResources();
@@ -5714,6 +5950,122 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       ok.addEventListener("click", closeDlg);
       box2.append(ok);
     });
+  }
+  function openPerson(name) {
+    openDlg(name, (box2) => {
+      box2.classList.add("pmdlg");
+      const draw = () => {
+        box2.querySelectorAll(".pmbody").forEach((x) => x.remove());
+        const body = el("div", "pmbody");
+        const nm = el("input");
+        nm.type = "text";
+        nm.maxLength = 60;
+        nm.value = name;
+        nm.id = "pmname";
+        nm.setAttribute("aria-label", "Name");
+        const sv3 = el("button", "btn sm primary", "Save name");
+        sv3.type = "button";
+        sv3.id = "pmsave";
+        sv3.addEventListener("click", () => {
+          if (renamePerson(name, nm.value)) closeDlg();
+        });
+        const r1 = el("div", "formrow");
+        r1.append(nm, sv3);
+        body.append(el("h3", "", "1. Name"), el("p", "hint", "The name changes everywhere: roadmaps, vacations, sprints, the Dashboard and the people on cards."), r1);
+        const sel = el("select");
+        sel.id = "pmmerge";
+        sel.setAttribute("aria-label", "Same person as");
+        const o0 = el("option", "", "Choose the name to keep…");
+        o0.value = "";
+        sel.append(o0);
+        [...directory().keys()].filter((n) => n !== name).sort((a, b) => a.localeCompare(b)).forEach((n) => {
+          const o = el("option", "", n);
+          o.value = n;
+          sel.append(o);
+        });
+        const mg = el("button", "btn sm", "Merge");
+        mg.type = "button";
+        mg.id = "pmdo";
+        mg.addEventListener("click", () => {
+          const to = sel.value;
+          if (!to) return;
+          confirmDlg("Merge " + name + " into " + to + "?", name + " disappears from the team list. Everything of " + name + " (features, vacations, sprint rows, Dashboard points) moves to " + to + ". This does not delete any data.", "Merge", () => {
+            renamePerson(name, to, true);
+          });
+        });
+        const r2 = el("div", "formrow");
+        r2.append(sel, mg);
+        body.append(el("h3", "", "2. Same person as another row?"), el("p", "hint", "Use it for a spelling that was added twice (for example Tramsi and Altramsi)."), r2);
+        const cur2 = leavingMap()[name] || "", dt = el("input");
+        dt.type = "date";
+        dt.value = cur2;
+        dt.id = "pmleft";
+        dt.setAttribute("aria-label", "Last working day");
+        const lv = el("button", "btn sm primary", cur2 ? "Change the day" : "Mark as left");
+        lv.type = "button";
+        lv.id = "pmleave";
+        lv.addEventListener("click", () => {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(dt.value)) {
+            notify("Pick the last working day first", "err");
+            return;
+          }
+          setLeaving(name, dt.value, "resource", "marked " + name + " as " + (dt.value < todayIso() ? "left on " : "leaving on ") + dt.value);
+          notify(name + ": last working day " + fmtIso(dt.value));
+          draw();
+          renderResources();
+        });
+        const r3 = el("div", "formrow");
+        r3.append(dt, lv);
+        if (cur2) {
+          const un = el("button", "btn sm", "Back in the team");
+          un.type = "button";
+          un.id = "pmclear";
+          un.addEventListener("click", () => {
+            setLeaving(name, "", "resource", name + " is not leaving any more");
+            draw();
+            renderResources();
+          });
+          r3.append(un);
+        }
+        body.append(el("h3", "", "3. Left the company, or leaving?"), el("p", "hint", "From the last working day the Dashboard stops counting this person, and the features they still own after it are flagged on the roadmap and on the Dashboard until you give them a new owner."), r3);
+        const w = cur2 ? leaverWork(name, allRoadmaps, withRm) : [];
+        if (cur2) {
+          const bx = el("div", "pmwork");
+          bx.id = "pmwork";
+          if (!w.length) bx.append(el("p", "", "No feature of " + name + " runs after " + fmtIso(cur2) + "."));
+          else {
+            bx.append(el("strong", "", w.length + (w.length === 1 ? " feature needs" : " features need") + " a new owner (they run after " + fmtIso(cur2) + "):"));
+            const ul = el("ul");
+            w.slice(0, 8).forEach((x) => ul.append(el("li", "", x.t + " · " + x.rmName)));
+            if (w.length > 8) ul.append(el("li", "", "… and " + (w.length - 8) + " more"));
+            bx.append(ul);
+            const go = el("button", "btn sm primary", "Plan them on the roadmap");
+            go.type = "button";
+            go.id = "pmplan";
+            go.addEventListener("click", () => {
+              closeDlg();
+              planLeaver(name, w[0].rm);
+            });
+            bx.append(go);
+          }
+          body.append(bx);
+        }
+        box2.append(body);
+      };
+      draw();
+      const ok = el("button", "btn", "Close");
+      ok.type = "button";
+      ok.addEventListener("click", closeDlg);
+      box2.append(ok);
+    });
+  }
+  function planLeaver(name, rmId) {
+    useRoadmap(rmId);
+    state.person = name;
+    fillPersons();
+    render();
+    const nb = document.querySelector('#nav button[data-p="roadmap"]');
+    if (nb) nb.click();
   }
   function removePerson2(name) {
     const id = personDocId(name), base0 = Object.keys(TEAMS).some((sq) => ["pm", "dev", "qa", "ux"].some((r) => (TEAMS[sq][r] || []).includes(name)));
@@ -5980,6 +6332,22 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           inp.addEventListener("blur", () => fin(true));
         });
         w.append(ed);
+        const mgb = el("button", "btn sm iconbtn", "⋯");
+        mgb.type = "button";
+        mgb.title = "Name, merge, left the company: " + p.name;
+        mgb.setAttribute("aria-label", "Manage " + p.name);
+        mgb.dataset.manage = p.name;
+        mgb.addEventListener("click", () => openPerson(p.name));
+        w.append(mgb);
+      }
+      {
+        const lvd = leavingMap()[p.name];
+        if (lvd) {
+          const n = leaverWork(p.name, allRoadmaps, withRm).length, t2 = el("span", "pmtag " + (lvd < todayIso() ? "left" : "soon"), (lvd < todayIso() ? "Left " : "Leaving ") + fmtIso(lvd) + (n ? " · " + n + " to plan" : ""));
+          t2.dataset.left = p.name;
+          t2.title = n ? n + " feature" + (n === 1 ? "" : "s") + " of " + p.name + " run after the last working day and need a new owner" : "No feature runs after the last working day";
+          w.append(t2);
+        }
       }
       c1.append(w);
       const c2 = el("td"), ds = selOf(DOMAINS, p.domain);
@@ -9657,137 +10025,6 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   }
   var missingInResources = () => unmatched(cfg2(), resources());
 
-  // src/esm/pages/monthly-history.js
-  function keepVersion(m, doc2, named, name, who2) {
-    S.hist = S.hist || {};
-    const vs = versionsOf(S.hist, m), at = +doc2.ts || 0;
-    if (!named && at && vs.some((v) => !v.named && v.at === at)) return "";
-    const mk = makeVersion(m, doc2, named, name, who2, Date.now(), named ? 0 : autoSlot(vs));
-    mk.v._p = Date.now();
-    if (S.hist[mk.id] && S.hist[mk.id].at === mk.v.at) return mk.id;
-    S.hist[mk.id] = mk.v;
-    const w = Object.assign({}, mk.v);
-    delete w._p;
-    write("reports/" + mk.id, w);
-    return mk.id;
-  }
-  var who = () => S.me && (S.me.name || S.me.email) || "";
-  function openHistory(m, cb) {
-    let sel = "";
-    openDlg("Version history · " + cb.label(m), (box2) => {
-      box2.classList.add("vhdlg");
-      const top = el("div", "vhtop"), inp = el("input");
-      inp.id = "vhname";
-      inp.type = "text";
-      inp.maxLength = 60;
-      inp.placeholder = "Name this version, for example Before the exec review";
-      inp.setAttribute("aria-label", "Name of the version");
-      const sv3 = el("button", "btn pri sm", "Save a version");
-      sv3.type = "button";
-      sv3.id = "vhsave";
-      sv3.addEventListener("click", () => {
-        const cur2 = cb.docOf(m);
-        keepVersion(m, cur2, true, inp.value.trim() || "Saved version", who());
-        inp.value = "";
-        notify("Version saved. It is kept until you remove it.");
-        draw();
-      });
-      top.append(inp, sv3);
-      const body = el("div", "vhbody"), list = el("div", "vhlist"), det = el("div", "vhdetail");
-      list.id = "vhlist";
-      det.id = "vhdetail";
-      list.setAttribute("role", "listbox");
-      list.setAttribute("aria-label", "Versions");
-      body.append(list, det);
-      box2.append(el("p", "hint", "Every change to a month is kept as a version. The board always shows the latest one. Pick a version to see what is different from now."), top, body);
-      function draw() {
-        const cur2 = cb.docOf(m), vs = versionsOf(S.hist, m);
-        list.textContent = "";
-        det.textContent = "";
-        const cb0 = el("button", "vhitem" + (sel ? "" : " on"), "");
-        cb0.type = "button";
-        cb0.dataset.id = "";
-        cb0.append(el("strong", "", "Now (latest)"), el("span", "", cardCount(cur2) + " cards"));
-        cb0.addEventListener("click", () => {
-          sel = "";
-          draw();
-        });
-        list.append(cb0);
-        if (!vs.length) list.append(el("p", "hint vhnone", "No earlier versions yet. One is kept automatically when the month changes."));
-        vs.forEach((v2) => {
-          const b = el("button", "vhitem" + (sel === v2.id ? " on" : "") + (v2.named ? " named" : ""), "");
-          b.type = "button";
-          b.dataset.id = v2.id;
-          b.setAttribute("role", "option");
-          b.setAttribute("aria-selected", sel === v2.id ? "true" : "false");
-          b.append(el("strong", "", v2.named ? "★ " + (v2.name || "Saved version") : stampOf(v2.at)), el("span", "", (v2.named ? stampOf(v2.at) + " · " : "") + (v2.by || "someone") + " · " + v2.n + " cards"));
-          b.addEventListener("click", () => {
-            sel = v2.id;
-            draw();
-          });
-          list.append(b);
-        });
-        const v = vs.find((x) => x.id === sel);
-        if (!v) {
-          det.append(el("p", "hint", "This is the version you see on the board."));
-          return;
-        }
-        const d = compare(v, cur2), sec = (title, arr, cls) => {
-          if (!arr.length) return;
-          const s = el("div", "vhsec " + cls);
-          s.append(el("strong", "", title + " (" + arr.length + ")"));
-          const ul = el("ul");
-          arr.slice(0, 40).forEach((c) => ul.append(el("li", "", c.t)));
-          if (arr.length > 40) ul.append(el("li", "", "… and " + (arr.length - 40) + " more"));
-          s.append(ul);
-          det.append(s);
-        };
-        det.append(el("p", "vhsum", (v.named ? "★ " + v.name + " · " : "") + stampOf(v.at) + " · " + (v.by || "someone") + " · " + v.n + " cards. Compared with now:"));
-        sec("Missing now (in this version, not on the board)", d.missing, "miss");
-        sec("Added since", d.newer, "add");
-        sec("Changed since", d.changed, "mod");
-        if (!d.missing.length && !d.newer.length && !d.changed.length) det.append(el("p", "hint", "Same as now."));
-        const bar4 = el("div", "vhbtns"), rb = el("button", "btn sm", "Restore this version"), bb = el("button", "btn pri sm", "Bring back only the missing cards" + (d.missing.length ? " (" + d.missing.length + ")" : ""));
-        rb.type = "button";
-        rb.id = "vhrestore";
-        bb.type = "button";
-        bb.id = "vhbring";
-        bb.disabled = !d.missing.length;
-        if (!d.missing.length) bb.title = "Nothing is missing";
-        bb.addEventListener("click", () => {
-          keepVersion(m, cb.docOf(m), true, "Before bringing cards back", who());
-          const add = bringBack(cb.docOf(m), v);
-          cb.save(m, (dd) => {
-            dd.lines = add.lines;
-          }, "brought back " + d.missing.length + " card" + (d.missing.length === 1 ? "" : "s") + " to " + cb.label(m) + " from the version of " + stampOf(v.at), false, true);
-          notify(d.missing.length + " card" + (d.missing.length === 1 ? "" : "s") + " brought back. Nothing else changed.");
-          cb.render();
-          sel = "";
-          draw();
-        });
-        rb.addEventListener("click", () => confirmDlg("Restore this version?", cb.label(m) + " goes back to the version of " + stampOf(v.at) + " (" + v.n + " cards). Cards added since are removed from the board. The board as it is now is kept as a version first, so you can come back.", "Restore", () => {
-          keepVersion(m, cb.docOf(m), true, "Before restoring " + stampOf(v.at), who());
-          const r = restoreOf(cb.docOf(m), v);
-          cb.save(m, (dd) => {
-            Object.keys(dd).forEach((k) => {
-              if (!(k in r) && !["by", "ts", "subAt", "subBy", "status", "pl", "mo", "lines"].includes(k)) delete dd[k];
-            });
-            Object.keys(r).forEach((k) => {
-              if (!["by", "ts", "subAt", "subBy", "status", "pl", "mo"].includes(k)) dd[k] = r[k];
-            });
-          }, "restored " + cb.label(m) + " to the version of " + stampOf(v.at), false, true);
-          notify("Restored.");
-          cb.render();
-          sel = "";
-          closeDlg();
-        }));
-        bar4.append(rb, bb);
-        det.append(bar4);
-      }
-      draw();
-    });
-  }
-
   // src/esm/pages/monthly.js
   var lkMap = /* @__PURE__ */ new Map();
   var STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9 6.8 19.6l1-5.8-4.3-4.1 5.9-.8z"/></svg>';
@@ -11195,6 +11432,15 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       if (over.length) items2.push({ sev: "warn", m: r.m, head: monthLabel(r.m) + " · " + over.length + (over.length === 1 ? " person has" : " people have") + " more points than they can take", body: over.map((x) => x.n + " " + fmt3(x.pl) + " / " + fmt3(x.cp) + " (" + personCards(r.lines, x.n).slice(0, 6).map((c) => '"' + c.t + '" ' + fmt3(c.pts)).join(", ") + ")").join("; ") + ". Planned / can take, after leave, support and buffer.", tips: [] });
     });
     checkPlan(months).filter((c) => c.t !== "cap").forEach((c) => items2.push({ sev: "warn", m: c.m, head: monthLabel(c.m) + " · " + (c.t === "dep" ? "Card order" : "Roadmap date"), body: c.s, tips: [] }));
+    {
+      const lm = leavingMap();
+      Object.keys(lm).sort().forEach((n) => {
+        const w = leaverWork(n, allRoadmaps, withRm);
+        if (!w.length) return;
+        const last = lm[n];
+        items2.push({ sev: "warn", head: n + " " + (last < todayIso() ? "left" : "is leaving") + " on " + fmtIso(last) + " · " + w.length + (w.length === 1 ? " feature needs" : " features need") + " a new owner", body: w.slice(0, 6).map((x) => '"' + x.t + '"').join(", ") + (w.length > 6 ? " and " + (w.length - 6) + " more" : "") + ". They run after the last working day.", tips: [], act: { label: "Plan " + n + "’s features", rm: w[0].rm, name: n } });
+      });
+    }
     if (!items2.length) {
       const ok = el("div", "cpok");
       ok.append(icon("ok"), el("span", "", "Nothing to fix. Every track fits in every month, cards are in a workable order and roadmap bars match their months."));
@@ -11209,9 +11455,19 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       tx.append(el("strong", "", it.head), el("div", "", it.body));
       row.append(ib, tx);
       it.tips.forEach((t) => tx.append(el("div", "cptip", t)));
-      const go = el("button", "btn sm", "Open " + monthLabel(it.m) + " in Monthly");
+      const go = el("button", "btn sm", it.act ? it.act.label : "Open " + monthLabel(it.m) + " in Monthly");
       go.type = "button";
-      go.addEventListener("click", () => showPage("monthly"));
+      if (it.act) {
+        go.classList.add("cpplan");
+        go.dataset.name = it.act.name;
+        go.addEventListener("click", () => {
+          useRoadmap(it.act.rm);
+          state.person = it.act.name;
+          fillPersons();
+          render();
+          showPage("roadmap");
+        });
+      } else go.addEventListener("click", () => showPage("monthly"));
       tx.append(go);
       box2.append(row);
     });

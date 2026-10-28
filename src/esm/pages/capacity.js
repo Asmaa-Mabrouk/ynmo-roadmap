@@ -5,8 +5,11 @@
  * Reads the monthly boards (S.reports), the leave calendar (S.vacs) and the capacity settings (S.ideas.capacity). Changes nothing by itself.
  */
 import { S } from '../core/state.js';
-import { $, el, canEdit } from '../core/model.js';
-import { pageHead, todayIso } from '../core/shared.js';
+import { $, el, canEdit, state } from '../core/model.js';
+import { leaverWork, leavingMap } from '../features/leavers.js';
+import { allRoadmaps, useRoadmap, withRm } from './roadmaps.js';
+import { render } from '../ui/gantt-render.js';
+import { fmtIso, pageHead, todayIso } from '../core/shared.js';
 import { monthLabel, monthRange, nextMonth, isMonth, cardId } from '../features/month-model.js';
 import { DOMAIN_OF, personCap, personCards, personLoads, personState, resolveDefaults, review, settings, suggestMoves } from '../features/capacity.js';
 import { checkPlan, depProblemsFor, missingInResources, openCapSettings, resources } from '../features/capacity-view.js';
@@ -61,10 +64,11 @@ function fixes(rev, months) {
     if (over.length) items.push({ sev: 'warn', m: r.m, head: monthLabel(r.m) + ' · ' + over.length + (over.length === 1 ? ' person has' : ' people have') + ' more points than they can take', body: over.map(x => x.n + ' ' + fmt(x.pl) + ' / ' + fmt(x.cp) + ' (' + personCards(r.lines, x.n).slice(0, 6).map(c => '"' + c.t + '" ' + fmt(c.pts)).join(', ') + ')').join('; ') + '. Planned / can take, after leave, support and buffer.', tips: [] });
   });
   checkPlan(months).filter(c => c.t !== 'cap').forEach(c => items.push({ sev: 'warn', m: c.m, head: monthLabel(c.m) + ' · ' + (c.t === 'dep' ? 'Card order' : 'Roadmap date'), body: c.s, tips: [] }));
+  { const lm = leavingMap(); Object.keys(lm).sort().forEach(n => { const w = leaverWork(n, allRoadmaps, withRm); if (!w.length) return; const last = lm[n]; items.push({ sev: 'warn', head: n + ' ' + (last < todayIso() ? 'left' : 'is leaving') + ' on ' + fmtIso(last) + ' · ' + w.length + (w.length === 1 ? ' feature needs' : ' features need') + ' a new owner', body: w.slice(0, 6).map(x => '"' + x.t + '"').join(', ') + (w.length > 6 ? ' and ' + (w.length - 6) + ' more' : '') + '. They run after the last working day.', tips: [], act: { label: 'Plan ' + n + '’s features', rm: w[0].rm, name: n } }); }); }
   if (!items.length) { const ok = el('div', 'cpok'); ok.append(icon('ok'), el('span', '', 'Nothing to fix. Every track fits in every month, cards are in a workable order and roadmap bars match their months.')); ok.id = 'cpnone'; box.append(ok); return box; }
   items.forEach(it => {
     const row = el('div', 'cpitem cp-' + it.sev), ib = el('span', 'cpicob'); ib.append(icon(it.sev === 'over' ? 'over' : 'warn')); const tx = el('div', 'cpitx'); tx.append(el('strong', '', it.head), el('div', '', it.body)); row.append(ib, tx); it.tips.forEach(t => tx.append(el('div', 'cptip', t)));
-    const go = el('button', 'btn sm', 'Open ' + monthLabel(it.m) + ' in Monthly'); go.type = 'button'; go.addEventListener('click', () => showPage('monthly')); tx.append(go); box.append(row);
+    const go = el('button', 'btn sm', it.act ? it.act.label : 'Open ' + monthLabel(it.m) + ' in Monthly'); go.type = 'button'; if (it.act) { go.classList.add('cpplan'); go.dataset.name = it.act.name; go.addEventListener('click', () => { useRoadmap(it.act.rm); state.person = it.act.name; fillPersons(); render(); showPage('roadmap'); }); } else go.addEventListener('click', () => showPage('monthly')); tx.append(go); box.append(row);
   });
   return box;
 }
