@@ -67,5 +67,8 @@ Note (sprint document): `sprint_items` docs are now blocks `{sp,k,sq,t,st,dn,tag
 ### Concurrent edits of one month (2026-10-27)
 A month is one document (`reports/mo<yyyymm>`). Each save reads the stored month first and keeps cards the screen has never seen (`writeMonth` in `pages/monthly.js`). Two people editing the **same card** at the same moment is still last-writer-wins; per-card documents would remove that and are not built. Free-tier Supabase has no point-in-time recovery, so a card lost before this change cannot be restored from the database (see the recovery steps in LEDGER 2026-10-27).
 
+
+### Month versions (2026-10-28)
+Docs `reports/mohist<yyyymm>_<time>` (named: `mohist<yyyymm>_n<rand><time>`): `{hist:1, of:'yyyy-mm', at, by, n (cards), named, name, doc (the month doc as it was)}`. The id starts with `mo`, so SQL 08 treats it as Monthly (editors write, others read); there is no `mo` field, so the board and weekly reports ignore it. The app keeps them out of `S.reports` (in `S.hist`). Automatic: newest 15 per month; named: kept. No SQL change.
 ### Capacity (2026-10-27)
 Card fields in the month doc: `who` {track: {name: points}} (points per person), `pts` {ai, fe, mob, be, pm, des, qa: points} (the total of each track, derived from `who`), `needs` (internal id of another card). Settings doc `ideas/capacity` {cfg: true, ppp, reserve, buffer, lanes: [{k, people: [...]}], leaving: {name: 'YYYY-MM-DD'}}; missing values use the defaults in `features/capacity.js`. No SQL change.

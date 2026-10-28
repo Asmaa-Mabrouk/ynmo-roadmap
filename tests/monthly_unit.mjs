@@ -89,3 +89,22 @@ import * as cap from '../src/esm/features/capacity.js';
   const um = cap.unmatched(rd, RS); ok('resources: names Resources does not list are reported', um.some(x => x.name === 'Altramsi') && !um.some(x => x.name === 'Saad'));
   ok('PMs are not a Dashboard track and their old points are ignored', !cap.LANES.some(l => l.k === 'pm') && cap.totalPts({ pts: { be: 3, pm: 5 } }) === 3 && Object.keys(cap.personLoads([{ who: { pm: { Asmaa: 5 }, be: { Hamid: 2 } } }])).join() === 'Hamid');
 }
+// ---- version history (features/month-history.js)
+{
+  const h = await import('../src/esm/features/month-history.js');
+  const L = (id, t) => ({ id, t }), mk = (ids, ts) => ({ mo: '2026-11', ts, by: 'Admin', lines: ids.map(i => L(i, 'card ' + i)) });
+  ok('history: ids of versions are recognised and are not month ids', h.isHistId('mohist202611_123') && !h.isHistId('mo202611') && !h.isHistId('mobacklog') && h.histId('2026-11', 5, false) === 'mohist202611_5');
+  ok('history: no version when nothing is stored or the month is empty', h.snapReason(null, mk(['a']), 0, 10) === '' && h.snapReason(mk([], 5), mk(['a']), 0, 10) === '');
+  ok('history: the first version is kept, then one per 10 minutes of activity', h.snapReason(mk(['a'], 1000), mk(['a', 'b']), 0, 2000) === 'time' && h.snapReason(mk(['a'], 1000 + 5 * 60000), mk(['a']), 1000, 9e9) === '' && h.snapReason(mk(['a'], 1000 + 10 * 60000), mk(['a']), 1000, 9e9) === 'time');
+  ok('history: a save that drops 3 cards always keeps a version, 2 cards does not force one', h.snapReason(mk(['a', 'b', 'c', 'd'], 1000), mk(['a']), 1000, 1500) === 'shrink' && h.snapReason(mk(['a', 'b', 'c'], 1000), mk(['a']), 1000, 1500) === '');
+  const v = Object.assign({ id: 'x' }, h.makeVersion('2026-11', mk(['a', 'b', 'c'], 777), false, '', 'me', 999).v), cur = mk(['b', 'c', 'd'], 800); cur.lines[1].t = 'card c EDITED';
+  const cmp = h.compare(v, cur);
+  ok('history: compare finds missing, added and changed cards', cmp.missing.length === 1 && cmp.missing[0].t === 'card a' && cmp.newer.length === 1 && cmp.newer[0].t === 'card d' && cmp.changed.length === 1 && cmp.changed[0].t === 'card c EDITED');
+  const bb = h.bringBack(cur, v);
+  ok('history: bring back adds only the missing cards and changes nothing else', bb.lines.map(l => l.id).join() === 'b,c,d,a' && bb.lines.find(l => l.id === 'c').t === 'card c EDITED');
+  const rs = h.restoreOf(cur, v);
+  ok('history: restore makes the month like the version', rs.lines.map(l => l.id).join() === 'a,b,c' && rs.lines.find(l => l.id === 'c').t === 'card c' && rs.mo === '2026-11');
+  const many = Array.from({ length: 20 }, (_, i) => ({ id: 'm' + i, at: 100 - i, named: false })).concat([{ id: 'keep', at: 1, named: true }]).sort((a, b) => b.at - a.at);
+  ok('history: only automatic versions beyond the newest 15 are pruned, named ones never', h.toPrune(many).length === 5 && !h.toPrune(many).includes('keep'));
+  ok('history: a version written but not yet sent back stays in the list for 30 seconds', Object.keys(h.keepPendingHist({}, { k: { _p: Date.now() }, old: { _p: Date.now() - 60000 } })).join() === 'k');
+}

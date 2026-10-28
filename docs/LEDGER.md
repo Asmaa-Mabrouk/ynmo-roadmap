@@ -42,6 +42,22 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-28 - Dashboard restyle and Monthly version history
+```
+🔄 YNMO LEDGER UPDATE - 2026-10-28
+Request: restyle the Dashboard like the Ynmo statistics dashboard; version history for Monthly to prevent a repeat of the data loss
+Surface: Ynmo Roadmaps tool (Dashboard, Monthly)
+Outcome: restyled Dashboard; automatic and named month versions with compare, restore and bring-back; warning when a save drops 3 or more cards
+New facts / decisions locked:
+  - Versions are stored as docs reports/mohist<yyyymm>_<time> (no SQL); automatic ones at most one per 10 min of activity, newest 15 kept; named ones never auto-deleted
+  - "Bring back only the missing cards" is the one-click fix for a stale-save loss; Restore keeps the board as a named version first
+Corrections to this skill: none
+Open / flagged:
+  - Shrink warning is covered by a unit check of the count rule, not by a UI test (no screen removes 3 cards in one save)
+  - History lives in the same table as the data (no point-in-time database backup); the backup patch 0003 is still not applied
+Changelog: Dashboard restyled; Monthly version history added.
+```
+
 ### 2026-10-27 - PMs removed from the Dashboard
 ```
 🔄 YNMO LEDGER UPDATE — 2026-10-27

@@ -1335,6 +1335,58 @@ button.cptile { font: inherit; text-align: start; cursor: pointer; width: 100%; 
 button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 0 0 0 2px var(--ink); }
 .pill.nores { border-style: dashed; color: #8a5a00; }
 .cpheatp .cprl { padding: 4px 6px; } .cpheatp .cptags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 2px; }
+
+/* ---------- Dashboard look (after the Ynmo statistics dashboard): soft white cards, status tiles with a tint, icon tiles, segmented controls ---------- */
+#pg-capacity { --cpsh: 0 2px 10px rgba(35, 45, 90, .07); }
+#pg-capacity .cpsec { background: var(--surface); border-radius: 16px; padding: 18px 20px; box-shadow: var(--cpsh); margin-top: 0; gap: 12px; }
+#pg-capacity .cpsec h2 { font-size: 1.1rem; font-weight: 800; }
+#pg-capacity .cpduo { margin-top: 0; gap: 16px; }
+#pg-capacity .cpchart { gap: 10px; }
+.cpico { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.cpicob { display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: #eef1fb; color: #5b4ab5; flex: none; }
+.cpseg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-inline-start: auto; background: var(--surface); }
+.cpseg button { font: inherit; font-size: 12px; font-weight: 700; padding: 4px 12px; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+.cpseg button[aria-pressed="true"] { background: #4caf8a; color: #fff; }
+/* month cards: status tint like the Ynmo result cards */
+.cpgrid { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+.cptile { border: 0; border-radius: 16px; padding: 14px 16px; box-shadow: var(--cpsh); background: linear-gradient(135deg, #e3f3ea 0%, #fff 62%); gap: 2px; }
+.cptile.cp-warn { background: linear-gradient(135deg, #fdf0d0 0%, #fff 62%); } .cptile.cp-over { background: linear-gradient(135deg, #fbe0de 0%, #fff 62%); }
+.cptile .cpicob { background: rgba(255, 255, 255, .8); color: #1d6a3e; } .cptile.cp-warn .cpicob { color: #8a5a00; } .cptile.cp-over .cpicob { color: #b3261e; }
+.cptile.sel { box-shadow: 0 0 0 2px var(--ink), var(--cpsh); }
+.cpbig { font-size: 2rem; font-weight: 800; line-height: 1.1; margin-top: 6px; } .cpmonth { margin-top: 4px; }
+/* numbers */
+.cpkpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.cpkpi { background: var(--surface); border-radius: 14px; box-shadow: var(--cpsh); padding: 14px 12px; display: grid; justify-items: center; gap: 2px; text-align: center; }
+.cpkpi b { font-size: 1.6rem; font-weight: 800; line-height: 1.15; } .cpkpi span:last-child { font-size: 12px; color: var(--muted); }
+.cpkpi.bad .cpicob { background: #fbe0de; color: #b3261e; }
+/* what needs fixing */
+.cpitem { grid-template-columns: auto 1fr; align-items: start; gap: 4px 12px; border: 0; border-radius: 14px; background: #fff7f6; justify-items: stretch; }
+.cpitem.cp-warn { background: #fffaf0; } .cpitem .cpitx { display: grid; gap: 4px; justify-items: start; }
+.cpitem .cpicob { background: #fbe0de; color: #b3261e; } .cpitem.cp-warn .cpicob { background: #fdf0d0; color: #8a5a00; }
+.cpok { display: flex; align-items: center; gap: 10px; border-radius: 14px; background: #e9f6ef; } .cpok .cpico { color: #1d6a3e; }
+/* charts */
+.cpcell { border-radius: 8px; }
+.cpleg { gap: 6px 12px; } .cpscale { border-radius: 6px; } .cpover { border-radius: 5px; }
+.cpbars { gap: 10px; } .cpbtrack { height: 16px; border-radius: 6px; background: #f1f2f8; overflow: visible; }
+.cpbtrack::before { display: none; }
+.cpbseg { position: absolute; top: 0; bottom: 0; border-radius: 4px; }
+.cpbover { position: absolute; top: -2px; bottom: -2px; border-radius: 0 6px 6px 0; background: repeating-linear-gradient(135deg, rgba(208, 59, 59, .85) 0 4px, rgba(208, 59, 59, .35) 4px 8px); border: 1.5px solid #d03b3b; }
+.cpblimit { top: -4px; bottom: -4px; }
+.cpkey { display: flex; flex-wrap: wrap; gap: 6px 14px; padding-top: 6px; font-size: 12px; color: var(--muted); }
+.cpkeyi { display: inline-flex; align-items: center; gap: 6px; } .cpsw { display: inline-block; width: 22px; height: 10px; border-radius: 4px; }
+
+/* ---------- Version history of a month ---------- */
+.vhdlg { display: grid; gap: 10px; min-width: min(760px, 92vw); }
+.vhtop { display: flex; gap: 8px; flex-wrap: wrap; } .vhtop input { flex: 1; min-width: 200px; }
+.vhbody { display: grid; grid-template-columns: minmax(220px, 280px) 1fr; gap: 12px; align-items: start; }
+.vhlist { display: grid; gap: 6px; max-height: 52vh; overflow: auto; }
+.vhitem { display: grid; gap: 2px; text-align: start; font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); cursor: pointer; }
+.vhitem span { font-size: 12px; color: var(--muted); } .vhitem.on { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand); background: #f1f8f5; } .vhitem.named strong { color: #5b4ab5; }
+.vhdetail { display: grid; gap: 8px; max-height: 52vh; overflow: auto; } .vhsum { margin: 0; font-weight: 700; }
+.vhsec { border-radius: 10px; padding: 8px 12px; background: #f4f5fa; } .vhsec ul { margin: 4px 0 0; padding-inline-start: 18px; font-size: 13px; }
+.vhsec.miss { background: #fbe9e7; } .vhsec.add { background: #e9f6ef; } .vhsec.mod { background: #fffaf0; }
+.vhbtns { display: flex; gap: 8px; flex-wrap: wrap; position: sticky; bottom: 0; background: var(--surface); padding-top: 6px; }
+@media (max-width: 640px) { .vhbody { grid-template-columns: 1fr; } .vhlist { max-height: 26vh; } }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -1447,6 +1499,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     sprints: {},
     sitems: {},
     reports: {},
+    hist: {},
     setup: {}
   };
 
@@ -1939,6 +1992,172 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       s.style.color = "var(--brand)";
     }
     return s;
+  }
+
+  // src/esm/features/month-undo.js
+  var SKIP = /* @__PURE__ */ new Set(["lines", "by", "ts", "subAt", "subBy", "status", "pl", "mo"]);
+  var same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  var pick = (o, keys) => {
+    const r = {};
+    keys.forEach((k) => {
+      if (o && k in o) r[k] = o[k];
+    });
+    return r;
+  };
+  var clone2 = (o) => JSON.parse(JSON.stringify(o));
+  var changedKeys = (a, b, skip) => [...new Set(Object.keys(a || {}).concat(Object.keys(b || {})))].filter((k) => !(skip && skip.has(k)) && !same(a && a[k], b && b[k]));
+  function diffDoc(old, nw) {
+    if (!nw) return old ? [{ t: "doc", before: clone2(old) }] : [];
+    const ol = old && old.lines || [], nl = nw.lines || [], om = new Map(ol.map((l) => [l.id, l])), nm = new Map(nl.map((l) => [l.id, l])), out = [];
+    ol.forEach((l, i) => {
+      if (!nm.has(l.id)) out.push({ t: "del", lid: l.id, before: clone2(l), next: ol[i + 1] ? ol[i + 1].id : null });
+    });
+    nl.forEach((l) => {
+      const o = om.get(l.id);
+      if (!o) {
+        out.push({ t: "add", lid: l.id });
+        return;
+      }
+      const ks = changedKeys(o, l);
+      if (ks.length) out.push({ t: "mod", lid: l.id, keys: ks, before: clone2(pick(o, ks)), after: clone2(pick(l, ks)) });
+    });
+    const co = ol.filter((l) => nm.has(l.id)).map((l) => l.id), cn = nl.filter((l) => om.has(l.id)).map((l) => l.id);
+    if (!same(co, cn)) out.push({ t: "order", ids: co });
+    const mk = changedKeys(old, nw, SKIP);
+    if (old && mk.length) out.push({ t: "meta", keys: mk, before: clone2(pick(old, mk)), after: clone2(pick(nw, mk)) });
+    return out;
+  }
+  function undoChanges(cur2, changes, mo) {
+    let applied = 0, skipped = 0;
+    if (changes.length === 1 && changes[0].t === "doc") {
+      if (cur2) return { doc: cur2, applied: 0, skipped: 1 };
+      return { doc: clone2(changes[0].before), applied: 1, skipped: 0 };
+    }
+    const d = cur2 ? clone2(cur2) : { mo, lines: [] };
+    d.lines = d.lines || [];
+    changes.slice().reverse().forEach((c) => {
+      if (c.t === "add") {
+        const i = d.lines.findIndex((l) => l.id === c.lid);
+        if (i >= 0) {
+          d.lines.splice(i, 1);
+          applied++;
+        } else skipped++;
+      } else if (c.t === "del") {
+        if (d.lines.some((l) => l.id === c.lid)) {
+          skipped++;
+          return;
+        }
+        const i = c.next ? d.lines.findIndex((l) => l.id === c.next) : -1;
+        if (i >= 0) d.lines.splice(i, 0, clone2(c.before));
+        else d.lines.push(clone2(c.before));
+        applied++;
+      } else if (c.t === "mod") {
+        const l = d.lines.find((x) => x.id === c.lid);
+        if (!l) {
+          skipped++;
+          return;
+        }
+        c.keys.forEach((k) => {
+          if (!same(l[k], c.after[k])) {
+            skipped++;
+            return;
+          }
+          if (k in c.before) l[k] = clone2(c.before[k]);
+          else delete l[k];
+          applied++;
+        });
+      } else if (c.t === "order") {
+        const pos = [];
+        d.lines.forEach((l, i) => {
+          if (c.ids.includes(l.id)) pos.push(i);
+        });
+        const present = c.ids.filter((id) => d.lines.some((l) => l.id === id)), byId = new Map(d.lines.map((l) => [l.id, l]));
+        if (present.length === pos.length && present.length > 1) {
+          const before = d.lines.map((l) => l.id).join();
+          present.forEach((id, k) => {
+            d.lines[pos[k]] = byId.get(id);
+          });
+          if (d.lines.map((l) => l.id).join() !== before) applied++;
+        } else skipped++;
+      } else if (c.t === "meta") {
+        c.keys.forEach((k) => {
+          if (!same(d[k], c.after[k])) {
+            skipped++;
+            return;
+          }
+          if (k in c.before) d[k] = clone2(c.before[k]);
+          else delete d[k];
+          applied++;
+        });
+      }
+    });
+    return { doc: d, applied, skipped };
+  }
+
+  // src/esm/features/month-history.js
+  var GAP_MS = 10 * 60 * 1e3;
+  var KEEP_AUTO = 15;
+  var SHRINK_AT = 3;
+  var KEEP_OUT = /* @__PURE__ */ new Set(["by", "ts", "subAt", "subBy", "status", "pl", "mo"]);
+  var clone3 = (o) => JSON.parse(JSON.stringify(o));
+  var isHistId = (id) => /^mohist\d{6}_/.test(String(id));
+  var histId = (m, at, named) => "mohist" + m.replace("-", "") + "_" + (named ? "n" + Math.random().toString(36).slice(2, 6) : "") + at;
+  var cards = (doc2) => (doc2 && doc2.lines || []).filter((l) => l && String(l.t || "").trim());
+  var cardCount = (doc2) => cards(doc2).length;
+  function snapReason(srv, next, lastAt, now) {
+    if (!srv || !Array.isArray(srv.lines) || !cardCount(srv)) return "";
+    if (cardCount(srv) - cardCount(next) >= SHRINK_AT) return "shrink";
+    const at = +srv.ts || now;
+    return !lastAt || at - lastAt >= GAP_MS ? "time" : "";
+  }
+  function makeVersion(m, doc2, named, name, who2, now) {
+    const at = named ? now : +doc2.ts || now, d = clone3(doc2);
+    return { id: histId(m, at, named), v: { hist: 1, of: m, at, by: named ? who2 : doc2.by || "", n: cardCount(doc2), named: !!named, name: name || "", doc: d } };
+  }
+  var versionsOf = (hist, m) => Object.keys(hist || {}).filter((id) => isHistId(id) && hist[id] && hist[id].of === m).map((id) => Object.assign({ id }, hist[id])).sort((a, b) => b.at - a.at);
+  var toPrune = (list) => list.filter((v) => !v.named).slice(KEEP_AUTO).map((v) => v.id);
+  function compare(version, cur2) {
+    const ch = diffDoc(version.doc, cur2 || { lines: [] }), title = (l) => String(l && l.t || "").trim() || "(no title)";
+    const byId = new Map((version.doc && version.doc.lines || []).map((l) => [l.id, l]));
+    const now = new Map((cur2 && cur2.lines || []).map((l) => [l.id, l]));
+    return {
+      missing: ch.filter((c) => c.t === "del").map((c) => ({ id: c.lid, t: title(c.before) })).filter((c) => String((byId.get(c.id) || {}).t || "").trim()),
+      newer: ch.filter((c) => c.t === "add").map((c) => ({ id: c.lid, t: title(now.get(c.lid)) })).filter((c) => String((now.get(c.id) || {}).t || "").trim()),
+      changed: ch.filter((c) => c.t === "mod").map((c) => ({ id: c.lid, t: title(now.get(c.lid)), keys: c.keys }))
+    };
+  }
+  function bringBack(cur2, version) {
+    const d = clone3(cur2 || { lines: [] }), have = new Set((d.lines || []).map((l) => l.id));
+    d.lines = d.lines || [];
+    (version.doc && version.doc.lines || []).forEach((l) => {
+      if (l && l.id && !have.has(l.id)) d.lines.push(clone3(l));
+    });
+    return d;
+  }
+  function restoreOf(cur2, version) {
+    const d = clone3(cur2 || { lines: [] }), v = clone3(version.doc || { lines: [] });
+    Object.keys(d).forEach((k) => {
+      if (!KEEP_OUT.has(k) && !(k in v)) delete d[k];
+    });
+    Object.keys(v).forEach((k) => {
+      if (!KEEP_OUT.has(k)) d[k] = v[k];
+    });
+    d.lines = v.lines || [];
+    return d;
+  }
+  function stampOf(at) {
+    const d = new Date(at);
+    if (isNaN(d)) return "";
+    const p = (n) => String(n).padStart(2, "0");
+    return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()] + " " + d.getDate() + " " + ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()] + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+  }
+  function keepPendingHist(fresh, local) {
+    const out = Object.assign({}, fresh), now = Date.now();
+    Object.keys(local || {}).forEach((id) => {
+      const v = local[id];
+      if (v && v._p && !(id in out) && now - v._p < 3e4) out[id] = v;
+    });
+    return out;
   }
 
   // src/esm/features/sharing.js
@@ -2697,9 +2916,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const f = el("form", "card");
     f.append(el("h2", "", "Add leave"));
     const names = [...directory().keys()].sort((x, y) => x.localeCompare(y));
-    const who = selOf([["", "Choose a person…"]].concat(names.map((n) => [n, n])), ""), a = el("input"), b = el("input"), ty = selOf(VTYPES, "Annual leave"), nt = el("input");
-    who.required = true;
-    who.setAttribute("aria-label", "Person");
+    const who2 = selOf([["", "Choose a person…"]].concat(names.map((n) => [n, n])), ""), a = el("input"), b = el("input"), ty = selOf(VTYPES, "Annual leave"), nt = el("input");
+    who2.required = true;
+    who2.setAttribute("aria-label", "Person");
     a.type = b.type = "date";
     a.required = true;
     nt.type = "text";
@@ -2708,16 +2927,16 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const td = todayIso();
     a.value = td;
     const r1 = el("div", "formrow");
-    r1.append(fld("Person", who), fld("From", a), fld("To", b), fld("Type", ty), fld("Note", nt));
+    r1.append(fld("Person", who2), fld("From", a), fld("To", b), fld("Type", ty), fld("Note", nt));
     const msg = el("div", "gerr"), go = el("button", "btn primary", "Add leave");
     go.type = "submit";
     go.disabled = !canEdit();
     f.append(r1, msg, go);
     f.addEventListener("submit", (e) => {
       e.preventDefault();
-      if (!who.value) {
+      if (!who2.value) {
         msg.textContent = "Choose a person first.";
-        who.focus();
+        who2.focus();
         return;
       }
       const x0 = a.value, x1 = b.value || a.value;
@@ -2725,12 +2944,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         msg.textContent = "Pick a valid date range.";
         return;
       }
-      const clash = vacsOf(who.value).find((v) => x0 <= (v.a1 || v.a0) && x1 >= v.a0);
+      const clash = vacsOf(who2.value).find((v) => x0 <= (v.a1 || v.a0) && x1 >= v.a0);
       if (clash) {
-        msg.textContent = who.value + " already has leave on " + fmtIso(clash.a0) + (clash.a1 > clash.a0 ? " to " + fmtIso(clash.a1) : "") + ". Remove it first or pick other dates.";
+        msg.textContent = who2.value + " already has leave on " + fmtIso(clash.a0) + (clash.a1 > clash.a0 ? " to " + fmtIso(clash.a1) : "") + ". Remove it first or pick other dates.";
         return;
       }
-      addVacation(who.value, x0, x1, ty.value, nt.value.trim());
+      addVacation(who2.value, x0, x1, ty.value, nt.value.trim());
     });
     root.append(f);
     if (S.vacNotice) {
@@ -2886,19 +3105,19 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   var personNotes = (name) => packNotes(notesHere("person").filter((n) => n.p === name));
   var hasPersonNotes = (name) => notesHere("person").some((n) => n.p === name);
   function leaveByDay() {
-    const counts = new Array(NDAYS).fill(0), who = Array.from({ length: NDAYS }, () => []);
+    const counts = new Array(NDAYS).fill(0), who2 = Array.from({ length: NDAYS }, () => []);
     const names = state.person === "all" ? [...directory().keys()] : [state.person];
     names.forEach((n) => vacsOf(n).forEach((v) => {
       const a = Math.max(0, kOfIso(v.a0)), b = Math.min(NDAYS - 1, kOfIso(v.a1 || v.a0));
-      for (let k = a; k <= b; k++) if (!who[k].includes(n)) {
-        who[k].push(n);
+      for (let k = a; k <= b; k++) if (!who2[k].includes(n)) {
+        who2[k].push(n);
         counts[k]++;
       }
     }));
-    return { counts, who };
+    return { counts, who: who2 };
   }
   function leaveRuns() {
-    const { counts, who } = leaveByDay(), runs = [];
+    const { counts, who: who2 } = leaveByDay(), runs = [];
     let k = 0;
     while (k < NDAYS) {
       if (!counts[k]) {
@@ -2907,7 +3126,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       }
       let e = k;
       while (e + 1 < NDAYS && counts[e + 1] === counts[k]) e++;
-      runs.push({ d0: k, d1: e, n: counts[k], who: who[k] });
+      runs.push({ d0: k, d1: e, n: counts[k], who: who2[k] });
       k = e + 1;
     }
     return runs;
@@ -2944,17 +3163,17 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         return w;
       };
       box2.append(fld2("Text", tx));
-      let who = null;
+      let who2 = null;
       if (k === "person") {
-        who = el("select");
-        who.setAttribute("aria-label", "Person");
+        who2 = el("select");
+        who2.setAttribute("aria-label", "Person");
         [...directory().keys()].sort((a, b) => a.localeCompare(b)).forEach((n) => {
           const o = el("option", "", n);
           o.value = n;
           if (n === note.p) o.selected = true;
-          who.append(o);
+          who2.append(o);
         });
-        box2.append(fld2("Person", who));
+        box2.append(fld2("Person", who2));
       }
       const d0 = el("input"), d1 = el("input");
       d0.type = d1.type = "date";
@@ -3017,7 +3236,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           return;
         }
         const patch = { k, t, a0: d0.value, a1: d1.value, c: col };
-        if (k === "person") patch.p = who.value;
+        if (k === "person") patch.p = who2.value;
         closeDlg();
         saveNote(note.id, patch, (editing ? "edited" : "added") + " the " + (k === "person" ? "note for " + patch.p : "period note") + ' "' + t + '"');
         notify("Note saved");
@@ -3910,7 +4129,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   var LINK_FIELDS = [["t", "Title"], ["pct", "Progress"]];
   var clean = (v) => typeof v === "string" ? v.replace(/\s+/g, " ").trim() : v;
   var roadVals = (bar4) => ({ t: clean(bar4 && bar4.t), pct: bar4 && Number.isFinite(bar4.pc) ? bar4.pc : void 0 });
-  function compare(cur2, base3, road) {
+  function compare2(cur2, base3, road) {
     const incoming2 = [], outgoing2 = [], rebase = {}, b0 = base3 || cur2;
     LINK_FIELDS.forEach(([f]) => {
       const c = clean(cur2[f]), b = clean(b0[f]), r = road[f];
@@ -3960,21 +4179,21 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   var cardIdsList = () => allCards().filter((x) => x.l.rid).map((x) => cardId(x.l)).filter(Boolean).sort();
   function scan() {
     const rows2 = [];
-    const cards = allCards();
-    cards.forEach(({ did, l }) => {
+    const cards2 = allCards();
+    cards2.forEach(({ did, l }) => {
       const bar4 = barOf(l.rid);
       if (!bar4) return;
       const cur2 = { t: l.t, pct: clampPct(l.pct) }, base3 = l.lk || null;
-      rows2.push({ kind: "card", did, l, id: cardId(l), label: l.t, bar: bar4, rid: l.rid, cur: cur2, base: base3, cmp: compare(cur2, base3, roadVals(bar4)) });
+      rows2.push({ kind: "card", did, l, id: cardId(l), label: l.t, bar: bar4, rid: l.rid, cur: cur2, base: base3, cmp: compare2(cur2, base3, roadVals(bar4)) });
     });
     Object.keys(S.reports || {}).filter(isReportDoc).forEach((did) => {
       const d = S.reports[did] || {};
       Object.keys(d.prods || {}).forEach((k) => ((d.prods[k] || {}).items || []).forEach((l) => {
         if (!l.fid) return;
-        const c = cards.find((x) => x.l.id === l.fid), bar4 = c && barOf(c.l.rid);
+        const c = cards2.find((x) => x.l.id === l.fid), bar4 = c && barOf(c.l.rid);
         if (!bar4) return;
         const cur2 = { t: l.t, pct: linePctOf(l) }, base3 = l.lk || null;
-        rows2.push({ kind: "line", did, pk: k, l, id: cardId(c.l), label: l.t, bar: bar4, rid: c.l.rid, cur: cur2, base: base3, cmp: compare(cur2, base3, roadVals(bar4)), week: d.a });
+        rows2.push({ kind: "line", did, pk: k, l, id: cardId(c.l), label: l.t, bar: bar4, rid: c.l.rid, cur: cur2, base: base3, cmp: compare2(cur2, base3, roadVals(bar4)), week: d.a });
       }));
     });
     return rows2;
@@ -4684,11 +4903,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       if (!c1.contains(e.relatedTarget)) c1.classList.remove("dropbefore", "dropafter");
     });
     c1.addEventListener("drop", (e) => {
-      const who = e.dataTransfer.getData("text/person");
-      if (!who) return;
+      const who2 = e.dataTransfer.getData("text/person");
+      if (!who2) return;
       e.preventDefault();
       c1.classList.remove("dropbefore", "dropafter");
-      movePerson(who, name, side(e));
+      movePerson(who2, name, side(e));
     });
     c1.append(grip, more);
   }
@@ -5174,9 +5393,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     });
     const det = el("div", "permdetail");
     det.setAttribute("aria-live", "polite");
-    const head = el("div", "permhead"), who = el("div");
-    who.append(el("h3", "", nameOf(cur2)), el("div", "hint", (cur2.role ? cur2.role + " · " : "") + (cur2.email || "")));
-    head.append(avatarEl(cur2.avatar, 48, cur2.name), who);
+    const head = el("div", "permhead"), who2 = el("div");
+    who2.append(el("h3", "", nameOf(cur2)), el("div", "hint", (cur2.role ? cur2.role + " · " : "") + (cur2.email || "")));
+    head.append(avatarEl(cur2.avatar, 48, cur2.name), who2);
     det.append(head);
     const self = cur2.id === S.me.id, admins = S.members.filter((x) => x.approved && x.is_admin);
     const ar = el("div", "permadmin"), at = el("div");
@@ -5827,8 +6046,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     pend.forEach((m) => {
       const row = el("div", "formrow");
       row.style.alignItems = "center";
-      const who = el("div");
-      who.append(el("b", "", m.name || m.email), el("div", "hint", (m.role ? m.role + " · " : "") + (m.email || "")));
+      const who2 = el("div");
+      who2.append(el("b", "", m.name || m.email), el("div", "hint", (m.role ? m.role + " · " : "") + (m.email || "")));
       const acc = selOf([["editor", "Editor"], ["viewer", "Viewer"]], "editor");
       acc.style.marginInlineStart = "auto";
       acc.setAttribute("aria-label", "Access for " + (m.name || m.email));
@@ -5847,7 +6066,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         toast("Approved. " + (m.name || m.email) + " can now open the tool.");
         await loadMembers();
       });
-      row.append(avatarEl(m.avatar, 36, m.name), who, acc, ok);
+      row.append(avatarEl(m.avatar, 36, m.name), who2, acc, ok);
       ac.append(row);
     });
     root.append(ac);
@@ -6253,7 +6472,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   }
 
   // src/esm/features/undo-stack.js
-  var same = (a, b) => JSON.stringify(a === void 0 ? null : a) === JSON.stringify(b === void 0 ? null : b);
+  var same2 = (a, b) => JSON.stringify(a === void 0 ? null : a) === JSON.stringify(b === void 0 ? null : b);
   var canon = (d) => d ? Object.keys(d).sort().reduce((o, k) => (o[k] = d[k], o), {}) : null;
   function createUndo(limit) {
     const max = limit || 100;
@@ -6287,7 +6506,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       },
       /** Record one change: `before` / `after` are the whole doc (null = did not exist / was deleted). */
       rec(id, before, after) {
-        if (same(canon(before), canon(after))) return;
+        if (same2(canon(before), canon(after))) return;
         const o = begin(), prev = o.ops.find((x) => x.id === id);
         if (prev) prev.after = after;
         else o.ops.push({ id, before, after });
@@ -6324,7 +6543,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         let done2 = 0, skipped = 0;
         (dir === "undo" ? s.ops.slice().reverse() : s.ops).forEach((o) => {
           const want = dir === "undo" ? o.after : o.before, then = dir === "undo" ? o.before : o.after;
-          if (!same(canon(current(o.id) || null), canon(want))) {
+          if (!same2(canon(current(o.id) || null), canon(want))) {
             skipped++;
             return;
           }
@@ -6458,14 +6677,14 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     root.append(head);
     const sum = el("section", "pr-sum"), big = el("div", "pr-big pc-" + pctBand(ov));
     big.append(el("b", "", ov + "%"), el("span", "", "overall progress"), bar2(ov), el("small", "", done2 + " of " + all.length + " item" + (all.length === 1 ? "" : "s") + " complete" + (risk ? " · " + risk + " at risk" : "") + (scope ? " · " + scope + " out of scope" : "")));
-    const cards = el("div", "pr-cards");
+    const cards2 = el("div", "pr-cards");
     pls.forEach((p) => {
       const its = items2(p), ap = avgPct(its) || 0, c = el("div", "pr-card pc-" + pctBand(ap));
       c.style.setProperty("--c", o.colOf(p));
       c.append(el("b", "", p.n), el("span", "pr-pct", ap + "%"), bar2(ap), el("small", "", its.length + " item" + (its.length === 1 ? "" : "s")));
-      cards.append(c);
+      cards2.append(c);
     });
-    sum.append(big, cards);
+    sum.append(big, cards2);
     root.append(sum);
     pls.forEach((p) => {
       const its = items2(p);
@@ -7636,7 +7855,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
             return;
           }
           const names = [...directory().keys()];
-          const res = mergeJira(o.blocks(), issues, { names, squadOf: (p, who) => PROJECT_SQUAD[p] || primarySq(who), squadName: o.laneName });
+          const res = mergeJira(o.blocks(), issues, { names, squadOf: (p, who2) => PROJECT_SQUAD[p] || primarySq(who2), squadName: o.laneName });
           res.updates.forEach((u) => o.saveItem(u.id, u.patch));
           const map = {};
           res.inserts.forEach((ins, i) => {
@@ -9207,7 +9426,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       ok.type = no.type = "button";
       no.addEventListener("click", closeDlg);
       ok.addEventListener("click", () => {
-        const who = {}, pts = {};
+        const who2 = {}, pts = {};
         for (const k of Object.keys(tracks)) {
           const t = tracks[k];
           if (!t.on) continue;
@@ -9226,7 +9445,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
             msg.textContent = "Pick at least one person for " + t.n + ", or switch the track off.";
             return;
           }
-          who[k] = w;
+          who2[k] = w;
           pts[k] = Object.keys(w).reduce((a, n) => a + w[n], 0);
         }
         let needs = "";
@@ -9242,7 +9461,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           }
         }
         closeDlg();
-        put2({ pts: Object.keys(pts).length ? pts : null, who: Object.keys(who).length ? who : null, needs: needs || "" }, 'set the points of "' + l.t + '"');
+        put2({ pts: Object.keys(pts).length ? pts : null, who: Object.keys(who2).length ? who2 : null, needs: needs || "" }, 'set the points of "' + l.t + '"');
       });
       const row = el("div", "row ptsfoot");
       row.append(ok, no);
@@ -9373,12 +9592,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           lv.append(r);
         });
         const all = [...new Set([].concat(...Object.keys(lanes).map((k) => lanes[k])))].sort((a, b) => a.localeCompare(b));
-        const who = el("select");
-        who.setAttribute("aria-label", "Person leaving");
+        const who2 = el("select");
+        who2.setAttribute("aria-label", "Person leaving");
         all.forEach((n) => {
           const o = el("option", "", n);
           o.value = n;
-          who.append(o);
+          who2.append(o);
         });
         const dt = el("input");
         dt.type = "date";
@@ -9387,13 +9606,13 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         ad.type = "button";
         ad.id = "leaveadd";
         ad.addEventListener("click", () => {
-          if (who.value && /^\d{4}-\d{2}-\d{2}$/.test(dt.value)) {
-            leaving[who.value] = dt.value;
+          if (who2.value && /^\d{4}-\d{2}-\d{2}$/.test(dt.value)) {
+            leaving[who2.value] = dt.value;
             draw();
           }
         });
         const row2 = el("div", "padd");
-        row2.append(fld("Person", who), fld("Last working day", dt));
+        row2.append(fld("Person", who2), fld("Last working day", dt));
         lv.append(row2, ad);
         body.append(lv);
       };
@@ -9413,104 +9632,137 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   }
   var missingInResources = () => unmatched(cfg2(), resources());
 
-  // src/esm/features/month-undo.js
-  var SKIP = /* @__PURE__ */ new Set(["lines", "by", "ts", "subAt", "subBy", "status", "pl", "mo"]);
-  var same2 = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-  var pick = (o, keys) => {
-    const r = {};
-    keys.forEach((k) => {
-      if (o && k in o) r[k] = o[k];
+  // src/esm/pages/monthly-history.js
+  function keepVersion(m, doc2, named, name, who2) {
+    const mk = makeVersion(m, doc2, named, name, who2, Date.now());
+    mk.v._p = Date.now();
+    S.hist = S.hist || {};
+    if (S.hist[mk.id]) return mk.id;
+    S.hist[mk.id] = mk.v;
+    const w = Object.assign({}, mk.v);
+    delete w._p;
+    write("reports/" + mk.id, w);
+    toPrune(versionsOf(S.hist, m)).forEach((id) => {
+      delete S.hist[id];
+      write("reports/" + id, null);
     });
-    return r;
-  };
-  var clone2 = (o) => JSON.parse(JSON.stringify(o));
-  var changedKeys = (a, b, skip) => [...new Set(Object.keys(a || {}).concat(Object.keys(b || {})))].filter((k) => !(skip && skip.has(k)) && !same2(a && a[k], b && b[k]));
-  function diffDoc(old, nw) {
-    if (!nw) return old ? [{ t: "doc", before: clone2(old) }] : [];
-    const ol = old && old.lines || [], nl = nw.lines || [], om = new Map(ol.map((l) => [l.id, l])), nm = new Map(nl.map((l) => [l.id, l])), out = [];
-    ol.forEach((l, i) => {
-      if (!nm.has(l.id)) out.push({ t: "del", lid: l.id, before: clone2(l), next: ol[i + 1] ? ol[i + 1].id : null });
-    });
-    nl.forEach((l) => {
-      const o = om.get(l.id);
-      if (!o) {
-        out.push({ t: "add", lid: l.id });
-        return;
-      }
-      const ks = changedKeys(o, l);
-      if (ks.length) out.push({ t: "mod", lid: l.id, keys: ks, before: clone2(pick(o, ks)), after: clone2(pick(l, ks)) });
-    });
-    const co = ol.filter((l) => nm.has(l.id)).map((l) => l.id), cn = nl.filter((l) => om.has(l.id)).map((l) => l.id);
-    if (!same2(co, cn)) out.push({ t: "order", ids: co });
-    const mk = changedKeys(old, nw, SKIP);
-    if (old && mk.length) out.push({ t: "meta", keys: mk, before: clone2(pick(old, mk)), after: clone2(pick(nw, mk)) });
-    return out;
+    return mk.id;
   }
-  function undoChanges(cur2, changes, mo) {
-    let applied = 0, skipped = 0;
-    if (changes.length === 1 && changes[0].t === "doc") {
-      if (cur2) return { doc: cur2, applied: 0, skipped: 1 };
-      return { doc: clone2(changes[0].before), applied: 1, skipped: 0 };
-    }
-    const d = cur2 ? clone2(cur2) : { mo, lines: [] };
-    d.lines = d.lines || [];
-    changes.slice().reverse().forEach((c) => {
-      if (c.t === "add") {
-        const i = d.lines.findIndex((l) => l.id === c.lid);
-        if (i >= 0) {
-          d.lines.splice(i, 1);
-          applied++;
-        } else skipped++;
-      } else if (c.t === "del") {
-        if (d.lines.some((l) => l.id === c.lid)) {
-          skipped++;
-          return;
-        }
-        const i = c.next ? d.lines.findIndex((l) => l.id === c.next) : -1;
-        if (i >= 0) d.lines.splice(i, 0, clone2(c.before));
-        else d.lines.push(clone2(c.before));
-        applied++;
-      } else if (c.t === "mod") {
-        const l = d.lines.find((x) => x.id === c.lid);
-        if (!l) {
-          skipped++;
-          return;
-        }
-        c.keys.forEach((k) => {
-          if (!same2(l[k], c.after[k])) {
-            skipped++;
-            return;
-          }
-          if (k in c.before) l[k] = clone2(c.before[k]);
-          else delete l[k];
-          applied++;
+  var who = () => S.me && (S.me.name || S.me.email) || "";
+  function openHistory(m, cb) {
+    let sel = "";
+    openDlg("Version history · " + cb.label(m), (box2) => {
+      box2.classList.add("vhdlg");
+      const top = el("div", "vhtop"), inp = el("input");
+      inp.id = "vhname";
+      inp.type = "text";
+      inp.maxLength = 60;
+      inp.placeholder = "Name this version, for example Before the exec review";
+      inp.setAttribute("aria-label", "Name of the version");
+      const sv3 = el("button", "btn pri sm", "Save a version");
+      sv3.type = "button";
+      sv3.id = "vhsave";
+      sv3.addEventListener("click", () => {
+        const cur2 = cb.docOf(m);
+        keepVersion(m, cur2, true, inp.value.trim() || "Saved version", who());
+        inp.value = "";
+        notify("Version saved. It is kept until you remove it.");
+        draw();
+      });
+      top.append(inp, sv3);
+      const body = el("div", "vhbody"), list = el("div", "vhlist"), det = el("div", "vhdetail");
+      list.id = "vhlist";
+      det.id = "vhdetail";
+      list.setAttribute("role", "listbox");
+      list.setAttribute("aria-label", "Versions");
+      body.append(list, det);
+      box2.append(el("p", "hint", "Every change to a month is kept as a version. The board always shows the latest one. Pick a version to see what is different from now."), top, body);
+      function draw() {
+        const cur2 = cb.docOf(m), vs = versionsOf(S.hist, m);
+        list.textContent = "";
+        det.textContent = "";
+        const cb0 = el("button", "vhitem" + (sel ? "" : " on"), "");
+        cb0.type = "button";
+        cb0.dataset.id = "";
+        cb0.append(el("strong", "", "Now (latest)"), el("span", "", cardCount(cur2) + " cards"));
+        cb0.addEventListener("click", () => {
+          sel = "";
+          draw();
         });
-      } else if (c.t === "order") {
-        const pos = [];
-        d.lines.forEach((l, i) => {
-          if (c.ids.includes(l.id)) pos.push(i);
-        });
-        const present = c.ids.filter((id) => d.lines.some((l) => l.id === id)), byId = new Map(d.lines.map((l) => [l.id, l]));
-        if (present.length === pos.length && present.length > 1) {
-          const before = d.lines.map((l) => l.id).join();
-          present.forEach((id, k) => {
-            d.lines[pos[k]] = byId.get(id);
+        list.append(cb0);
+        if (!vs.length) list.append(el("p", "hint vhnone", "No earlier versions yet. One is kept automatically when the month changes."));
+        vs.forEach((v2) => {
+          const b = el("button", "vhitem" + (sel === v2.id ? " on" : "") + (v2.named ? " named" : ""), "");
+          b.type = "button";
+          b.dataset.id = v2.id;
+          b.setAttribute("role", "option");
+          b.setAttribute("aria-selected", sel === v2.id ? "true" : "false");
+          b.append(el("strong", "", v2.named ? "★ " + (v2.name || "Saved version") : stampOf(v2.at)), el("span", "", (v2.named ? stampOf(v2.at) + " · " : "") + (v2.by || "someone") + " · " + v2.n + " cards"));
+          b.addEventListener("click", () => {
+            sel = v2.id;
+            draw();
           });
-          if (d.lines.map((l) => l.id).join() !== before) applied++;
-        } else skipped++;
-      } else if (c.t === "meta") {
-        c.keys.forEach((k) => {
-          if (!same2(d[k], c.after[k])) {
-            skipped++;
-            return;
-          }
-          if (k in c.before) d[k] = clone2(c.before[k]);
-          else delete d[k];
-          applied++;
+          list.append(b);
         });
+        const v = vs.find((x) => x.id === sel);
+        if (!v) {
+          det.append(el("p", "hint", "This is the version you see on the board."));
+          return;
+        }
+        const d = compare(v, cur2), sec = (title, arr, cls) => {
+          if (!arr.length) return;
+          const s = el("div", "vhsec " + cls);
+          s.append(el("strong", "", title + " (" + arr.length + ")"));
+          const ul = el("ul");
+          arr.slice(0, 40).forEach((c) => ul.append(el("li", "", c.t)));
+          if (arr.length > 40) ul.append(el("li", "", "… and " + (arr.length - 40) + " more"));
+          s.append(ul);
+          det.append(s);
+        };
+        det.append(el("p", "vhsum", (v.named ? "★ " + v.name + " · " : "") + stampOf(v.at) + " · " + (v.by || "someone") + " · " + v.n + " cards. Compared with now:"));
+        sec("Missing now (in this version, not on the board)", d.missing, "miss");
+        sec("Added since", d.newer, "add");
+        sec("Changed since", d.changed, "mod");
+        if (!d.missing.length && !d.newer.length && !d.changed.length) det.append(el("p", "hint", "Same as now."));
+        const bar4 = el("div", "vhbtns"), rb = el("button", "btn sm", "Restore this version"), bb = el("button", "btn pri sm", "Bring back only the missing cards" + (d.missing.length ? " (" + d.missing.length + ")" : ""));
+        rb.type = "button";
+        rb.id = "vhrestore";
+        bb.type = "button";
+        bb.id = "vhbring";
+        bb.disabled = !d.missing.length;
+        if (!d.missing.length) bb.title = "Nothing is missing";
+        bb.addEventListener("click", () => {
+          keepVersion(m, cb.docOf(m), true, "Before bringing cards back", who());
+          const add = bringBack(cb.docOf(m), v);
+          cb.save(m, (dd) => {
+            dd.lines = add.lines;
+          }, "brought back " + d.missing.length + " card" + (d.missing.length === 1 ? "" : "s") + " to " + cb.label(m) + " from the version of " + stampOf(v.at), false, true);
+          notify(d.missing.length + " card" + (d.missing.length === 1 ? "" : "s") + " brought back. Nothing else changed.");
+          cb.render();
+          sel = "";
+          draw();
+        });
+        rb.addEventListener("click", () => confirmDlg("Restore this version?", cb.label(m) + " goes back to the version of " + stampOf(v.at) + " (" + v.n + " cards). Cards added since are removed from the board. The board as it is now is kept as a version first, so you can come back.", "Restore", () => {
+          keepVersion(m, cb.docOf(m), true, "Before restoring " + stampOf(v.at), who());
+          const r = restoreOf(cb.docOf(m), v);
+          cb.save(m, (dd) => {
+            Object.keys(dd).forEach((k) => {
+              if (!(k in r) && !["by", "ts", "subAt", "subBy", "status", "pl", "mo", "lines"].includes(k)) delete dd[k];
+            });
+            Object.keys(r).forEach((k) => {
+              if (!["by", "ts", "subAt", "subBy", "status", "pl", "mo"].includes(k)) dd[k] = r[k];
+            });
+          }, "restored " + cb.label(m) + " to the version of " + stampOf(v.at), false, true);
+          notify("Restored.");
+          cb.render();
+          sel = "";
+          closeDlg();
+        }));
+        bar4.append(rb, bb);
+        det.append(bar4);
       }
+      draw();
     });
-    return { doc: d, applied, skipped };
   }
 
   // src/esm/pages/monthly.js
@@ -9627,6 +9879,15 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     monthQueue[id] = (monthQueue[id] || Promise.resolve()).then(async () => {
       try {
         const r = await sb.from("reports").select("data").eq("id", id).maybeSingle(), srv = r && r.data && r.data.data;
+        if (srv && Array.isArray(srv.lines) && /^\d{4}-\d{2}$/.test(String(d.mo)) && canWrite() && !isViewer()) {
+          const vs = versionsOf(S.hist, d.mo), why3 = snapReason(srv, d, vs.length ? vs[0].at : 0, Date.now());
+          if (why3) {
+            try {
+              keepVersion(d.mo, srv, false, "", "");
+            } catch (e) {
+            }
+          }
+        }
         if (srv && Array.isArray(srv.lines)) {
           const mine = new Set(d.lines.map((l) => l.id)), seen = new Set((old && old.lines || []).map((l) => l.id)), extra = srv.lines.filter((l) => l && l.id && !mine.has(l.id) && !seen.has(l.id));
           if (extra.length) {
@@ -9644,12 +9905,20 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       write("reports/" + id, d);
     });
   }
-  function saveMonth(m, mutate, log, quiet) {
+  function saveMonth(m, mutate, log, quiet, force) {
     const id = monthId(m), old = S.reports[id];
     const d = old ? JSON.parse(JSON.stringify(old)) : { mo: m, lines: [] };
     d.lines = d.lines || [];
     d.pl = TAGS.map((t) => ({ k: t.k, n: t.n, squads: t.squads }));
     mutate(d);
+    if (!force && old && cardCount(old) - cardCount(d) >= 3) {
+      const a = cardCount(old), b = cardCount(d);
+      confirmDlg("Remove " + (a - b) + " cards?", lab(m) + " would go from " + a + " to " + b + " cards. If this is not what you meant, cancel. Earlier versions stay in Version history.", "Save anyway", () => {
+        saveMonth(m, mutate, log, quiet, true);
+        renderMonthly();
+      });
+      return;
+    }
     d.status = "submitted";
     d.subAt = d.subAt || (/* @__PURE__ */ new Date()).toISOString();
     d.subBy = d.subBy || S.me && (S.me.name || S.me.email) || "";
@@ -9680,12 +9949,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       d1.value = b0 >= d0.value ? b0 : d0.value;
       d0.setAttribute("aria-label", "Start date");
       d1.setAttribute("aria-label", "End date");
-      const names = [...directory().keys()].sort((x, y) => x.localeCompare(y)), who = selOf([["__none", "Unassigned"]].concat(names.map((n) => [n, n])), "__none");
-      who.setAttribute("aria-label", "Assignee");
+      const names = [...directory().keys()].sort((x, y) => x.localeCompare(y)), who2 = selOf([["__none", "Unassigned"]].concat(names.map((n) => [n, n])), "__none");
+      who2.setAttribute("aria-label", "Assignee");
       const fromTag = (tag.squads || []).find((k) => LANES.some((x) => x.k === k)), sq = selOf(LANES.map((x) => [x.k, x.n]), fromTag || LANES[0].k);
       sq.setAttribute("aria-label", "Squad");
-      if (!fromTag) who.addEventListener("change", () => {
-        if (who.value !== "__none") sq.value = primarySq(who.value);
+      if (!fromTag) who2.addEventListener("change", () => {
+        if (who2.value !== "__none") sq.value = primarySq(who2.value);
       });
       d0.addEventListener("change", () => {
         if (d1.value < d0.value) d1.value = d0.value;
@@ -9694,7 +9963,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       err.setAttribute("aria-live", "polite");
       const grid = el("div", "padd");
       grid.style.gridTemplateColumns = "1fr";
-      grid.append(fld("Assignee", who), fld("Squad", sq), fld("Start", d0), fld("End", d1));
+      grid.append(fld("Assignee", who2), fld("Squad", sq), fld("Start", d0), fld("End", d1));
       const ok = el("button", "btn primary", "Add to roadmap"), no = el("button", "btn", "Cancel");
       ok.type = no.type = "button";
       no.addEventListener("click", closeDlg);
@@ -9709,8 +9978,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           return;
         }
         pushHistory();
-        const nid = "c" + Date.now().toString(36), none = who.value === "__none", all = items().filter((x) => x.sq === sq.value);
-        S.over[nid] = { custom: true, rm: state.rm, t: l.t, n: notesOf(l).map((q) => q.t).join(" | "), sq: sq.value, pr: sq.value === "ai" ? ["tifli"] : [sq.value], d0: Math.max(0, k0), d1: Math.min(NDAYS - 1, k1), st: "planned", pc: clampPct(l.pct), res: none ? [] : [who.value], ord: all.length ? Math.max.apply(null, all.map((x) => x.ord)) + 1 : 0, card: l.id };
+        const nid = "c" + Date.now().toString(36), none = who2.value === "__none", all = items().filter((x) => x.sq === sq.value);
+        S.over[nid] = { custom: true, rm: state.rm, t: l.t, n: notesOf(l).map((q) => q.t).join(" | "), sq: sq.value, pr: sq.value === "ai" ? ["tifli"] : [sq.value], d0: Math.max(0, k0), d1: Math.min(NDAYS - 1, k1), st: "planned", pc: clampPct(l.pct), res: none ? [] : [who2.value], ord: all.length ? Math.max.apply(null, all.map((x) => x.ord)) + 1 : 0, card: l.id };
         persist(nid);
         saveMonth(m, (d) => {
           const x = d.lines.find((z) => z.id === l.id);
@@ -9720,7 +9989,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
             x.lk = { t: x.t, pct: clampPct(x.pct) };
           }
         }, null, true);
-        logAct("roadmap", 'added "' + l.t + '" (' + cardId(l) + ") to " + r.n + " from " + d0.value + " to " + d1.value + (none ? "" : " for " + who.value));
+        logAct("roadmap", 'added "' + l.t + '" (' + cardId(l) + ") to " + r.n + " from " + d0.value + " to " + d1.value + (none ? "" : " for " + who2.value));
         closeDlg();
         render();
         renderMonthly();
@@ -9903,11 +10172,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
             ta.focus();
             return;
           }
-          const who = S.me && (S.me.name || S.me.email) || "";
+          const who2 = S.me && (S.me.name || S.me.email) || "";
           saveMonth(m, (d) => {
             const z = tgt(d);
             if (z) {
-              z.notes = notesOf(z).concat([{ id: "n" + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), t: v.slice(0, 1e3), by: who, at: (/* @__PURE__ */ new Date()).toISOString() }]);
+              z.notes = notesOf(z).concat([{ id: "n" + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), t: v.slice(0, 1e3), by: who2, at: (/* @__PURE__ */ new Date()).toISOString() }]);
               delete z.note;
             }
           }, "added a note to " + nm());
@@ -10297,6 +10566,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         const b = more.getBoundingClientRect();
         openCtx(b.right - 190, b.bottom + 4, (mm) => {
           mi(mm, "Copy text", () => copyMonth(m));
+          mi(mm, "Version history…", () => openHistory(m, { docOf: (x) => JSON.parse(JSON.stringify(S.reports[monthId(x)] || { mo: x, lines: [] })), save: saveMonth, render: renderMonthly, label: lab }));
           if (S.reports[monthId(m)] && canDel()) {
             mm.append(el("div", "msep"));
             mi(mm, "Delete month", () => deleteMonth(m), "danger");
@@ -10608,16 +10878,32 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     node.addEventListener("pointerleave", hide);
     node.addEventListener("blur", hide);
   }
+  var ICONS = {
+    ok: '<path d="M12 3 5 6v5c0 4.4 2.9 8.3 7 10 4.1-1.7 7-5.6 7-10V6l-7-3z" /><path d="m9 12 2 2 4-4" />',
+    warn: '<path d="M12 4 2.8 20h18.4L12 4z" /><path d="M12 10v4.5M12 17.5v.5" />',
+    over: '<path d="M8.2 3h7.6L21 8.2v7.6L15.8 21H8.2L3 15.8V8.2L8.2 3z" /><path d="M12 8v5M12 16v.5" />',
+    points: '<rect x="3" y="4" width="18" height="12" rx="2" /><path d="M7 12l3-3 3 2 4-4M8 20h8M12 16v4" />',
+    cap: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />',
+    tracks: '<circle cx="9" cy="8" r="3.2" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 5.2a3.2 3.2 0 0 1 0 5.6M18 14.3c1.8.8 3 2.6 3 4.7" />',
+    away: '<rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M8 3v4M16 3v4M3.5 10h17" />'
+  };
+  function icon(name) {
+    const s = sv2("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", class: "cpico" });
+    s.innerHTML = ICONS[name] || "";
+    return s;
+  }
   function withTable(id, title, sub, chart, table) {
     const box2 = el("div", "cpchart");
     box2.id = id;
     const head = el("div", "cpchead"), t = el("div");
     if (title) t.append(el("h3", "", title));
     if (sub) t.append(el("p", "sub", sub));
-    const btn2 = el("button", "btn sm", "Table");
-    btn2.type = "button";
-    btn2.setAttribute("aria-pressed", "false");
-    head.append(t, btn2);
+    const seg = el("div", "cpseg"), bc = el("button", "", "Chart"), bt = el("button", "", "Table");
+    bc.type = bt.type = "button";
+    bc.setAttribute("aria-pressed", "true");
+    bt.setAttribute("aria-pressed", "false");
+    seg.append(bc, bt);
+    head.append(t, seg);
     const tb = el("table", "cptable");
     const hr = el("tr");
     table.head.forEach((h) => hr.append(el("th", "", h)));
@@ -10631,13 +10917,14 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     });
     tb.append(body);
     tb.hidden = true;
-    btn2.addEventListener("click", () => {
-      const on = tb.hidden;
+    const set = (on) => {
       tb.hidden = !on;
       chart.hidden = on;
-      btn2.textContent = on ? "Chart" : "Table";
-      btn2.setAttribute("aria-pressed", String(on));
-    });
+      bt.setAttribute("aria-pressed", String(on));
+      bc.setAttribute("aria-pressed", String(!on));
+    };
+    bt.addEventListener("click", () => set(true));
+    bc.addEventListener("click", () => set(false));
     box2.append(head, chart, tb);
     return box2;
   }
@@ -10730,20 +11017,41 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   function barsTracks(r) {
     const wrap = el("div", "cpbars");
     wrap.id = "cpbars";
-    const max = Math.max(1, ...r.lanes.map((x) => Math.max(x.used, x.cap))), rows2 = [];
+    const max = Math.max(1, ...r.lanes.map((x) => Math.max(x.used, x.cap))), rows2 = [], used = {};
+    const prodOf = (laneK) => {
+      const out = {};
+      r.lines.forEach((l) => {
+        const v = ptsOf(l, laneK);
+        if (v > 0) {
+          const k = TAGS.some((t) => t.k === l.k) ? l.k : "other";
+          out[k] = (out[k] || 0) + v;
+        }
+      });
+      return out;
+    };
+    const order = PRODUCT_ORDER.concat(["other"]), colour = (k) => (TAGS.find((t) => t.k === k) || { c: "#9aa0b8" }).c, nameOf2 = (k) => (TAGS.find((t) => t.k === k) || { n: "Other" }).n;
     r.lanes.forEach((x) => {
       const row = el("div", "cpbrow");
       row.dataset.lane = x.k;
       row.append(el("span", "cprl", x.n));
-      const track = el("span", "cpbtrack"), pc = x.cap / max * 100, within2 = Math.min(x.used, x.cap) / max * 100, past = Math.max(0, x.used - x.cap) / max * 100;
+      const track = el("span", "cpbtrack"), pc = x.cap / max * 100, by = prodOf(x.k);
       track.style.setProperty("--cap", pc + "%");
-      const a = el("i", "cpbfill");
-      a.style.width = within2 + "%";
-      track.append(a);
-      if (past > 0) {
+      let left = 0;
+      order.forEach((k) => {
+        if (!by[k]) return;
+        used[k] = 1;
+        const w = by[k] / max * 100, seg = el("i", "cpbseg");
+        seg.style.left = left + "%";
+        seg.style.width = "calc(" + w + "% - 2px)";
+        seg.style.background = colour(k);
+        seg.dataset.product = k;
+        track.append(seg);
+        left += w;
+      });
+      if (x.used > x.cap + 1e-9) {
         const b = el("i", "cpbover");
-        b.style.left = within2 + "%";
-        b.style.width = past + "%";
+        b.style.left = pc + "%";
+        b.style.width = (x.used - x.cap) / max * 100 + "%";
         track.append(b);
       }
       const lim = el("i", "cpblimit");
@@ -10752,13 +11060,22 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       const v = el("span", "cpbval", fmt2(x.used) + " / " + fmt2(x.cap) + (x.st === "over" ? "  ▲ " + fmt2(x.over) + " over" : ""));
       if (x.st === "over") v.classList.add("bad");
       row.append(track, v);
-      const lines = [x.n + ", " + monthLabel(r.m), fmt2(x.used) + " points planned of " + fmt2(x.cap), x.st === "over" ? fmt2(x.over) + " over" : fmt2(x.free) + " free"];
+      const lines = [x.n + ", " + monthLabel(r.m), fmt2(x.used) + " points planned of " + fmt2(x.cap), x.st === "over" ? fmt2(x.over) + " over" : fmt2(x.free) + " free"].concat(order.filter((k) => by[k]).map((k) => nameOf2(k) + " " + fmt2(by[k])));
       row.setAttribute("aria-label", lines.join(". "));
       tip2(row, lines);
       wrap.append(row);
-      rows2.push([x.n, fmt2(x.used), fmt2(x.cap), x.st === "over" ? "over by " + fmt2(x.over) : "free " + fmt2(x.free)]);
+      rows2.push([x.n, fmt2(x.used), fmt2(x.cap), x.st === "over" ? "over by " + fmt2(x.over) : "free " + fmt2(x.free)].concat(order.map((k) => by[k] ? fmt2(by[k]) : "–")));
     });
-    return { node: wrap, table: { head: ["Track", "Planned", "Can take", "Room"], rows: rows2 } };
+    const shown = order.filter((k) => used[k]), key = el("div", "cpkey");
+    key.id = "cpkey";
+    shown.forEach((k) => {
+      const i = el("i", "cpsw");
+      i.style.background = colour(k);
+      key.append(el("span", "cpkeyi", ""));
+      key.lastChild.append(i, document.createTextNode(nameOf2(k)));
+    });
+    if (shown.length) wrap.append(key);
+    return { node: wrap, table: { head: ["Track", "Planned", "Can take", "Room"].concat(order.map(nameOf2)), rows: rows2 } };
   }
   function columnsTrend(rev) {
     const W = 120 + rev.length * 96, H3 = 230, pl = 44, pb = 30, pt = 18, ph = H3 - pb - pt;
@@ -10823,11 +11140,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         ui3.m = r.m;
         renderCapacity();
       });
-      const top = el("div", "cptop");
-      top.append(el("strong", "", monthLabel(r.m)), el("span", "cppill", WORD[r.st]));
+      const top = el("div", "cptop"), ic = el("span", "cpicob");
+      ic.append(icon(r.st));
+      top.append(ic, el("span", "cppill", WORD[r.st]));
       t.append(top);
+      t.append(el("div", "cpbig", String(r.pts)), el("div", "cpsub", "points planned · " + r.lines.length + " card" + (r.lines.length === 1 ? "" : "s")), el("strong", "cpmonth", monthLabel(r.m)));
       t.append(el("div", "cpline", bad.length ? bad.map((x) => x.n).join(", ") + (bad.length > 1 ? " are over" : " is over") : tight.length ? tight.map((x) => x.n).join(", ") + (tight.length > 1 ? " are almost full" : " is almost full") : r.pts ? "Everything fits" : "Nothing planned yet"));
-      t.append(el("div", "cpsub", r.pts + " points planned · " + r.lines.length + " card" + (r.lines.length === 1 ? "" : "s")));
       g.append(t);
     });
     return g;
@@ -10849,29 +11167,59 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     });
     checkPlan(months).filter((c) => c.t !== "cap").forEach((c) => items2.push({ sev: "warn", m: c.m, head: monthLabel(c.m) + " · " + (c.t === "dep" ? "Card order" : "Roadmap date"), body: c.s, tips: [] }));
     if (!items2.length) {
-      const ok = el("div", "cpok", "Nothing to fix. Every track fits in every month, cards are in a workable order and roadmap bars match their months.");
+      const ok = el("div", "cpok");
+      ok.append(icon("ok"), el("span", "", "Nothing to fix. Every track fits in every month, cards are in a workable order and roadmap bars match their months."));
       ok.id = "cpnone";
       box2.append(ok);
       return box2;
     }
     items2.forEach((it) => {
-      const row = el("div", "cpitem cp-" + it.sev);
-      row.append(el("strong", "", it.head), el("div", "", it.body));
-      it.tips.forEach((t) => row.append(el("div", "cptip", t)));
+      const row = el("div", "cpitem cp-" + it.sev), ib = el("span", "cpicob");
+      ib.append(icon(it.sev === "over" ? "over" : "warn"));
+      const tx = el("div", "cpitx");
+      tx.append(el("strong", "", it.head), el("div", "", it.body));
+      row.append(ib, tx);
+      it.tips.forEach((t) => tx.append(el("div", "cptip", t)));
       const go = el("button", "btn sm", "Open " + monthLabel(it.m) + " in Monthly");
       go.type = "button";
       go.addEventListener("click", () => showPage("monthly"));
-      row.append(go);
+      tx.append(go);
       box2.append(row);
     });
     return box2;
+  }
+  function kpis(rev) {
+    const r = rev.find((x) => x.m === ui3.m) || rev[0], g = el("div", "cpkpis");
+    g.id = "cpkpi";
+    const st = settings(cfg3()), today = todayIso(), vac = vacList2(), seen = {};
+    let away = 0;
+    st.lanes.forEach((l) => l.people.forEach((n) => {
+      if (seen[n]) return;
+      seen[n] = 1;
+      const p = personState(n, today, vac, st.leaving);
+      if (p.onLeave || p.leaving && p.leaving.state !== "later") away++;
+    }));
+    const cap = r.lanes.reduce((a, x) => a + x.cap, 0), over = r.lanes.filter((x) => x.st === "over").length;
+    [["points", fmt3(r.pts), "Points planned"], ["cap", fmt3(cap), "All tracks can take"], [over ? "over" : "ok", String(over), over === 1 ? "Track over the limit" : "Tracks over the limit"], ["away", String(away), "People on leave, leaving or left"]].forEach((x) => {
+      const t = el("div", "cpkpi" + (x[0] === "over" ? " bad" : ""));
+      t.dataset.k = x[0];
+      const ic = el("span", "cpicob");
+      ic.append(icon(x[0]));
+      t.append(ic, el("b", "", x[1]), el("span", "", x[2]));
+      g.append(t);
+    });
+    return g;
   }
   function missingNote() {
     const miss = missingInResources();
     if (!miss.length) return null;
     const box2 = el("div", "cpitem cp-warn");
     box2.id = "cpmissing";
-    box2.append(el("strong", "", miss.length + (miss.length === 1 ? " name is" : " names are") + " not in Resources yet"), el("div", "", miss.map((x) => x.name + " (" + x.track + ")").join(", ") + ". Leave from Vacations and the roadmap can only follow people who are listed in Resources."));
+    const ib = el("span", "cpicob");
+    ib.append(icon("warn"));
+    const tx = el("div", "cpitx");
+    box2.append(ib, tx);
+    tx.append(el("strong", "", miss.length + (miss.length === 1 ? " name is" : " names are") + " not in Resources yet"), el("div", "", miss.map((x) => x.name + " (" + x.track + ")").join(", ") + ". Leave from Vacations and the roadmap can only follow people who are listed in Resources."));
     if (canEdit()) {
       const b = el("button", "btn sm primary", "Add them to Resources");
       b.type = "button";
@@ -10886,7 +11234,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         fillPersons();
         renderCapacity();
       });
-      box2.append(b);
+      tx.append(b);
     }
     return box2;
   }
@@ -10924,6 +11272,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       return s2;
     };
     sec("cp-glance", "The months at a glance", "Click a month to see it track by track below.").append(tiles(rev));
+    sec("cp-kpi", monthLabel(ui3.m) + " in numbers").append(kpis(rev));
     const fx = sec("cp-fix", "What needs fixing", "If something is over, change the points or move a card in Monthly, then come back here.");
     const mn = missingNote();
     if (mn) fx.append(mn);
@@ -11184,7 +11533,14 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     }, () => {
     });
     S.db.collection("reports").onSnapshot((s) => {
-      const n = snapDocs("reports", s, S.reports);
+      const n = snapDocs("reports", s, S.reports), hn = {};
+      Object.keys(n).forEach((k) => {
+        if (isHistId(k)) {
+          hn[k] = n[k];
+          delete n[k];
+        }
+      });
+      S.hist = keepPendingHist(hn, S.hist);
       if (same3(n, S.reports)) return;
       S.reports = n;
       if (state.page === "reports" && !state.edit && !document.activeElement.closest("#pg-reports")) renderReports();

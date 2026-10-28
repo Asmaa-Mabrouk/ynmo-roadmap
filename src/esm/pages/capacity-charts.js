@@ -6,8 +6,8 @@
  * so colour never carries the meaning alone. Every chart has a table twin and a hover / keyboard tooltip. Labels are set with textContent only.
  */
 import { el } from '../core/model.js';
-import { monthLabel, monthRange } from '../features/month-model.js';
-import { personCap, personLoads, personState, settings } from '../features/capacity.js';
+import { PRODUCT_ORDER, TAGS, monthLabel, monthRange } from '../features/month-model.js';
+import { personCap, personLoads, personState, ptsOf, settings } from '../features/capacity.js';
 import { fmtIso } from '../core/shared.js';
 
 const LO = '#e6f3ee', HI = '#0a5c43', BAD = '#d03b3b', INK = '#1b1f33';
@@ -38,14 +38,27 @@ export function tip(node, lines) {
   node.addEventListener('pointerleave', hide); node.addEventListener('blur', hide);
 }
 
+/** Line icons (static markup, no data in it). */
+const ICONS = {
+  ok: '<path d="M12 3 5 6v5c0 4.4 2.9 8.3 7 10 4.1-1.7 7-5.6 7-10V6l-7-3z" /><path d="m9 12 2 2 4-4" />',
+  warn: '<path d="M12 4 2.8 20h18.4L12 4z" /><path d="M12 10v4.5M12 17.5v.5" />',
+  over: '<path d="M8.2 3h7.6L21 8.2v7.6L15.8 21H8.2L3 15.8V8.2L8.2 3z" /><path d="M12 8v5M12 16v.5" />',
+  points: '<rect x="3" y="4" width="18" height="12" rx="2" /><path d="M7 12l3-3 3 2 4-4M8 20h8M12 16v4" />',
+  cap: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />',
+  tracks: '<circle cx="9" cy="8" r="3.2" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 5.2a3.2 3.2 0 0 1 0 5.6M18 14.3c1.8.8 3 2.6 3 4.7" />',
+  away: '<rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M8 3v4M16 3v4M3.5 10h17" />'
+};
+export function icon(name) { const s = sv('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true', class: 'cpico' }); s.innerHTML = ICONS[name] || ''; return s; }
+
 /** A chart with a "Table" button that swaps it for its table twin. table = {head: [..], rows: [[..]]} */
 export function withTable(id, title, sub, chart, table) {
   const box = el('div', 'cpchart'); box.id = id;
   const head = el('div', 'cpchead'), t = el('div'); if (title) t.append(el('h3', '', title)); if (sub) t.append(el('p', 'sub', sub));
-  const btn = el('button', 'btn sm', 'Table'); btn.type = 'button'; btn.setAttribute('aria-pressed', 'false'); head.append(t, btn);
+  const seg = el('div', 'cpseg'), bc = el('button', '', 'Chart'), bt = el('button', '', 'Table'); bc.type = bt.type = 'button'; bc.setAttribute('aria-pressed', 'true'); bt.setAttribute('aria-pressed', 'false'); seg.append(bc, bt); head.append(t, seg);
   const tb = el('table', 'cptable'); const hr = el('tr'); table.head.forEach(h => hr.append(el('th', '', h))); tb.append(el('thead')); tb.firstChild.append(hr);
   const body = el('tbody'); table.rows.forEach(r => { const tr = el('tr'); r.forEach((c, i) => tr.append(el(i ? 'td' : 'th', '', c))); body.append(tr); }); tb.append(body); tb.hidden = true;
-  btn.addEventListener('click', () => { const on = tb.hidden; tb.hidden = !on; chart.hidden = on; btn.textContent = on ? 'Chart' : 'Table'; btn.setAttribute('aria-pressed', String(on)); });
+  const set = on => { tb.hidden = !on; chart.hidden = on; bt.setAttribute('aria-pressed', String(on)); bc.setAttribute('aria-pressed', String(!on)); };
+  bt.addEventListener('click', () => set(true)); bc.addEventListener('click', () => set(false));
   box.append(head, chart, tb); return box;
 }
 
@@ -103,23 +116,29 @@ export function heatPeople(rev, cfg, vacs, today) {
   return { node: g, table: { head: ['Person'].concat(rev.map(r => monthLabel(r.m))), rows: rows } };
 }
 
-/** Bars: for one month, points planned against what each track can take. The pale track is capacity, the fill is planned, the part past capacity is red. */
+/** Bars: for one month, points planned in each track, stacked by product (the colours of the Monthly cards), against what the track can take
+ *  (pale bar and the dark tick). The part past the limit is hatched red and the value says how much. */
 export function barsTracks(r) {
   const wrap = el('div', 'cpbars'); wrap.id = 'cpbars';
-  const max = Math.max(1, ...r.lanes.map(x => Math.max(x.used, x.cap))), rows = [];
+  const max = Math.max(1, ...r.lanes.map(x => Math.max(x.used, x.cap))), rows = [], used = {};
+  const prodOf = (laneK) => { const out = {}; r.lines.forEach(l => { const v = ptsOf(l, laneK); if (v > 0) { const k = TAGS.some(t => t.k === l.k) ? l.k : 'other'; out[k] = (out[k] || 0) + v; } }); return out; };
+  const order = PRODUCT_ORDER.concat(['other']), colour = k => (TAGS.find(t => t.k === k) || { c: '#9aa0b8' }).c, nameOf = k => (TAGS.find(t => t.k === k) || { n: 'Other' }).n;
   r.lanes.forEach(x => {
     const row = el('div', 'cpbrow'); row.dataset.lane = x.k; row.append(el('span', 'cprl', x.n));
-    const track = el('span', 'cpbtrack'), pc = x.cap / max * 100, within = Math.min(x.used, x.cap) / max * 100, past = Math.max(0, x.used - x.cap) / max * 100;
-    track.style.setProperty('--cap', pc + '%');
-    const a = el('i', 'cpbfill'); a.style.width = within + '%'; track.append(a);
-    if (past > 0) { const b = el('i', 'cpbover'); b.style.left = within + '%'; b.style.width = past + '%'; track.append(b); }
+    const track = el('span', 'cpbtrack'), pc = x.cap / max * 100, by = prodOf(x.k); track.style.setProperty('--cap', pc + '%');
+    let left = 0; order.forEach(k => { if (!by[k]) return; used[k] = 1; const w = by[k] / max * 100, seg = el('i', 'cpbseg'); seg.style.left = left + '%'; seg.style.width = 'calc(' + w + '% - 2px)'; seg.style.background = colour(k); seg.dataset.product = k; track.append(seg); left += w; });
+    if (x.used > x.cap + 1e-9) { const b = el('i', 'cpbover'); b.style.left = pc + '%'; b.style.width = (x.used - x.cap) / max * 100 + '%'; track.append(b); }
     const lim = el('i', 'cpblimit'); lim.style.left = pc + '%'; track.append(lim);
-    const v = el('span', 'cpbval', fmt(x.used) + ' / ' + fmt(x.cap) + (x.st === 'over' ? '  ▲ ' + fmt(x.over) + ' over' : ''));
-    if (x.st === 'over') v.classList.add('bad');
-    row.append(track, v); const lines = [x.n + ', ' + monthLabel(r.m), fmt(x.used) + ' points planned of ' + fmt(x.cap), x.st === 'over' ? fmt(x.over) + ' over' : fmt(x.free) + ' free']; row.setAttribute('aria-label', lines.join('. ')); tip(row, lines); wrap.append(row);
-    rows.push([x.n, fmt(x.used), fmt(x.cap), x.st === 'over' ? 'over by ' + fmt(x.over) : 'free ' + fmt(x.free)]);
+    const v = el('span', 'cpbval', fmt(x.used) + ' / ' + fmt(x.cap) + (x.st === 'over' ? '  ▲ ' + fmt(x.over) + ' over' : '')); if (x.st === 'over') v.classList.add('bad');
+    row.append(track, v);
+    const lines = [x.n + ', ' + monthLabel(r.m), fmt(x.used) + ' points planned of ' + fmt(x.cap), x.st === 'over' ? fmt(x.over) + ' over' : fmt(x.free) + ' free'].concat(order.filter(k => by[k]).map(k => nameOf(k) + ' ' + fmt(by[k])));
+    row.setAttribute('aria-label', lines.join('. ')); tip(row, lines); wrap.append(row);
+    rows.push([x.n, fmt(x.used), fmt(x.cap), x.st === 'over' ? 'over by ' + fmt(x.over) : 'free ' + fmt(x.free)].concat(order.map(k => (by[k] ? fmt(by[k]) : '–'))));
   });
-  return { node: wrap, table: { head: ['Track', 'Planned', 'Can take', 'Room'], rows: rows } };
+  const shown = order.filter(k => used[k]), key = el('div', 'cpkey'); key.id = 'cpkey';
+  shown.forEach(k => { const i = el('i', 'cpsw'); i.style.background = colour(k); key.append(el('span', 'cpkeyi', ''), ); key.lastChild.append(i, document.createTextNode(nameOf(k))); });
+  if (shown.length) wrap.append(key);
+  return { node: wrap, table: { head: ['Track', 'Planned', 'Can take', 'Room'].concat(order.map(nameOf)), rows: rows } };
 }
 
 /** Columns: points planned each month (all tracks) against the capacity of all tracks (the dark tick). */

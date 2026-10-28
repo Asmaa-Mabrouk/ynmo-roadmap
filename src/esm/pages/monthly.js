@@ -24,6 +24,8 @@ import { guardMove, openPoints, ptsChips } from '../features/capacity-view.js';
 import { diffDoc, undoChanges } from '../features/month-undo.js';
 import { adhocStats, cardId, sortByProduct, PRODUCT_ORDER, notesOf, clampPct, monthId, monthLabel, monthProgress, monthRange, monthText, newLine, nextMonth, pctBand, SIZES, TAGS, legacyTag } from '../features/month-model.js';
 import { NOTE_ICON, setupBanner } from './reports.js';
+import { openHistory, keepVersion } from './monthly-history.js';
+import { snapReason, cardCount, versionsOf } from '../features/month-history.js';
 import { scan, ensureRecords, openCheckUpdates } from '../features/feature-sync.js';
 let lkMap = new Map();
 
@@ -84,6 +86,9 @@ function writeMonth(id, d, old) {
   monthQueue[id] = (monthQueue[id] || Promise.resolve()).then(async () => {
     try {
       const r = await sb.from('reports').select('data').eq('id', id).maybeSingle(), srv = r && r.data && r.data.data;
+      if (srv && Array.isArray(srv.lines) && /^\d{4}-\d{2}$/.test(String(d.mo)) && canWrite() && !isViewer()) {
+        const vs = versionsOf(S.hist, d.mo), why = snapReason(srv, d, vs.length ? vs[0].at : 0, Date.now()); if (why) { try { keepVersion(d.mo, srv, false, '', ''); } catch (e) { /* history is best effort */ } }
+      }
       if (srv && Array.isArray(srv.lines)) {
         const mine = new Set(d.lines.map(l => l.id)), seen = new Set(((old && old.lines) || []).map(l => l.id)), extra = srv.lines.filter(l => l && l.id && !mine.has(l.id) && !seen.has(l.id));
         if (extra.length) { d.lines = d.lines.concat(extra); S.reports[id] = d; toast(extra.length + ' card' + (extra.length === 1 ? '' : 's') + ' added by someone else ' + (extra.length === 1 ? 'was' : 'were') + ' kept.'); try { renderMonthly(); } catch (e) { /* page not open */ } }
@@ -92,10 +97,12 @@ function writeMonth(id, d, old) {
     write('reports/' + id, d);
   });
 }
-function saveMonth(m, mutate, log, quiet) {
+function saveMonth(m, mutate, log, quiet, force) {
   const id = monthId(m), old = S.reports[id];
   const d = old ? JSON.parse(JSON.stringify(old)) : { mo: m, lines: [] };
   d.lines = d.lines || []; d.pl = TAGS.map(t => ({ k: t.k, n: t.n, squads: t.squads })); mutate(d);
+  /* a save that drops 3 or more cards at once asks first (nothing is changed until the person confirms) */
+  if (!force && old && cardCount(old) - cardCount(d) >= 3) { const a = cardCount(old), b = cardCount(d); confirmDlg('Remove ' + (a - b) + ' cards?', lab(m) + ' would go from ' + a + ' to ' + b + ' cards. If this is not what you meant, cancel. Earlier versions stay in Version history.', 'Save anyway', () => { saveMonth(m, mutate, log, quiet, true); renderMonthly(); }); return; }
   d.status = 'submitted'; d.subAt = d.subAt || new Date().toISOString(); d.subBy = d.subBy || (S.me && (S.me.name || S.me.email)) || '';
   d.by = (S.me && (S.me.name || S.me.email)) || ''; d.ts = Date.now(); S.reports[id] = d; writeMonth(id, d, old);
   if (!quiet) record(m, old, d);
@@ -322,7 +329,7 @@ function column(m, prods, ed) {
   { const nb = noteBtn(m, d, ed, true); if (!nb.hidden) h.append(nb); }
   if (ed && !isBl) {
     const more = el('button', 'btn sm colmore', '⋯'); more.type = 'button'; more.setAttribute('aria-label', 'Month options for ' + lab(m)); more.title = 'Month options';
-    more.addEventListener('click', e => { e.stopPropagation(); const b = more.getBoundingClientRect(); openCtx(b.right - 190, b.bottom + 4, mm => { mi(mm, 'Copy text', () => copyMonth(m)); if (S.reports[monthId(m)] && canDel()) { mm.append(el('div', 'msep')); mi(mm, 'Delete month', () => deleteMonth(m), 'danger'); } }); });
+    more.addEventListener('click', e => { e.stopPropagation(); const b = more.getBoundingClientRect(); openCtx(b.right - 190, b.bottom + 4, mm => { mi(mm, 'Copy text', () => copyMonth(m)); mi(mm, 'Version history…', () => openHistory(m, { docOf: x => JSON.parse(JSON.stringify(S.reports[monthId(x)] || { mo: x, lines: [] })), save: saveMonth, render: renderMonthly, label: lab })); if (S.reports[monthId(m)] && canDel()) { mm.append(el('div', 'msep')); mi(mm, 'Delete month', () => deleteMonth(m), 'danger'); } }); });
     h.append(more); h.style.cssText = 'display:flex;align-items:center;gap:8px'; more.style.marginInlineStart = 'auto';
   }
   if (isBl) { const hb = el('button', 'btn sm colmore', '✕'); hb.type = 'button'; hb.setAttribute('aria-label', 'Hide the backlog'); hb.title = 'Hide the backlog'; hb.addEventListener('click', () => { setBl(false); renderMonthly(); }); h.append(hb); h.style.cssText = 'display:flex;align-items:center;gap:8px'; hb.style.marginInlineStart = 'auto'; }

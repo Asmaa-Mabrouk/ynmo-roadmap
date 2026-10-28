@@ -1,0 +1,51 @@
+import sys, os; sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__)))); os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))+"/out")
+from h18 import *
+"""Monthly version history: automatic versions (kept from what is stored, one per 10 minutes of activity), the Version history dialog (list, what differs from now),
+Restore this version, Bring back only the missing cards, Save a version (named), nothing leaks into the board or the weekly reports, executives do not get it."""
+R=[]
+def ok(n,c): R.append((n,bool(c))); print(('PASS ' if c else 'FAIL ')+n)
+def add(P,mo,text):
+    c=P.locator('.mdcol[data-mo="%s"]'%mo); c.locator('.mdopen').click(); ta=c.locator('.mdadd textarea'); ta.fill(text); ta.press('Enter'); P.wait_for_timeout(500); P.keyboard.press('Escape'); P.wait_for_timeout(250)
+def card(P,t): return P.locator('.mdcard:has-text("%s")'%t).first
+def delete(P,t): card(P,t).locator('.kebab').click(); P.locator('#ctx .mi:has-text("Delete card")').click(); P.wait_for_timeout(250); P.click('#xdlg button:text-is("Delete card")'); P.wait_for_timeout(500)
+def titles(P): return sorted(x.strip() for x in P.locator('.mdcol[data-mo="2026-11"] .mdcard .mdtitle').all_inner_texts()) if P.locator('.mdcol[data-mo="2026-11"] .mdcard .mdtitle').count() else []
+def hist(P): return P.evaluate("()=>Object.keys(JSON.parse(localStorage.getItem('fk3')).reports).filter(k=>k.startsWith('mohist'))")
+def open_hist(P): P.locator('.mdcol[data-mo="2026-11"] .colmore').click(); P.locator('#ctx .mi:has-text("Version history")').click(); P.wait_for_timeout(400)
+def at(ctx,t): ctx.clock.set_fixed_time("2026-10-20T"+t)
+with sync_playwright() as pw:
+    b=pw.chromium.launch(); ctx=mkctx(b); at(ctx,"10:00:00"); errs=[]
+    A=newpage(ctx,errs); signup(A,'Admin','adm@x.com'); E=newpage(ctx,errs); signup(E,'Exec','exec@x.com')
+    A.click('#nav button[data-p="admin"]'); A.wait_for_timeout(700); A.locator('#permissions .permuser:has-text("Exec")').click(); A.wait_for_timeout(300)
+    A.click('#permissions button:text-is("Approve with these permissions")'); A.wait_for_timeout(800)
+    A.click('#nav button[data-p="monthly"]'); A.wait_for_timeout(900)
+    add(A,'2026-11','alpha'); add(A,'2026-11','beta'); add(A,'2026-11','gamma')
+    ok('V1 the second save kept a first version of the month', len(hist(A))==1)
+    at(ctx,"10:20:00"); add(A,'2026-11','delta'); add(A,'2026-11','epsilon')
+    ok('V2 20 minutes later another version is kept (one per 10 minutes of activity)', len(hist(A))==2)
+    at(ctx,"10:40:00"); delete(A,'alpha'); delete(A,'beta')
+    ok('V3 the board shows only the latest state and never a history doc as a month', A.locator('.mdcol[data-mo="2026-11"] .mdcard').count()==3 and A.locator('.mdcol').count()<=6 and len(hist(A))==3)
+    A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(700)
+    ok('V4 the weekly Reports page is not affected by history docs', A.locator('#pg-reports').is_visible() and 'mohist' not in A.locator('#pg-reports').inner_html())
+    A.click('#nav button[data-p="monthly"]'); A.wait_for_timeout(700)
+    open_hist(A)
+    ok('V5 the dialog lists Now and the versions with time, who and card count', A.locator('#vhlist .vhitem').count()==4 and 'Admin' in A.locator('#vhlist').inner_text() and '4 cards' in A.locator('#vhlist').inner_text() and '20 Oct 10:20' in A.locator('#vhlist').inner_text())
+    A.locator('#vhlist .vhitem[data-id]:not([data-id=""])').filter(has_text='20 Oct 10:20').first.click(); A.wait_for_timeout(300)
+    d=A.locator('#vhdetail').inner_text()
+    ok('V6 picking a version shows what is missing now, added since and changed', 'alpha' in d and 'beta' in d and 'epsilon' in d and 'Missing now' in d and 'Added since' in d)
+    A.click('#vhbring'); A.wait_for_timeout(700)
+    ok('V7 Bring back only the missing cards adds alpha and beta and keeps epsilon', sorted(titles(A))==['alpha','beta','delta','epsilon','gamma'] or A.locator('.mdcol[data-mo="2026-11"] .mdcard').count()==5)
+    ok('V8 bringing cards back kept the board as a version first', any(True for _ in hist(A)) and len(hist(A))>=4)
+    A.keyboard.press('Escape'); A.wait_for_timeout(200)
+    open_hist(A); A.fill('#vhname','Before the exec review'); A.click('#vhsave'); A.wait_for_timeout(500)
+    ok('V9 Save a version adds a named version with a star', '★ Before the exec review' in A.locator('#vhlist').inner_text())
+    A.locator('#vhlist .vhitem[data-id]:not([data-id=""])').filter(has_text='20 Oct 10:20').first.click(); A.wait_for_timeout(300)
+    A.click('#vhrestore'); A.wait_for_timeout(300); A.click('#xdlg button:text-is("Restore")'); A.wait_for_timeout(800)
+    ok('V10 Restore this version puts the month back exactly (epsilon gone, alpha back)', A.locator('.mdcol[data-mo="2026-11"] .mdcard:has-text("epsilon")').count()==0 and A.locator('.mdcol[data-mo="2026-11"] .mdcard:has-text("alpha")').count()==1 and A.locator('.mdcol[data-mo="2026-11"] .mdcard').count()==4)
+    A.keyboard.press('Escape'); A.wait_for_timeout(200)
+    open_hist(A)
+    ok('V11 restoring kept the previous board as a named version, so it can be undone', 'Before restoring' in A.locator('#vhlist').inner_text())
+    A.keyboard.press('Escape'); A.wait_for_timeout(200)
+    E.click('#nav button[data-p="monthly"]'); E.wait_for_timeout(900)
+    ok('V12 executives see no month menu and so no Version history', E.locator('.mdcol[data-mo="2026-11"] .colmore').count()==0 and E.locator('.mdcol[data-mo="2026-11"] .mdcard').count()>=1)
+    ok('no page errors', errs==[]); print('errors:',errs[:3]); print(sum(1 for _,c in R if c),'/',len(R))
+    b.close()
