@@ -42,6 +42,18 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-28 - Official team names applied to the live database (by the database agent)
+```
+🔄 YNMO LEDGER UPDATE - 2026-10-28
+Request: apply the official names to the database
+Surface: Supabase YNMO_PM (data only)
+Outcome: items 42 rows, vacations 10, sprint_items 23, ideas 2, reports 14, people 10 renamed; zero old names left (activity log kept as history); roadmap shows 23 rows, no duplicates
+New facts / decisions locked: kept doc pmun8zy64 (Mohamed Altramsi, AI + Tifli) and hid the duplicate; hid the "Dina Sam" duplicate; backups backup_20261028_* and backup_20261028b_*
+Corrections to this skill: none
+Open / flagged: four leave rows were saved with old names by an open old tab, so everyone reloads; the migration is safe to repeat; backup tables should be dropped once the team is happy
+Changelog: official names applied to live data.
+```
+
 ### 2026-10-28 - New resource everywhere (tracks)
 ```
 🔄 YNMO LEDGER UPDATE - 2026-10-28
