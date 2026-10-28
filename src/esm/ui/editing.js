@@ -4,6 +4,7 @@
  * Cell editing (startEdit/finishEdit), add/duplicate rows, right-click bar/row menus (barMenu/rowMenu) and add-person dialog.
  * Dependencies are explicit ES imports; shared mutable state lives in `S` (core/state.js).
  */
+import { setTracks } from '../features/tracks.js';
 import { S } from '../core/state.js';
 import { openNoteDialog } from '../features/timeline-notes.js';
 import { $, COLORS, PALETTE, isHex, LANES, NDAYS, ROLES, STATUS, canDelete, canEdit, dayFromIso, dlabel, directory, el, iso, items, rangePatch, state } from '../core/model.js';
@@ -122,6 +123,7 @@ export function openAddPerson(anchor) {
     const pid = 'p' + Date.now().toString(36);
     S.extras[pid] = { n: name, role: rs.value, sq: sq.value };
     write('people/' + pid, S.extras[pid]);
+    { const tk = { qa: 'qa', ux: 'des' }[rs.value]; if (tk) setTracks(name, [tk], [...directory().values()].map(p => ({ name: p.name, domain: p.domain })), 'resource', 'put ' + name + ' in the Dashboard tracks'); }   // QA and UX map to a track; developers are chosen in Resources
     closePicker(); fillPersons(); render();
     const row = $('grid').querySelector('.c1.pn[data-person="' + name.replace(/"/g, '\\"') + '"]');
     if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest' });

@@ -2,6 +2,8 @@
 
 ## Unreleased – Sprints + Weekly executive report
 
+- **A new resource shows up everywhere (2026-10-28):** Resources, Vacations, Roadmap rows and assign menus and Sprints already read the team list. Monthly "Points and people" and the Dashboard team read the Dashboard tracks (`ideas/capacity` > `lanes`), so a new person was missing there. Now: **Resources > Add member** has "Planned with points in these Dashboard tracks" (pre-selected from the domain: QA, Backend, Frontend, Mobile, UX / Design, AI / ML; Engineering, Full-stack, PM and Other are chosen by hand); **⋯ Manage** has "Points tracks" to change it later; **+ Add person** on the roadmap puts a Quality person in Quality and a UX person in Design. Test `new_resource.py` (17 checks). No SQL.
+
 - **Leave deducted the same way everywhere (2026-10-28):** capacity used the real number of weekdays of each month (21, 22 or 23) to price leave; now a month is always 20 working days and one working day of leave (or after a last working day) takes 2 points (ppp / 20). People heat map: 🌴 and the number of days on a cell, with the days and points in the hover. Tests T11, T12 and three unit checks.
 
 - **Dashboard: month picker, Table/Chart fix (2026-10-28):** a **Month** list above the numbers and above the track-by-track chart changes the month shown (the month tiles still work; the two lists stay in step). Fix: on *Month by month*, pressing **Table** left the chart visible above the table (an SVG chart ignores the `hidden` property); the chart is now hidden properly. Tests H11b, H11c, H12, H13.

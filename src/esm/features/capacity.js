@@ -30,9 +30,11 @@ export function matchResource(name, resources, domain) {
 export function resolveDefaults(cfg, resources) {
   const s = settings(cfg), out = Object.assign({}, cfg || {});
   const saved = {}; ((cfg && cfg.lanes) || []).forEach(x => { if (x && x.k && Array.isArray(x.people)) saved[x.k] = true; });
-  out.lanes = s.lanes.map(l => ({ k: l.k, people: saved[l.k] ? l.people : l.people.map(n => matchResource(n, resources, DOMAIN_OF[l.k]) || n) }));
+  out.lanes = s.lanes.map(l => ({ k: l.k, people: (saved[l.k] ? l.people : l.people.map(n => matchResource(n, resources, DOMAIN_OF[l.k]) || n)).slice() }));
   return out;
 }
+/** The track a Resources domain belongs to ('' for PM, Full-stack, Engineering and Other: those are chosen by hand). */
+export const trackOfDomain = d => Object.keys(DOMAIN_OF).find(x => DOMAIN_OF[x] === d) || '';
 /** Names in the tracks that Resources does not list: [{k, track, name}] */
 export function unmatched(cfg, resources) {
   const have = new Set((resources || []).map(r => fold(r.name))), out = [];

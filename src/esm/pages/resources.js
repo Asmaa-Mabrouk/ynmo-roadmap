@@ -23,6 +23,15 @@ import { applyAccessChange } from '../app/shell.js';
 import { leaverWork, leavingMap, renameInDashboard, setLeaving } from '../features/leavers.js';
 import { confirmDlg } from '../ui/confirm.js';
 import { fmtIso, todayIso } from '../core/shared.js';
+import { setTracks, tracksOf } from '../features/tracks.js';
+import { LANES as TRACKS, trackOfDomain } from '../features/capacity.js';
+const resList = () => [...directory().values()].map(p => ({ name: p.name, domain: p.domain }));
+/** Pills for the Dashboard tracks; `set` is a Set of track keys, `onChange(set)` is called after each click. */
+function trackPills(set, onChange) {
+  const row = el('div', 'formrow trackrow');
+  TRACKS.forEach(t => { const b = el('button', 'pill', t.n); b.type = 'button'; b.dataset.track = t.k; b.setAttribute('aria-pressed', String(set.has(t.k))); b.addEventListener('click', () => { set.has(t.k) ? set.delete(t.k) : set.add(t.k); b.setAttribute('aria-pressed', String(set.has(t.k))); onChange(set); }); row.append(b); });
+  return row;
+}
 
 /* ---------- resources ---------- */
 function personDocId(name) { return Object.keys(S.extras).find(i => S.extras[i] && S.extras[i].n === name && !S.extras[i].hidden); }
@@ -150,6 +159,8 @@ function openPerson(name) {
       const mg = el('button', 'btn sm', 'Merge'); mg.type = 'button'; mg.id = 'pmdo';
       mg.addEventListener('click', () => { const to = sel.value; if (!to) return; confirmDlg('Merge ' + name + ' into ' + to + '?', name + ' disappears from the team list. Everything of ' + name + ' (features, vacations, sprint rows, Dashboard points) moves to ' + to + '. This does not delete any data.', 'Merge', () => { renamePerson(name, to, true); }); });
       const r2 = el('div', 'formrow'); r2.append(sel, mg); body.append(el('h3', '', '2. Same person as another row?'), el('p', 'hint', 'Use it for a spelling that was added twice (for example Tramsi and Altramsi).'), r2);
+      const tk = new Set(tracksOf(name, resList()));
+      body.append(el('h3', '', 'Points tracks'), el('p', 'hint', 'The Dashboard tracks this person is planned in. They appear in Monthly under "Points and people" for these tracks, and in the Dashboard team.'), trackPills(tk, set => { setTracks(name, [...set], resList(), 'resource', 'set the Dashboard tracks of ' + name); }));
       const cur = leavingMap()[name] || '', dt = el('input'); dt.type = 'date'; dt.value = cur; dt.id = 'pmleft'; dt.setAttribute('aria-label', 'Last working day');
       const lv = el('button', 'btn sm primary', cur ? 'Change the day' : 'Mark as left'); lv.type = 'button'; lv.id = 'pmleave';
       lv.addEventListener('click', () => { if (!/^\d{4}-\d{2}-\d{2}$/.test(dt.value)) { notify('Pick the last working day first', 'err'); return; } setLeaving(name, dt.value, 'resource', 'marked ' + name + ' as ' + (dt.value < todayIso() ? 'left on ' : 'leaving on ') + dt.value); notify(name + ': last working day ' + fmtIso(dt.value)); draw(); renderResources(); });
@@ -193,7 +204,7 @@ function setRoadmapRows(name, picked, hideRest) {
   saveIdea('peoplehide', { cfg: true, byRm: by });
   return allRoadmaps().filter(rm => !(by[rm.id] || []).includes(name)).map(rm => rm.n);
 }
-function addMember(name, domain, sqs, picked) {
+function addMember(name, domain, sqs, picked, tracks) {
   const dup = [...directory().keys()].find(k => k.trim().toLowerCase() === name.trim().toLowerCase());
   if (dup) {   // already added (for example from the roadmap's "+ Add person"): do not duplicate, just show the row where it was asked for
     const shown = setRoadmapRows(dup, picked, false); logAct('resource', 'showed ' + dup + ' on ' + [...picked].map(id => (allRoadmaps().find(r => r.id === id) || {}).n).filter(Boolean).join(' + '));
@@ -202,6 +213,7 @@ function addMember(name, domain, sqs, picked) {
   const id = 'p' + Date.now().toString(36);
   S.extras[id] = { n: name, domain: domain, sqs: sqs }; write('people/' + id, S.extras[id]);
   const shown = setRoadmapRows(name, picked, true);
+  if (tracks && tracks.length) setTracks(name, tracks, resList(), 'resource', 'put ' + name + ' in the Dashboard tracks');
   logAct('resource', 'added ' + name + ' (' + domain + ', ' + sqs.map(k => laneOf(k).n).join(' + ') + ')' + (shown.length ? ' on ' + shown.join(' + ') : ' (no roadmap row yet)'));
   fillPersons(); render(); renderResources(); return '';
 }
@@ -224,14 +236,17 @@ export function renderResources() {
   const f = el('form', 'card'); f.append(el('h2', '', 'Add team member'));
   const nm = el('input'); nm.type = 'text'; nm.required = true; nm.maxLength = 60; nm.placeholder = 'Full name';
   const dm = selOf(DOMAINS, 'Engineering');
+  const tkSet = new Set(), tkRow0 = el('div'); let tkTouched = false;
+  const drawTk = () => { tkRow0.textContent = ''; tkRow0.append(trackPills(tkSet, () => { tkTouched = true; })); };
+  dm.addEventListener('change', () => { if (tkTouched) return; tkSet.clear(); const k = trackOfDomain(dm.value); if (k) tkSet.add(k); drawTk(); }); drawTk();
   const sq = el('div', 'formrow'); const picked = new Set(['tifli']);
   LANES.forEach(l => { const b = el('button', 'pill', l.n); b.type = 'button'; b.style.setProperty('--c', l.c); b.setAttribute('aria-pressed', String(picked.has(l.k))); b.prepend(el('i')); b.addEventListener('click', () => { picked.has(l.k) ? picked.delete(l.k) : picked.add(l.k); b.setAttribute('aria-pressed', String(picked.has(l.k))); }); sq.append(b); });
   const rmRow = el('div', 'formrow'), rmPick = new Set(allRoadmaps().map(r => r.id));
   allRoadmaps().forEach(r => { const b = el('button', 'pill', r.n); b.type = 'button'; b.setAttribute('aria-pressed', 'true'); b.prepend(el('i')); b.addEventListener('click', () => { rmPick.has(r.id) ? rmPick.delete(r.id) : rmPick.add(r.id); b.setAttribute('aria-pressed', String(rmPick.has(r.id))); }); rmRow.append(b); });
   const msg = el('div', 'gerr'); const go = el('button', 'btn primary', 'Add member'); go.type = 'submit'; go.disabled = !canEdit();
   const r1 = el('div', 'formrow'); r1.append(fld('Name', nm), fld('Domain', dm));
-  f.append(r1, fld('Squads', sq), fld('Show a row on these roadmaps (also fixes a person already added from the roadmap, no duplicate)', rmRow), msg, go);
-  f.addEventListener('submit', e => { e.preventDefault(); const v = nm.value.trim(); if (!v) return; if (!picked.size) { msg.textContent = 'Pick at least one squad.'; return; } const m = addMember(v, dm.value, [...picked], rmPick); if (m) msg.textContent = m; });
+  f.append(r1, fld('Squads', sq), fld('Planned with points in these Dashboard tracks (Monthly "Points and people" and the Dashboard list them). Leave empty for a PM or someone who is not planned with points.', tkRow0), fld('Show a row on these roadmaps (also fixes a person already added from the roadmap, no duplicate)', rmRow), msg, go);
+  f.addEventListener('submit', e => { e.preventDefault(); const v = nm.value.trim(); if (!v) return; if (!picked.size) { msg.textContent = 'Pick at least one squad.'; return; } const m = addMember(v, dm.value, [...picked], rmPick, [...tkSet]); if (m) msg.textContent = m; });
   root.append(f);
   const dir = directory(), prim = d => Math.min.apply(null, [...d.sqs].map(k => LANES.findIndex(l => l.k === k)).filter(i => i >= 0).concat([9]));
   const people = [...dir.values()].sort((a, b) => prim(a) - prim(b) || a.name.localeCompare(b.name));

@@ -42,6 +42,18 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-28 - New resource everywhere (tracks)
+```
+🔄 YNMO LEDGER UPDATE - 2026-10-28
+Request: a new resource must show in Resources, Vacations, Roadmap (rows, features) and Monthly points; test all over; DB needs
+Surface: Ynmo Roadmaps tool
+Outcome: Dashboard tracks chosen when adding a member, in the Manage pop-up and for "+ Add person" (QA, UX); tested end to end; no SQL
+New facts / decisions locked: the tracks of a person live in ideas/capacity > lanes (editors can write them under the existing policy)
+Corrections to this skill: none
+Open / flagged: people added before this change are in tracks only if they are in the Dashboard settings
+Changelog: new resources get Dashboard tracks.
+```
+
 ### 2026-10-28 - Leave priced at 2 points a day, palm in the heat map
 ```
 🔄 YNMO LEDGER UPDATE - 2026-10-28
