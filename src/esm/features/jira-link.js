@@ -10,6 +10,7 @@ import { sb } from '../core/supabase.js';
 import { openDlg, closeDlg } from './safety.js';
 import { statusOf } from './jira-merge.js';
 import { jiraUrl } from './report-model.js';
+import { parseJira } from './sprint-cover.js';
 
 const BASE = 'ynmo-jira-base', PRJ = 'ynmo-jira-projects';
 const get = k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
@@ -71,7 +72,14 @@ export function openJiraLink(o) {
     const row = el('div', 'row'), no = el('button', 'btn', 'Cancel'); no.type = 'button'; no.addEventListener('click', closeDlg);
     if (o.b.jk) { const un = el('button', 'btn', 'Unlink ' + o.b.jk); un.type = 'button'; un.addEventListener('click', () => { o.saveItem(o.b.id, { jk: '' }); closeDlg(); o.redraw(o.b.id); o.notify('Unlinked from ' + o.b.jk); }); row.append(un); }
     row.append(no);
-    box.append(fld('Search', q), fld('Limit to projects (optional)', pr), msg, list, row);
-    setTimeout(() => { q.focus(); q.select(); if (q.value.trim().length >= 2) run(); }, 0);
+    // Paste a Jira address or a key: needs no Jira search service.
+    const pa = el('input'); pa.type = 'text'; pa.id = 'jkpaste'; pa.placeholder = 'https://your-site.atlassian.net/browse/ABC-123, or ABC-123'; pa.setAttribute('aria-label', 'Jira link or key'); pa.autocomplete = 'off';
+    const pm = el('p', 'sub'); pm.setAttribute('aria-live', 'polite');
+    const pb = el('button', 'btn primary', 'Link'); pb.type = 'button'; pb.id = 'jkpastego';
+    const useIt = () => { const r = parseJira(pa.value); if (!r) { pm.textContent = 'No Jira key found. A key looks like ABC-123.'; return; } if (r.base) rememberBase(r.base); o.saveItem(o.b.id, { jk: r.key }); closeDlg(); o.redraw(o.b.id); o.notify('Linked to ' + r.key); };
+    pb.addEventListener('click', useIt); pa.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); useIt(); } });
+    const pr0 = el('div', 'row'); pr0.append(pa, pb);
+    box.append(fld('Paste the ticket link or key', pr0), pm, el('p', 'sub', 'Or search Jira by words:'), fld('Search', q), fld('Limit to projects (optional)', pr), msg, list, row);
+    setTimeout(() => { pa.focus(); if (q.value.trim().length >= 2) run(); }, 0);
   });
 }

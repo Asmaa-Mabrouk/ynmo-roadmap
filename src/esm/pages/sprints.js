@@ -28,7 +28,9 @@ import { openMenu, closeMenu } from '../ui/menu.js';
 import { crumbs } from '../ui/crumbs.js';
 import { createUndo } from '../features/undo-stack.js';
 import { registerUndo } from '../features/undo-router.js';
-import { state } from '../core/model.js';
+import { state, items } from '../core/model.js';
+import { cover } from '../features/sprint-cover.js';
+import { allRoadmaps, withRm } from './roadmaps.js';
 
 const iso = t => new Date(t).toISOString().slice(0, 10);
 const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -37,6 +39,16 @@ const lane = k => LANES.find(l => l.k === k) || EXTRA_SECTIONS.find(l => l.k ===
 const base = sp => { const d = Object.assign({}, S.sprints[sp.id] || sp); delete d.id; return d; };
 const DEFAULT_TAGS = { fix: 'red', support: 'blue' };
 
+/** Everything a sprint line can be matched with: the features of every roadmap and the cards of every month (with the people assigned to each). */
+function coverPool() {
+  const pool = [];
+  allRoadmaps().forEach(rm => withRm(rm.id, () => items().forEach(it => pool.push({ kind: 'feature', t: it.t, where: rm.n, names: (it.res || []).slice() }))));
+  Object.keys(S.reports || {}).filter(k => /^mo\d{6}$/.test(k) || k === 'mobacklog').forEach(k => {
+    const d = S.reports[k]; if (!d || !Array.isArray(d.lines)) return; const where = k === 'mobacklog' ? 'Monthly backlog' : 'Monthly ' + k.slice(2, 6) + '-' + k.slice(6);
+    d.lines.forEach(l => { if (!l || !l.t) return; const names = []; Object.keys(l.who || {}).forEach(t => Object.keys(l.who[t] || {}).forEach(n => names.push(n))); pool.push({ kind: 'card', t: l.t, where: where, names: names }); });
+  });
+  return pool;
+}
 export const sprintList = () => Object.keys(S.sprints).map(id => Object.assign({ id: id }, S.sprints[id])).filter(s => s.a && s.b).sort((x, y) => y.n - x.n);
 const rows = sp => Object.keys(S.sitems).map(id => Object.assign({ id: id }, S.sitems[id])).filter(i => i.sp === sp).sort((a, b) => (a.ord || 0) - (b.ord || 0) || (a.id < b.id ? -1 : 1));
 const blocksOf = sp => rows(sp).filter(i => i.k);
@@ -329,6 +341,11 @@ function docEditor(sp, ro) {
       }
       r.append(bt);
       if (b.jk && (b.k === 's' || b.k === 'u')) { const u = issueUrl(b.jk), jc = el(u ? 'a' : 'span', 'jkchip', b.jk); if (u) { jc.href = u; jc.target = '_blank'; jc.rel = 'noopener noreferrer'; jc.title = 'Open ' + b.jk + ' in Jira'; } else jc.title = 'Linked to Jira ' + b.jk; r.append(jc); }
+      if (info.cover && info.cover.state !== 'ok') {
+        const cc = info.cover, ch = el('span', 'covchip cov-' + cc.state, cc.state === 'missing' ? 'Not on the plan' : 'Not assigned to ' + info.person.split(' ')[0]);
+        ch.title = cc.state === 'missing' ? 'No roadmap feature or Monthly card matches this line. Add it to the roadmap or to Monthly, or tag it #fix or #support if it is not planned work.' : 'Found on the plan (' + cc.hits.slice(0, 3).map(h => h.t + ' · ' + h.where).join('; ') + ') but ' + info.person + ' is not assigned there.';
+        ch.dataset.state = cc.state; r.append(ch);
+      }
       if (b.k === 'p') { const inf = directory().get(b.t); if (inf) r.append(el('span', 'role', inf.domain)); }
       const tags = el('span', 'btags'); (b.tags || []).forEach(n => { const ch = el('button', 'tgchip tg-' + (tagMap(spId)[n] || 'gray'), '#' + n); ch.type = 'button'; ch.disabled = ro; ch.setAttribute('aria-label', 'Tag ' + n + ': change colour or remove'); ch.addEventListener('click', () => chipMenu(b, n, ch)); tags.append(ch); }); r.append(tags);
     }
@@ -357,13 +374,21 @@ function docEditor(sp, ro) {
   function draw() {
     const keepY = window.scrollY;
     host.textContent = ''; const all = list(); let c = 'var(--brand)';
+    let sec = '', person = ''; const pool = coverPool(), cv = { missing: 0, unassigned: 0 };
     all.forEach((b, i) => {
       if (b.k === 'h') c = lane(b.sq).c;
       const info = {};
+      if (b.k === 'h') { sec = b.sq || ''; person = ''; } else if (b.k === 'p') person = String(b.t || '').trim();
+      else if (b.k === 's' && person && !/^x_/.test(sec) && String(b.t || '').trim() && (b.st || 'planned') !== 'done' && !(b.tags || []).some(n => n === 'fix' || n === 'support')) { info.cover = cover(b, person, pool); info.person = person; if (info.cover.state !== 'ok') cv[info.cover.state]++; }
       if (b.k === 'h') { const g = groupOf(all, i), ns = g.filter(x => x.k === 's').length, leaf = g.filter((x, n) => x.k === 'u' || (x.k === 's' && !(g[n + 1] && g[n + 1].k === 'u'))); info.count = ns + ' scope' + (ns === 1 ? '' : 's') + ' · ' + leaf.filter(x => x.st === 'done').length + '/' + leaf.length + ' done'; }
       if (b.k === 's') { const kids = []; for (let j = i + 1; j < all.length && all[j].k === 'u'; j++) kids.push(all[j]); if (kids.length) info.derived = scopeStatus(kids, b.st); }
       host.append(blockRow(b, c, info));
     });
+    if (cv.missing || cv.unassigned) {
+      const bar = el('div', 'covbar'); bar.id = 'covbar'; bar.setAttribute('role', 'status');
+      bar.append(el('b', '', 'Not connected to the plan:'), el('span', '', (cv.missing ? cv.missing + ' not on any roadmap or Monthly card' : '') + (cv.missing && cv.unassigned ? ' · ' : '') + (cv.unassigned ? cv.unassigned + ' on the plan but not assigned to the person who has it here' : '')));
+      host.prepend(bar);
+    }
     if (!ro) host.append(ghostRow(all));
     applyPicked();
     if (!all.length && ro) host.append(el('p', 'empty', 'Nothing written in this sprint yet.'));

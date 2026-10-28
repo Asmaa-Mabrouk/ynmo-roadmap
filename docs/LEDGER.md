@@ -42,6 +42,18 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-28 - Sprint lines checked against the plan, paste a Jira link
+```
+🔄 YNMO LEDGER UPDATE - 2026-10-28
+Request: Jira link on sprint tickets; highlight sprint scope not on the roadmap/Monthly or not assigned to the person; how to connect the system
+Surface: Ynmo Roadmaps tool (Sprints)
+Outcome: paste a Jira address or key; red/amber chips and a top bar; connection proposal given
+New facts / decisions locked: a sprint line matches by Jira key or same words; #fix and #support are exempt
+Corrections to this skill: none
+Open / flagged: explicit link from a sprint line to a card/feature; jira-search Edge Function still not deployed
+Changelog: sprint lines checked against plan; paste Jira link.
+```
+
 ### 2026-10-28 - Official team names applied to the live database (by the database agent)
 ```
 🔄 YNMO LEDGER UPDATE - 2026-10-28

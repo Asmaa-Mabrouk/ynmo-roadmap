@@ -983,3 +983,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 /* palm on a people heat-map cell: this person has leave in that month (the hover says how many days and points) */
 .cpcell { position: relative; }
 .cpcell .cpleaf { position: absolute; top: 2px; inset-inline-end: 4px; font-size: 11px; font-weight: 800; color: #0a5c43; background: rgba(255,255,255,.75); border-radius: 8px; padding: 0 4px; line-height: 16px; }
+/* sprint lines that are not connected to the roadmap or Monthly */
+.covchip { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 1px 8px; margin-inline-start: 8px; white-space: nowrap; }
+.covchip.cov-missing { background: #fdecea; color: #b3261e; border: 1px solid #f3b8b3; }
+.covchip.cov-unassigned { background: #fff4e0; color: #8a5a00; border: 1px solid #f0d49a; }
+.covbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: #fff8ec; border: 1px solid #f0d49a; color: #6b4a00; border-radius: 12px; padding: 8px 12px; margin-bottom: 10px; font-size: 13px; }

@@ -1406,6 +1406,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 /* palm on a people heat-map cell: this person has leave in that month (the hover says how many days and points) */
 .cpcell { position: relative; }
 .cpcell .cpleaf { position: absolute; top: 2px; inset-inline-end: 4px; font-size: 11px; font-weight: 800; color: #0a5c43; background: rgba(255,255,255,.75); border-radius: 8px; padding: 0 4px; line-height: 16px; }
+/* sprint lines that are not connected to the roadmap or Monthly */
+.covchip { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 1px 8px; margin-inline-start: 8px; white-space: nowrap; }
+.covchip.cov-missing { background: #fdecea; color: #b3261e; border: 1px solid #f3b8b3; }
+.covchip.cov-unassigned { background: #fff4e0; color: #8a5a00; border: 1px solid #f0d49a; }
+.covbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: #fff8ec; border: 1px solid #f0d49a; color: #6b4a00; border-radius: 12px; padding: 8px 12px; margin-bottom: 10px; font-size: 13px; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -8301,6 +8306,34 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     return out;
   }
 
+  // src/esm/features/sprint-cover.js
+  var KEY = /\b([A-Z][A-Z0-9_]+-\d+)\b/;
+  function parseJira(text) {
+    const t = String(text || "").trim(), m = KEY.exec(t.toUpperCase().replace(/[^A-Z0-9_\-\/:.?=&%]/g, " "));
+    if (!m) return null;
+    const u = /^(https:\/\/[^\s/]+)\/(?:browse|jira\/software\/[^\s]*?\/issues)\b/i.exec(t) || /^(https:\/\/[^\s/]+\.atlassian\.net)\b/i.exec(t);
+    return { key: m[1], base: u ? u[1] : "" };
+  }
+  var norm = (s) => String(s || "").toLowerCase().replace(/\(?\b[a-z][a-z0-9_]+-\d+\b\)?/g, " ").replace(/#\S+/g, " ").replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim();
+  var toks = (s) => norm(s).split(" ").filter((w) => w.length >= 3);
+  function sameWords(a, b) {
+    const x = norm(a), y = norm(b);
+    if (!x || !y) return false;
+    if (x === y) return true;
+    if (Math.min(x.length, y.length) >= 6 && (x.includes(y) || y.includes(x))) return true;
+    const A = toks(a), B = toks(b);
+    if (A.length < 2 || B.length < 2) return false;
+    const [s, l] = A.length <= B.length ? [A, B] : [B, A], hit = s.filter((w) => l.includes(w)).length;
+    return hit / s.length >= 0.75;
+  }
+  var hasKey = (title, key) => !!key && String(title || "").toUpperCase().includes(String(key).toUpperCase());
+  function cover(scope, person, pool) {
+    const key = scope.jk || (KEY.exec(String(scope.t || "").toUpperCase()) || [])[1] || "";
+    const hits = (pool || []).filter((p) => key && (hasKey(p.t, key) || p.jk && p.jk.toUpperCase() === key.toUpperCase()) || sameWords(scope.t, p.t));
+    const mine = hits.filter((p) => (p.names || []).some((n) => sameName(n, person) || sameName(person, n)));
+    return { state: mine.length ? "ok" : hits.length ? "unassigned" : "missing", hits, mine };
+  }
+
   // src/esm/features/jira-link.js
   var BASE2 = "ynmo-jira-base";
   var PRJ = "ynmo-jira-projects";
@@ -8420,27 +8453,58 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         row.append(un);
       }
       row.append(no);
-      box2.append(fld("Search", q), fld("Limit to projects (optional)", pr), msg, list, row);
+      const pa = el("input");
+      pa.type = "text";
+      pa.id = "jkpaste";
+      pa.placeholder = "https://your-site.atlassian.net/browse/ABC-123, or ABC-123";
+      pa.setAttribute("aria-label", "Jira link or key");
+      pa.autocomplete = "off";
+      const pm = el("p", "sub");
+      pm.setAttribute("aria-live", "polite");
+      const pb = el("button", "btn primary", "Link");
+      pb.type = "button";
+      pb.id = "jkpastego";
+      const useIt = () => {
+        const r = parseJira(pa.value);
+        if (!r) {
+          pm.textContent = "No Jira key found. A key looks like ABC-123.";
+          return;
+        }
+        if (r.base) rememberBase(r.base);
+        o.saveItem(o.b.id, { jk: r.key });
+        closeDlg();
+        o.redraw(o.b.id);
+        o.notify("Linked to " + r.key);
+      };
+      pb.addEventListener("click", useIt);
+      pa.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          useIt();
+        }
+      });
+      const pr0 = el("div", "row");
+      pr0.append(pa, pb);
+      box2.append(fld("Paste the ticket link or key", pr0), pm, el("p", "sub", "Or search Jira by words:"), fld("Search", q), fld("Limit to projects (optional)", pr), msg, list, row);
       setTimeout(() => {
-        q.focus();
-        q.select();
+        pa.focus();
         if (q.value.trim().length >= 2) run();
       }, 0);
     });
   }
 
   // src/esm/features/jira-pull.js
-  var KEY = "ynmo-jira-projects";
+  var KEY2 = "ynmo-jira-projects";
   var saved = () => {
     try {
-      return localStorage.getItem(KEY) || "";
+      return localStorage.getItem(KEY2) || "";
     } catch (e) {
       return "";
     }
   };
   var remember = (v) => {
     try {
-      localStorage.setItem(KEY, v);
+      localStorage.setItem(KEY2, v);
     } catch (e) {
     }
   };
@@ -8760,6 +8824,22 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     return d;
   };
   var DEFAULT_TAGS = { fix: "red", support: "blue" };
+  function coverPool() {
+    const pool = [];
+    allRoadmaps().forEach((rm) => withRm(rm.id, () => items().forEach((it) => pool.push({ kind: "feature", t: it.t, where: rm.n, names: (it.res || []).slice() }))));
+    Object.keys(S.reports || {}).filter((k) => /^mo\d{6}$/.test(k) || k === "mobacklog").forEach((k) => {
+      const d = S.reports[k];
+      if (!d || !Array.isArray(d.lines)) return;
+      const where = k === "mobacklog" ? "Monthly backlog" : "Monthly " + k.slice(2, 6) + "-" + k.slice(6);
+      d.lines.forEach((l) => {
+        if (!l || !l.t) return;
+        const names = [];
+        Object.keys(l.who || {}).forEach((t) => Object.keys(l.who[t] || {}).forEach((n) => names.push(n)));
+        pool.push({ kind: "card", t: l.t, where, names });
+      });
+    });
+    return pool;
+  }
   var sprintList = () => Object.keys(S.sprints).map((id) => Object.assign({ id }, S.sprints[id])).filter((s) => s.a && s.b).sort((x, y) => y.n - x.n);
   var rows = (sp) => Object.keys(S.sitems).map((id) => Object.assign({ id }, S.sitems[id])).filter((i) => i.sp === sp).sort((a, b) => (a.ord || 0) - (b.ord || 0) || (a.id < b.id ? -1 : 1));
   var blocksOf = (sp) => rows(sp).filter((i) => i.k);
@@ -9431,6 +9511,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           } else jc.title = "Linked to Jira " + b.jk;
           r.append(jc);
         }
+        if (info.cover && info.cover.state !== "ok") {
+          const cc = info.cover, ch = el("span", "covchip cov-" + cc.state, cc.state === "missing" ? "Not on the plan" : "Not assigned to " + info.person.split(" ")[0]);
+          ch.title = cc.state === "missing" ? "No roadmap feature or Monthly card matches this line. Add it to the roadmap or to Monthly, or tag it #fix or #support if it is not planned work." : "Found on the plan (" + cc.hits.slice(0, 3).map((h) => h.t + " · " + h.where).join("; ") + ") but " + info.person + " is not assigned there.";
+          ch.dataset.state = cc.state;
+          r.append(ch);
+        }
         if (b.k === "p") {
           const inf = directory().get(b.t);
           if (inf) r.append(el("span", "role", inf.domain));
@@ -9504,9 +9590,20 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       host2.textContent = "";
       const all = list();
       let c = "var(--brand)";
+      let sec = "", person = "";
+      const pool = coverPool(), cv = { missing: 0, unassigned: 0 };
       all.forEach((b, i) => {
         if (b.k === "h") c = lane(b.sq).c;
         const info = {};
+        if (b.k === "h") {
+          sec = b.sq || "";
+          person = "";
+        } else if (b.k === "p") person = String(b.t || "").trim();
+        else if (b.k === "s" && person && !/^x_/.test(sec) && String(b.t || "").trim() && (b.st || "planned") !== "done" && !(b.tags || []).some((n) => n === "fix" || n === "support")) {
+          info.cover = cover(b, person, pool);
+          info.person = person;
+          if (info.cover.state !== "ok") cv[info.cover.state]++;
+        }
         if (b.k === "h") {
           const g = groupOf(all, i), ns = g.filter((x) => x.k === "s").length, leaf = g.filter((x, n) => x.k === "u" || x.k === "s" && !(g[n + 1] && g[n + 1].k === "u"));
           info.count = ns + " scope" + (ns === 1 ? "" : "s") + " · " + leaf.filter((x) => x.st === "done").length + "/" + leaf.length + " done";
@@ -9518,6 +9615,13 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         }
         host2.append(blockRow(b, c, info));
       });
+      if (cv.missing || cv.unassigned) {
+        const bar4 = el("div", "covbar");
+        bar4.id = "covbar";
+        bar4.setAttribute("role", "status");
+        bar4.append(el("b", "", "Not connected to the plan:"), el("span", "", (cv.missing ? cv.missing + " not on any roadmap or Monthly card" : "") + (cv.missing && cv.unassigned ? " · " : "") + (cv.unassigned ? cv.unassigned + " on the plan but not assigned to the person who has it here" : "")));
+        host2.prepend(bar4);
+      }
       if (!ro) host2.append(ghostRow(all));
       applyPicked();
       if (!all.length && ro) host2.append(el("p", "empty", "Nothing written in this sprint yet."));

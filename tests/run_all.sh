@@ -14,6 +14,7 @@ done
 node tests/feature_link_unit.mjs | grep -q '^FAIL' && { echo 'feature_link_unit.mjs: FAIL'; fail=1; }
 node tests/monthly_unit.mjs | grep -q '^FAIL' && { echo 'monthly_unit.mjs: FAIL'; fail=1; }
 node tests/undo_unit.mjs | grep -q '^FAIL' && { echo 'undo_unit.mjs: FAIL'; fail=1; }
+node tests/sprint_cover_unit.mjs | grep -q '^FAIL' && { echo 'sprint_cover_unit.mjs: FAIL'; fail=1; }
 node build.mjs --dist >/dev/null && python3 tests/csp_check.py || fail=1
 python3 tests/e2e_qa.py | tee tests/out/qa.log | tail -1
 exit $fail
