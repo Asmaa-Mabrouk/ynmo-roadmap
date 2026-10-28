@@ -1398,6 +1398,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 .pmtag.left { border-color: #d03b3b; background: #fbe0de; color: #8c1d18; }
 .pmwork { background: #fffaf0; border: 1px solid #e0a400; border-radius: 12px; padding: 10px 14px; display: grid; gap: 6px; } .pmwork ul { margin: 0; padding-inline-start: 18px; }
 .bar.ownerleft { outline: 2px dashed #d03b3b; outline-offset: 1px; }
+/* the "No matches" row of a searchable dropdown carries the hidden attribute; .copt's display:flex was overriding it, so it always showed */
+.copt[hidden] { display: none; }
+/* month picker on the Dashboard charts */
+.cpmpick { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--muted); margin: 0 0 8px; }
+.cpmpick select { font: inherit; font-weight: 700; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -1624,10 +1629,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   var ROLES = { pm: "PM", dev: "Engineer", qa: "Quality", ux: "UX" };
   var isHex = (c) => /^#[0-9a-f]{6}$/i.test(String(c || ""));
   var TEAMS = {
-    tifli: { pm: ["Emad"], dev: ["Aya Fathy", "Hamid Shahin", "Mario"], qa: ["Mona"], ux: ["Mostafa"] },
-    plan: { pm: ["Asmaa", "Engy"], dev: ["Soliman", "Amal", "Waradny"], qa: ["Sherif", "Zahran", "Mwrohan"], ux: ["Saad", "Khalid"] },
-    daycare: { pm: ["Engy"], dev: ["Wardany", "Sayeh", "Abdelhamid"], qa: ["Dina Mousa", "Merihan"], ux: ["Saad", "Khalid"] },
-    ai: { pm: ["Asmaa"], dev: ["Tramsi", "Aliaa", "Sahdy"] }
+    tifli: { pm: ["Emad"], dev: ["Aya Fathy", "Hamid Shahien", "Mario"], qa: ["Mona Mohamed"], ux: ["Mostafa"] },
+    plan: { pm: ["Asmaa", "Engy"], dev: ["Ahmed Soliman", "Amal Saleem", "Ahmed Wardany"], qa: ["Sherif", "Mohamed Zahran", "Mwrohan"], ux: ["Saad Mohamed", "Khalid Abdelfattah"] },
+    daycare: { pm: ["Engy"], dev: ["Ahmed Wardany", "Mo'men Sayeh", "Abdelhamid Ali"], qa: ["Dina Mousa", "Merihan"], ux: ["Saad Mohamed", "Khalid Abdelfattah"] },
+    ai: { pm: ["Asmaa"], dev: ["Mohamed Altramsi", "Aliaa Ibrahim", "Shady Bassily"] }
   };
   var CP = "September checkpoint";
   var UR = "Updated Roadmap (Shadow Teacher)";
@@ -9498,12 +9503,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 
   // src/esm/features/capacity.js
   var LANES2 = [
-    { k: "ai", n: "AI", people: ["Altramsi", "Aliaa", "Shady"] },
-    { k: "fe", n: "Full Stack FE", people: ["Amal", "Sayeh", "Abdelhamid"] },
-    { k: "mob", n: "Full Stack Mobile", people: ["Aya Fathy", "Adnan"] },
-    { k: "be", n: "BE", people: ["Soliman", "Wardany", "Hosieny", "Hamid"] },
-    { k: "des", n: "Design", people: ["Saad", "Khalid Abdelfattah"] },
-    { k: "qa", n: "Quality", people: ["Mona", "Dina Mousa", "Zahran", "Dina Sam"] }
+    { k: "ai", n: "AI", people: ["Mohamed Altramsi", "Aliaa Ibrahim", "Shady Bassily"] },
+    { k: "fe", n: "Full Stack FE", people: ["Amal Saleem", "Mo'men Sayeh", "Abdelhamid Ali"] },
+    { k: "mob", n: "Full Stack Mobile", people: ["Aya Fathy", "Ahmed Adnan"] },
+    { k: "be", n: "BE", people: ["Ahmed Soliman", "Ahmed Wardany", "Ahmed Hoseiny", "Hamid Shahien"] },
+    { k: "des", n: "Design", people: ["Saad Mohamed", "Khalid Abdelfattah"] },
+    { k: "qa", n: "Quality", people: ["Mona Mohamed", "Dina Mousa", "Mohamed Zahran", "Dina Samy"] }
   ];
   var DOMAIN_OF = { ai: "AI / ML", fe: "Frontend", mob: "Mobile", be: "Backend", des: "UX / Design", qa: "QA" };
   function matchResource(name, resources2, domain) {
@@ -11183,9 +11188,13 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     });
     tb.append(body);
     tb.hidden = true;
+    const flag = (e, v) => {
+      if (v) e.setAttribute("hidden", "");
+      else e.removeAttribute("hidden");
+    };
     const set = (on) => {
-      tb.hidden = !on;
-      chart.hidden = on;
+      flag(tb, !on);
+      flag(chart, on);
       bt.setAttribute("aria-pressed", String(on));
       bc.setAttribute("aria-pressed", String(!on));
     };
@@ -11542,6 +11551,23 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     root.append(pageHead("Dashboard", "Can the team deliver what each month promises? Green fits, red is over.", tools));
     tipHost(root);
     if (!months.includes(ui3.m)) ui3.m = (rev.find((r) => r.pts > 0) || rev[0]).m;
+    const monthPick = (id) => {
+      const w = el("label", "cpmpick", "Month "), sl = el("select");
+      sl.id = id;
+      sl.setAttribute("aria-label", "Month shown");
+      months.forEach((m) => {
+        const o = el("option", "", monthLabel(m));
+        o.value = m;
+        if (m === ui3.m) o.selected = true;
+        sl.append(o);
+      });
+      sl.addEventListener("change", () => {
+        ui3.m = sl.value;
+        renderCapacity();
+      });
+      w.append(sl);
+      return w;
+    };
     const sec = (id, t, sub) => {
       const c = el("section", "cpsec");
       c.id = id;
@@ -11557,7 +11583,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       return s2;
     };
     sec("cp-glance", "The months at a glance", "Click a month to see it track by track below.").append(tiles(rev));
-    sec("cp-kpi", monthLabel(ui3.m) + " in numbers").append(kpis(rev));
+    {
+      const ks = sec("cp-kpi", monthLabel(ui3.m) + " in numbers");
+      ks.append(monthPick("cpmonth"), kpis(rev));
+    }
     const fx = sec("cp-fix", "What needs fixing", "If something is over, change the points or move a card in Monthly, then come back here.");
     const mn = missingNote();
     if (mn) fx.append(mn);
@@ -11568,7 +11597,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     root.append(duo);
     const barSec = el("section", "cpsec");
     barSec.id = "cp-bars";
-    barSec.append(el("h2", "", monthLabel(ui3.m) + ", track by track"), el("p", "sub", "Pale = what the track can take. Green = planned. Red = past the limit."));
+    barSec.append(el("h2", "", monthLabel(ui3.m) + ", track by track"), el("p", "sub", "Pale = what the track can take. Green = planned. Red = past the limit."), monthPick("cpmonth2"));
     const h3 = barsTracks(rev[months.indexOf(ui3.m)]);
     barSec.append(withTable("cp-bars-c", "", "", h3.node, h3.table));
     const colsSec = el("section", "cpsec");

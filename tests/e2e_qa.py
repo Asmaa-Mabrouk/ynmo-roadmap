@@ -276,7 +276,7 @@ with sync_playwright() as p:
         n=A.evaluate("Object.keys(__ynmo.vacs).length"); addv('Emad','2026-10-15','2026-10-25'); n2=A.evaluate("Object.keys(__ynmo.vacs).length"); return (n2==n,'overlap accepted silently: %d->%d'%(n,n2))
     @T('Vacations','V6','Leave outside current roadmap range does not break rendering')
     def _():
-        addv('Amal','2030-01-01','2030-01-05'); nav(A,'roadmap'); return (True,'')
+        addv('Amal Saleem','2030-01-01','2030-01-05'); nav(A,'roadmap'); return (True,'')
     @T('Vacations','V7','Person expand shows stats + calendar; persists across rerender')
     def _():
         nav(A,'vacations'); A.locator('.tlhead:has-text("Emad")').click(); A.wait_for_timeout(300); return (A.locator('.tltile').count()>3 and A.locator('.mcal').count()>0,'tiles=%d cal=%d'%(A.locator('.tltile').count(),A.locator('.mcal').count()))
@@ -306,7 +306,7 @@ with sync_playwright() as p:
         B.wait_for_timeout(1500); t=B.locator(f'.pb[data-id="{id0}"]').first.inner_text(); return ('Changed by A' in t, t[:30])
     @T('Realtime','M3','A adds vacation → B roadmap shows flag live')
     def _():
-        nav(B,'roadmap'); before=B.locator('.vflag').count(); nav(A,'vacations'); addv('Mona','2026-11-15','2026-11-19'); B.wait_for_timeout(1500); after=B.locator('.vflag').count(); return (after>before,'flags %d->%d'%(before,after))
+        nav(B,'roadmap'); before=B.locator('.vflag').count(); nav(A,'vacations'); addv('Mona Mohamed','2026-11-15','2026-11-19'); B.wait_for_timeout(1500); after=B.locator('.vflag').count(); return (after>before,'flags %d->%d'%(before,after))
     @T('Realtime','M4','A creates roadmap → B selector lists it live')
     def _():
         n=B.locator('#rmsel option').count(); nav(A,'roadmaps'); createrm('Live RM',2027,'Q2'); B.wait_for_timeout(1500); m=B.locator('#rmsel option').count(); A.select_option('#rmsel','h2-2026'); return (m==n+1,'%d->%d'%(n,m))

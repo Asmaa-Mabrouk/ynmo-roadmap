@@ -975,3 +975,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 .pmtag.left { border-color: #d03b3b; background: #fbe0de; color: #8c1d18; }
 .pmwork { background: #fffaf0; border: 1px solid #e0a400; border-radius: 12px; padding: 10px 14px; display: grid; gap: 6px; } .pmwork ul { margin: 0; padding-inline-start: 18px; }
 .bar.ownerleft { outline: 2px dashed #d03b3b; outline-offset: 1px; }
+/* the "No matches" row of a searchable dropdown carries the hidden attribute; .copt's display:flex was overriding it, so it always showed */
+.copt[hidden] { display: none; }
+/* month picker on the Dashboard charts */
+.cpmpick { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--muted); margin: 0 0 8px; }
+.cpmpick select { font: inherit; font-weight: 700; }

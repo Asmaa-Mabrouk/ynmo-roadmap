@@ -42,6 +42,18 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-28 - Official team names in the code, dropdown "No matches" fix
+```
+🔄 YNMO LEDGER UPDATE - 2026-10-28
+Request: use the official names; explain the points list screenshot
+Surface: Ynmo Roadmaps tool
+Outcome: built-in names and Dashboard defaults are the official names; "No matches" no longer always shows
+New facts / decisions locked: official names list (see CHANGELOG); database rename goes after this is deployed
+Corrections to this skill: none
+Open / flagged: database rename still to be approved to the agent; names in old data stay old until then
+Changelog: official names in code; dropdown No matches fix.
+```
+
 ### 2026-10-28 - Resources Manage pop-up, leavers, Gantt lines for linked cards
 ```
 🔄 YNMO LEDGER UPDATE - 2026-10-28

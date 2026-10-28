@@ -57,7 +57,8 @@ export function withTable(id, title, sub, chart, table) {
   const seg = el('div', 'cpseg'), bc = el('button', '', 'Chart'), bt = el('button', '', 'Table'); bc.type = bt.type = 'button'; bc.setAttribute('aria-pressed', 'true'); bt.setAttribute('aria-pressed', 'false'); seg.append(bc, bt); head.append(t, seg);
   const tb = el('table', 'cptable'); const hr = el('tr'); table.head.forEach(h => hr.append(el('th', '', h))); tb.append(el('thead')); tb.firstChild.append(hr);
   const body = el('tbody'); table.rows.forEach(r => { const tr = el('tr'); r.forEach((c, i) => tr.append(el(i ? 'td' : 'th', '', c))); body.append(tr); }); tb.append(body); tb.hidden = true;
-  const set = on => { tb.hidden = !on; chart.hidden = on; bt.setAttribute('aria-pressed', String(on)); bc.setAttribute('aria-pressed', String(!on)); };
+  const flag = (e, v) => { if (v) e.setAttribute('hidden', ''); else e.removeAttribute('hidden'); };   // an SVG chart has no .hidden property, so the attribute is set directly
+  const set = on => { flag(tb, !on); flag(chart, on); bt.setAttribute('aria-pressed', String(on)); bc.setAttribute('aria-pressed', String(!on)); };
   bt.addEventListener('click', () => set(true)); bc.addEventListener('click', () => set(false));
   box.append(head, chart, tb); return box;
 }

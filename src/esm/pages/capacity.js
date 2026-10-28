@@ -107,14 +107,15 @@ export function renderCapacity() {
   root.append(pageHead('Dashboard', 'Can the team deliver what each month promises? Green fits, red is over.', tools));
   tipHost(root);
   if (!months.includes(ui.m)) ui.m = (rev.find(r => r.pts > 0) || rev[0]).m;
+  const monthPick = id => { const w = el('label', 'cpmpick', 'Month '), sl = el('select'); sl.id = id; sl.setAttribute('aria-label', 'Month shown'); months.forEach(m => { const o = el('option', '', monthLabel(m)); o.value = m; if (m === ui.m) o.selected = true; sl.append(o); }); sl.addEventListener('change', () => { ui.m = sl.value; renderCapacity(); }); w.append(sl); return w; };
   const sec = (id, t, sub) => { const c = el('section', 'cpsec'); c.id = id; c.append(el('h2', '', t)); if (sub) c.append(el('p', 'sub', sub)); root.append(c); return c; };
   const chartSec = (id, t, sub, ch, tbl, extra) => { const s2 = sec(id, t, sub); if (extra) s2.append(extra); s2.append(withTable(id + '-c', '', '', ch, tbl)); return s2; };
   sec('cp-glance', 'The months at a glance', 'Click a month to see it track by track below.').append(tiles(rev));
-  sec('cp-kpi', monthLabel(ui.m) + ' in numbers').append(kpis(rev));
+  { const ks = sec('cp-kpi', monthLabel(ui.m) + ' in numbers'); ks.append(monthPick('cpmonth'), kpis(rev)); }
   const fx = sec('cp-fix', 'What needs fixing', 'If something is over, change the points or move a card in Monthly, then come back here.'); const mn = missingNote(); if (mn) fx.append(mn); fx.append(fixes(rev, months));
   const h1 = heatTracks(rev); chartSec('cp-heat', 'How full is each track', 'Darker = fuller. Red with a triangle = over. Each box: share, then planned / can take (points).', h1.node, h1.table, legend());
   const duo = el('div', 'cpduo'); root.append(duo);
-  const barSec = el('section', 'cpsec'); barSec.id = 'cp-bars'; barSec.append(el('h2', '', monthLabel(ui.m) + ', track by track'), el('p', 'sub', 'Pale = what the track can take. Green = planned. Red = past the limit.')); const h3 = barsTracks(rev[months.indexOf(ui.m)]); barSec.append(withTable('cp-bars-c', '', '', h3.node, h3.table));
+  const barSec = el('section', 'cpsec'); barSec.id = 'cp-bars'; barSec.append(el('h2', '', monthLabel(ui.m) + ', track by track'), el('p', 'sub', 'Pale = what the track can take. Green = planned. Red = past the limit.'), monthPick('cpmonth2')); const h3 = barsTracks(rev[months.indexOf(ui.m)]); barSec.append(withTable('cp-bars-c', '', '', h3.node, h3.table));
   const colsSec = el('section', 'cpsec'); colsSec.id = 'cp-cols'; colsSec.append(el('h2', '', 'Month by month'), el('p', 'sub', 'Columns = points planned. Dark tick = what all tracks can take.')); const h2 = columnsTrend(rev); colsSec.append(withTable('cp-cols-c', '', '', h2.node, h2.table));
   duo.append(barSec, colsSec);
   const h4 = heatPeople(rev, cfg(), vacList(), todayIso()); chartSec('cp-heatp', 'The team', 'Each person: points planned / what they can take, with leave and who has left or is leaving.', h4.node, h4.table, legend());

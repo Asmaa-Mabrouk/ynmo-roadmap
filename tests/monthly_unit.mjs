@@ -38,7 +38,7 @@ const P8 = { ppp: 8 }; // the old 8 points a person; the new default is 40 (1 po
   ok('capacity: working days are Sunday to Thursday (Nov 2026 = 22)', cap.workdays(rg.a, rg.b) === 22);
   const be = cap.LANES.find(l => l.k === 'be'), c0 = cap.laneCapacity(be, rg, [], P8);
   ok('capacity: 4 BE people x 8 points less 30% = 22.4', c0.people === 4 && c0.raw === 32 && c0.cap === 22.4);
-  const c1 = cap.laneCapacity(be, rg, [{ p: 'Soliman Ahmed', a0: '2026-11-01', a1: '2026-11-12' }], P8);
+  const c1 = cap.laneCapacity(be, rg, [{ p: 'Ahmed Soliman', a0: '2026-11-01', a1: '2026-11-12' }], P8);
   ok('capacity: leave reduces the capacity (8 working days of 21)', c1.raw < 32 && c1.raw > 25);
   ok('capacity: a full-name leave entry matches the short name', cap.sameName('Aya Fathy Ali', 'Aya Fathy') && !cap.sameName('Amal Hassan', 'Aya Fathy'));
   const lines = [{ id: 'a', pts: { be: 10, fe: 5 } }, { id: 'b', pts: { be: 8 } }];
@@ -78,16 +78,16 @@ const P8 = { ppp: 8 }; // the old 8 points a person; the new default is 40 (1 po
   ok('person loads: points add up per person across tracks and cards (Soliman 8, Hamid 3)', pl.Soliman === 8 && pl.Hamid === 3 && Object.keys(pl).length === 2);
   ok('who: a missing or bad value gives nobody', Object.keys(cap.whoOf({}, 'be')).length === 0 && Object.keys(cap.whoOf({ who: { be: 5 } }, 'be')).length === 0 && cap.whoOf({ who: { be: { A: 2 } } }, 'be').A === 2);
   // names follow Resources
-  const RS = [{ name: 'Hamid Shahin', domain: 'Engineering' }, { name: 'Khalid', domain: 'UX / Design' }, { name: 'Saad', domain: 'UX / Design' }, { name: 'Wardany', domain: 'Backend' }];
+  const RS = [{ name: 'Hamid Shahien', domain: 'Engineering' }, { name: 'Khalid', domain: 'UX / Design' }, { name: 'Saad', domain: 'UX / Design' }, { name: 'Ahmed Wardany', domain: 'Backend' }];
   ok('resources: an exact name is kept', cap.matchResource('Saad', RS, 'UX / Design') === 'Saad');
-  ok('resources: a short name finds the longer Resources name (Hamid is Hamid Shahin)', cap.matchResource('Hamid', RS, 'Backend') === 'Hamid Shahin');
+  ok('resources: a short name finds the longer Resources name (Hamid is Hamid Shahien)', cap.matchResource('Hamid', RS, 'Backend') === 'Hamid Shahien');
   ok('resources: Khalid Abdelfattah is the Design Khalid', cap.matchResource('Khalid Abdelfattah', RS, 'UX / Design') === 'Khalid');
   ok('resources: Khalid Nazim (PM) is not the Design Khalid', cap.matchResource('Khalid Nazim', RS, 'PM') === '');
   ok('resources: an unknown name matches nothing', cap.matchResource('Nobody', RS, 'PM') === '');
   const rd = cap.resolveDefaults({}, RS), des = rd.lanes.find(l => l.k === 'des').people, beP = rd.lanes.find(l => l.k === 'be').people;
-  ok('resources: defaults are resolved (Design uses Khalid, BE uses Hamid Shahin)', des.includes('Khalid') && !des.includes('Khalid Abdelfattah') && beP.includes('Hamid Shahin'));
+  ok('resources: defaults are resolved (Design uses Khalid, BE uses Hamid Shahien)', des.includes('Khalid') && !des.includes('Khalid Abdelfattah') && beP.includes('Hamid Shahien'));
   ok('resources: saved lanes are left exactly as saved', cap.resolveDefaults({ lanes: [{ k: 'be', people: ['Hamid'] }] }, RS).lanes.find(l => l.k === 'be').people.join() === 'Hamid');
-  const um = cap.unmatched(rd, RS); ok('resources: names Resources does not list are reported', um.some(x => x.name === 'Altramsi') && !um.some(x => x.name === 'Saad'));
+  const um = cap.unmatched(rd, RS); ok('resources: names Resources does not list are reported', um.some(x => x.name === 'Mohamed Altramsi') && !um.some(x => x.name === 'Saad'));
   ok('PMs are not a Dashboard track and their old points are ignored', !cap.LANES.some(l => l.k === 'pm') && cap.totalPts({ pts: { be: 3, pm: 5 } }) === 3 && Object.keys(cap.personLoads([{ pts: { be: 2, pm: 5 }, who: { pm: { Asmaa: 5 }, be: { Hamid: 2 } } }])).join() === 'Hamid');
 }
 // ---- version history (features/month-history.js)

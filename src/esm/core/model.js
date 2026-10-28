@@ -68,10 +68,10 @@ export const barColorCss = c => (isHex(c) ? c : COLORS.includes(c) ? 'var(--' + 
 export const onColor = c => { if (!isHex(c)) return null; const n = parseInt(c.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255; return (0.299 * r + 0.587 * g + 0.114 * b) > 165 ? '#14161f' : '#ffffff'; };
 
 export const TEAMS = {
-  tifli:   { pm: ['Emad'], dev: ['Aya Fathy', 'Hamid Shahin', 'Mario'], qa: ['Mona'], ux: ['Mostafa'] },
-  plan:    { pm: ['Asmaa', 'Engy'], dev: ['Soliman', 'Amal', 'Waradny'], qa: ['Sherif', 'Zahran', 'Mwrohan'], ux: ['Saad', 'Khalid'] },
-  daycare: { pm: ['Engy'], dev: ['Wardany', 'Sayeh', 'Abdelhamid'], qa: ['Dina Mousa', 'Merihan'], ux: ['Saad', 'Khalid'] },
-  ai:      { pm: ['Asmaa'], dev: ['Tramsi', 'Aliaa', 'Sahdy'] }
+  tifli:   { pm: ['Emad'], dev: ['Aya Fathy', 'Hamid Shahien', 'Mario'], qa: ['Mona Mohamed'], ux: ['Mostafa'] },
+  plan:    { pm: ['Asmaa', 'Engy'], dev: ['Ahmed Soliman', 'Amal Saleem', 'Ahmed Wardany'], qa: ['Sherif', 'Mohamed Zahran', 'Mwrohan'], ux: ['Saad Mohamed', 'Khalid Abdelfattah'] },
+  daycare: { pm: ['Engy'], dev: ['Ahmed Wardany', "Mo'men Sayeh", 'Abdelhamid Ali'], qa: ['Dina Mousa', 'Merihan'], ux: ['Saad Mohamed', 'Khalid Abdelfattah'] },
+  ai:      { pm: ['Asmaa'], dev: ['Mohamed Altramsi', 'Aliaa Ibrahim', 'Shady Bassily'] }
 };
 
 const CP = 'September checkpoint', UR = 'Updated Roadmap (Shadow Teacher)';
@@ -152,10 +152,9 @@ const NOTES = [
   'No Saudi public holidays fall between 1 Oct 2026 and 31 Jan 2027 (National Day was 23 Sep, Founding Day is 22 Feb 2027). Use Days off to shade team leave or company closures.',
   'Each feature keeps one set of dates. When one person has two features at the same time they sit one above the other inside their row and those days are shaded and counted as overlap. Hover a bar to highlight the same feature on the other rows.',
   'Resources start as the squad PM. Assign engineers, quality and UX per feature from the Resources column.',
-  'Home Sessions Phase 1 needs 1 Mobile, 2 BE and 2 FE engineers. The Tifli squad lists 3 engineers (Aya Fathy, Hamid Shahin, Mario), and Standalone Assessment runs in the same months.',
+  'Home Sessions Phase 1 needs 1 Mobile, 2 BE and 2 FE engineers. The Tifli squad lists 3 engineers (Aya Fathy, Hamid Shahien, Mario), and Standalone Assessment runs in the same months.',
   'The six Warif items have "To be coordinated according to the Support contract" as status and "Stop" as the note. They are shown as waiting on contract.',
-  '"Waradny" (Plan squad) and "Wardany" (Daycare squad) are spelled two ways in the team list and are shown as written.',
-  'Warif and Sharjah use the Plan UX pair (Saad and Khalid). Confirm if a different designer covers them.',
+  'Warif and Sharjah use the Plan UX pair (Saad Mohamed and Khalid Abdelfattah). Confirm if a different designer covers them.',
   'Items under "Later 2027" in the checkpoint are not on this chart.',
   'Edits are shared: anyone with edit access sees your changes.'
 ];

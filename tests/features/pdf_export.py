@@ -31,8 +31,8 @@ with sync_playwright() as pw:
     A.evaluate("()=>{document.body.classList.remove('print-roadmap');const v=document.getElementById('printrm');if(v)v.remove()}")
     # dropdown search: typing on a focused dropdown opens it with the text; accents / Arabic folding
     A.locator('#status').select_option('all')
-    A.locator('#person').focus(); A.keyboard.type('mo'); A.wait_for_timeout(300)
-    ok('typing on a focused dropdown opens it and searches', A.locator('.cpop').count()==1 and A.input_value('.cpop .csearch')=='mo' and A.evaluate("[...document.querySelectorAll('.cpop .copt[data-opt]')].filter(r=>!r.hidden).length")<5)
+    A.locator('#person').focus(); A.keyboard.type('mona'); A.wait_for_timeout(300)
+    ok('typing on a focused dropdown opens it and searches', A.locator('.cpop').count()==1 and A.input_value('.cpop .csearch')=='mona' and A.evaluate("[...document.querySelectorAll('.cpop .copt[data-opt]')].filter(r=>!r.hidden).length")<5)
     A.keyboard.press('Escape')
     ok('no page errors', errs==[])
 p=sum(1 for _,c in R if c); print(p,'/',len(R)); sys.exit(0 if p==len(R) else 1)

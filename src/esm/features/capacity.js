@@ -8,12 +8,12 @@
 
 /** Roles and the people available in them (November 2026 list from the owner). Editable in the app (settings doc `capacity`). */
 export const LANES = [
-  { k: 'ai', n: 'AI', people: ['Altramsi', 'Aliaa', 'Shady'] },
-  { k: 'fe', n: 'Full Stack FE', people: ['Amal', 'Sayeh', 'Abdelhamid'] },
-  { k: 'mob', n: 'Full Stack Mobile', people: ['Aya Fathy', 'Adnan'] },
-  { k: 'be', n: 'BE', people: ['Soliman', 'Wardany', 'Hosieny', 'Hamid'] },
-  { k: 'des', n: 'Design', people: ['Saad', 'Khalid Abdelfattah'] },
-  { k: 'qa', n: 'Quality', people: ['Mona', 'Dina Mousa', 'Zahran', 'Dina Sam'] }
+  { k: 'ai', n: 'AI', people: ['Mohamed Altramsi', 'Aliaa Ibrahim', 'Shady Bassily'] },
+  { k: 'fe', n: 'Full Stack FE', people: ['Amal Saleem', "Mo'men Sayeh", 'Abdelhamid Ali'] },
+  { k: 'mob', n: 'Full Stack Mobile', people: ['Aya Fathy', 'Ahmed Adnan'] },
+  { k: 'be', n: 'BE', people: ['Ahmed Soliman', 'Ahmed Wardany', 'Ahmed Hoseiny', 'Hamid Shahien'] },
+  { k: 'des', n: 'Design', people: ['Saad Mohamed', 'Khalid Abdelfattah'] },
+  { k: 'qa', n: 'Quality', people: ['Mona Mohamed', 'Dina Mousa', 'Mohamed Zahran', 'Dina Samy'] }
 ];
 /** The Resources domain of each track: where a person of that track is listed in Resources. */
 export const DOMAIN_OF = { ai: 'AI / ML', fe: 'Frontend', mob: 'Mobile', be: 'Backend', des: 'UX / Design', qa: 'QA' };
