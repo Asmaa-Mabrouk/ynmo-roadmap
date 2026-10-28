@@ -42,6 +42,18 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-28 - Leave priced at 2 points a day, palm in the heat map
+```
+🔄 YNMO LEDGER UPDATE - 2026-10-28
+Request: unify how leave is deducted (month = 20 working days); show a palm and the days on the heat map; expected vacation as a Monthly card
+Surface: Ynmo Roadmaps tool (Dashboard)
+Outcome: 1 working day of leave or after leaving = 2 points; 🌴 + days on heat map cells with hover; no vacation card in Monthly (leave stays in Vacations)
+New facts / decisions locked: STD month = 20 working days; day = ppp / 20 points
+Corrections to this skill: none
+Open / flagged: expected (not yet approved) leave is entered in Vacations
+Changelog: leave = 2 points per day; palm on heat map.
+```
+
 ### 2026-10-28 - Official team names in the code, dropdown "No matches" fix
 ```
 🔄 YNMO LEDGER UPDATE - 2026-10-28

@@ -40,6 +40,11 @@ const P8 = { ppp: 8 }; // the old 8 points a person; the new default is 40 (1 po
   ok('capacity: 4 BE people x 8 points less 30% = 22.4', c0.people === 4 && c0.raw === 32 && c0.cap === 22.4);
   const c1 = cap.laneCapacity(be, rg, [{ p: 'Ahmed Soliman', a0: '2026-11-01', a1: '2026-11-12' }], P8);
   ok('capacity: leave reduces the capacity (8 working days of 21)', c1.raw < 32 && c1.raw > 25);
+  { const oct = { a: '2026-10-01', b: '2026-10-31' }, nov = { a: '2026-11-01', b: '2026-11-30' }, D = { ppp: 40 };
+    const lo = cap.personRaw('Ahmed Soliman', oct, [{ p: 'Ahmed Soliman', a0: '2026-10-04', a1: '2026-10-08' }], D), ln = cap.personRaw('Ahmed Soliman', nov, [{ p: 'Ahmed Soliman', a0: '2026-11-01', a1: '2026-11-05' }], D);
+    ok('capacity: every working day of leave costs 2 points (ppp / 20) in a 23-day month and in a 22-day month', lo === 30 && ln === 30);
+    ok('capacity: the leave details say days and points', cap.lostInfo('Ahmed Soliman', nov, [{ p: 'Ahmed Soliman', a0: '2026-11-01', a1: '2026-11-05' }], D).leave === 5 && cap.dayPts(D) === 2);
+    ok('capacity: a last working day mid-month costs 2 points for each working day after it', cap.personRaw('Ahmed Soliman', nov, [], { ppp: 40, leaving: { 'Ahmed Soliman': '2026-11-12' } }) === 40 - 2 * cap.workdays('2026-11-13', '2026-11-30')); }
   ok('capacity: a full-name leave entry matches the short name', cap.sameName('Aya Fathy Ali', 'Aya Fathy') && !cap.sameName('Amal Hassan', 'Aya Fathy'));
   const lines = [{ id: 'a', pts: { be: 10, fe: 5 } }, { id: 'b', pts: { be: 8 } }];
   ok('capacity: loads add the points per role', JSON.stringify(cap.loads(lines)).includes('"be":18') && cap.loads(lines).fe === 5);

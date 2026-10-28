@@ -1403,6 +1403,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 /* month picker on the Dashboard charts */
 .cpmpick { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--muted); margin: 0 0 8px; }
 .cpmpick select { font: inherit; font-weight: 700; }
+/* palm on a people heat-map cell: this person has leave in that month (the hover says how many days and points) */
+.cpcell { position: relative; }
+.cpcell .cpleaf { position: absolute; top: 2px; inset-inline-end: 4px; font-size: 11px; font-weight: 800; color: #0a5c43; background: rgba(255,255,255,.75); border-radius: 8px; padding: 0 4px; line-height: 16px; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -9584,9 +9587,16 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     });
     return { ppp: num(c.ppp, DEFAULTS.ppp, 0, 100), reserve: num(c.reserve, DEFAULTS.reserve, 0, 0.9), buffer: num(c.buffer, DEFAULTS.buffer, 0, 0.9), leaving, lanes: LANES2.map((l) => ({ k: l.k, n: l.n, people: byK[l.k] || l.people })) };
   }
+  var STD_DAYS = 20;
+  function lostInfo(name, range, vacs, cfg4) {
+    const s = settings(cfg4), until = s.leaving[name], end = until && until < range.b ? until : range.b;
+    if (end < range.a) return { leave: 0, after: workdays(range.a, range.b), gone: true, pts: s.ppp, perDay: s.ppp / STD_DAYS };
+    const leave = leaveDays(vacs, name, range.a, end), after = end < range.b ? workdays(addDays2(end, 1), range.b) : 0, perDay = s.ppp / STD_DAYS;
+    return { leave, after, gone: false, pts: Math.min(s.ppp, (leave + after) * perDay), perDay };
+  }
   function personRaw(name, range, vacs, cfg4) {
-    const s = settings(cfg4), wd = Math.max(1, workdays(range.a, range.b)), until = s.leaving[name], end = until && until < range.b ? until : range.b;
-    return end < range.a ? 0 : s.ppp * Math.max(0, (workdays(range.a, end) - leaveDays(vacs, name, range.a, end)) / wd);
+    const s = settings(cfg4), li = lostInfo(name, range, vacs, cfg4);
+    return li.gone ? 0 : Math.max(0, s.ppp - li.pts);
   }
   function personCap(name, range, vacs, cfg4) {
     const s = settings(cfg4);
@@ -11279,7 +11289,13 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           c.append(el("b", "cppct", (u > 1 ? "▲ " : "") + (Number.isFinite(u) ? pct(u) : "over")), el("span", "cpnum", fmt2(pl) + " / " + fmt2(cap)));
           shade(c, u);
         }
-        const lines = [p.n + ", " + monthLabel(r.m), !cap && !pl ? "Not available this month (left, or on leave all month)" : fmt2(pl) + " points planned of " + fmt2(cap) + " they can take"];
+        const li = lostInfo(p.n, monthRange(r.m), vacs, cfg4), lines = [p.n + ", " + monthLabel(r.m), !cap && !pl ? "Not available this month (left, or on leave all month)" : fmt2(pl) + " points planned of " + fmt2(cap) + " they can take"];
+        if (!li.gone && li.leave > 0) {
+          const lf = el("span", "cpleaf", "🌴 " + li.leave + "d");
+          c.append(lf);
+          lines.push("🌴 " + li.leave + " working day" + (li.leave === 1 ? "" : "s") + " of leave = −" + fmt2(li.leave * li.perDay) + " points (1 day = " + fmt2(li.perDay) + " points)");
+        }
+        if (!li.gone && li.after > 0) lines.push("Last working day is in this month: " + li.after + " working day" + (li.after === 1 ? "" : "s") + " lost = −" + fmt2(li.after * li.perDay) + " points");
         c.setAttribute("aria-label", lines.join(". "));
         tip2(c, lines);
         g.append(c);

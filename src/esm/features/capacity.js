@@ -66,10 +66,22 @@ export function settings(cfg) {
   const leaving = {}; Object.keys(c.leaving && typeof c.leaving === 'object' ? c.leaving : {}).forEach(n => { if (/^\d{4}-\d{2}-\d{2}$/.test(c.leaving[n])) leaving[n] = c.leaving[n]; });
   return { ppp: num(c.ppp, DEFAULTS.ppp, 0, 100), reserve: num(c.reserve, DEFAULTS.reserve, 0, 0.9), buffer: num(c.buffer, DEFAULTS.buffer, 0, 0.9), leaving: leaving, lanes: LANES.map(l => ({ k: l.k, n: l.n, people: byK[l.k] || l.people })) };
 }
-/** Points one person can deliver in a month before reserve and buffer: ppp, less leave and the days after their last working day. */
+/** A standard month has 20 working days whatever the calendar says (so 1 working day = ppp / 20 = 2 points, 8 hours). */
+export const STD_DAYS = 20;
+/** Points one working day is worth. */
+export const dayPts = cfg => settings(cfg).ppp / STD_DAYS;
+/** What a person loses in a month: working days of leave (inside the days they still work) and the working days after their last day.
+ *  Every lost working day costs the same: ppp / 20 points. */
+export function lostInfo(name, range, vacs, cfg) {
+  const s = settings(cfg), until = s.leaving[name], end = until && until < range.b ? until : range.b;
+  if (end < range.a) return { leave: 0, after: workdays(range.a, range.b), gone: true, pts: s.ppp, perDay: s.ppp / STD_DAYS };
+  const leave = leaveDays(vacs, name, range.a, end), after = end < range.b ? workdays(addDays(end, 1), range.b) : 0, perDay = s.ppp / STD_DAYS;
+  return { leave: leave, after: after, gone: false, pts: Math.min(s.ppp, (leave + after) * perDay), perDay: perDay };
+}
+/** Points one person can deliver in a month before reserve and buffer: ppp, less 2 points (ppp / 20) for every working day of leave or after their last working day. */
 export function personRaw(name, range, vacs, cfg) {
-  const s = settings(cfg), wd = Math.max(1, workdays(range.a, range.b)), until = s.leaving[name], end = until && until < range.b ? until : range.b;
-  return end < range.a ? 0 : s.ppp * Math.max(0, (workdays(range.a, end) - leaveDays(vacs, name, range.a, end)) / wd);
+  const s = settings(cfg), li = lostInfo(name, range, vacs, cfg);
+  return li.gone ? 0 : Math.max(0, s.ppp - li.pts);
 }
 /** Points one person can be planned for in a month (after reserve and buffer). */
 export function personCap(name, range, vacs, cfg) { const s = settings(cfg); return Math.round(personRaw(name, range, vacs, cfg) * (1 - s.reserve - s.buffer) * 10) / 10; }

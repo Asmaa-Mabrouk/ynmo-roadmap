@@ -7,7 +7,7 @@
  */
 import { el } from '../core/model.js';
 import { PRODUCT_ORDER, TAGS, monthLabel, monthRange } from '../features/month-model.js';
-import { personCap, personLoads, personState, ptsOf, settings } from '../features/capacity.js';
+import { lostInfo, personCap, personLoads, personState, ptsOf, settings } from '../features/capacity.js';
 import { fmtIso } from '../core/shared.js';
 
 const LO = '#e6f3ee', HI = '#0a5c43', BAD = '#d03b3b', INK = '#1b1f33';
@@ -109,7 +109,9 @@ export function heatPeople(rev, cfg, vacs, today) {
     rev.forEach((r, i) => {
       const cap = personCap(p.n, monthRange(r.m), vacs, cfg), pl = loads[i][p.n] || 0, u = util(pl, cap), c = el('div', 'cpcell cpsmall'); c.dataset.name = p.n; c.dataset.m = r.m;
       if (!cap && !pl) { c.classList.add('na'); c.append(el('b', 'cppct', '–')); } else { c.append(el('b', 'cppct', (u > 1 ? '▲ ' : '') + (Number.isFinite(u) ? pct(u) : 'over')), el('span', 'cpnum', fmt(pl) + ' / ' + fmt(cap))); shade(c, u); }
-      const lines = [p.n + ', ' + monthLabel(r.m), !cap && !pl ? 'Not available this month (left, or on leave all month)' : fmt(pl) + ' points planned of ' + fmt(cap) + ' they can take'];
+      const li = lostInfo(p.n, monthRange(r.m), vacs, cfg), lines = [p.n + ', ' + monthLabel(r.m), !cap && !pl ? 'Not available this month (left, or on leave all month)' : fmt(pl) + ' points planned of ' + fmt(cap) + ' they can take'];
+      if (!li.gone && li.leave > 0) { const lf = el('span', 'cpleaf', '\u{1F334} ' + li.leave + 'd'); c.append(lf); lines.push('\u{1F334} ' + li.leave + ' working day' + (li.leave === 1 ? '' : 's') + ' of leave = \u2212' + fmt(li.leave * li.perDay) + ' points (1 day = ' + fmt(li.perDay) + ' points)'); }
+      if (!li.gone && li.after > 0) lines.push('Last working day is in this month: ' + li.after + ' working day' + (li.after === 1 ? '' : 's') + ' lost = \u2212' + fmt(li.after * li.perDay) + ' points');
       c.setAttribute('aria-label', lines.join('. ')); tip(c, lines); g.append(c); row.push(!cap && !pl ? 'not available' : fmt(pl) + ' / ' + fmt(cap));
     });
     rows.push(row);

@@ -2,6 +2,8 @@
 
 ## Unreleased – Sprints + Weekly executive report
 
+- **Leave deducted the same way everywhere (2026-10-28):** capacity used the real number of weekdays of each month (21, 22 or 23) to price leave; now a month is always 20 working days and one working day of leave (or after a last working day) takes 2 points (ppp / 20). People heat map: 🌴 and the number of days on a cell, with the days and points in the hover. Tests T11, T12 and three unit checks.
+
 - **Dashboard: month picker, Table/Chart fix (2026-10-28):** a **Month** list above the numbers and above the track-by-track chart changes the month shown (the month tiles still work; the two lists stay in step). Fix: on *Month by month*, pressing **Table** left the chart visible above the table (an SVG chart ignores the `hidden` property); the chart is now hidden properly. Tests H11b, H11c, H12, H13.
 
 - **Official team names (2026-10-28):** the built-in team list (`TEAMS` in `core/model.js`) and the Dashboard default people (`features/capacity.js`) now use the official names: Mohamed Altramsi, Aliaa Ibrahim, Shady Bassily, Amal Saleem, Mo'men Sayeh, Abdelhamid Ali, Aya Fathy, Ahmed Adnan, Ahmed Soliman, Ahmed Wardany, Hamid Shahien, Ahmed Hoseiny, Saad Mohamed, Khalid Abdelfattah, Mona Mohamed, Dina Mousa, Dina Samy, Mohamed Zahran. The note about "Waradny / Wardany" is removed. Existing data keeps the old spellings until the database is renamed (`docs/DB_RENAME_PEOPLE_PROMPT.md`). **Fix:** the "No matches" row of every searchable dropdown (for example the points list) was always visible; it now shows only when a search finds nothing.
