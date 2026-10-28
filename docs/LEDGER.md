@@ -48,7 +48,7 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 Request: handle a resource who is part time 50% and show it on the Dashboard
 Surface: Ynmo Roadmaps tool (Resources, Dashboard)
 Outcome: Time on the team in Resources > ⋯; capacity x share; tag and hover on the Dashboard; track in full-time equivalents
-New facts / decisions locked: part time scales the 40 points and the price of a leave day (ppp x share / 20); stored in ideas/capacity > part
+New facts / decisions locked: part time scales the 40 points; a leave day costs 2 points (8 hours) for everybody; stored in ideas/capacity > part
 Corrections to this skill: none
 Open / flagged: a rename used to drop a built-in-track person from the Dashboard; fixed
 Changelog: part-time share per person; rename keeps tracks.

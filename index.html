@@ -2281,8 +2281,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   var STD_DAYS = 20;
   function lostInfo(name, range, vacs, cfg4) {
     const s = settings(cfg4), until = s.leaving[name], end = until && until < range.b ? until : range.b, base3 = s.ppp * (s.part[name] || 1);
-    if (end < range.a) return { leave: 0, after: workdays(range.a, range.b), gone: true, pts: base3, perDay: base3 / STD_DAYS, base: base3 };
-    const leave = leaveDays(vacs, name, range.a, end), after = end < range.b ? workdays(addDays(end, 1), range.b) : 0, perDay = base3 / STD_DAYS;
+    if (end < range.a) return { leave: 0, after: workdays(range.a, range.b), gone: true, pts: base3, perDay: s.ppp / STD_DAYS, base: base3 };
+    const leave = leaveDays(vacs, name, range.a, end), after = end < range.b ? workdays(addDays(end, 1), range.b) : 0, perDay = s.ppp / STD_DAYS;
     return { leave, after, gone: false, pts: Math.min(base3, (leave + after) * perDay), perDay, base: base3 };
   }
   function personRaw(name, range, vacs, cfg4) {
@@ -6293,7 +6293,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           notify(name + ": " + Math.round(+sh.value * 100) + "% of the time. The Dashboard capacity follows.");
           renderResources();
         });
-        body.append(el("h3", "", "Time on the team"), el("p", "hint", "Part time? A half-time person can take half the points of a month (14 instead of 28), and a day of leave costs them half as much. The Dashboard shows it on their row."), sh);
+        body.append(el("h3", "", "Time on the team"), el("p", "hint", "Part time? A half-time person can take half the points of a month (14 instead of 28), and a day of leave still costs 2 points (one 8-hour day, the same for everybody). The Dashboard shows it on their row."), sh);
         const cur2 = leavingMap()[name] || "", dt = el("input");
         dt.type = "date";
         dt.value = cur2;

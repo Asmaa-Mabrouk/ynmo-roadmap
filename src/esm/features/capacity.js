@@ -79,11 +79,11 @@ export const dayPts = cfg => settings(cfg).ppp / STD_DAYS;
  *  Every lost working day costs the same: ppp / 20 points. */
 export function lostInfo(name, range, vacs, cfg) {
   const s = settings(cfg), until = s.leaving[name], end = until && until < range.b ? until : range.b, base = s.ppp * (s.part[name] || 1);
-  if (end < range.a) return { leave: 0, after: workdays(range.a, range.b), gone: true, pts: base, perDay: base / STD_DAYS, base: base };
-  const leave = leaveDays(vacs, name, range.a, end), after = end < range.b ? workdays(addDays(end, 1), range.b) : 0, perDay = base / STD_DAYS;
+  if (end < range.a) return { leave: 0, after: workdays(range.a, range.b), gone: true, pts: base, perDay: s.ppp / STD_DAYS, base: base };
+  const leave = leaveDays(vacs, name, range.a, end), after = end < range.b ? workdays(addDays(end, 1), range.b) : 0, perDay = s.ppp / STD_DAYS;
   return { leave: leave, after: after, gone: false, pts: Math.min(base, (leave + after) * perDay), perDay: perDay, base: base };
 }
-/** Points one person can deliver in a month before reserve and buffer: ppp x their share (half time = 0.5), less one working day (their share of ppp / 20, 2 points full time) for every working day of leave or after their last working day. */
+/** Points one person can deliver in a month before reserve and buffer: ppp x their share (half time = 0.5), less 2 points (one 8-hour day = ppp / 20, the same for everybody) for every working day of leave or after their last working day. */
 export function personRaw(name, range, vacs, cfg) {
   const s = settings(cfg), li = lostInfo(name, range, vacs, cfg);
   return li.gone ? 0 : Math.max(0, li.base - li.pts);

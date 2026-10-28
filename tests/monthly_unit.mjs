@@ -43,7 +43,7 @@ const P8 = { ppp: 8 }; // the old 8 points a person; the new default is 40 (1 po
   { const nov = { a: '2026-11-01', b: '2026-11-30' }, H = { ppp: 40, part: { 'Aya Fathy': 0.5 } };
     ok('part time: a half-time person delivers half (20 of 40 before support and buffer, 14 of 28 after)', cap.personRaw('Aya Fathy', nov, [], H) === 20 && cap.personCap('Aya Fathy', nov, [], H) === 14);
     ok('part time: somebody else is not affected', cap.personRaw('Ahmed Adnan', nov, [], H) === 40);
-    ok('part time: a day of leave costs a half-time person 1 point, not 2', cap.personRaw('Aya Fathy', nov, [{ p: 'Aya Fathy', a0: '2026-11-01', a1: '2026-11-02' }], H) === 18);
+    ok('part time: a day of leave costs a half-time person 2 points too (one 8-hour day)', cap.personRaw('Aya Fathy', nov, [{ p: 'Aya Fathy', a0: '2026-11-01', a1: '2026-11-02' }], H) === 16);
     ok('part time: the track counts full-time equivalents (Mobile = 1.5)', cap.laneCapacity(cap.LANES.find(l => l.k === 'mob'), nov, [], H).fte === 1.5 && cap.laneCapacity(cap.LANES.find(l => l.k === 'mob'), nov, [], H).cap === 42);
     ok('part time: nonsense shares are ignored (0, 1, 2, text)', Object.keys(cap.settings({ part: { A: 0, B: 1, C: 2, D: 'x', E: 0.5 } }).part).join() === 'E'); }
   { const oct = { a: '2026-10-01', b: '2026-10-31' }, nov = { a: '2026-11-01', b: '2026-11-30' }, D = { ppp: 40 };
