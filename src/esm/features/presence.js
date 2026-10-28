@@ -4,6 +4,7 @@
  * Supabase Realtime presence on the PRIVATE channel `ynmo-presence` (requires the realtime policies in supabase-setup-v5-security.sql). Shows avatars and warns when someone else is editing the same bar.
  * Dependencies are explicit ES imports; shared mutable state lives in `S` (core/state.js).
  */
+import { PAGES } from '../core/shared.js';
 import { S } from '../core/state.js';
 import { toast } from '../core/shared.js';
 import { $, el, state } from '../core/model.js';
@@ -25,6 +26,7 @@ export function startPresence() {
     S.presCh.subscribe(s => { if (s === 'SUBSCRIBED') trackPres(); });
   } catch (e) { S.presCh = null; }
 }
+const pageName = k => { const p = PAGES.find(x => x[0] === k); return p ? p[1] : k; };
 function others() { const out = []; Object.keys(S.pres).forEach(k => { if (k === (S.me && S.me.id)) return; const m = (S.pres[k] || [])[0]; if (m) out.push(m); }); return out; }
 function editorOf(id) { const o = others().find(m => m.edit === id); return o || null; }
 function drawPresence() {
@@ -32,7 +34,7 @@ function drawPresence() {
   if (!box) { box = el('div', 'presence'); box.id = 'presence'; box.setAttribute('aria-label', 'People online'); const av = $('avbtn'); av.parentNode.insertBefore(box, av); }
   box.textContent = '';
   const o = others(); box.hidden = !o.length;
-  o.slice(0, 4).forEach(m => { const a = avatarEl(m.av, 28, m.name); const what = m.name + (m.edit ? ' is editing' : ' is online') + (m.page ? ' · ' + m.page : ''), w = el('span', 'pav'); /* the tooltip sits on a wrapper: the round avatar clips anything drawn outside it */ w.dataset.tip = what; w.tabIndex = 0; w.setAttribute('role', 'img'); w.setAttribute('aria-label', what); w.append(a); box.append(w); });
+  o.slice(0, 4).forEach(m => { const a = avatarEl(m.av, 28, m.name); const what = m.name + (m.edit ? ' is editing' : ' is online') + (m.page ? ' · ' + pageName(m.page) : ''), w = el('span', 'pav'); /* the tooltip sits on a wrapper: the round avatar clips anything drawn outside it */ w.dataset.tip = what; w.tabIndex = 0; w.setAttribute('role', 'img'); w.setAttribute('aria-label', what); w.append(a); box.append(w); });
   if (o.length > 4) { const mo = el('span', 'pmore', '+' + (o.length - 4)); mo.dataset.tip = o.slice(4).map(x => x.name).join(', '); mo.tabIndex = 0; box.append(mo); }
   box.setAttribute('role', 'group'); box.setAttribute('aria-label', o.length + (o.length === 1 ? ' other person online: ' : ' others online: ') + o.map(m => m.name).join(', '));
 }

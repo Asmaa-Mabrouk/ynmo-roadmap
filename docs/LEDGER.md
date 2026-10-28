@@ -42,6 +42,20 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-28 - Not-on-roadmap flag, log names, Dashboard address
+```
+🔄 YNMO LEDGER UPDATE - 2026-10-28
+Request: flag Monthly cards that are not on the roadmap; log shows the feature name; Dashboard name in the address and online label; why December/January showed Altramsi 13 points
+Surface: Ynmo Roadmaps tool (Monthly, Log, Dashboard)
+Outcome: amber outline and chip on cards not on the roadmap; log names the card; #/dashboard and "Dashboard" in presence; overload items list their cards
+New facts / decisions locked:
+  - A card counts as planned on the roadmap when it is a bar on it or came from it
+Corrections to this skill: none
+Open / flagged:
+  - Altramsi 13 in December and January with no points on those months: the cause in the live data is not known; the Dashboard item now lists the cards, and points left in who without track points are ignored
+Changelog: Not-on-roadmap flag; log names cards; Dashboard address.
+```
+
 ### 2026-10-28 - 1 point = 4 hours, 40 points a person
 ```
 🔄 YNMO LEDGER UPDATE - 2026-10-28
@@ -65,7 +79,7 @@ Request: restyle the Dashboard like the Ynmo statistics dashboard; version histo
 Surface: Ynmo Roadmaps tool (Dashboard, Monthly)
 Outcome: restyled Dashboard; automatic and named month versions with compare, restore and bring-back; warning when a save drops 3 or more cards
 New facts / decisions locked:
-  - Versions are stored as docs reports/mohist<yyyymm>_<time> (no SQL); automatic ones at most one per 10 min of activity, newest 15 kept; named ones never auto-deleted
+  - Versions are stored as docs reports/mohist<yyyymm>_a0-a14 (no SQL); automatic ones at most one per 10 min of activity in 15 rotating slots (oldest overwritten, nothing deleted); named ones separate and kept
   - "Bring back only the missing cards" is the one-click fix for a stale-save loss; Restore keeps the board as a named version first
 Corrections to this skill: none
 Open / flagged:

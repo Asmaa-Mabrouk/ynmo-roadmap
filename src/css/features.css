@@ -964,3 +964,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 .vhsec.miss { background: #fbe9e7; } .vhsec.add { background: #e9f6ef; } .vhsec.mod { background: #fffaf0; }
 .vhbtns { display: flex; gap: 8px; flex-wrap: wrap; position: sticky; bottom: 0; background: var(--surface); padding-top: 6px; }
 @media (max-width: 640px) { .vhbody { grid-template-columns: 1fr; } .vhlist { max-height: 26vh; } }
+
+/* a month card that is not planned on the roadmap stands out */
+.mdcard.noroad { box-shadow: 0 0 0 2px #e0a400 inset; background-image: linear-gradient(180deg, rgba(255, 196, 0, .10), rgba(255, 196, 0, 0) 55%); }
+.mdnoroad { font-size: .72rem; padding: 1px 8px; background: #fff3cc; color: #7a5200; border: 1px solid #e0a400; font-weight: 700; }

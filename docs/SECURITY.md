@@ -6,7 +6,7 @@ only usability. The only key in the client is the *publishable* key. Never commi
 
 ## Controls
 
-- **Version history:** versions are `reports` docs whose id starts with `mo`, so they follow the Monthly permission (editors write, viewers cannot open the dialog). They contain the same data as the month itself. They are in the same table as the live data, so they are not a substitute for a database backup.
+- **Version history:** versions are `reports` docs whose id starts with `mo`, so they follow the Monthly permission (editors write, viewers cannot open the dialog). They contain the same data as the month itself. The app never deletes them (15 automatic slots are overwritten in rotation), because only monthly level 3 may delete in `reports` and a refused write makes the app switch to view-only. They are in the same table as the live data, so they are not a substitute for a database backup.
 | Threat | Control | Where |
 |---|---|---|
 | Unauthorized data access | RLS on every table; read = approved, write = editor | sql/04, 05 |

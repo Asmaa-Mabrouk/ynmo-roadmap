@@ -9,14 +9,15 @@ import { write } from '../core/saving.js';
 import { notify } from '../ui/notify.js';
 import { confirmDlg } from '../ui/confirm.js';
 import { openDlg, closeDlg } from '../features/safety.js';
-import { bringBack, cardCount, compare, makeVersion, restoreOf, stampOf, toPrune, versionsOf } from '../features/month-history.js';
+import { bringBack, cardCount, compare, autoSlot, makeVersion, restoreOf, stampOf, versionsOf } from '../features/month-history.js';
 
-/** Keeps a version of `doc` (what is stored for month `m`) and removes the oldest automatic versions past the limit. */
+/** Keeps a version of `doc` (what is stored for month `m`) and (an automatic version reuses the slot of the oldest one when all 15 are used; nothing is deleted). */
 export function keepVersion(m, doc, named, name, who) {
-  const mk = makeVersion(m, doc, named, name, who, Date.now()); mk.v._p = Date.now();
-  S.hist = S.hist || {}; if (S.hist[mk.id]) return mk.id;
+  S.hist = S.hist || {}; const vs = versionsOf(S.hist, m), at = +doc.ts || 0;
+  if (!named && at && vs.some(v => !v.named && v.at === at)) return '';   // this state is already kept
+  const mk = makeVersion(m, doc, named, name, who, Date.now(), named ? 0 : autoSlot(vs)); mk.v._p = Date.now();
+  if (S.hist[mk.id] && S.hist[mk.id].at === mk.v.at) return mk.id;
   S.hist[mk.id] = mk.v; const w = Object.assign({}, mk.v); delete w._p; write('reports/' + mk.id, w);
-  toPrune(versionsOf(S.hist, m)).forEach(id => { delete S.hist[id]; write('reports/' + id, null); });
   return mk.id;
 }
 const who = () => (S.me && (S.me.name || S.me.email)) || '';

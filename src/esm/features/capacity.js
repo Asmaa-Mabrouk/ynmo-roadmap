@@ -76,7 +76,9 @@ export function personCap(name, range, vacs, cfg) { const s = settings(cfg); ret
 /** Who works on a card in a role: {name: points}. */
 export const whoOf = (l, k) => { const w = l && l.who && l.who[k]; return w && typeof w === 'object' ? w : {}; };
 /** Points of each person over a list of cards, all roles together: {name: points}. */
-export function personLoads(lines) { const out = {}; (lines || []).forEach(l => Object.keys((l && l.who) || {}).filter(k => LANES.some(x => x.k === k)).forEach(k => { const w = whoOf(l, k); Object.keys(w).forEach(n => { out[n] = (out[n] || 0) + Math.max(0, +w[n] || 0); }); })); return out; }
+export function personLoads(lines) { const out = {}; (lines || []).forEach(l => Object.keys((l && l.who) || {}).filter(k => LANES.some(x => x.k === k) && ptsOf(l, k) > 0).forEach(k => { const w = whoOf(l, k); Object.keys(w).forEach(n => { out[n] = (out[n] || 0) + Math.max(0, +w[n] || 0); }); })); return out; }
+/** Which cards give a person their points: [{id, t, pts}] biggest first (same rule as personLoads). */
+export function personCards(lines, name) { const out = []; (lines || []).forEach(l => { let p = 0; Object.keys((l && l.who) || {}).filter(k => LANES.some(x => x.k === k) && ptsOf(l, k) > 0).forEach(k => { p += Math.max(0, +whoOf(l, k)[name] || 0); }); if (p > 0) out.push({ id: l.id, t: String(l.t || '').trim() || '(no title)', pts: p }); }); return out.sort((a, b) => b.pts - a.pts); }
 /** Plannable points of one role in a month: people x points each, less their leave, less the days after their last working day,
  *  less reserve and buffer. `people` counts those still working at some point of the month. */
 export function laneCapacity(lane, range, vacs, cfg) {

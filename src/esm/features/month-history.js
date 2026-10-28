@@ -3,14 +3,14 @@
  * Version history of a month (pure functions, no DOM). A version is a copy of a month doc kept as the doc `reports/mohist<yyyymm>_<time>`
  * (the id starts with `mo`, so it follows the Monthly permissions; it has no `mo` field, so it is never taken for a month or a weekly report).
  * Automatic versions are made from what is stored on the server just before a save overwrites it: at most one every 10 minutes, and always when a save
- * would drop 3 or more cards. The newest 15 automatic versions of a month are kept. Named versions ("Save a version") are never deleted automatically.
+ * would drop 3 or more cards. A month has 15 automatic slots (`mohist<yyyymm>_a0` to `_a14`): when all are used, the oldest slot is overwritten, so nothing is ever deleted (editors may add and change docs; only the highest level may delete, and a refused delete would make the app think the person is view-only). Named versions ("Save a version") are separate docs and are never replaced.
  */
 import { diffDoc } from './month-undo.js';
 export const GAP_MS = 10 * 60 * 1000, KEEP_AUTO = 15, SHRINK_AT = 3;
 const KEEP_OUT = new Set(['by', 'ts', 'subAt', 'subBy', 'status', 'pl', 'mo']);
 const clone = o => JSON.parse(JSON.stringify(o));
 export const isHistId = id => /^mohist\d{6}_/.test(String(id));
-export const histId = (m, at, named) => 'mohist' + m.replace('-', '') + '_' + (named ? 'n' + Math.random().toString(36).slice(2, 6) : '') + at;
+export const histId = (m, at, named, slot) => 'mohist' + m.replace('-', '') + '_' + (named ? 'n' + Math.random().toString(36).slice(2, 6) + at : 'a' + slot);
 export const cards = doc => ((doc && doc.lines) || []).filter(l => l && String(l.t || '').trim());
 export const cardCount = doc => cards(doc).length;
 /** Does saving `next` over the stored `srv` need a version of `srv` first? Returns '' (no), 'shrink' or 'time'. */
@@ -20,14 +20,19 @@ export function snapReason(srv, next, lastAt, now) {
   const at = +srv.ts || now; return !lastAt || at - lastAt >= GAP_MS ? 'time' : '';
 }
 /** The version doc kept for a stored month doc. */
-export function makeVersion(m, doc, named, name, who, now) {
+export function makeVersion(m, doc, named, name, who, now, slot) {
   const at = named ? now : (+doc.ts || now), d = clone(doc);
-  return { id: histId(m, at, named), v: { hist: 1, of: m, at: at, by: named ? who : (doc.by || ''), n: cardCount(doc), named: !!named, name: name || '', doc: d } };
+  return { id: histId(m, at, named, slot || 0), v: { hist: 1, of: m, at: at, by: named ? who : (doc.by || ''), n: cardCount(doc), named: !!named, name: name || '', doc: d } };
 }
 /** The versions of one month, newest first. */
 export const versionsOf = (hist, m) => Object.keys(hist || {}).filter(id => isHistId(id) && hist[id] && hist[id].of === m).map(id => Object.assign({ id: id }, hist[id])).sort((a, b) => b.at - a.at);
 /** Automatic versions beyond the newest KEEP_AUTO (to delete). Named versions are never listed. */
-export const toPrune = list => list.filter(v => !v.named).slice(KEEP_AUTO).map(v => v.id);
+/** The automatic slot to write next: the first unused one, else the slot of the oldest automatic version (it is overwritten). `list` = versionsOf(...), newest first. */
+export function autoSlot(list) {
+  const autos = list.filter(v => !v.named), used = new Map(autos.map(v => [+(/_a(\d+)$/.exec(v.id) || [])[1], v]));
+  for (let i = 0; i < KEEP_AUTO; i++) if (!used.has(i)) return i;
+  const oldest = autos[autos.length - 1]; return oldest ? +(/_a(\d+)$/.exec(oldest.id) || [0, 0])[1] : 0;
+}
 /** What differs between a version and the month as it is now. missing = cards the version has that are gone now; newer = cards added since; changed = same card, different content. */
 export function compare(version, cur) {
   const ch = diffDoc(version.doc, cur || { lines: [] }), title = l => String((l && l.t) || '').trim() || '(no title)';

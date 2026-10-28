@@ -1387,6 +1387,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 .vhsec.miss { background: #fbe9e7; } .vhsec.add { background: #e9f6ef; } .vhsec.mod { background: #fffaf0; }
 .vhbtns { display: flex; gap: 8px; flex-wrap: wrap; position: sticky; bottom: 0; background: var(--surface); padding-top: 6px; }
 @media (max-width: 640px) { .vhbody { grid-template-columns: 1fr; } .vhlist { max-height: 26vh; } }
+
+/* a month card that is not planned on the roadmap stands out */
+.mdcard.noroad { box-shadow: 0 0 0 2px #e0a400 inset; background-image: linear-gradient(180deg, rgba(255, 196, 0, .10), rgba(255, 196, 0, 0) 55%); }
+.mdnoroad { font-size: .72rem; padding: 1px 8px; background: #fff3cc; color: #7a5200; border: 1px solid #e0a400; font-weight: 700; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -2101,7 +2105,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   var KEEP_OUT = /* @__PURE__ */ new Set(["by", "ts", "subAt", "subBy", "status", "pl", "mo"]);
   var clone3 = (o) => JSON.parse(JSON.stringify(o));
   var isHistId = (id) => /^mohist\d{6}_/.test(String(id));
-  var histId = (m, at, named) => "mohist" + m.replace("-", "") + "_" + (named ? "n" + Math.random().toString(36).slice(2, 6) : "") + at;
+  var histId = (m, at, named, slot) => "mohist" + m.replace("-", "") + "_" + (named ? "n" + Math.random().toString(36).slice(2, 6) + at : "a" + slot);
   var cards = (doc2) => (doc2 && doc2.lines || []).filter((l) => l && String(l.t || "").trim());
   var cardCount = (doc2) => cards(doc2).length;
   function snapReason(srv, next, lastAt, now) {
@@ -2110,12 +2114,17 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const at = +srv.ts || now;
     return !lastAt || at - lastAt >= GAP_MS ? "time" : "";
   }
-  function makeVersion(m, doc2, named, name, who2, now) {
+  function makeVersion(m, doc2, named, name, who2, now, slot) {
     const at = named ? now : +doc2.ts || now, d = clone3(doc2);
-    return { id: histId(m, at, named), v: { hist: 1, of: m, at, by: named ? who2 : doc2.by || "", n: cardCount(doc2), named: !!named, name: name || "", doc: d } };
+    return { id: histId(m, at, named, slot || 0), v: { hist: 1, of: m, at, by: named ? who2 : doc2.by || "", n: cardCount(doc2), named: !!named, name: name || "", doc: d } };
   }
   var versionsOf = (hist, m) => Object.keys(hist || {}).filter((id) => isHistId(id) && hist[id] && hist[id].of === m).map((id) => Object.assign({ id }, hist[id])).sort((a, b) => b.at - a.at);
-  var toPrune = (list) => list.filter((v) => !v.named).slice(KEEP_AUTO).map((v) => v.id);
+  function autoSlot(list) {
+    const autos = list.filter((v) => !v.named), used = new Map(autos.map((v) => [+(/_a(\d+)$/.exec(v.id) || [])[1], v]));
+    for (let i = 0; i < KEEP_AUTO; i++) if (!used.has(i)) return i;
+    const oldest = autos[autos.length - 1];
+    return oldest ? +(/_a(\d+)$/.exec(oldest.id) || [0, 0])[1] : 0;
+  }
   function compare(version, cur2) {
     const ch = diffDoc(version.doc, cur2 || { lines: [] }), title = (l) => String(l && l.t || "").trim() || "(no title)";
     const byId = new Map((version.doc && version.doc.lines || []).map((l) => [l.id, l]));
@@ -3417,6 +3426,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       S.presCh = null;
     }
   }
+  var pageName = (k) => {
+    const p = PAGES.find((x) => x[0] === k);
+    return p ? p[1] : k;
+  };
   function others() {
     const out = [];
     Object.keys(S.pres).forEach((k) => {
@@ -3444,7 +3457,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     box2.hidden = !o.length;
     o.slice(0, 4).forEach((m) => {
       const a = avatarEl(m.av, 28, m.name);
-      const what = m.name + (m.edit ? " is editing" : " is online") + (m.page ? " · " + m.page : ""), w = el("span", "pav");
+      const what = m.name + (m.edit ? " is editing" : " is online") + (m.page ? " · " + pageName(m.page) : ""), w = el("span", "pav");
       w.dataset.tip = what;
       w.tabIndex = 0;
       w.setAttribute("role", "img");
@@ -9212,13 +9225,24 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   };
   function personLoads(lines) {
     const out = {};
-    (lines || []).forEach((l) => Object.keys(l && l.who || {}).filter((k) => LANES2.some((x) => x.k === k)).forEach((k) => {
+    (lines || []).forEach((l) => Object.keys(l && l.who || {}).filter((k) => LANES2.some((x) => x.k === k) && ptsOf(l, k) > 0).forEach((k) => {
       const w = whoOf(l, k);
       Object.keys(w).forEach((n) => {
         out[n] = (out[n] || 0) + Math.max(0, +w[n] || 0);
       });
     }));
     return out;
+  }
+  function personCards(lines, name) {
+    const out = [];
+    (lines || []).forEach((l) => {
+      let p = 0;
+      Object.keys(l && l.who || {}).filter((k) => LANES2.some((x) => x.k === k) && ptsOf(l, k) > 0).forEach((k) => {
+        p += Math.max(0, +whoOf(l, k)[name] || 0);
+      });
+      if (p > 0) out.push({ id: l.id, t: String(l.t || "").trim() || "(no title)", pts: p });
+    });
+    return out.sort((a, b) => b.pts - a.pts);
   }
   function laneCapacity(lane2, range, vacs, cfg4) {
     const s = settings(cfg4);
@@ -9635,18 +9659,16 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 
   // src/esm/pages/monthly-history.js
   function keepVersion(m, doc2, named, name, who2) {
-    const mk = makeVersion(m, doc2, named, name, who2, Date.now());
-    mk.v._p = Date.now();
     S.hist = S.hist || {};
-    if (S.hist[mk.id]) return mk.id;
+    const vs = versionsOf(S.hist, m), at = +doc2.ts || 0;
+    if (!named && at && vs.some((v) => !v.named && v.at === at)) return "";
+    const mk = makeVersion(m, doc2, named, name, who2, Date.now(), named ? 0 : autoSlot(vs));
+    mk.v._p = Date.now();
+    if (S.hist[mk.id] && S.hist[mk.id].at === mk.v.at) return mk.id;
     S.hist[mk.id] = mk.v;
     const w = Object.assign({}, mk.v);
     delete w._p;
     write("reports/" + mk.id, w);
-    toPrune(versionsOf(S.hist, m)).forEach((id) => {
-      delete S.hist[id];
-      write("reports/" + id, null);
-    });
     return mk.id;
   }
   var who = () => S.me && (S.me.name || S.me.email) || "";
@@ -10405,6 +10427,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       foot.append(z);
     }
     if (l.adhoc) foot.append(el("span", "chip mdadhoc", "Ad hoc"));
+    if (m !== BL && !onRoadmap(l) && !l.src && String(l.t || "").trim()) {
+      r.classList.add("noroad");
+      const b = el("span", "chip mdnoroad", "⚠ Not on roadmap");
+      b.title = "This card is not planned on the roadmap yet" + (ed ? ". Use ⋯ → Add to roadmap…" : ".");
+      foot.append(b);
+    }
     if (onRoadmap(l)) {
       const b = el("span", "chip mdroad", "On roadmap");
       b.title = "This card is a bar on the roadmap";
@@ -10533,7 +10561,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           x.no = ++n;
           d.lines.push(x);
         });
-      }, "added " + (ts.length === 1 ? "a deliverable" : ts.length + " deliverables") + " to " + lab(m));
+      }, "added " + (ts.length === 1 ? '"' + ts[0] + '"' : ts.length + " deliverables (" + ts.slice(0, 5).map((t) => '"' + t + '"').join(", ") + (ts.length > 5 ? ", …" : "") + ")") + " to " + lab(m));
       ui2.focusComp = true;
       renderMonthly();
     });
@@ -11164,7 +11192,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const vac = vacList2(), seen = {};
     rev.forEach((r) => {
       const ld = personLoads(r.lines), over = Object.keys(ld).map((n) => ({ n, pl: ld[n], cp: personCap(n, monthRange(r.m), vac, cfg3()) })).filter((x) => x.pl > x.cp + 1e-9);
-      if (over.length) items2.push({ sev: "warn", m: r.m, head: monthLabel(r.m) + " · " + over.length + (over.length === 1 ? " person has" : " people have") + " more points than they can take", body: over.map((x) => x.n + " " + fmt3(x.pl) + " / " + fmt3(x.cp)).join(", ") + " (planned / can take, after leave, reserve and buffer).", tips: [] });
+      if (over.length) items2.push({ sev: "warn", m: r.m, head: monthLabel(r.m) + " · " + over.length + (over.length === 1 ? " person has" : " people have") + " more points than they can take", body: over.map((x) => x.n + " " + fmt3(x.pl) + " / " + fmt3(x.cp) + " (" + personCards(r.lines, x.n).slice(0, 6).map((c) => '"' + c.t + '" ' + fmt3(c.pts)).join(", ") + ")").join("; ") + ". Planned / can take, after leave, support and buffer.", tips: [] });
     });
     checkPlan(months).filter((c) => c.t !== "cap").forEach((c) => items2.push({ sev: "warn", m: c.m, head: monthLabel(c.m) + " · " + (c.t === "dep" ? "Card order" : "Roadmap date"), body: c.s, tips: [] }));
     if (!items2.length) {
@@ -11389,7 +11417,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     });
     const pt = $("ptitle");
     if (pt) pt.textContent = (PAGES.find((x) => x[0] === p) || [0, ""])[1];
-    if (location.hash !== "#/" + p && !((p === "sprints" || p === "reports") && new RegExp("^#/" + p + "/").test(location.hash))) window.history.replaceState(null, "", "#/" + p);
+    const hp = p === "capacity" ? "dashboard" : p;
+    if (location.hash !== "#/" + hp && !((p === "sprints" || p === "reports") && new RegExp("^#/" + p + "/").test(location.hash))) window.history.replaceState(null, "", "#/" + hp);
     renderPage(p);
   }
   var NAV_LABEL = { monthly: "Monthly", admin: "Users" };
@@ -11599,8 +11628,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     loadMembers();
     setInterval(loadMembers, 2e4);
     {
-      const h = (location.hash.match(/^#\/(\w+)/) || [])[1], ok = (x) => PAGES.some((y) => y[0] === x);
-      showPage(ok(h) ? h : ok(LANDING) ? LANDING : "roadmap");
+      const al = (x) => x === "dashboard" ? "capacity" : x, h = al((location.hash.match(/^#\/(\w+)/) || [])[1]), ok = (x) => PAGES.some((y) => y[0] === x);
+      showPage(ok(h) ? h : ok(al(LANDING)) ? al(LANDING) : "roadmap");
     }
   }
   function showStuck(why3) {

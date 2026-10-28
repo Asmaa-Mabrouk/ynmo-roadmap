@@ -41,7 +41,8 @@ export function showPage(p) {
   PAGES.forEach(x => { $('pg-' + x[0]).hidden = x[0] !== p; });
   document.querySelectorAll('#nav button').forEach(b => { if (b.dataset.p === p) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   const pt = $('ptitle'); if (pt) pt.textContent = (PAGES.find(x => x[0] === p) || [0, ''])[1];
-  if (location.hash !== '#/' + p && !((p === 'sprints' || p === 'reports') && new RegExp('^#/' + p + '/').test(location.hash))) window.history.replaceState(null, '', '#/' + p);
+  const hp = p === 'capacity' ? 'dashboard' : p;   // the Dashboard shows as #/dashboard in the address (#/capacity still opens it)
+  if (location.hash !== '#/' + hp && !((p === 'sprints' || p === 'reports') && new RegExp('^#/' + p + '/').test(location.hash))) window.history.replaceState(null, '', '#/' + hp);
   renderPage(p);
 }
 const NAV_LABEL = { monthly: 'Monthly', admin: 'Users' };
@@ -104,7 +105,7 @@ export function start() {
   S.db.collection('activity').onSnapshot(s => { S.logs = s.docs.map(d => ({ id: d.id, data: d.data() })).sort((a, b) => a.data.at < b.data.at ? 1 : -1); if (!S.logsOld.length) S.logsMore = s.docs.length >= ACTIVE_LOG_PAGE; if (state.page === 'log') renderLog(); }, () => {});
   setSave('ready'); fillRm(); startExtras();
   loadMembers(); setInterval(loadMembers, 20000);
-  { const h = (location.hash.match(/^#\/(\w+)/) || [])[1], ok = x => PAGES.some(y => y[0] === x); showPage(ok(h) ? h : ok(LANDING) ? LANDING : 'roadmap'); }
+  { const al = x => x === 'dashboard' ? 'capacity' : x, h = al((location.hash.match(/^#\/(\w+)/) || [])[1]), ok = x => PAGES.some(y => y[0] === x); showPage(ok(h) ? h : ok(al(LANDING)) ? al(LANDING) : 'roadmap'); }
 }
 /** The sign-in check or profile did not answer: show a way out instead of a spinner that never ends. */
 function showStuck(why) {

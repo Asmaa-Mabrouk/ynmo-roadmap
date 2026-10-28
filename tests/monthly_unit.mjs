@@ -74,7 +74,7 @@ const P8 = { ppp: 8 }; // the old 8 points a person; the new default is 40 (1 po
   const R = { a: '2026-11-01', b: '2026-11-30' };
   ok('person capacity: 8 points less 30% = 5.6', cap.personCap('Soliman', R, [], P8) === 5.6);
   ok('person capacity: leave lowers it, a last day before the month makes it 0', cap.personCap('Soliman', R, [{ p: 'Soliman', a0: '2026-11-01', a1: '2026-11-11' }], P8) < 5.6 && cap.personCap('Soliman', R, [], { leaving: { Soliman: '2026-10-31' } }) === 0);
-  const pl = cap.personLoads([{ who: { be: { Soliman: 5, Hamid: 3 }, fe: { Soliman: 2 } } }, { who: { be: { Soliman: 1 } } }, { pts: { be: 4 } }]);
+  const pl = cap.personLoads([{ pts: { be: 8, fe: 2 }, who: { be: { Soliman: 5, Hamid: 3 }, fe: { Soliman: 2 } } }, { pts: { be: 1 }, who: { be: { Soliman: 1 } } }, { pts: { be: 4 } }]);
   ok('person loads: points add up per person across tracks and cards (Soliman 8, Hamid 3)', pl.Soliman === 8 && pl.Hamid === 3 && Object.keys(pl).length === 2);
   ok('who: a missing or bad value gives nobody', Object.keys(cap.whoOf({}, 'be')).length === 0 && Object.keys(cap.whoOf({ who: { be: 5 } }, 'be')).length === 0 && cap.whoOf({ who: { be: { A: 2 } } }, 'be').A === 2);
   // names follow Resources
@@ -88,13 +88,13 @@ const P8 = { ppp: 8 }; // the old 8 points a person; the new default is 40 (1 po
   ok('resources: defaults are resolved (Design uses Khalid, BE uses Hamid Shahin)', des.includes('Khalid') && !des.includes('Khalid Abdelfattah') && beP.includes('Hamid Shahin'));
   ok('resources: saved lanes are left exactly as saved', cap.resolveDefaults({ lanes: [{ k: 'be', people: ['Hamid'] }] }, RS).lanes.find(l => l.k === 'be').people.join() === 'Hamid');
   const um = cap.unmatched(rd, RS); ok('resources: names Resources does not list are reported', um.some(x => x.name === 'Altramsi') && !um.some(x => x.name === 'Saad'));
-  ok('PMs are not a Dashboard track and their old points are ignored', !cap.LANES.some(l => l.k === 'pm') && cap.totalPts({ pts: { be: 3, pm: 5 } }) === 3 && Object.keys(cap.personLoads([{ who: { pm: { Asmaa: 5 }, be: { Hamid: 2 } } }])).join() === 'Hamid');
+  ok('PMs are not a Dashboard track and their old points are ignored', !cap.LANES.some(l => l.k === 'pm') && cap.totalPts({ pts: { be: 3, pm: 5 } }) === 3 && Object.keys(cap.personLoads([{ pts: { be: 2, pm: 5 }, who: { pm: { Asmaa: 5 }, be: { Hamid: 2 } } }])).join() === 'Hamid');
 }
 // ---- version history (features/month-history.js)
 {
   const h = await import('../src/esm/features/month-history.js');
   const L = (id, t) => ({ id, t }), mk = (ids, ts) => ({ mo: '2026-11', ts, by: 'Admin', lines: ids.map(i => L(i, 'card ' + i)) });
-  ok('history: ids of versions are recognised and are not month ids', h.isHistId('mohist202611_123') && !h.isHistId('mo202611') && !h.isHistId('mobacklog') && h.histId('2026-11', 5, false) === 'mohist202611_5');
+  ok('history: ids of versions are recognised and are not month ids', h.isHistId('mohist202611_123') && !h.isHistId('mo202611') && !h.isHistId('mobacklog') && h.histId('2026-11', 5, false, 0) === 'mohist202611_a0');
   ok('history: no version when nothing is stored or the month is empty', h.snapReason(null, mk(['a']), 0, 10) === '' && h.snapReason(mk([], 5), mk(['a']), 0, 10) === '');
   ok('history: the first version is kept, then one per 10 minutes of activity', h.snapReason(mk(['a'], 1000), mk(['a', 'b']), 0, 2000) === 'time' && h.snapReason(mk(['a'], 1000 + 5 * 60000), mk(['a']), 1000, 9e9) === '' && h.snapReason(mk(['a'], 1000 + 10 * 60000), mk(['a']), 1000, 9e9) === 'time');
   ok('history: a save that drops 3 cards always keeps a version, 2 cards does not force one', h.snapReason(mk(['a', 'b', 'c', 'd'], 1000), mk(['a']), 1000, 1500) === 'shrink' && h.snapReason(mk(['a', 'b', 'c'], 1000), mk(['a']), 1000, 1500) === '');
@@ -105,8 +105,8 @@ const P8 = { ppp: 8 }; // the old 8 points a person; the new default is 40 (1 po
   ok('history: bring back adds only the missing cards and changes nothing else', bb.lines.map(l => l.id).join() === 'b,c,d,a' && bb.lines.find(l => l.id === 'c').t === 'card c EDITED');
   const rs = h.restoreOf(cur, v);
   ok('history: restore makes the month like the version', rs.lines.map(l => l.id).join() === 'a,b,c' && rs.lines.find(l => l.id === 'c').t === 'card c' && rs.mo === '2026-11');
-  const many = Array.from({ length: 20 }, (_, i) => ({ id: 'm' + i, at: 100 - i, named: false })).concat([{ id: 'keep', at: 1, named: true }]).sort((a, b) => b.at - a.at);
-  ok('history: only automatic versions beyond the newest 15 are pruned, named ones never', h.toPrune(many).length === 5 && !h.toPrune(many).includes('keep'));
+  const slots = n => Array.from({ length: n }, (_, i) => ({ id: 'mohist202611_a' + i, at: 100 - i, named: false })).concat([{ id: 'mohist202611_nx1', at: 1, named: true }]).sort((a, b) => b.at - a.at);
+  ok('history: automatic versions use the first free slot, then overwrite the oldest one (nothing is deleted)', h.autoSlot([]) === 0 && h.autoSlot(slots(3)) === 3 && h.autoSlot(slots(15)) === 14 && h.autoSlot(slots(14)) === 14 && h.histId('2026-11', 9, false, 4) === 'mohist202611_a4');
   ok('history: a version written but not yet sent back stays in the list for 30 seconds', Object.keys(h.keepPendingHist({}, { k: { _p: Date.now() }, old: { _p: Date.now() - 60000 } })).join() === 'k');
 }
 // ---- new capacity default: 1 point = 4 hours, 20 days x 8 h = 160 h = 40 points, less 20% support and 10% buffer = 28 points = 112 h
@@ -116,4 +116,10 @@ const P8 = { ppp: 8 }; // the old 8 points a person; the new default is 40 (1 po
   ok('a person can take 28 points = 112 hours after support and buffer', Math.abs(cap.personCap('Soliman', R2, [], {}) - 28) < 1e-9 && Math.abs(cap.personCap('Soliman', R2, [], {}) * cap.HOURS_PER_POINT - 112) < 1e-9);
   ok('the capacity does not depend on how many weekdays the month has (Oct 23 days, Nov 22 days)', cap.personCap('Soliman', { a: '2026-10-01', b: '2026-10-31' }, [], {}) === cap.personCap('Soliman', R2, [], {}));
   ok('the point list offers 1, 2, 3, 5, 8, 13 and 21', cap.SCALE.join() === '0,1,2,3,5,8,13,21');
+}
+// ---- a person only gets points from tracks the card still has points on, and the cards behind a load can be listed
+{
+  const ls = [{ id: 'a', t: 'Billing', pts: { be: 8 }, who: { be: { Soliman: 8 } } }, { id: 'b', t: 'Ghost', pts: null, who: { be: { Soliman: 13 } } }, { id: 'c', t: 'Wallet', pts: { be: 3, fe: 0 }, who: { be: { Soliman: 3 }, fe: { Soliman: 5 } } }];
+  ok('person loads: points left in `who` after the card lost its track points are ignored', cap.personLoads(ls).Soliman === 11);
+  ok('person cards: lists the cards behind the load, biggest first', JSON.stringify(cap.personCards(ls, 'Soliman').map(c => c.t + ':' + c.pts)) === '["Billing:8","Wallet:3"]');
 }

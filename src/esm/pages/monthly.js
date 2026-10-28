@@ -284,6 +284,7 @@ function card(m, l, prods, ed) {
   ptsChips(l).forEach(c => foot.append(c));
   if (SIZES[l.sz]) { const z = el('span', 'chip mdsz mdsz-' + l.sz); z.innerHTML = (l.sz === 'enh' ? STAR + ' ' : '') + SIZES[l.sz]; foot.append(z); }
   if (l.adhoc) foot.append(el('span', 'chip mdadhoc', 'Ad hoc'));
+  if (m !== BL && !onRoadmap(l) && !l.src && String(l.t || '').trim()) { r.classList.add('noroad'); const b = el('span', 'chip mdnoroad', '⚠ Not on roadmap'); b.title = 'This card is not planned on the roadmap yet' + (ed ? '. Use ⋯ → Add to roadmap…' : '.'); foot.append(b); }
   if (onRoadmap(l)) { const b = el('span', 'chip mdroad', 'On roadmap'); b.title = 'This card is a bar on the roadmap'; foot.append(b); } else if (l.src) { const b = el('span', 'chip mdroad', 'From roadmap'); b.title = 'Brought in from the roadmap'; foot.append(b); }
   { const k = lkMap.get(l.id); if (k) { if (k.cmp.incoming.length) { const b = el('span', 'chip fschip in', 'Roadmap changed'); b.title = 'The roadmap has a newer ' + k.cmp.incoming.map(x => x.f === 't' ? 'title' : 'progress').join(' and ') + '. Use Check updates.'; foot.append(b); } if (k.cmp.outgoing.length) { const b = el('span', 'chip fschip out', 'Waiting for admin'); b.title = 'Your change to the ' + k.cmp.outgoing.map(x => x.f === 't' ? 'title' : 'progress').join(' and ') + ' is waiting for an admin to approve it on the roadmap.'; foot.append(b); } } }
   foot.append(infoBtn(m, l, ed), noteBtn(m, l, ed));
@@ -316,7 +317,7 @@ function composer(m, prods) {
   ta.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); f.requestSubmit(); } else if (e.key === 'Escape') { e.preventDefault(); close(); } });
   f.addEventListener('submit', e => {
     e.preventDefault(); const ts = ta.value.split('\n').map(x => x.replace(/^\s*[-*•\d.)]+\s+/, '').trim()).filter(Boolean); if (!ts.length) { ta.focus(); return; }
-    ta.value = ''; setSort(false); const first = reserveNos(ts.length); saveMonth(m, d => { let n = first - 1; ts.forEach(t => { const x = newLine(ui.prod, t, {}); x.no = ++n; d.lines.push(x); }); }, 'added ' + (ts.length === 1 ? 'a deliverable' : ts.length + ' deliverables') + ' to ' + lab(m)); ui.focusComp = true; renderMonthly();
+    ta.value = ''; setSort(false); const first = reserveNos(ts.length); saveMonth(m, d => { let n = first - 1; ts.forEach(t => { const x = newLine(ui.prod, t, {}); x.no = ++n; d.lines.push(x); }); }, 'added ' + (ts.length === 1 ? '"' + ts[0] + '"' : ts.length + ' deliverables (' + ts.slice(0, 5).map(t => '"' + t + '"').join(', ') + (ts.length > 5 ? ', …' : '') + ')') + ' to ' + lab(m)); ui.focusComp = true; renderMonthly();
   });
   const row = el('div', 'mdcrow'); row.append(go, no); f.append(ta, chips, row); wrap.append(f); return wrap;
 }

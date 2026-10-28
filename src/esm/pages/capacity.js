@@ -8,7 +8,7 @@ import { S } from '../core/state.js';
 import { $, el, canEdit } from '../core/model.js';
 import { pageHead, todayIso } from '../core/shared.js';
 import { monthLabel, monthRange, nextMonth, isMonth, cardId } from '../features/month-model.js';
-import { DOMAIN_OF, personCap, personLoads, personState, resolveDefaults, review, settings, suggestMoves } from '../features/capacity.js';
+import { DOMAIN_OF, personCap, personCards, personLoads, personState, resolveDefaults, review, settings, suggestMoves } from '../features/capacity.js';
 import { checkPlan, depProblemsFor, missingInResources, openCapSettings, resources } from '../features/capacity-view.js';
 import { write } from '../core/saving.js';
 import { logAct } from '../core/shared.js';
@@ -58,7 +58,7 @@ function fixes(rev, months) {
   const vac = vacList(), seen = {};
   rev.forEach(r => {
     const ld = personLoads(r.lines), over = Object.keys(ld).map(n => ({ n: n, pl: ld[n], cp: personCap(n, monthRange(r.m), vac, cfg()) })).filter(x => x.pl > x.cp + 1e-9);
-    if (over.length) items.push({ sev: 'warn', m: r.m, head: monthLabel(r.m) + ' · ' + over.length + (over.length === 1 ? ' person has' : ' people have') + ' more points than they can take', body: over.map(x => x.n + ' ' + fmt(x.pl) + ' / ' + fmt(x.cp)).join(', ') + ' (planned / can take, after leave, reserve and buffer).', tips: [] });
+    if (over.length) items.push({ sev: 'warn', m: r.m, head: monthLabel(r.m) + ' · ' + over.length + (over.length === 1 ? ' person has' : ' people have') + ' more points than they can take', body: over.map(x => x.n + ' ' + fmt(x.pl) + ' / ' + fmt(x.cp) + ' (' + personCards(r.lines, x.n).slice(0, 6).map(c => '"' + c.t + '" ' + fmt(c.pts)).join(', ') + ')').join('; ') + '. Planned / can take, after leave, support and buffer.', tips: [] });
   });
   checkPlan(months).filter(c => c.t !== 'cap').forEach(c => items.push({ sev: 'warn', m: c.m, head: monthLabel(c.m) + ' · ' + (c.t === 'dep' ? 'Card order' : 'Roadmap date'), body: c.s, tips: [] }));
   if (!items.length) { const ok = el('div', 'cpok'); ok.append(icon('ok'), el('span', '', 'Nothing to fix. Every track fits in every month, cards are in a workable order and roadmap bars match their months.')); ok.id = 'cpnone'; box.append(ok); return box; }
