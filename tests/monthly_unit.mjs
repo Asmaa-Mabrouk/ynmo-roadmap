@@ -32,18 +32,19 @@ ok('sort by product: Tifli, AI, Daycare, Plan, SCHS, Warif, then the others', sr
 const inp = [mk('b', 'plan'), mk('a', 'plan')]; sortByProduct(inp);
 ok('sorting does not change the original list and keeps the order inside a product', inp[0].id === 'b' && sortByProduct(inp).map(l => l.id).join() === 'b,a');
 import * as cap from '../src/esm/features/capacity.js';
+const P8 = { ppp: 8 }; // the old 8 points a person; the new default is 40 (1 point = 4 hours)
 {
   const rg = { a: '2026-11-01', b: '2026-11-30' };
   ok('capacity: working days are Sunday to Thursday (Nov 2026 = 22)', cap.workdays(rg.a, rg.b) === 22);
-  const be = cap.LANES.find(l => l.k === 'be'), c0 = cap.laneCapacity(be, rg, [], {});
+  const be = cap.LANES.find(l => l.k === 'be'), c0 = cap.laneCapacity(be, rg, [], P8);
   ok('capacity: 4 BE people x 8 points less 30% = 22.4', c0.people === 4 && c0.raw === 32 && c0.cap === 22.4);
-  const c1 = cap.laneCapacity(be, rg, [{ p: 'Soliman Ahmed', a0: '2026-11-01', a1: '2026-11-12' }], {});
+  const c1 = cap.laneCapacity(be, rg, [{ p: 'Soliman Ahmed', a0: '2026-11-01', a1: '2026-11-12' }], P8);
   ok('capacity: leave reduces the capacity (8 working days of 21)', c1.raw < 32 && c1.raw > 25);
   ok('capacity: a full-name leave entry matches the short name', cap.sameName('Aya Fathy Ali', 'Aya Fathy') && !cap.sameName('Amal Hassan', 'Aya Fathy'));
   const lines = [{ id: 'a', pts: { be: 10, fe: 5 } }, { id: 'b', pts: { be: 8 } }];
   ok('capacity: loads add the points per role', JSON.stringify(cap.loads(lines)).includes('"be":18') && cap.loads(lines).fe === 5);
   ok('capacity: status ok / warn / over', cap.statusOf(5, 20) === 'ok' && cap.statusOf(19, 20) === 'warn' && cap.statusOf(21, 20) === 'over');
-  const ov = cap.overAfter({ id: 'n', pts: { be: 6 } }, lines, rg, [], {});
+  const ov = cap.overAfter({ id: 'n', pts: { be: 6 } }, lines, rg, [], P8);
   ok('capacity: a card that pushes BE past 22.4 is reported', ov.length === 1 && ov[0].k === 'be' && ov[0].used === 24);
   ok('capacity: a card that fits is not reported', cap.overAfter({ id: 'n', pts: { be: 3 } }, lines, rg, [], {}).length === 0);
   const monthOf = id => ({ p: '2026-12', q: '' }[id] || '2026-11'), lab = id => 'X#' + id;
@@ -53,17 +54,17 @@ import * as cap from '../src/esm/features/capacity.js';
   ok('capacity: settings can be overridden and bad values fall back', cap.settings({ ppp: 10, reserve: 5 }).ppp === 10 && cap.settings({ reserve: 5 }).reserve === 0.2);
   // leaving, person state, review and suggestions (Capacity dashboard)
   const BE = { k: 'be', people: ['Soliman', 'Wardany', 'Hosieny', 'Hamid'] };
-  const gone = cap.laneCapacity(BE, rg, [], { leaving: { Hamid: '2026-10-31' } });
+  const gone = cap.laneCapacity(BE, rg, [], { ppp: 8, leaving: { Hamid: '2026-10-31' } });
   ok('leaving: someone who left before the month adds nothing (3 people, 24 raw, 16.8)', gone.people === 3 && gone.raw === 24 && gone.cap === 16.8);
-  const half = cap.laneCapacity(BE, rg, [], { leaving: { Hamid: '2026-11-15' } });
+  const half = cap.laneCapacity(BE, rg, [], { ppp: 8, leaving: { Hamid: '2026-11-15' } });
   ok('leaving: a last day inside the month counts only the days worked', half.people === 4 && half.raw > 24 && half.raw < 32);
   ok('leaving: bad dates are ignored', Object.keys(cap.settings({ leaving: { A: 'soon', B: '2026-12-01' } }).leaving).join() === 'B');
   const ps = (n, v, l) => cap.personState(n, '2026-10-20', v, l, 90, 60);
-  ok('person: on leave today shows until when', ps('Amal', [{ p: 'Amal Hassan', a0: '2026-10-19', a1: '2026-10-22' }], {}).onLeave === true && ps('Amal', [{ p: 'Amal Hassan', a0: '2026-10-19', a1: '2026-10-22' }], {}).leave.a1 === '2026-10-22');
-  ok('person: next leave inside 90 days is shown, one beyond is not', ps('Amal', [{ p: 'Amal', a0: '2026-11-03', a1: '2026-11-05' }], {}).leave.a0 === '2026-11-03' && ps('Amal', [{ p: 'Amal', a0: '2027-03-01', a1: '2027-03-02' }], {}).leave === null);
+  ok('person: on leave today shows until when', ps('Amal', [{ p: 'Amal Hassan', a0: '2026-10-19', a1: '2026-10-22' }], P8).onLeave === true && ps('Amal', [{ p: 'Amal Hassan', a0: '2026-10-19', a1: '2026-10-22' }], P8).leave.a1 === '2026-10-22');
+  ok('person: next leave inside 90 days is shown, one beyond is not', ps('Amal', [{ p: 'Amal', a0: '2026-11-03', a1: '2026-11-05' }], P8).leave.a0 === '2026-11-03' && ps('Amal', [{ p: 'Amal', a0: '2027-03-01', a1: '2027-03-02' }], P8).leave === null);
   ok('person: leaving soon, later and left', ps('A', [], { A: '2026-11-30' }).leaving.state === 'soon' && ps('A', [], { A: '2027-03-01' }).leaving.state === 'later' && ps('A', [], { A: '2026-10-01' }).leaving.state === 'left');
   const mk = (m, lines) => lines, boards = { '2026-11': [{ id: 'a', t: 'a', pts: { be: 15 } }, { id: 'b', t: 'b', pts: { be: 12 } }], '2026-12': [], '2027-01': [{ id: 'c', t: 'c', pts: { be: 22 } }] };
-  const o = { linesOf: m => boards[m] || [], rangeOf: cap.monthRangeOf || (m => ({ a: m + '-01', b: m + '-30' })), vacs: [], cfg: {}, probsOf: () => [] };
+  const o = { linesOf: m => boards[m] || [], rangeOf: cap.monthRangeOf || (m => ({ a: m + '-01', b: m + '-30' })), vacs: [], cfg: P8, probsOf: () => [] };
   const rev = cap.review(['2026-11', '2026-12', '2027-01'], o);
   ok('review: November BE is over (27 of 22.4), December fits', rev[0].st === 'over' && rev[0].lanes.find(x => x.k === 'be').over === 4.6 && rev[1].st === 'ok' && rev[1].lanes.find(x => x.k === 'be').free > 20);
   const sug = cap.suggestMoves(rev, o);
@@ -71,8 +72,8 @@ import * as cap from '../src/esm/features/capacity.js';
   ok('suggest: says so when no later month has room', cap.suggestMoves(rev, Object.assign({}, o, { probsOf: () => ['blocked'] }))[0].none === true);
   // per person (points dialog and Dashboard)
   const R = { a: '2026-11-01', b: '2026-11-30' };
-  ok('person capacity: 8 points less 30% = 5.6', cap.personCap('Soliman', R, [], {}) === 5.6);
-  ok('person capacity: leave lowers it, a last day before the month makes it 0', cap.personCap('Soliman', R, [{ p: 'Soliman', a0: '2026-11-01', a1: '2026-11-11' }], {}) < 5.6 && cap.personCap('Soliman', R, [], { leaving: { Soliman: '2026-10-31' } }) === 0);
+  ok('person capacity: 8 points less 30% = 5.6', cap.personCap('Soliman', R, [], P8) === 5.6);
+  ok('person capacity: leave lowers it, a last day before the month makes it 0', cap.personCap('Soliman', R, [{ p: 'Soliman', a0: '2026-11-01', a1: '2026-11-11' }], P8) < 5.6 && cap.personCap('Soliman', R, [], { leaving: { Soliman: '2026-10-31' } }) === 0);
   const pl = cap.personLoads([{ who: { be: { Soliman: 5, Hamid: 3 }, fe: { Soliman: 2 } } }, { who: { be: { Soliman: 1 } } }, { pts: { be: 4 } }]);
   ok('person loads: points add up per person across tracks and cards (Soliman 8, Hamid 3)', pl.Soliman === 8 && pl.Hamid === 3 && Object.keys(pl).length === 2);
   ok('who: a missing or bad value gives nobody', Object.keys(cap.whoOf({}, 'be')).length === 0 && Object.keys(cap.whoOf({ who: { be: 5 } }, 'be')).length === 0 && cap.whoOf({ who: { be: { A: 2 } } }, 'be').A === 2);
@@ -107,4 +108,12 @@ import * as cap from '../src/esm/features/capacity.js';
   const many = Array.from({ length: 20 }, (_, i) => ({ id: 'm' + i, at: 100 - i, named: false })).concat([{ id: 'keep', at: 1, named: true }]).sort((a, b) => b.at - a.at);
   ok('history: only automatic versions beyond the newest 15 are pruned, named ones never', h.toPrune(many).length === 5 && !h.toPrune(many).includes('keep'));
   ok('history: a version written but not yet sent back stays in the list for 30 seconds', Object.keys(h.keepPendingHist({}, { k: { _p: Date.now() }, old: { _p: Date.now() - 60000 } })).join() === 'k');
+}
+// ---- new capacity default: 1 point = 4 hours, 20 days x 8 h = 160 h = 40 points, less 20% support and 10% buffer = 28 points = 112 h
+{
+  const R2 = { a: '2026-11-01', b: '2026-11-30' };
+  ok('points are hours / 4 and a person has 40 points a month by default', cap.HOURS_PER_POINT === 4 && cap.DEFAULTS.ppp === 40 && cap.DEFAULTS.reserve === 0.2 && cap.DEFAULTS.buffer === 0.1);
+  ok('a person can take 28 points = 112 hours after support and buffer', Math.abs(cap.personCap('Soliman', R2, [], {}) - 28) < 1e-9 && Math.abs(cap.personCap('Soliman', R2, [], {}) * cap.HOURS_PER_POINT - 112) < 1e-9);
+  ok('the capacity does not depend on how many weekdays the month has (Oct 23 days, Nov 22 days)', cap.personCap('Soliman', { a: '2026-10-01', b: '2026-10-31' }, [], {}) === cap.personCap('Soliman', R2, [], {}));
+  ok('the point list offers 1, 2, 3, 5, 8, 13 and 21', cap.SCALE.join() === '0,1,2,3,5,8,13,21');
 }

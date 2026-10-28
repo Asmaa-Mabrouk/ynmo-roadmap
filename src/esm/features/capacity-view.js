@@ -10,7 +10,7 @@ import { openDlg, closeDlg } from './safety.js';
 import { saveIdea } from '../pages/ideas.js';
 import { cardId, monthLabel, monthRange } from './month-model.js';
 import { allCards, cardByFid, fidFromText, fidLabel } from './feature-sync.js';
-import { SCALE, resolveDefaults, unmatched, whoOf, dependencyProblems, laneCapacity, loads, overAfter, ptsOf, settings, statusOf, totalPts } from './capacity.js';
+import { HOURS_PER_POINT, SCALE, resolveDefaults, unmatched, whoOf, dependencyProblems, laneCapacity, loads, overAfter, ptsOf, settings, statusOf, totalPts } from './capacity.js';
 
 /** The saved settings, with the default people spelled as Resources spells them. */
 export const resources = () => [...directory().values()].map(p => ({ name: p.name, domain: p.domain }));
@@ -50,7 +50,7 @@ export function openPoints(m, l, put) {
         const row = el('div', 'pperson'); row.dataset.track = x.k; row.dataset.name = n;
         const cb = el('input'); cb.type = 'checkbox'; cb.checked = n in cur; cb.setAttribute('aria-label', n + ' works on this card');
         const lab = el('label', 'ppname'); lab.append(cb, el('span', '', n));
-        const sel = el('select'); SCALE.forEach(v => { const o = el('option', '', v ? String(v) : 'points'); o.value = String(v); sel.append(o); }); sel.value = String(+cur[n] || 0); sel.disabled = !cb.checked; sel.setAttribute('aria-label', n + ' points');
+        const sel = el('select'); SCALE.forEach(v => { const o = el('option', '', v ? v + ' · ' + v * HOURS_PER_POINT + ' h' : 'points'); o.value = String(v); sel.append(o); }); sel.value = String(+cur[n] || 0); sel.disabled = !cb.checked; sel.setAttribute('aria-label', n + ' points');
         cb.addEventListener('change', () => { sel.disabled = !cb.checked; if (!cb.checked) sel.value = '0'; sum(); }); sel.addEventListener('change', sum);
         row.append(lab, sel); sec.append(row); t.rows[n] = { cb: cb, sel: sel };
       });
@@ -116,7 +116,7 @@ export function openCapSettings(done) {
     box.append(el('p', 'sub', 'People come from Resources. Capacity of a track in a month = its people x points per person, less their leave (Vacations), less the reserve and buffer.'));
     const mk = (v, step) => { const i = el('input'); i.type = 'number'; i.step = step; i.value = v; return i; };
     const ppp = mk(st.ppp, '0.5'), rs = mk(Math.round(st.reserve * 100), '5'), bf = mk(Math.round(st.buffer * 100), '5');
-    const nums = el('div', 'padd'); nums.append(fld('Points per person per month', ppp), fld('Reserve for bugs and support (%)', rs), fld('Buffer (%)', bf)); box.append(nums);
+    const nums = el('div', 'padd'); nums.append(fld('Points per person per month (1 point = ' + HOURS_PER_POINT + ' hours; 40 = 20 days)', ppp), fld('Reserve for bugs and support (%)', rs), fld('Buffer (%)', bf)); box.append(nums);
     const body = el('div'); box.append(body);
     const draw = () => {
       body.textContent = '';

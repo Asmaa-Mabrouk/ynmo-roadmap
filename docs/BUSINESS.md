@@ -52,6 +52,7 @@ replaced by creating new roadmaps with their own date range.
 6. **Sprint to executive report:** write the sprint plan (pull Jira tickets) → open the week's report → Sync / Generate with AI → edit → Submit; optionally export the sprint plan to Google Docs.
 
 ## 6. Business rules
+- **Points are hours:** 1 point = 4 hours. A person has 20 working days x 8 h = 160 h = 40 points a month; 20% support and 10% buffer come off, leaving 28 points (112 h). A track takes the sum of its people.
 - **Monthly version history:** every change to a month is kept as a version (time, who, cards). Editors can open **Version history** from the month menu, see what differs from now, **Bring back only the missing cards** (keeps newer work), **Restore this version**, or **Save a version** with a name (never deleted automatically). A save that would remove 3 or more cards at once asks first.
 - Approval is mandatory; unconfirmed emails never become admin.
 - Viewers cannot mutate anything (enforced in UI *and* by database policies).

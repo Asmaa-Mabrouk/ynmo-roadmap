@@ -40,9 +40,11 @@ export function unmatched(cfg, resources) {
   return out;
 }
 /** Points one person delivers in a month before the reserve; reserve and buffer are shares of the total kept free. */
-export const DEFAULTS = { ppp: 8, reserve: 0.2, buffer: 0.1 };
+/** One point is 4 hours. A person has 20 working days of 8 hours = 160 hours = 40 points a month; 20% support and 10% buffer come off (40 x 0.7 = 28 points = 112 hours). */
+export const HOURS_PER_POINT = 4;
+export const DEFAULTS = { ppp: 40, reserve: 0.2, buffer: 0.1 };
 /** Allowed point values for one role of one card. */
-export const SCALE = [0, 1, 2, 3, 5, 8, 13];
+export const SCALE = [0, 1, 2, 3, 5, 8, 13, 21];
 
 export const addIso = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };

@@ -25,6 +25,10 @@ with sync_playwright() as pw:
     A=newpage(ctx,errs); signup(A,'Admin','adm@x.com'); E=newpage(ctx,errs); signup(E,'Exec','exec@x.com')
     A.click('#nav button[data-p="admin"]'); A.wait_for_timeout(700); A.locator('#permissions .permuser:has-text("Exec")').click(); A.wait_for_timeout(300)
     A.click('#permissions button:text-is("Approve with these permissions")'); A.wait_for_timeout(800)
+    dash(A)
+    ok('N0 new default: one person takes 28 points (112 hours), so 4 BE people take 112', A.locator('#cpheat .cpcell[data-lane="be"][data-m="2026-11"] .cpnum').inner_text().strip()=='0 / 112')
+    A.evaluate("()=>{const j=JSON.parse(localStorage.getItem('fk3')); j.ideas=j.ideas||{}; j.ideas.capacity={cfg:true,ppp:8,reserve:0.2,buffer:0.1}; localStorage.setItem('fk3',JSON.stringify(j))}")
+    A.reload(); A.wait_for_timeout(1500); E.reload(); E.wait_for_timeout(1500)  # the rest of the scenarios use the old 8 points a person, so the numbers below stay readable
     A.click('#nav button[data-p="monthly"]'); A.wait_for_timeout(900)
     add(A,'2026-11','alpha'); add(A,'2026-11','beta'); add(A,'2026-10','gamma')
     ok('C0 Monthly columns no longer carry the capacity meters', A.locator('.caprow').count()==0 and A.locator('#mdtocap').count()==1)

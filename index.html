@@ -9148,8 +9148,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     }));
     return out;
   }
-  var DEFAULTS = { ppp: 8, reserve: 0.2, buffer: 0.1 };
-  var SCALE = [0, 1, 2, 3, 5, 8, 13];
+  var HOURS_PER_POINT = 4;
+  var DEFAULTS = { ppp: 40, reserve: 0.2, buffer: 0.1 };
+  var SCALE = [0, 1, 2, 3, 5, 8, 13, 21];
   var addIso = (iso4, n) => {
     const d = /* @__PURE__ */ new Date(iso4 + "T00:00:00Z");
     d.setUTCDate(d.getUTCDate() + n);
@@ -9378,7 +9379,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           lab2.append(cb, el("span", "", n));
           const sel = el("select");
           SCALE.forEach((v) => {
-            const o = el("option", "", v ? String(v) : "points");
+            const o = el("option", "", v ? v + " · " + v * HOURS_PER_POINT + " h" : "points");
             o.value = String(v);
             sel.append(o);
           });
@@ -9533,7 +9534,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       };
       const ppp = mk(st.ppp, "0.5"), rs = mk(Math.round(st.reserve * 100), "5"), bf = mk(Math.round(st.buffer * 100), "5");
       const nums = el("div", "padd");
-      nums.append(fld("Points per person per month", ppp), fld("Reserve for bugs and support (%)", rs), fld("Buffer (%)", bf));
+      nums.append(fld("Points per person per month (1 point = " + HOURS_PER_POINT + " hours; 40 = 20 days)", ppp), fld("Reserve for bugs and support (%)", rs), fld("Buffer (%)", bf));
       box2.append(nums);
       const body = el("div");
       box2.append(body);

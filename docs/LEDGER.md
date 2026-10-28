@@ -42,6 +42,22 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-28 - 1 point = 4 hours, 40 points a person
+```
+🔄 YNMO LEDGER UPDATE - 2026-10-28
+Request: 20 working days a month, keep support and buffer monthly, 1 point = 4 hours, a day counted as 7 or 8 hours at most (117.6 was first given; with 8 h days it becomes 112)
+Surface: Ynmo Roadmaps tool (Dashboard capacity)
+Outcome: capacity default 40 points per person a month (160 h), less 20% support and 10% buffer = 28 points = 112 h; point list 1,2,3,5,8,13,21 with hours
+New facts / decisions locked:
+  - 1 point = 4 hours; 20 working days x 8 h = 160 h = 40 points; usable 28 points = 112 h
+  - Month length no longer changes the capacity; leave still reduces it
+Corrections to this skill: the earlier "8 points per person, 5.6 usable" is replaced by 40 and 28 (the 117.6 first discussed needs 8.4 h days; the user then said a day is 8 hours at most)
+Open / flagged:
+  - Points already on cards were given on the old scale and are not converted; they need re-estimating (1 old point was about 2.5 days = about 5 new points)
+  - If Dashboard settings were saved with 8, change the number to 40
+Changelog: 1 point = 4 hours; 40 points per person a month.
+```
+
 ### 2026-10-28 - Dashboard restyle and Monthly version history
 ```
 🔄 YNMO LEDGER UPDATE - 2026-10-28
