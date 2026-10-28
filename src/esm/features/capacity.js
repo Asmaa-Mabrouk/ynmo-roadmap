@@ -66,24 +66,27 @@ export function settings(cfg) {
   const c = cfg || {}, byK = {}; (c.lanes || []).forEach(x => { if (x && x.k && Array.isArray(x.people)) byK[x.k] = x.people.map(String).filter(Boolean); });
   const num = (v, d, lo, hi) => { const n = +v; return Number.isFinite(n) && n >= lo && n <= hi ? n : d; };
   const leaving = {}; Object.keys(c.leaving && typeof c.leaving === 'object' ? c.leaving : {}).forEach(n => { if (/^\d{4}-\d{2}-\d{2}$/.test(c.leaving[n])) leaving[n] = c.leaving[n]; });
-  return { ppp: num(c.ppp, DEFAULTS.ppp, 0, 100), reserve: num(c.reserve, DEFAULTS.reserve, 0, 0.9), buffer: num(c.buffer, DEFAULTS.buffer, 0, 0.9), leaving: leaving, lanes: LANES.map(l => ({ k: l.k, n: l.n, people: byK[l.k] || l.people })) };
+  const part = {}; Object.keys(c.part && typeof c.part === 'object' ? c.part : {}).forEach(n => { const v = +c.part[n]; if (Number.isFinite(v) && v > 0 && v < 1) part[n] = Math.round(v * 100) / 100; });
+  return { part: part, ppp: num(c.ppp, DEFAULTS.ppp, 0, 100), reserve: num(c.reserve, DEFAULTS.reserve, 0, 0.9), buffer: num(c.buffer, DEFAULTS.buffer, 0, 0.9), leaving: leaving, lanes: LANES.map(l => ({ k: l.k, n: l.n, people: byK[l.k] || l.people })) };
 }
 /** A standard month has 20 working days whatever the calendar says (so 1 working day = ppp / 20 = 2 points, 8 hours). */
 export const STD_DAYS = 20;
+/** Share of a full month a person works (1 = full time, 0.5 = half time), from the Dashboard settings (`part`). */
+export const shareOf = (name, cfg) => { const p = settings(cfg).part; return p[name] || 1; };
 /** Points one working day is worth. */
 export const dayPts = cfg => settings(cfg).ppp / STD_DAYS;
 /** What a person loses in a month: working days of leave (inside the days they still work) and the working days after their last day.
  *  Every lost working day costs the same: ppp / 20 points. */
 export function lostInfo(name, range, vacs, cfg) {
-  const s = settings(cfg), until = s.leaving[name], end = until && until < range.b ? until : range.b;
-  if (end < range.a) return { leave: 0, after: workdays(range.a, range.b), gone: true, pts: s.ppp, perDay: s.ppp / STD_DAYS };
-  const leave = leaveDays(vacs, name, range.a, end), after = end < range.b ? workdays(addDays(end, 1), range.b) : 0, perDay = s.ppp / STD_DAYS;
-  return { leave: leave, after: after, gone: false, pts: Math.min(s.ppp, (leave + after) * perDay), perDay: perDay };
+  const s = settings(cfg), until = s.leaving[name], end = until && until < range.b ? until : range.b, base = s.ppp * (s.part[name] || 1);
+  if (end < range.a) return { leave: 0, after: workdays(range.a, range.b), gone: true, pts: base, perDay: base / STD_DAYS, base: base };
+  const leave = leaveDays(vacs, name, range.a, end), after = end < range.b ? workdays(addDays(end, 1), range.b) : 0, perDay = base / STD_DAYS;
+  return { leave: leave, after: after, gone: false, pts: Math.min(base, (leave + after) * perDay), perDay: perDay, base: base };
 }
-/** Points one person can deliver in a month before reserve and buffer: ppp, less 2 points (ppp / 20) for every working day of leave or after their last working day. */
+/** Points one person can deliver in a month before reserve and buffer: ppp x their share (half time = 0.5), less one working day (their share of ppp / 20, 2 points full time) for every working day of leave or after their last working day. */
 export function personRaw(name, range, vacs, cfg) {
   const s = settings(cfg), li = lostInfo(name, range, vacs, cfg);
-  return li.gone ? 0 : Math.max(0, s.ppp - li.pts);
+  return li.gone ? 0 : Math.max(0, li.base - li.pts);
 }
 /** Points one person can be planned for in a month (after reserve and buffer). */
 export function personCap(name, range, vacs, cfg) { const s = settings(cfg); return Math.round(personRaw(name, range, vacs, cfg) * (1 - s.reserve - s.buffer) * 10) / 10; }
@@ -96,9 +99,9 @@ export function personCards(lines, name) { const out = []; (lines || []).forEach
 /** Plannable points of one role in a month: people x points each, less their leave, less the days after their last working day,
  *  less reserve and buffer. `people` counts those still working at some point of the month. */
 export function laneCapacity(lane, range, vacs, cfg) {
-  const s = settings(cfg); let raw = 0, here = 0;
-  (lane.people || []).forEach(p => { const until = s.leaving[p]; if (until && until < range.a) return; here++; raw += personRaw(p, range, vacs, cfg); });
-  return { people: here, raw: Math.round(raw * 10) / 10, cap: Math.round(raw * (1 - s.reserve - s.buffer) * 10) / 10 };
+  const s = settings(cfg); let raw = 0, here = 0, fte = 0;
+  (lane.people || []).forEach(p => { const until = s.leaving[p]; if (until && until < range.a) return; here++; fte += s.part[p] || 1; raw += personRaw(p, range, vacs, cfg); });
+  return { people: here, fte: Math.round(fte * 100) / 100, raw: Math.round(raw * 10) / 10, cap: Math.round(raw * (1 - s.reserve - s.buffer) * 10) / 10 };
 }
 export const ptsOf = (l, k) => Math.max(0, +(l && l.pts && l.pts[k]) || 0);
 export const totalPts = l => LANES.reduce((a, x) => a + ptsOf(l, x.k), 0);
@@ -135,7 +138,7 @@ export function personState(name, today, vacs, leaving, horizon, soonDays) {
 export function review(months, o) {
   return months.map(m => {
     const lines = o.linesOf(m), rg = o.rangeOf(m), ld = loads(lines);
-    const lanes = settings(o.cfg).lanes.map(l => { const c = laneCapacity(l, rg, o.vacs, o.cfg), used = ld[l.k]; return { k: l.k, n: l.n, used: used, cap: c.cap, people: c.people, free: Math.max(0, Math.round((c.cap - used) * 10) / 10), over: Math.max(0, Math.round((used - c.cap) * 10) / 10), st: statusOf(used, c.cap) }; });
+    const lanes = settings(o.cfg).lanes.map(l => { const c = laneCapacity(l, rg, o.vacs, o.cfg), used = ld[l.k]; return { k: l.k, n: l.n, used: used, cap: c.cap, people: c.people, fte: c.fte, free: Math.max(0, Math.round((c.cap - used) * 10) / 10), over: Math.max(0, Math.round((used - c.cap) * 10) / 10), st: statusOf(used, c.cap) }; });
     return { m: m, lines: lines, lanes: lanes, st: lanes.some(x => x.st === 'over') ? 'over' : lanes.some(x => x.st === 'warn') ? 'warn' : 'ok', pts: lanes.reduce((a, x) => a + x.used, 0) };
   });
 }

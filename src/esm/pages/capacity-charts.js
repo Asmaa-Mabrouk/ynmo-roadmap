@@ -82,7 +82,7 @@ export function heatTracks(rev) {
     rev.forEach(r => {
       const x = r.lanes[i], u = util(x.used, x.cap), c = el('div', 'cpcell'); c.dataset.lane = l.k; c.dataset.m = r.m;
       c.append(el('b', 'cppct', !x.cap && !x.used ? '–' : (u > 1 ? '▲ ' : '') + (Number.isFinite(u) ? pct(u) : 'over')), el('span', 'cpnum', fmt(x.used) + ' / ' + fmt(x.cap)));
-      shade(c, u); const lines = [x.n + ', ' + monthLabel(r.m), fmt(x.used) + ' points planned of ' + fmt(x.cap) + ' (' + x.people + ' people)', x.st === 'over' ? fmt(x.over) + ' points over' : fmt(x.free) + ' points free'];
+      shade(c, u); const lines = [x.n + ', ' + monthLabel(r.m), fmt(x.used) + ' points planned of ' + fmt(x.cap) + ' (' + x.people + ' people' + (Math.abs(x.fte - x.people) > 0.005 ? ', ' + fmt(x.fte) + ' full-time' : '') + ')', x.st === 'over' ? fmt(x.over) + ' points over' : fmt(x.free) + ' points free'];
       c.setAttribute('aria-label', lines.join('. ')); tip(c, lines); g.append(c); row.push(fmt(x.used) + ' / ' + fmt(x.cap) + (x.st === 'over' ? ' (over ' + fmt(x.over) + ')' : ' (free ' + fmt(x.free) + ')'));
     });
     rows.push(row);
@@ -102,6 +102,7 @@ export function heatPeople(rev, cfg, vacs, today) {
   people.forEach(p => {
     const lab = el('span', 'cprl'); lab.dataset.name = p.n; lab.append(el('b', '', p.n), el('small', '', p.tracks.join(' + ')));
     const ps = personState(p.n, today, vacs, s.leaving), tg = el('span', 'cptags');
+    const sh0 = settings(cfg).part[p.n]; if (sh0) tg.append(el('span', 'cptag info', 'Part time ' + Math.round(sh0 * 100) + '%'));
     if (ps.leaving) tg.append(el('span', 'cptag ' + (ps.leaving.state === 'later' ? 'info' : 'bad'), ps.leaving.state === 'left' ? 'Left on ' + short(ps.leaving.date) : 'Leaving ' + short(ps.leaving.date) + (ps.leaving.state === 'soon' ? ' (soon)' : '')));
     if (ps.onLeave) tg.append(el('span', 'cptag warn', 'On leave until ' + short(ps.leave.a1))); else if (ps.leave) tg.append(el('span', 'cptag info', 'Leave ' + short(ps.leave.a0) + (ps.leave.a1 > ps.leave.a0 ? ' to ' + short(ps.leave.a1) : '')));
     if (tg.childNodes.length) lab.append(tg);
@@ -110,6 +111,7 @@ export function heatPeople(rev, cfg, vacs, today) {
       const cap = personCap(p.n, monthRange(r.m), vacs, cfg), pl = loads[i][p.n] || 0, u = util(pl, cap), c = el('div', 'cpcell cpsmall'); c.dataset.name = p.n; c.dataset.m = r.m;
       if (!cap && !pl) { c.classList.add('na'); c.append(el('b', 'cppct', '–')); } else { c.append(el('b', 'cppct', (u > 1 ? '▲ ' : '') + (Number.isFinite(u) ? pct(u) : 'over')), el('span', 'cpnum', fmt(pl) + ' / ' + fmt(cap))); shade(c, u); }
       const li = lostInfo(p.n, monthRange(r.m), vacs, cfg), lines = [p.n + ', ' + monthLabel(r.m), !cap && !pl ? 'Not available this month (left, or on leave all month)' : fmt(pl) + ' points planned of ' + fmt(cap) + ' they can take'];
+      if (!li.gone && li.base < s.ppp - 1e-9) lines.push('Works ' + Math.round(li.base / s.ppp * 100) + '% of the time: ' + fmt(li.base) + ' of ' + fmt(s.ppp) + ' points before support and buffer');
       if (!li.gone && li.leave > 0) { const lf = el('span', 'cpleaf', '\u{1F334} ' + li.leave + 'd'); c.append(lf); lines.push('\u{1F334} ' + li.leave + ' working day' + (li.leave === 1 ? '' : 's') + ' of leave = \u2212' + fmt(li.leave * li.perDay) + ' points (1 day = ' + fmt(li.perDay) + ' points)'); }
       if (!li.gone && li.after > 0) lines.push('Last working day is in this month: ' + li.after + ' working day' + (li.after === 1 ? '' : 's') + ' lost = \u2212' + fmt(li.after * li.perDay) + ' points');
       c.setAttribute('aria-label', lines.join('. ')); tip(c, lines); g.append(c); row.push(!cap && !pl ? 'not available' : fmt(pl) + ' / ' + fmt(cap));

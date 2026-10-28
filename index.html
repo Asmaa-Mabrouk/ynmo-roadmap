@@ -2189,6 +2189,225 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     return out;
   }
 
+  // src/esm/features/capacity.js
+  var LANES2 = [
+    { k: "ai", n: "AI", people: ["Mohamed Altramsi", "Aliaa Ibrahim", "Shady Bassily"] },
+    { k: "fe", n: "Full Stack FE", people: ["Amal Saleem", "Mo'men Sayeh", "Abdelhamid Ali"] },
+    { k: "mob", n: "Full Stack Mobile", people: ["Aya Fathy", "Ahmed Adnan"] },
+    { k: "be", n: "BE", people: ["Ahmed Soliman", "Ahmed Wardany", "Ahmed Hoseiny", "Hamid Shahien"] },
+    { k: "des", n: "Design", people: ["Saad Mohamed", "Khalid Abdelfattah"] },
+    { k: "qa", n: "Quality", people: ["Mona Mohamed", "Dina Mousa", "Mohamed Zahran", "Dina Samy"] }
+  ];
+  var DOMAIN_OF = { ai: "AI / ML", fe: "Frontend", mob: "Mobile", be: "Backend", des: "UX / Design", qa: "QA" };
+  function matchResource(name, resources2, domain) {
+    const f = fold(name), list = resources2 || [], exact = list.find((r) => fold(r.name) === f);
+    if (exact) return exact.name;
+    const near = list.filter((r) => sameName(r.name, name) && (fold(r.name).startsWith(f + " ") || r.domain === domain));
+    const pick2 = near.length > 1 ? near.filter((r) => r.domain === domain) : near;
+    return pick2.length === 1 ? pick2[0].name : "";
+  }
+  function resolveDefaults(cfg4, resources2) {
+    const s = settings(cfg4), out = Object.assign({}, cfg4 || {});
+    const saved2 = {};
+    (cfg4 && cfg4.lanes || []).forEach((x) => {
+      if (x && x.k && Array.isArray(x.people)) saved2[x.k] = true;
+    });
+    out.lanes = s.lanes.map((l) => ({ k: l.k, people: (saved2[l.k] ? l.people : l.people.map((n) => matchResource(n, resources2, DOMAIN_OF[l.k]) || n)).slice() }));
+    return out;
+  }
+  var trackOfDomain = (d) => Object.keys(DOMAIN_OF).find((x) => DOMAIN_OF[x] === d) || "";
+  function unmatched(cfg4, resources2) {
+    const have = new Set((resources2 || []).map((r) => fold(r.name))), out = [];
+    settings(cfg4).lanes.forEach((l) => l.people.forEach((n) => {
+      if (!have.has(fold(n))) out.push({ k: l.k, track: l.n, name: n });
+    }));
+    return out;
+  }
+  var HOURS_PER_POINT = 4;
+  var DEFAULTS = { ppp: 40, reserve: 0.2, buffer: 0.1 };
+  var SCALE = [0, 1, 2, 3, 5, 8, 13, 21];
+  var addIso = (iso4, n) => {
+    const d = /* @__PURE__ */ new Date(iso4 + "T00:00:00Z");
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().slice(0, 10);
+  };
+  var addDays = (iso4, n) => {
+    const d = /* @__PURE__ */ new Date(iso4 + "T00:00:00Z");
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().slice(0, 10);
+  };
+  function workdays(a, b) {
+    let n = 0;
+    for (let d = a; d <= b; d = addDays(d, 1)) {
+      const w = (/* @__PURE__ */ new Date(d + "T00:00:00Z")).getUTCDay();
+      if (w !== 5 && w !== 6) n++;
+    }
+    return n;
+  }
+  var fold = (s) => String(s || "").toLowerCase().trim().replace(/\s+/g, " ");
+  var sameName = (leaveName, name) => {
+    const a = fold(leaveName), b = fold(name);
+    return !!a && !!b && (a === b || a.startsWith(b + " ") || b.startsWith(a + " "));
+  };
+  function leaveDays(vacs, name, a, b) {
+    let n = 0;
+    (vacs || []).forEach((v) => {
+      if (!sameName(v.p, name) || !v.a0) return;
+      const s = v.a0 > a ? v.a0 : a, e = (v.a1 || v.a0) < b ? v.a1 || v.a0 : b;
+      if (s <= e) n += workdays(s, e);
+    });
+    return n;
+  }
+  function settings(cfg4) {
+    const c = cfg4 || {}, byK = {};
+    (c.lanes || []).forEach((x) => {
+      if (x && x.k && Array.isArray(x.people)) byK[x.k] = x.people.map(String).filter(Boolean);
+    });
+    const num = (v, d, lo, hi) => {
+      const n = +v;
+      return Number.isFinite(n) && n >= lo && n <= hi ? n : d;
+    };
+    const leaving = {};
+    Object.keys(c.leaving && typeof c.leaving === "object" ? c.leaving : {}).forEach((n) => {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(c.leaving[n])) leaving[n] = c.leaving[n];
+    });
+    const part = {};
+    Object.keys(c.part && typeof c.part === "object" ? c.part : {}).forEach((n) => {
+      const v = +c.part[n];
+      if (Number.isFinite(v) && v > 0 && v < 1) part[n] = Math.round(v * 100) / 100;
+    });
+    return { part, ppp: num(c.ppp, DEFAULTS.ppp, 0, 100), reserve: num(c.reserve, DEFAULTS.reserve, 0, 0.9), buffer: num(c.buffer, DEFAULTS.buffer, 0, 0.9), leaving, lanes: LANES2.map((l) => ({ k: l.k, n: l.n, people: byK[l.k] || l.people })) };
+  }
+  var STD_DAYS = 20;
+  function lostInfo(name, range, vacs, cfg4) {
+    const s = settings(cfg4), until = s.leaving[name], end = until && until < range.b ? until : range.b, base3 = s.ppp * (s.part[name] || 1);
+    if (end < range.a) return { leave: 0, after: workdays(range.a, range.b), gone: true, pts: base3, perDay: base3 / STD_DAYS, base: base3 };
+    const leave = leaveDays(vacs, name, range.a, end), after = end < range.b ? workdays(addDays(end, 1), range.b) : 0, perDay = base3 / STD_DAYS;
+    return { leave, after, gone: false, pts: Math.min(base3, (leave + after) * perDay), perDay, base: base3 };
+  }
+  function personRaw(name, range, vacs, cfg4) {
+    const s = settings(cfg4), li = lostInfo(name, range, vacs, cfg4);
+    return li.gone ? 0 : Math.max(0, li.base - li.pts);
+  }
+  function personCap(name, range, vacs, cfg4) {
+    const s = settings(cfg4);
+    return Math.round(personRaw(name, range, vacs, cfg4) * (1 - s.reserve - s.buffer) * 10) / 10;
+  }
+  var whoOf = (l, k) => {
+    const w = l && l.who && l.who[k];
+    return w && typeof w === "object" ? w : {};
+  };
+  function personLoads(lines) {
+    const out = {};
+    (lines || []).forEach((l) => Object.keys(l && l.who || {}).filter((k) => LANES2.some((x) => x.k === k) && ptsOf(l, k) > 0).forEach((k) => {
+      const w = whoOf(l, k);
+      Object.keys(w).forEach((n) => {
+        out[n] = (out[n] || 0) + Math.max(0, +w[n] || 0);
+      });
+    }));
+    return out;
+  }
+  function personCards(lines, name) {
+    const out = [];
+    (lines || []).forEach((l) => {
+      let p = 0;
+      Object.keys(l && l.who || {}).filter((k) => LANES2.some((x) => x.k === k) && ptsOf(l, k) > 0).forEach((k) => {
+        p += Math.max(0, +whoOf(l, k)[name] || 0);
+      });
+      if (p > 0) out.push({ id: l.id, t: String(l.t || "").trim() || "(no title)", pts: p });
+    });
+    return out.sort((a, b) => b.pts - a.pts);
+  }
+  function laneCapacity(lane2, range, vacs, cfg4) {
+    const s = settings(cfg4);
+    let raw = 0, here = 0, fte = 0;
+    (lane2.people || []).forEach((p) => {
+      const until = s.leaving[p];
+      if (until && until < range.a) return;
+      here++;
+      fte += s.part[p] || 1;
+      raw += personRaw(p, range, vacs, cfg4);
+    });
+    return { people: here, fte: Math.round(fte * 100) / 100, raw: Math.round(raw * 10) / 10, cap: Math.round(raw * (1 - s.reserve - s.buffer) * 10) / 10 };
+  }
+  var ptsOf = (l, k) => Math.max(0, +(l && l.pts && l.pts[k]) || 0);
+  var totalPts = (l) => LANES2.reduce((a, x) => a + ptsOf(l, x.k), 0);
+  function loads(lines) {
+    const out = {};
+    LANES2.forEach((l) => {
+      out[l.k] = 0;
+    });
+    (lines || []).forEach((x) => LANES2.forEach((l) => {
+      out[l.k] += ptsOf(x, l.k);
+    }));
+    return out;
+  }
+  var statusOf = (used, cap) => used > cap + 1e-9 ? "over" : cap > 0 && used >= cap * 0.9 ? "warn" : "ok";
+  function overAfter(line, lines, range, vacs, cfg4) {
+    const s = settings(cfg4), base3 = loads((lines || []).filter((x) => x.id !== line.id)), out = [];
+    s.lanes.forEach((l) => {
+      const add = ptsOf(line, l.k);
+      if (!add) return;
+      const cap = laneCapacity(l, range, vacs, cfg4).cap, used = base3[l.k] + add;
+      if (used > cap + 1e-9) out.push({ k: l.k, n: l.n, used, cap });
+    });
+    return out;
+  }
+  function dependencyProblems(line, to, monthOf, labelOf2, dependants2) {
+    const out = [];
+    if (line.needs) {
+      const pm = monthOf(line.needs);
+      if (!pm) out.push("It needs " + labelOf2(line.needs) + ", which is not planned in a month yet.");
+      else if (pm > to) out.push("It needs " + labelOf2(line.needs) + ", which is planned later (" + pm + ").");
+    }
+    (dependants2 || []).forEach((d) => {
+      const dm = monthOf(d.id);
+      if (dm && dm < to) out.push(labelOf2(d.id) + " needs this card and is planned earlier (" + dm + ").");
+    });
+    return out;
+  }
+  function personState(name, today, vacs, leaving, horizon, soonDays) {
+    const end = addIso(today, horizon || 90), mine = (vacs || []).filter((v) => v && v.a0 && sameName(v.p, name) && (v.a1 || v.a0) >= today && v.a0 <= end).sort((x, y) => x.a0 < y.a0 ? -1 : 1);
+    const cur2 = mine.find((v) => v.a0 <= today), next = mine.find((v) => v.a0 > today), lv = leaving && leaving[name];
+    return {
+      onLeave: !!cur2,
+      leave: cur2 ? { a0: cur2.a0, a1: cur2.a1 || cur2.a0 } : next ? { a0: next.a0, a1: next.a1 || next.a0 } : null,
+      leaving: lv ? { date: lv, state: lv < today ? "left" : lv <= addIso(today, soonDays || 60) ? "soon" : "later" } : null
+    };
+  }
+  function review(months, o) {
+    return months.map((m) => {
+      const lines = o.linesOf(m), rg = o.rangeOf(m), ld = loads(lines);
+      const lanes = settings(o.cfg).lanes.map((l) => {
+        const c = laneCapacity(l, rg, o.vacs, o.cfg), used = ld[l.k];
+        return { k: l.k, n: l.n, used, cap: c.cap, people: c.people, fte: c.fte, free: Math.max(0, Math.round((c.cap - used) * 10) / 10), over: Math.max(0, Math.round((used - c.cap) * 10) / 10), st: statusOf(used, c.cap) };
+      });
+      return { m, lines, lanes, st: lanes.some((x) => x.st === "over") ? "over" : lanes.some((x) => x.st === "warn") ? "warn" : "ok", pts: lanes.reduce((a, x) => a + x.used, 0) };
+    });
+  }
+  function suggestMoves(rev, o) {
+    const out = [], used = {};
+    rev.forEach((r, i) => r.lanes.filter((x) => x.st === "over").forEach((x) => {
+      const cands = r.lines.filter((l) => ptsOf(l, x.k) > 0 && !used[l.id]).sort((a, b) => {
+        const fa = ptsOf(a, x.k) >= x.over, fb = ptsOf(b, x.k) >= x.over;
+        return fa !== fb ? fa ? -1 : 1 : fa ? ptsOf(a, x.k) - ptsOf(b, x.k) : ptsOf(b, x.k) - ptsOf(a, x.k);
+      });
+      let found = 0, cleared = 0;
+      cands.forEach((l) => {
+        if (found >= 2 || cleared >= x.over) return;
+        const to = rev.slice(i + 1).find((t) => !overAfter(l, t.lines, o.rangeOf(t.m), o.vacs, o.cfg).length && !o.probsOf(l, t.m).length);
+        if (to) {
+          used[l.id] = 1;
+          found++;
+          cleared += ptsOf(l, x.k);
+          out.push({ m: r.m, k: x.k, n: x.n, line: l, to: to.m, pts: ptsOf(l, x.k) });
+        }
+      });
+      if (!found) out.push({ m: r.m, k: x.k, n: x.n, none: true });
+    }));
+    return out;
+  }
+
   // src/esm/features/sharing.js
   function shareFor(rm) {
     const k = Object.keys(S.shares).find((t) => S.shares[t].rm === rm);
@@ -3005,6 +3224,13 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   }
 
   // src/esm/features/leavers.js
+  var partMap = () => S.ideas.capacity && S.ideas.capacity.part || {};
+  function setPart(name, share, act, sum) {
+    const pt = Object.assign({}, partMap());
+    if (share > 0 && share < 1) pt[name] = share;
+    else delete pt[name];
+    saveIdea("capacity", { cfg: true, part: pt }, act, sum);
+  }
   var leavingMap = () => S.ideas.capacity && S.ideas.capacity.leaving || {};
   function afterLast(it, name) {
     const last = leavingMap()[name];
@@ -3028,12 +3254,17 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   }
   function renameInDashboard(old, nw) {
     let n = 0;
-    const c = S.ideas.capacity;
-    if (c) {
+    const c = S.ideas.capacity || {};
+    {
       const patch = {};
-      if (Array.isArray(c.lanes)) {
-        const ls = c.lanes.map((l) => Object.assign({}, l, { people: [...new Set((l.people || []).map((x) => x === old ? nw : x))] }));
-        if (JSON.stringify(ls) !== JSON.stringify(c.lanes)) patch.lanes = ls;
+      const cur2 = resolveDefaults(c, [...directory().values()].map((p) => ({ name: p.name, domain: p.domain }))).lanes;
+      const ls = cur2.map((l) => ({ k: l.k, people: [...new Set(l.people.map((x) => x === old ? nw : x))] }));
+      if (cur2.some((l) => l.people.includes(old))) patch.lanes = ls;
+      if (c.part && c.part[old]) {
+        const pt = Object.assign({}, c.part);
+        if (!pt[nw]) pt[nw] = pt[old];
+        delete pt[old];
+        patch.part = pt;
       }
       if (c.leaving && c.leaving[old]) {
         const lv = Object.assign({}, c.leaving);
@@ -3076,219 +3307,6 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       }
     });
     return n;
-  }
-
-  // src/esm/features/capacity.js
-  var LANES2 = [
-    { k: "ai", n: "AI", people: ["Mohamed Altramsi", "Aliaa Ibrahim", "Shady Bassily"] },
-    { k: "fe", n: "Full Stack FE", people: ["Amal Saleem", "Mo'men Sayeh", "Abdelhamid Ali"] },
-    { k: "mob", n: "Full Stack Mobile", people: ["Aya Fathy", "Ahmed Adnan"] },
-    { k: "be", n: "BE", people: ["Ahmed Soliman", "Ahmed Wardany", "Ahmed Hoseiny", "Hamid Shahien"] },
-    { k: "des", n: "Design", people: ["Saad Mohamed", "Khalid Abdelfattah"] },
-    { k: "qa", n: "Quality", people: ["Mona Mohamed", "Dina Mousa", "Mohamed Zahran", "Dina Samy"] }
-  ];
-  var DOMAIN_OF = { ai: "AI / ML", fe: "Frontend", mob: "Mobile", be: "Backend", des: "UX / Design", qa: "QA" };
-  function matchResource(name, resources2, domain) {
-    const f = fold(name), list = resources2 || [], exact = list.find((r) => fold(r.name) === f);
-    if (exact) return exact.name;
-    const near = list.filter((r) => sameName(r.name, name) && (fold(r.name).startsWith(f + " ") || r.domain === domain));
-    const pick2 = near.length > 1 ? near.filter((r) => r.domain === domain) : near;
-    return pick2.length === 1 ? pick2[0].name : "";
-  }
-  function resolveDefaults(cfg4, resources2) {
-    const s = settings(cfg4), out = Object.assign({}, cfg4 || {});
-    const saved2 = {};
-    (cfg4 && cfg4.lanes || []).forEach((x) => {
-      if (x && x.k && Array.isArray(x.people)) saved2[x.k] = true;
-    });
-    out.lanes = s.lanes.map((l) => ({ k: l.k, people: (saved2[l.k] ? l.people : l.people.map((n) => matchResource(n, resources2, DOMAIN_OF[l.k]) || n)).slice() }));
-    return out;
-  }
-  var trackOfDomain = (d) => Object.keys(DOMAIN_OF).find((x) => DOMAIN_OF[x] === d) || "";
-  function unmatched(cfg4, resources2) {
-    const have = new Set((resources2 || []).map((r) => fold(r.name))), out = [];
-    settings(cfg4).lanes.forEach((l) => l.people.forEach((n) => {
-      if (!have.has(fold(n))) out.push({ k: l.k, track: l.n, name: n });
-    }));
-    return out;
-  }
-  var HOURS_PER_POINT = 4;
-  var DEFAULTS = { ppp: 40, reserve: 0.2, buffer: 0.1 };
-  var SCALE = [0, 1, 2, 3, 5, 8, 13, 21];
-  var addIso = (iso4, n) => {
-    const d = /* @__PURE__ */ new Date(iso4 + "T00:00:00Z");
-    d.setUTCDate(d.getUTCDate() + n);
-    return d.toISOString().slice(0, 10);
-  };
-  var addDays = (iso4, n) => {
-    const d = /* @__PURE__ */ new Date(iso4 + "T00:00:00Z");
-    d.setUTCDate(d.getUTCDate() + n);
-    return d.toISOString().slice(0, 10);
-  };
-  function workdays(a, b) {
-    let n = 0;
-    for (let d = a; d <= b; d = addDays(d, 1)) {
-      const w = (/* @__PURE__ */ new Date(d + "T00:00:00Z")).getUTCDay();
-      if (w !== 5 && w !== 6) n++;
-    }
-    return n;
-  }
-  var fold = (s) => String(s || "").toLowerCase().trim().replace(/\s+/g, " ");
-  var sameName = (leaveName, name) => {
-    const a = fold(leaveName), b = fold(name);
-    return !!a && !!b && (a === b || a.startsWith(b + " ") || b.startsWith(a + " "));
-  };
-  function leaveDays(vacs, name, a, b) {
-    let n = 0;
-    (vacs || []).forEach((v) => {
-      if (!sameName(v.p, name) || !v.a0) return;
-      const s = v.a0 > a ? v.a0 : a, e = (v.a1 || v.a0) < b ? v.a1 || v.a0 : b;
-      if (s <= e) n += workdays(s, e);
-    });
-    return n;
-  }
-  function settings(cfg4) {
-    const c = cfg4 || {}, byK = {};
-    (c.lanes || []).forEach((x) => {
-      if (x && x.k && Array.isArray(x.people)) byK[x.k] = x.people.map(String).filter(Boolean);
-    });
-    const num = (v, d, lo, hi) => {
-      const n = +v;
-      return Number.isFinite(n) && n >= lo && n <= hi ? n : d;
-    };
-    const leaving = {};
-    Object.keys(c.leaving && typeof c.leaving === "object" ? c.leaving : {}).forEach((n) => {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(c.leaving[n])) leaving[n] = c.leaving[n];
-    });
-    return { ppp: num(c.ppp, DEFAULTS.ppp, 0, 100), reserve: num(c.reserve, DEFAULTS.reserve, 0, 0.9), buffer: num(c.buffer, DEFAULTS.buffer, 0, 0.9), leaving, lanes: LANES2.map((l) => ({ k: l.k, n: l.n, people: byK[l.k] || l.people })) };
-  }
-  var STD_DAYS = 20;
-  function lostInfo(name, range, vacs, cfg4) {
-    const s = settings(cfg4), until = s.leaving[name], end = until && until < range.b ? until : range.b;
-    if (end < range.a) return { leave: 0, after: workdays(range.a, range.b), gone: true, pts: s.ppp, perDay: s.ppp / STD_DAYS };
-    const leave = leaveDays(vacs, name, range.a, end), after = end < range.b ? workdays(addDays(end, 1), range.b) : 0, perDay = s.ppp / STD_DAYS;
-    return { leave, after, gone: false, pts: Math.min(s.ppp, (leave + after) * perDay), perDay };
-  }
-  function personRaw(name, range, vacs, cfg4) {
-    const s = settings(cfg4), li = lostInfo(name, range, vacs, cfg4);
-    return li.gone ? 0 : Math.max(0, s.ppp - li.pts);
-  }
-  function personCap(name, range, vacs, cfg4) {
-    const s = settings(cfg4);
-    return Math.round(personRaw(name, range, vacs, cfg4) * (1 - s.reserve - s.buffer) * 10) / 10;
-  }
-  var whoOf = (l, k) => {
-    const w = l && l.who && l.who[k];
-    return w && typeof w === "object" ? w : {};
-  };
-  function personLoads(lines) {
-    const out = {};
-    (lines || []).forEach((l) => Object.keys(l && l.who || {}).filter((k) => LANES2.some((x) => x.k === k) && ptsOf(l, k) > 0).forEach((k) => {
-      const w = whoOf(l, k);
-      Object.keys(w).forEach((n) => {
-        out[n] = (out[n] || 0) + Math.max(0, +w[n] || 0);
-      });
-    }));
-    return out;
-  }
-  function personCards(lines, name) {
-    const out = [];
-    (lines || []).forEach((l) => {
-      let p = 0;
-      Object.keys(l && l.who || {}).filter((k) => LANES2.some((x) => x.k === k) && ptsOf(l, k) > 0).forEach((k) => {
-        p += Math.max(0, +whoOf(l, k)[name] || 0);
-      });
-      if (p > 0) out.push({ id: l.id, t: String(l.t || "").trim() || "(no title)", pts: p });
-    });
-    return out.sort((a, b) => b.pts - a.pts);
-  }
-  function laneCapacity(lane2, range, vacs, cfg4) {
-    const s = settings(cfg4);
-    let raw = 0, here = 0;
-    (lane2.people || []).forEach((p) => {
-      const until = s.leaving[p];
-      if (until && until < range.a) return;
-      here++;
-      raw += personRaw(p, range, vacs, cfg4);
-    });
-    return { people: here, raw: Math.round(raw * 10) / 10, cap: Math.round(raw * (1 - s.reserve - s.buffer) * 10) / 10 };
-  }
-  var ptsOf = (l, k) => Math.max(0, +(l && l.pts && l.pts[k]) || 0);
-  var totalPts = (l) => LANES2.reduce((a, x) => a + ptsOf(l, x.k), 0);
-  function loads(lines) {
-    const out = {};
-    LANES2.forEach((l) => {
-      out[l.k] = 0;
-    });
-    (lines || []).forEach((x) => LANES2.forEach((l) => {
-      out[l.k] += ptsOf(x, l.k);
-    }));
-    return out;
-  }
-  var statusOf = (used, cap) => used > cap + 1e-9 ? "over" : cap > 0 && used >= cap * 0.9 ? "warn" : "ok";
-  function overAfter(line, lines, range, vacs, cfg4) {
-    const s = settings(cfg4), base3 = loads((lines || []).filter((x) => x.id !== line.id)), out = [];
-    s.lanes.forEach((l) => {
-      const add = ptsOf(line, l.k);
-      if (!add) return;
-      const cap = laneCapacity(l, range, vacs, cfg4).cap, used = base3[l.k] + add;
-      if (used > cap + 1e-9) out.push({ k: l.k, n: l.n, used, cap });
-    });
-    return out;
-  }
-  function dependencyProblems(line, to, monthOf, labelOf2, dependants2) {
-    const out = [];
-    if (line.needs) {
-      const pm = monthOf(line.needs);
-      if (!pm) out.push("It needs " + labelOf2(line.needs) + ", which is not planned in a month yet.");
-      else if (pm > to) out.push("It needs " + labelOf2(line.needs) + ", which is planned later (" + pm + ").");
-    }
-    (dependants2 || []).forEach((d) => {
-      const dm = monthOf(d.id);
-      if (dm && dm < to) out.push(labelOf2(d.id) + " needs this card and is planned earlier (" + dm + ").");
-    });
-    return out;
-  }
-  function personState(name, today, vacs, leaving, horizon, soonDays) {
-    const end = addIso(today, horizon || 90), mine = (vacs || []).filter((v) => v && v.a0 && sameName(v.p, name) && (v.a1 || v.a0) >= today && v.a0 <= end).sort((x, y) => x.a0 < y.a0 ? -1 : 1);
-    const cur2 = mine.find((v) => v.a0 <= today), next = mine.find((v) => v.a0 > today), lv = leaving && leaving[name];
-    return {
-      onLeave: !!cur2,
-      leave: cur2 ? { a0: cur2.a0, a1: cur2.a1 || cur2.a0 } : next ? { a0: next.a0, a1: next.a1 || next.a0 } : null,
-      leaving: lv ? { date: lv, state: lv < today ? "left" : lv <= addIso(today, soonDays || 60) ? "soon" : "later" } : null
-    };
-  }
-  function review(months, o) {
-    return months.map((m) => {
-      const lines = o.linesOf(m), rg = o.rangeOf(m), ld = loads(lines);
-      const lanes = settings(o.cfg).lanes.map((l) => {
-        const c = laneCapacity(l, rg, o.vacs, o.cfg), used = ld[l.k];
-        return { k: l.k, n: l.n, used, cap: c.cap, people: c.people, free: Math.max(0, Math.round((c.cap - used) * 10) / 10), over: Math.max(0, Math.round((used - c.cap) * 10) / 10), st: statusOf(used, c.cap) };
-      });
-      return { m, lines, lanes, st: lanes.some((x) => x.st === "over") ? "over" : lanes.some((x) => x.st === "warn") ? "warn" : "ok", pts: lanes.reduce((a, x) => a + x.used, 0) };
-    });
-  }
-  function suggestMoves(rev, o) {
-    const out = [], used = {};
-    rev.forEach((r, i) => r.lanes.filter((x) => x.st === "over").forEach((x) => {
-      const cands = r.lines.filter((l) => ptsOf(l, x.k) > 0 && !used[l.id]).sort((a, b) => {
-        const fa = ptsOf(a, x.k) >= x.over, fb = ptsOf(b, x.k) >= x.over;
-        return fa !== fb ? fa ? -1 : 1 : fa ? ptsOf(a, x.k) - ptsOf(b, x.k) : ptsOf(b, x.k) - ptsOf(a, x.k);
-      });
-      let found = 0, cleared = 0;
-      cands.forEach((l) => {
-        if (found >= 2 || cleared >= x.over) return;
-        const to = rev.slice(i + 1).find((t) => !overAfter(l, t.lines, o.rangeOf(t.m), o.vacs, o.cfg).length && !o.probsOf(l, t.m).length);
-        if (to) {
-          used[l.id] = 1;
-          found++;
-          cleared += ptsOf(l, x.k);
-          out.push({ m: r.m, k: x.k, n: x.n, line: l, to: to.m, pts: ptsOf(l, x.k) });
-        }
-      });
-      if (!found) out.push({ m: r.m, k: x.k, n: x.n, none: true });
-    }));
-    return out;
   }
 
   // src/esm/features/tracks.js
@@ -6259,6 +6277,23 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         body.append(el("h3", "", "Points tracks"), el("p", "hint", 'The Dashboard tracks this person is planned in. They appear in Monthly under "Points and people" for these tracks, and in the Dashboard team.'), trackPills(tk, (set) => {
           setTracks(name, [...set], resList(), "resource", "set the Dashboard tracks of " + name);
         }));
+        const sh = el("select");
+        sh.id = "pmpart";
+        sh.setAttribute("aria-label", "Time on the team");
+        const cs = partMap()[name] || 1;
+        [[1, "Full time (100%)"], [0.8, "80%"], [0.75, "75%"], [0.6, "60%"], [0.5, "Half time (50%)"], [0.4, "40%"], [0.25, "25%"]].concat(cs !== 1 && ![0.8, 0.75, 0.6, 0.5, 0.4, 0.25].includes(cs) ? [[cs, Math.round(cs * 100) + "%"]] : []).forEach(([v, t]) => {
+          const o = el("option", "", t);
+          o.value = String(v);
+          sh.append(o);
+        });
+        sh.value = String(cs);
+        sh.disabled = !canEdit();
+        sh.addEventListener("change", () => {
+          setPart(name, +sh.value, "resource", name + " works " + Math.round(+sh.value * 100) + "% of the time");
+          notify(name + ": " + Math.round(+sh.value * 100) + "% of the time. The Dashboard capacity follows.");
+          renderResources();
+        });
+        body.append(el("h3", "", "Time on the team"), el("p", "hint", "Part time? A half-time person can take half the points of a month (14 instead of 28), and a day of leave costs them half as much. The Dashboard shows it on their row."), sh);
         const cur2 = leavingMap()[name] || "", dt = el("input");
         dt.type = "date";
         dt.value = cur2;
@@ -11399,7 +11434,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         c.dataset.m = r.m;
         c.append(el("b", "cppct", !x.cap && !x.used ? "–" : (u > 1 ? "▲ " : "") + (Number.isFinite(u) ? pct(u) : "over")), el("span", "cpnum", fmt2(x.used) + " / " + fmt2(x.cap)));
         shade(c, u);
-        const lines = [x.n + ", " + monthLabel(r.m), fmt2(x.used) + " points planned of " + fmt2(x.cap) + " (" + x.people + " people)", x.st === "over" ? fmt2(x.over) + " points over" : fmt2(x.free) + " points free"];
+        const lines = [x.n + ", " + monthLabel(r.m), fmt2(x.used) + " points planned of " + fmt2(x.cap) + " (" + x.people + " people" + (Math.abs(x.fte - x.people) > 5e-3 ? ", " + fmt2(x.fte) + " full-time" : "") + ")", x.st === "over" ? fmt2(x.over) + " points over" : fmt2(x.free) + " points free"];
         c.setAttribute("aria-label", lines.join(". "));
         tip2(c, lines);
         g.append(c);
@@ -11431,6 +11466,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       lab2.dataset.name = p.n;
       lab2.append(el("b", "", p.n), el("small", "", p.tracks.join(" + ")));
       const ps = personState(p.n, today, vacs, s.leaving), tg = el("span", "cptags");
+      const sh0 = settings(cfg4).part[p.n];
+      if (sh0) tg.append(el("span", "cptag info", "Part time " + Math.round(sh0 * 100) + "%"));
       if (ps.leaving) tg.append(el("span", "cptag " + (ps.leaving.state === "later" ? "info" : "bad"), ps.leaving.state === "left" ? "Left on " + short(ps.leaving.date) : "Leaving " + short(ps.leaving.date) + (ps.leaving.state === "soon" ? " (soon)" : "")));
       if (ps.onLeave) tg.append(el("span", "cptag warn", "On leave until " + short(ps.leave.a1)));
       else if (ps.leave) tg.append(el("span", "cptag info", "Leave " + short(ps.leave.a0) + (ps.leave.a1 > ps.leave.a0 ? " to " + short(ps.leave.a1) : "")));
@@ -11449,6 +11486,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           shade(c, u);
         }
         const li = lostInfo(p.n, monthRange(r.m), vacs, cfg4), lines = [p.n + ", " + monthLabel(r.m), !cap && !pl ? "Not available this month (left, or on leave all month)" : fmt2(pl) + " points planned of " + fmt2(cap) + " they can take"];
+        if (!li.gone && li.base < s.ppp - 1e-9) lines.push("Works " + Math.round(li.base / s.ppp * 100) + "% of the time: " + fmt2(li.base) + " of " + fmt2(s.ppp) + " points before support and buffer");
         if (!li.gone && li.leave > 0) {
           const lf = el("span", "cpleaf", "🌴 " + li.leave + "d");
           c.append(lf);

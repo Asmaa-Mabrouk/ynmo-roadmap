@@ -5,12 +5,19 @@
  * (they need a new owner), and renaming or merging a person inside the Dashboard data (settings and the people on the cards).
  */
 import { S } from '../core/state.js';
-import { items, rangeOf } from '../core/model.js';
+import { directory, items, rangeOf } from '../core/model.js';
+import { resolveDefaults } from './capacity.js';
 import { kOfIso } from '../core/shared.js';
 import { write } from '../core/saving.js';
 import { saveIdea } from '../pages/ideas.js';
 import { keepVersion } from '../pages/monthly-history.js';
 
+export const partMap = () => (S.ideas.capacity && S.ideas.capacity.part) || {};
+/** Sets or clears (share 1) the part-time share of a person: 0.5 = half time. */
+export function setPart(name, share, act, sum) {
+  const pt = Object.assign({}, partMap()); if (share > 0 && share < 1) pt[name] = share; else delete pt[name];
+  saveIdea('capacity', { cfg: true, part: pt }, act, sum);
+}
 export const leavingMap = () => (S.ideas.capacity && S.ideas.capacity.leaving) || {};
 /** Does this feature, for this owner, run after the owner's last working day? */
 export function afterLast(it, name) {
@@ -30,10 +37,14 @@ export function setLeaving(name, date, act, sum) {
 }
 /** A person is renamed (or merged into `nw`): the Dashboard settings and the people on the cards follow. Returns how many documents changed. */
 export function renameInDashboard(old, nw) {
-  let n = 0; const c = S.ideas.capacity;
-  if (c) {
+  let n = 0; const c = S.ideas.capacity || {};
+  {
     const patch = {};
-    if (Array.isArray(c.lanes)) { const ls = c.lanes.map(l => Object.assign({}, l, { people: [...new Set((l.people || []).map(x => (x === old ? nw : x)))] })); if (JSON.stringify(ls) !== JSON.stringify(c.lanes)) patch.lanes = ls; }
+    // the tracks as the Dashboard shows them now (saved lanes, or the built-in names): rename the person in them and save all six, so a built-in name is not lost
+    const cur = resolveDefaults(c, [...directory().values()].map(p => ({ name: p.name, domain: p.domain }))).lanes;
+    const ls = cur.map(l => ({ k: l.k, people: [...new Set(l.people.map(x => (x === old ? nw : x)))] }));
+    if (cur.some(l => l.people.includes(old))) patch.lanes = ls;
+    if (c.part && c.part[old]) { const pt = Object.assign({}, c.part); if (!pt[nw]) pt[nw] = pt[old]; delete pt[old]; patch.part = pt; }
     if (c.leaving && c.leaving[old]) { const lv = Object.assign({}, c.leaving); if (!lv[nw]) lv[nw] = lv[old]; delete lv[old]; patch.leaving = lv; }
     if (Object.keys(patch).length) { saveIdea('capacity', patch); n++; }
   }
