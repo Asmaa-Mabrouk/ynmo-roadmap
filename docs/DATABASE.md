@@ -12,6 +12,8 @@ if any statement fails nothing from that script is applied.
 | 05-security-hardening | Admin only after **confirmed** email; forge-proof activity log; immutable baselines; profile length limits; private presence channel policies |
 
 ## Tables
+
+> Data state (2026-10-29): the team names in `items`, `people`, `vacations`, `sprint_items`, `ideas` and `reports` use the official spelling (migrated 2026-10-28; backups `backup_20261028_*` and `backup_20261028b_*` still exist and should be dropped when the team confirms). Health check: `docs/DB_HEALTH_CHECK_PROMPT.md`. Other agent prompts: `DB_AGENT_PROMPT.md` (settings, points, version history) and `DB_RENAME_PEOPLE_PROMPT.md` (the rename, applied).
 Generic document tables: `id text PK, data jsonb, updated_at timestamptz, updated_by text`.
 | Table | Holds |
 |---|---|

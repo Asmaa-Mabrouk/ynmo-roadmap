@@ -42,6 +42,18 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-29 - Docs refreshed, full regression, DB health-check prompt
+```
+🔄 YNMO LEDGER UPDATE - 2026-10-29
+Request: update the master skill and all docs; full regression; a prompt for the database agent's health checks
+Surface: Ynmo Roadmaps tool
+Outcome: docs aligned (counts, modules, rules); regression green (79/79 scenarios, 760 feature checks, 138 unit checks); docs/DB_HEALTH_CHECK_PROMPT.md; skill update proposed
+New facts / decisions locked: backup tables backup_20261028_* are dropped only after the team confirms; every data migration follows backup, dry run, apply, re-check, reload
+Corrections to this skill: scenario count is 79 (not 88); suite takes about 12 minutes
+Open / flagged: ideas/capacity not saved yet; 4 cards with old-scale points; jira-search not deployed; uptime monitor and alerts; live checks after deploy
+Changelog: docs refresh; regression green; health-check prompt.
+```
+
 ### 2026-10-28 - Part-time people on the Dashboard
 ```
 🔄 YNMO LEDGER UPDATE - 2026-10-28

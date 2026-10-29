@@ -13,6 +13,7 @@ Shared, editable, real-time **Gantt roadmap and planning workspace** for the Ynm
 ## What it does (30 seconds)
 Plan features on a day-level timeline, assign people, track dependencies/milestones, keep an ideas board (Trello-style), plan a monthly deliverables board (one column per month, cards coloured by product, synced from the roadmap), plan two-week sprints as a document (pull each person's Jira tickets, export to Google Docs), auto-draft a per-product weekly executive report, keep a Notion-style Monthly deliverables page (synced from the roadmap with editable percentages), share a read-only link with
 stakeholders, export the roadmap as a coloured PDF, and audit every change with undo. Access is by **admin approval** with **Editor / Viewer** roles.
+Planning side: **Monthly** cards with points per person (1 point = 4 hours, 40 a month, 2 per leave day), a **Dashboard** of capacity per track and person (part time, leave, leavers), monthly **version history**, **Resources** pop-up to rename, merge, set part time or mark someone as left, and **Sprints** checked against the plan with Jira links.
 Full product description: [docs/BUSINESS.md](docs/BUSINESS.md).
 
 ## Quick start
@@ -45,7 +46,7 @@ docs/                     BUSINESS, ARCHITECTURE, DATABASE, SECURITY, DEPLOYMENT
 ## Daily workflow
 1. Edit files in `src/`. **Never edit `index.html` by hand.**
 2. `node build.mjs` and open `index.html`.
-3. `tests/run_all.sh` (build check, lint, every feature script, CSP check, 88 scenarios; about 6 minutes). See [docs/TESTING.md](docs/TESTING.md).
+3. `tests/run_all.sh` (build check, lint, every feature script, CSP check, 79 scenarios; about 12 minutes). See [docs/TESTING.md](docs/TESTING.md).
 4. Commit **both** `src/` and `index.html`; `node build.mjs --check` must pass. Push to `main` to deploy.
 
 ## Documentation map

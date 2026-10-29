@@ -31,6 +31,13 @@ only usability. The only key in the client is the *publishable* key. Never commi
 | Google sign-in abuse | Scope `drive.file` only (documents the tool created); access token in memory, never saved; OAuth Client ID is public and no client secret is used; CSP allows only `accounts.google.com/gsi/*` and `www.googleapis.com` | features/google-drive.js, vercel.json |
 | Stored XSS through rich text in reports | HTML is never inserted as-is: `cleanFragment` rebuilds nodes from a tag whitelist (b, i, u, ul, ol, li, br, p, https/mailto links); scripts, handlers, styles and `javascript:` links are dropped on paste and on display | features/rich-text.js |
 
+## Data written by the planning features (2026-10)
+- `ideas/capacity` (Dashboard settings: points, tracks, leavers, part time) and `ideas/cardseq` are written by editors under the existing `ideas` policy; viewers read only.
+- Monthly version copies (`reports/mohist*`) carry the `mo` id prefix, so they follow the Monthly permission; they have no `mo` field and no top-level `status`, so viewers cannot read them. Editors cannot delete in `reports`, which is why automatic versions rotate over 15 slots.
+- Merging two people hides the old row (`hidden: true`); nothing is deleted. A refused write flips the app to view-only.
+- No secret is stored in the repo or in settings; only the publishable Supabase key is in code. Jira keys are public identifiers; the Jira site address is not a secret.
+- Backup tables created for a migration (`backup_<date>_*`) must have row-level security turned on and be dropped when no longer needed.
+
 ## Known limits / residual risk
 - CSP keeps `'unsafe-inline'` for script/style because the app is one inline file; moving to hashed/nonce inline or external files would remove it.
 - Anyone with a share link can read that snapshot until revoked.

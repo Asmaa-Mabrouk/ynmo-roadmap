@@ -58,10 +58,16 @@ Every push to `main` deploys; Vercel rebuilds from `src/`, the committed `index.
 ## 4. Release procedure
 ```bash
 npm install && node build.mjs && node build.mjs --check && node lint.mjs
-tests/run_all.sh        # about 6 minutes: build check, lint, feature scripts, CSP check, 88 scenarios
+tests/run_all.sh        # about 12 minutes: build check, lint, 41 feature scripts, 6 unit files, CSP check, 79 scenarios
 git add -A && git commit -m "feat: …" && git push origin main
 ```
 Rollback: Vercel → Deployments → *Promote* a previous one, or `git revert` and push.
+
+### Release checklist for data changes (2026-10)
+1. Back up the tables first (`create table backup_<date>_<table> as select * from <table>`, then turn row-level security on for each copy).
+2. Dry run (read-only), then apply one transaction per table, then re-check that nothing old is left.
+3. Ask everybody to reload: an open tab with an older build can write the old values again.
+4. Drop the backup tables when the team is happy. The health check prompt is `docs/DB_HEALTH_CHECK_PROMPT.md`.
 
 ## 5. Changing the Supabase project or key
 Edit `SUPABASE_URL` / `SUPABASE_KEY` in `src/esm/core/supabase.js` (publishable key only), update `connect-src` in `vercel.json`, rebuild.
