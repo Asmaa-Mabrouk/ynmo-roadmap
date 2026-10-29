@@ -48,9 +48,9 @@ with sync_playwright() as pw:
     ok('Quality scope section added too', P.locator('.sdoc .blk.k-h', has_text='Quality scope').count()==1)
     # ---- report picks them up
     A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(400)
-    nb=A.locator('#pg-reports button', has_text='New report').first
+    nb=A.locator('#pg-reports button', has_text='Build report').first
     if nb.count(): nb.click(); A.wait_for_timeout(900)
-    if A.locator('button:text-is("Sync from Sprint & Roadmap")').count(): A.click('button:text-is("Sync from Sprint & Roadmap")'); A.wait_for_timeout(700)
+    if A.locator('button:text-is("Sync from Sprint, Roadmap & Monthly")').count(): A.click('button:text-is("Sync from Sprint, Roadmap & Monthly")'); A.wait_for_timeout(700)
     txt=A.locator('#pg-reports').inner_text()
     ok('weekly report has Deployments and Quality scope sections', 'Deployments' in txt and 'Quality scope' in txt)
     ok('no page errors', errs==[])

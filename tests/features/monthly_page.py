@@ -3,6 +3,8 @@ from h18 import *
 """Delete a weekly report; the Monthly page: list of cards, new month, Sync from Roadmap with an estimated percentage per product (editing a percentage
 locks it from later syncs), ad hoc requests, undo, copy text, submit/read-only, shown read-only inside the weekly report, delete, no overflow on a phone."""
 R=[]
+def carry(A):
+    if A.locator('#xdlg select[aria-label="Reason for the carry over"]').count(): A.click('#xdlg button:text-is("Carry over")'); A.wait_for_timeout(500)
 def ok(n,c): R.append((n,bool(c))); print(('PASS ' if c else 'FAIL ')+n)
 def sprint_with(A, end, start):
     A.click('#nav button[data-p="sprints"]'); A.click('button:text-is("+ New sprint")'); A.wait_for_timeout(400)
@@ -12,8 +14,8 @@ with sync_playwright() as pw:
     A=newpage(ctx,errs); signup(A,'Admin','adm@x.com')
     # ---- delete a weekly report ----
     sprint_with(A,'2026-10-14','2026-10-01')
-    A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(300); A.click('button:has-text("New report for week of")'); A.wait_for_timeout(900)
-    ok('a new weekly report has empty product sections', A.locator('.rprod').count()>=2 and A.locator('.rline').count()==0)
+    A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(300); A.click('button:has-text("Build report for week of")'); A.wait_for_timeout(900)
+    ok('a new weekly report has its product sections', A.locator('.rprod').count()>=2)
     g=A.locator('.rprod').first.locator('.rgrp')
     g.locator('textarea').fill('First item\nSecond item'); g.locator('button:text-is("Add items")').click(); A.wait_for_timeout(500)
     sel=A.locator('.rprod').first.locator('.rline select[aria-label="Percent complete"]').first
@@ -64,10 +66,10 @@ with sync_playwright() as pw:
     A.locator('.cmenu .copt:has-text("Delete report")').click(); A.click('#xdlg button:text-is("Delete report")'); A.wait_for_timeout(600)
     ok('deleted from the list menu', A.locator('.rpcard').count()==0)
     # remove a default product, print layout
-    A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(300); A.click('button:has-text("New report for week of")'); A.wait_for_timeout(800)
+    A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(300); A.click('button:has-text("Build report for week of")'); A.wait_for_timeout(800)
     n0=A.locator('.rprod').count(); A.locator('.rprod').last.locator('button:text-is("Remove section")').click(); A.click('#xdlg button:text-is("Remove section")'); A.wait_for_timeout(500)
     ok('any product section can be removed (e.g. AI)', A.locator('.rprod').count()==n0-1)
-    A.click('button:text-is("Sync from Sprint & Roadmap")'); A.wait_for_timeout(600)
+    A.click('button:text-is("Sync from Sprint, Roadmap & Monthly")'); A.wait_for_timeout(600)
     ok('a removed section does not come back on sync', A.locator('.rprod').count()==n0-1)
     A.locator('.rprod').first.locator('textarea').fill('Printed item\nOut of scope item'); A.locator('.rprod').first.locator('button:text-is("Add items")').click(); A.wait_for_timeout(300)
     A.locator('.rprod').first.locator('.flagbtn').nth(1).click(); A.wait_for_timeout(200)
@@ -111,7 +113,7 @@ with sync_playwright() as pw:
     ttl=lambda m: A.evaluate("m=>[...document.querySelectorAll('.mdcol[data-mo=\"'+m+'\"] .mdtext')].map(e=>e.innerText)", m)
     g=oc.locator('.mdcard:has-text("Drag B") .grip'); tg=oc.locator('.mdcard:has-text("Board pack")'); g.hover(); A.mouse.down(); bx=tg.bounding_box(); A.mouse.move(bx['x']+40,bx['y']+4,steps=8); A.mouse.up(); A.wait_for_timeout(600)
     ok('dragging a card above another re-orders the column', ttl('2026-10')[0]=='Drag B' and ttl('2026-10').index('Board pack')>ttl('2026-10').index('Drag B'))
-    g=oc.locator('.mdcard:has-text("Drag A") .grip'); nv=A.locator('.mdcol[data-mo="2026-11"]'); g.hover(); A.mouse.down(); nb=nv.bounding_box(); A.mouse.move(nb['x']+60,nb['y']+200,steps=10); A.mouse.up(); A.wait_for_timeout(600)
+    g=oc.locator('.mdcard:has-text("Drag A") .grip'); nv=A.locator('.mdcol[data-mo="2026-11"]'); g.hover(); A.mouse.down(); nb=nv.bounding_box(); A.mouse.move(nb['x']+60,nb['y']+200,steps=10); A.mouse.up(); A.wait_for_timeout(600); carry(A)
     ok('dragging a card into another month moves it there', 'Drag A' in ttl('2026-11') and 'Drag A' not in ttl('2026-10'))
     for t in ['Drag A','Drag B']:
         A.locator('.mdcard:has-text("%s") .kebab'%t).first.click(); A.locator('#ctx .mi:text-is("Delete card")').click(); A.click('#xdlg button:text-is("Delete card")'); A.wait_for_timeout(400)
@@ -248,7 +250,7 @@ with sync_playwright() as pw:
     ok('+ Add month appends the next month', A.locator('.mdcol').count()==3 and A.locator('.mdcol[data-mo="2026-12"]').count()==1 and A.locator('#addmonth').inner_text()=='+ Add month (January 2027)')
     # move a card to another month through its menu
     mc=A.locator('.mdcol[data-mo="2026-10"] .mdcard').first; mid=mc.get_attribute('data-id'); mc.locator('.kebab').click(); A.wait_for_timeout(200)
-    A.locator('#ctx .mi:text-is("December 2026")').click(); A.wait_for_timeout(600)
+    A.locator('#ctx .mi:text-is("December 2026")').click(); A.wait_for_timeout(600); carry(A)
     ok('a card can be moved to another month', A.locator('.mdcol[data-mo="2026-12"] .mdcard[data-id="%s"]'%mid).count()==1 and A.locator('.mdcol[data-mo="2026-10"] .mdcard[data-id="%s"]'%mid).count()==0)
     # no ad hoc item in the card menu any more
     dc=A.locator('.mdcol[data-mo="2026-12"] .mdcard').first; dc.locator('.kebab').click(); A.wait_for_timeout(200)

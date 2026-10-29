@@ -58,7 +58,7 @@ Every push to `main` deploys; Vercel rebuilds from `src/`, the committed `index.
 ## 4. Release procedure
 ```bash
 npm install && node build.mjs && node build.mjs --check && node lint.mjs
-tests/run_all.sh        # about 12 minutes: build check, lint, 41 feature scripts, 6 unit files, CSP check, 79 scenarios
+tests/run_all.sh        # about 12 minutes: build check, lint, 44 feature scripts, 7 unit files, CSP check, 79 scenarios
 git add -A && git commit -m "feat: …" && git push origin main
 ```
 Rollback: Vercel → Deployments → *Promote* a previous one, or `git revert` and push.

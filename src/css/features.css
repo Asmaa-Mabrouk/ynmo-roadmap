@@ -988,3 +988,6 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 .covchip.cov-missing { background: #fdecea; color: #b3261e; border: 1px solid #f3b8b3; }
 .covchip.cov-unassigned { background: #fff4e0; color: #8a5a00; border: 1px solid #f0d49a; }
 .covbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: #fff8ec; border: 1px solid #f0d49a; color: #6b4a00; border-radius: 12px; padding: 8px 12px; margin-bottom: 10px; font-size: 13px; }
+.rchecks { margin: 8px 0 0; }
+.rchecks ul { margin: 6px 0 0; padding-inline-start: 18px; }
+.mdco { font-size: .72rem; padding: 1px 8px; background: #eaf0ff; border-color: #aab9ee; color: #26408b; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

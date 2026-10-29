@@ -42,6 +42,46 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-10-29 - Weekly report from Monthly + roadmap
+```
+🔄 YNMO LEDGER UPDATE - 2026-10-29
+Request: build the weekly report from the Monthly module and the roadmap, automated, optionally improved with AI
+Surface: Ynmo Roadmaps tool (Reports)
+Outcome: a new report is built in one click from sprint plan + roadmap + Monthly cards; drafts follow their sources on open; checks box
+New facts / decisions locked:
+  - Monthly cards in the week's month: 1-99% In progress, 100% Delivered once (not repeated next week), 0% left out; card replaces its roadmap bar and same-words sprint item
+  - Notes and details of cards are internal, never copied to the report; the AI call is unchanged (titles only)
+Corrections to this skill: a new report is no longer empty; the button is "Build report for week of ..." and the sync button "Sync from Sprint, Roadmap & Monthly"
+Open / flagged: scheduled auto-creation each week (server job) not built; AI summary of the three sources not extended; Gemini vs Claude key and name-stripping decisions still open
+Changelog: weekly report built from Monthly + roadmap
+```
+
+### 2026-10-29 - Monthly filters, people heat map
+```
+🔄 YNMO LEDGER UPDATE - 2026-10-29
+Request: remove Design and Quality people from the heat map; filter Monthly by assigned person and points
+Surface: Ynmo Roadmaps tool (Dashboard, Monthly)
+Outcome: people heat map lists only people who get points on cards (no Design or Quality); Monthly filters Assigned to and Points (editors)
+New facts / decisions locked:
+  - Design and Quality are still counted by the track heat map, bars and capacity; only their people rows are hidden in the people heat map (so a leave of a Design or QA person shows on the track numbers only)
+Corrections to this skill: none
+Open / flagged: say if Design and Quality should also leave the track heat map
+Changelog: filters by person and points; heat map without Design and Quality
+```
+
+### 2026-10-29 - Carry over tag (Monthly)
+```
+🔄 YNMO LEDGER UPDATE - 2026-10-29
+Request: a tag on cards carried from one month to the next, with a reason
+Surface: Ynmo Roadmaps tool (Monthly)
+Outcome: unfinished card moved to a later month asks why and gets "Carry over from <month>: reason"; manual mark, change and remove in the card menu
+New facts / decisions locked:
+  - Card field `co {from, why, by, at}`; no tag for finished cards, ad hoc cards, the backlog or earlier months; reason is optional
+Corrections to this skill: none
+Open / flagged: the weekly report and the Dashboard do not show the tag yet (could flag carried-over cards in the report checks)
+Changelog: carry over tag with reason
+```
+
 ### 2026-10-29 - Docs refreshed, full regression, DB health-check prompt
 ```
 🔄 YNMO LEDGER UPDATE - 2026-10-29

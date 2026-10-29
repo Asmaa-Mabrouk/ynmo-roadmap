@@ -1,0 +1,43 @@
+import sys, os; sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__)))); os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))+"/out")
+from h18 import *
+"""Monthly: an unfinished card moved to a later month gets the tag "Carry over from <month>" with an optional reason; finished cards, earlier months and the backlog do not. Fake test database only."""
+R=[]
+def ok(n,c): R.append((n,bool(c))); print(('PASS ' if c else 'FAIL ')+n)
+with sync_playwright() as pw:
+    b=pw.chromium.launch(); ctx=mkctx(b); ctx.clock.set_fixed_time("2026-10-20T10:00:00"); errs=[]
+    A=newpage(ctx,errs); signup(A,'Admin','adm@x.com')
+    A.click('#nav button[data-p="monthly"]'); A.wait_for_timeout(800)
+    oc=A.locator('.mdcol[data-mo="2026-10"]'); oc.locator('.mdopen').click(); ta=oc.locator('.mdadd textarea')
+    for t in ['Half done','Fully done','Manual mark']:
+        ta.fill(t); ta.press('Enter'); A.wait_for_timeout(450)
+    A.keyboard.press('Escape'); A.wait_for_timeout(300)
+    col=lambda m: A.locator('.mdcol[data-mo="%s"]'%m)
+    card=lambda m,t: col(m).locator('.mdcard:has-text("%s")'%t)
+    card('2026-10','Half done').locator('select[aria-label="Percent complete"]').select_option('50'); A.wait_for_timeout(300)
+    card('2026-10','Fully done').locator('select[aria-label="Percent complete"]').select_option('100'); A.wait_for_timeout(300)
+    def move(t, frm, to):
+        card(frm,t).locator('.kebab').click(); A.wait_for_timeout(200); A.locator('#ctx .mi:text-is("%s")'%to).click(); A.wait_for_timeout(500)
+    move('Fully done','2026-10','November 2026')
+    ok('C1 a finished card moves without a question and gets no tag', A.locator('#xdlg select[aria-label="Reason for the carry over"]').count()==0 and card('2026-11','Fully done').locator('.mdco').count()==0)
+    move('Half done','2026-10','November 2026')
+    ok('C2 an unfinished card moved to a later month asks why', A.locator('#xdlg select[aria-label="Reason for the carry over"]').count()==1)
+    A.locator('#xdlg select[aria-label="Reason for the carry over"]').select_option('Scope grew'); A.fill('#xdlg input[aria-label="More detail about the reason"]','new screens'); A.click('#xdlg button:text-is("Carry over")'); A.wait_for_timeout(700)
+    ch=card('2026-11','Half done').locator('.mdco')
+    ok('C3 the card has the tag with last month and the reason', ch.count()==1 and 'Carry over from October' in ch.inner_text() and 'Scope grew: new screens' in ch.inner_text())
+    ok('C4 the hover has the full text', 'Carry over from October 2026: Scope grew: new screens' in (ch.get_attribute('title') or ''))
+    A.reload(); A.wait_for_timeout(1500)
+    ok('C5 the tag is saved', card('2026-11','Half done').locator('.mdco').count()==1)
+    card('2026-11','Half done').locator('.kebab').click(); A.wait_for_timeout(200)
+    ok('C6 the menu offers the reason and removing the tag', A.locator('#ctx .mi:has-text("Carry-over reason")').count()==1 and A.locator('#ctx .mi:has-text("Remove carry-over tag")').count()==1)
+    A.locator('#ctx .mi:has-text("Carry-over reason")').click(); A.wait_for_timeout(300)
+    A.locator('#xdlg select[aria-label="Reason for the carry over"]').select_option('Re-prioritised'); A.fill('#xdlg input[aria-label="More detail about the reason"]',''); A.click('#xdlg button:text-is("Carry over")'); A.wait_for_timeout(600)
+    ok('C7 the reason can be changed', 'Re-prioritised' in card('2026-11','Half done').locator('.mdco').inner_text() and 'Scope grew' not in card('2026-11','Half done').locator('.mdco').inner_text())
+    move('Half done','2026-11','Back to backlog')
+    ok('C8 back to the backlog clears the tag', A.evaluate("()=>{const r=JSON.parse(localStorage.getItem('fk3')).reports||{};const l=((r.mobacklog||{}).lines||[]).find(x=>x.t==='Half done');return !!l&&!l.co}"))
+    card('2026-10','Manual mark').locator('.kebab').click(); A.wait_for_timeout(200); A.locator('#ctx .mi:has-text("Mark as carry over from last month")').click(); A.wait_for_timeout(300)
+    A.locator('#xdlg select[aria-label="Reason for the carry over"]').select_option('Needs more testing'); A.click('#xdlg button:text-is("Carry over")'); A.wait_for_timeout(600)
+    ok('C9 a card can be marked by hand (from September)', 'Carry over from September' in card('2026-10','Manual mark').locator('.mdco').inner_text())
+    card('2026-10','Manual mark').locator('.kebab').click(); A.wait_for_timeout(200); A.locator('#ctx .mi:has-text("Remove carry-over tag")').click(); A.wait_for_timeout(500)
+    ok('C10 the tag can be removed', card('2026-10','Manual mark').locator('.mdco').count()==0)
+    ok('C11 no page errors', errs==[]); print('errors:',errs[:3])
+    print(sum(1 for _,c in R if c),'/',len(R))

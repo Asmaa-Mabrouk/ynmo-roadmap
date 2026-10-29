@@ -31,7 +31,7 @@ with sync_playwright() as pw:
     ok('R5 Monthly "Points and people" lists her under Quality', in_points(A,'probe card','qa','Nora Quality'))
     ok('R6 she is not listed under Backend', not in_points(A,'probe card','be','Nora Quality'))
     A.click('#nav button[data-p="capacity"]'); A.wait_for_timeout(600)
-    ok('R7 the Dashboard team lists her', A.locator('#cpheatp .cprl[data-name="Nora Quality"]').count()==1)
+    ok('R7 the Quality track counts her, the people heat map leaves Quality people out', A.locator('#cpheatp .cprl[data-name="Nora Quality"]').count()==0)
     ok('R8 the Quality track can take her 28 points more (112 + 28)', A.locator('#cpheat .cpcell[data-lane="qa"][data-m="2026-11"] .cpnum').inner_text().strip()=='0 / 140')
     # ambiguous domain: nothing pre-selected, choose Backend by hand
     A.click('#nav button[data-p="resources"]'); A.wait_for_timeout(600)

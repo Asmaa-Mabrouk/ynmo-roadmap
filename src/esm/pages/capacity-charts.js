@@ -72,6 +72,8 @@ export function legend() {
 }
 
 /** Heat map 1: tracks by month, shade = share of capacity used; the cell also says used / can take. */
+/** Design and Quality people are not planned with points on the cards, so their rows would only show 0%: the people heat map leaves them out. */
+const NOHEAT = ['des', 'qa'];
 export function heatTracks(rev) {
   const g = el('div', 'cpheat'); g.id = 'cpheat'; g.style.gridTemplateColumns = '120px repeat(' + rev.length + ', minmax(84px, 1fr))';
   g.append(el('span', 'cphh'));
@@ -94,7 +96,7 @@ export function heatTracks(rev) {
 const short = iso => fmtIso(iso).replace(/ \d{4}$/, '');
 export function heatPeople(rev, cfg, vacs, today) {
   const s = settings(cfg), seen = {}, people = [];
-  s.lanes.forEach(l => l.people.forEach(p => { if (!seen[p]) { seen[p] = { n: p, tracks: [] }; people.push(seen[p]); } seen[p].tracks.push(l.n); }));
+  s.lanes.filter(l => !NOHEAT.includes(l.k)).forEach(l => l.people.forEach(p => { if (!seen[p]) { seen[p] = { n: p, tracks: [] }; people.push(seen[p]); } seen[p].tracks.push(l.n); }));
   const loads = rev.map(r => personLoads(r.lines));
   const g = el('div', 'cpheat cpheatp'); g.id = 'cpheatp'; g.style.gridTemplateColumns = '190px repeat(' + rev.length + ', minmax(72px, 1fr))';
   g.append(el('span', 'cphh')); rev.forEach(r => g.append(el('span', 'cphh', monthLabel(r.m))));

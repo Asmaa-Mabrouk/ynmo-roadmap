@@ -60,9 +60,26 @@ export const legacyTag = (k, squad) => { const t = TAGS.find(x => squad && x.squ
 export const cardId = l => { if (!l || !l.no) return ''; const t = TAGS.find(x => x.k === l.k); return (t ? t.ab : String(l.k || '??').slice(0, 2).toUpperCase()) + '#' + l.no; };
 /** Notes of a card as a thread [{id, t, by, at}]; an older single `note` string is the first entry. */
 export const notesOf = l => (l && Array.isArray(l.notes) ? l.notes : l && l.note ? [{ id: 'n0', t: String(l.note), by: '', at: '' }] : []);
+/** Why a card moved on to a later month (a card that carries over has `co: { from: 'yyyy-mm', why, by, at }`). */
+export const CARRY_REASONS = ['Blocked by a dependency', 'Waiting for approval or input', 'Re-prioritised', 'Not enough capacity', 'Scope grew', 'Needs more testing', 'Other'];
+/** Short text of the carry-over tag: "Carry over from October 2026: reason" (or '' when the card does not carry over). */
+export const carryText = l => (l && l.co && isMonth(l.co.from) ? 'Carry over from ' + monthLabel(l.co.from) + (String(l.co.why || '').trim() ? ': ' + String(l.co.why).trim() : '') : '');
+/** [person, points, track] of everyone given points on a card (`who` = {track: {person: points}}). */
+export const whoPairs = l => { const out = []; Object.keys((l && l.who) || {}).forEach(t => Object.keys(l.who[t] || {}).forEach(n => out.push([n, Number(l.who[t][n]) || 0, t]))); return out; };
+/** Every person given points on any of the cards, sorted. */
+export const assignees = lines => [...new Set([].concat(...(lines || []).map(l => whoPairs(l).filter(x => x[1] > 0).map(x => x[0]))))].sort((a, b) => a.localeCompare(b));
+/** Filter "Assigned to" (a person or 'all') and "Points" ('all', 'with', 'none' or a number such as '5' = that person, or anybody, has exactly that many points). */
+export function pointsMatch(l, person, pts) {
+  const all = whoPairs(l), mine = person === 'all' ? all : all.filter(x => x[0] === person), has = mine.some(x => x[1] > 0);
+  if (person !== 'all' && !has) return false;
+  if (pts === 'all') return true;
+  if (pts === 'with') return has;
+  if (pts === 'none') return !all.some(x => x[1] > 0);
+  return mine.some(x => x[1] === Number(pts));
+}
 export const SIZES = { quick: 'Quick win', enh: 'Small enhancement' };
 /** Flags of a card as text: business priority, and a small piece of work (quick win / enhancement). */
-const tagsOf = l => (l.hp ? ' [BUSINESS PRIORITY]' : '') + (SIZES[l.sz] ? ' [' + SIZES[l.sz].toUpperCase() + ']' : '');
+const tagsOf = l => (l.hp ? ' [BUSINESS PRIORITY]' : '') + (carryText(l) ? ' [' + carryText(l).toUpperCase() + ']' : '') + (SIZES[l.sz] ? ' [' + SIZES[l.sz].toUpperCase() + ']' : '');
 /** Plain text of a month (for Copy text). `products` = [{k,n}]. Empty when there is nothing to show. */
 export function monthText(doc, products, fmt) {
   if (!doc || !live(doc.lines).length) return [];

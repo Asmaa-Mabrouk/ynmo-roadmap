@@ -20,8 +20,8 @@ import { crumbs } from '../ui/crumbs.js';
 import { createUndo } from '../features/undo-stack.js';
 import { registerUndo } from '../features/undo-router.js';
 import { autoGrow, plainBox, submitOnCtrlEnter } from '../features/rich-text.js';
-import { RSTATUS, linePct, avgPct, aiPayload, applyAi, buildProds, jiraUrl, newManualLine, productsOf, reportToText } from '../features/report-model.js';
-import { pctBand } from '../features/month-model.js';
+import { RSTATUS, linePct, avgPct, aiPayload, applyAi, buildProds, jiraUrl, monthSections, newManualLine, prevDoneOf, productsOf, reportChecks, reportToText } from '../features/report-model.js';
+import { pctBand, monthOf, monthId, isMonth } from '../features/month-model.js';
 import { progressBlock } from '../features/month-view.js';
 import { buildPrint } from '../features/report-print.js';
 import { confirmDlg } from '../ui/confirm.js';
@@ -29,7 +29,7 @@ import { scan, ensureRecords, openCheckUpdates, fidFromText, fidLabel, cardIdsLi
 import { EXTRA_SECTIONS } from '../features/sprint-doc.js';
 
 const SPARK = '<svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8L2.5 17.5l1.8-.7z"/></svg>';
-const rUI = { busy: false, note: '', noteFor: '', err: false, wait: false, last: '' };
+const rUI = { busy: false, note: '', noteFor: '', err: false, wait: false, last: '', auto: {} };
 const routeId = () => { const m = /^#\/reports\/(\w+)/.exec(location.hash); return m ? m[1] : null; };
 /** The product's colour on the Roadmap and Sprints pages (its first squad), so the report looks like them. */
 const colOf = p => { if (p.c) return p.c; const l = LANES.concat(EXTRA_SECTIONS).find(x => (p.squads || []).includes(x.k)); return l ? l.c : 'var(--brand)'; };
@@ -66,6 +66,8 @@ function roadFor(a, b) {
   const rm = allRoadmaps().find(r => r.a <= a && r.b >= a); if (!rm) return { road: [], ka: NaN, kb: NaN };
   return withRm(rm.id, () => ({ road: items().map(i => ({ id: i.id, t: i.t, sq: i.sq, d0: i.d0, d1: i.d1, st: i.st, ms: !!i.ms })), ka: kOfIso(a), kb: kOfIso(b) }));
 }
+/** The Monthly cards of the month this report week falls in (not ad hoc, with a title), or []. */
+const monthCardsOf = rep => { const m = monthOf(rep.a), d = isMonth(m) ? S.reports[monthId(m)] : null; return d ? (d.lines || []).filter(l => !l.adhoc && String(l.t || '').trim()) : []; };
 const addDays = (s, n) => new Date(Date.parse(s + 'T00:00:00Z') + n * 864e5).toISOString().slice(0, 10);
 /** Weeks (2 per sprint) that have no report yet, newest first. */
 export function missingWeeks() {
@@ -76,8 +78,8 @@ export function missingWeeks() {
 function newReport(wk) {
   const id = wk.id; if (S.reports[id]) { location.hash = '#/reports/' + id; return; }
   const rep = { id: id, sp: wk.sp, n: wk.n, w: wk.w, a: wk.a, b: wk.b, status: 'draft', pl: productsOf(cfg()), prods: {} };
-  location.hash = '#/reports/' + id;
-  sync(rep, false, true);   /* a new report starts with empty product sections: the PM adds the items */
+  location.hash = '#/reports/' + id; rUI.auto[id] = 1;
+  sync(rep, false, true);   /* a new report is built at once from the sprint plan, the roadmap and Monthly; the PM only checks it */
 }
 /** Human explanation of a failed call to the AI function (not deployed, key missing, not allowed, unreachable). */
 async function aiWhy(e) {
@@ -95,28 +97,32 @@ async function aiWhy(e) {
 const countLines = prods => Object.keys(prods).reduce((n, k) => n + prods[k].items.filter(l => !l.hide).length, 0);
 const say = (rep, txt, bad) => { rUI.note = txt; rUI.noteFor = rep.id; rUI.err = !!bad; toast(txt); notify(txt, bad ? 'err' : 'ok'); };
 /** Rules-only re-sync (never overwrites edited lines/summaries), then optionally the AI wording. Empty data is reported as an error, never sent to the AI. */
-async function sync(rep, ai, isNew) {
+async function sync(rep, ai, isNew, quiet) {
   if (rUI.busy) return; rUI.busy = true; rUI.note = ''; rUI.err = false;
-  /* Only the "Sync from Sprint & Roadmap" button pulls items in; a new report and the AI button never do. */
-  const fill = !isNew && !ai, pl = productsOf(cfg()), { road, ka, kb } = fill ? roadFor(rep.a, rep.b) : { road: [], ka: NaN, kb: NaN }, sitems = fill ? itemsOf(rep.sp) : [];
+  /* "Sync" and a new report pull the items in from the sprint plan, the roadmap and Monthly; the AI button never does. */
+  const fill = !ai, pl = productsOf(cfg()), { road, ka, kb } = fill ? roadFor(rep.a, rep.b) : { road: [], ka: NaN, kb: NaN }, sitems = fill ? itemsOf(rep.sp) : [], cards = fill ? monthCardsOf(rep) : [];
+  const before = quiet ? JSON.stringify([rep.pl, rep.prods, rep.srcN]) : '';
   // Deployments / Quality scope sections get their own report section when no product already covers them.
   EXTRA_SECTIONS.forEach(x => { if (sitems.some(i => i.squad === x.k) && !pl.some(q => q.squads.includes(x.k))) pl.push({ k: x.k, n: x.n, squads: [x.k] }); });
+  monthSections(cards, pl).forEach(x => pl.push(x));   /* Finance, SCHS, Warif, New initiative cards that have started */
   (rep.pl || []).filter(x => x.custom).forEach(x => { if (!pl.some(q => q.k === x.k)) pl.push(x); });   /* sections added by hand stay */
   const hidden = new Set(rep.hidePl || []); for (let i = pl.length - 1; i >= 0; i--) if (hidden.has(pl[i].k)) pl.splice(i, 1);   /* sections removed from this report stay removed */
   pl.forEach(q => { const o = (rep.pl || []).find(x => x.k === q.k); if (o) q.n = o.n; });   /* and renamed ones keep their name */
   rep.pl = pl;
-  if (fill) rep.prods = buildProds(pl, rep.prods, sitems, road, ka, kb, rep.a, rep.b);
+  if (fill) rep.prods = buildProds(pl, rep.prods, sitems, road, ka, kb, rep.a, rep.b, cards, prevDoneOf(S.reports, rep.a));
   else { const keep = rep.prods || {}; rep.prods = {}; pl.forEach(p => { rep.prods[p.k] = keep[p.k] || { items: [], sum: '', sumH: '', sumEdited: false }; }); }   /* keep every line as it is; only make sure each product has a section */
-  if (fill) rep.srcN = { si: sitems.length, rf: road.filter(r => Number.isFinite(ka) && r.d0 <= kb && r.d1 >= ka).length };
+  if (fill) rep.srcN = { si: sitems.length, rf: road.filter(r => Number.isFinite(ka) && r.d0 <= kb && r.d1 >= ka).length, mo: cards.filter(c => Number(c.pct) > 0).length };
   const lines = countLines(rep.prods);
-  save(rep, isNew ? 'created the weekly report for ' + fmtIso(rep.a) : 'synced the weekly report for ' + fmtIso(rep.a), 'Sync from sprint and roadmap');
-  if (isNew) { say(rep, 'Report created. Add your items under each product.', false); rUI.busy = false; renderReports(); return; }
+  if (quiet) { rUI.busy = false; if (JSON.stringify([rep.pl, rep.prods, rep.srcN]) === before) return; save(rep, '', 'Refresh from the sources'); renderReports(); return; }
+  save(rep, isNew ? 'created the weekly report for ' + fmtIso(rep.a) : 'synced the weekly report for ' + fmtIso(rep.a), 'Sync from sprint, roadmap and Monthly');
+  if (isNew && lines) { say(rep, 'Report built from the sprint plan, the roadmap and Monthly (' + lines + ' items). Check it, then press Save.', false); rUI.busy = false; renderReports(); return; }
+  if (isNew) { say(rep, 'Report created, but no data was found for this week yet. Add items on the Sprints page or in Monthly, then press Sync.', false); rUI.busy = false; renderReports(); return; }
   if (!lines && !fill) { say(rep, 'There are no items to rewrite yet. Add items under a product first.', true); rUI.busy = false; renderReports(); return; }
   if (!lines) {
-    say(rep, 'No data found for this week: Sprint ' + rep.n + ' has no items for these products and no roadmap bar overlaps ' + fmtIso(rep.a) + '. Add items on the Sprints page (or check Report settings), then sync again.', true);
+    say(rep, 'No data found for this week: Sprint ' + rep.n + ' has no items for these products, no roadmap bar overlaps ' + fmtIso(rep.a) + ' and no Monthly card has started. Add items on the Sprints page (or check Report settings), then sync again.', true);
     rUI.busy = false; renderReports(); return;
   }
-  say(rep, fill ? 'Synced from Sprint and Roadmap' : 'Report updated', false); renderReports();
+  say(rep, fill ? 'Synced from Sprint, Roadmap and Monthly' : 'Report updated', false); renderReports();
   if (ai) {
     rUI.note = 'Writing with Gemini…'; rUI.noteFor = rep.id; rUI.wait = true; renderReports();
     try {
@@ -288,7 +294,7 @@ function listView(pg, viewer, l) {
   const acts = el('div', 'acts');
   if (!viewer) {
     const free = missingWeeks(), t = todayIso(), pick = free.find(w => w.a <= t) || free[free.length - 1];
-    if (pick) { const nb = el('button', 'btn primary', '+ New report for week of ' + fmtIso(pick.a)); nb.type = 'button'; nb.disabled = !canBuild(); nb.addEventListener('click', () => newReport(pick)); acts.append(nb); }
+    if (pick) { const nb = el('button', 'btn primary', '+ Build report for week of ' + fmtIso(pick.a)); nb.type = 'button'; nb.disabled = !canBuild(); nb.addEventListener('click', () => newReport(pick)); acts.append(nb); }
     acts.append(settingsBtn());
   }
   pg.append(pageHead('Weekly report', viewer ? 'Submitted weekly updates per product. Open one to read it.' : 'One report per week, built from the sprint plan and the roadmap. Open one to edit it, then submit it to the executives.', acts.children.length ? acts : null));
@@ -320,11 +326,11 @@ function detailView(pg, viewer, rep) {
   pg.append(crumbs([{ label: 'Reports', href: '#/reports' }, { label: 'Week of ' + fmtIso(rep.a) }]));
   pg.append(pageHead('Weekly report', 'Sprint ' + rep.n + ' · week ' + (rep.w || 1) + ' of 2' + (viewer ? '' : ro ? '. You can read this report.' : '. Edit anything, then press Save to show it to the executives.')));
   const sb0 = viewer ? null : setupBanner(); if (sb0) pg.append(sb0);
-  const srcTxt = rep.srcN ? ' · built from ' + rep.srcN.si + ' sprint items + ' + rep.srcN.rf + ' roadmap bars' : '';
+  const srcTxt = rep.srcN ? ' · built from ' + rep.srcN.si + ' sprint items + ' + rep.srcN.rf + ' roadmap bars' + (rep.srcN.mo !== undefined ? ' + ' + rep.srcN.mo + ' Monthly cards' : '') : '';
   const meta = el('p', 'sub rmeta', (sub ? 'Saved' + (rep.subBy ? ' by ' + rep.subBy : '') + (rep.subAt ? ' on ' + fmtIso(rep.subAt.slice(0, 10)) : '') + ' · visible to the executives' : 'Not saved yet · the executives cannot see it') + (viewer ? '' : ' · last edit ' + (rep.by || '') + srcTxt));
   const tools = el('div', 'row spbar rtools');
   const btn = (t, cls, fn, dis) => { const b = el('button', 'btn ' + (cls || ''), t); b.type = 'button'; b.disabled = !!dis; b.addEventListener('click', fn); tools.append(b); return b; };
-  if (!viewer) { btn('Sync from Sprint & Roadmap', '', () => sync(rep, false), !canBuild() || rUI.busy); }
+  if (!viewer) { btn('Sync from Sprint, Roadmap & Monthly', '', () => sync(rep, false), !canBuild() || rUI.busy); }
   if (!viewer) {
     const U = undoR(rep.id), ub = btn('↶ Undo', '', () => reportUndo('undo'), true), rb = btn('↷ Redo', '', () => reportUndo('redo'), true);
     const upd = () => { ub.disabled = !U.canUndo() || !canBuild(); rb.disabled = !U.canRedo() || !canBuild(); ub.title = ub.ariaLabel = U.canUndo() ? 'Undo: ' + U.nextUndo() + ' (Ctrl/Cmd+Z)' : 'Nothing to undo'; rb.title = rb.ariaLabel = U.canRedo() ? 'Redo: ' + U.nextRedo() + ' (Ctrl/Cmd+Shift+Z)' : 'Nothing to redo'; };
@@ -354,7 +360,13 @@ function detailView(pg, viewer, rep) {
   body.append(hero);
   body.append(progressBlock('Overall progress', fmtIso(rep.a) + ' – ' + fmtIso(rep.b), pls, rep.prods || {}, colOf));
   pls.forEach(p => body.append(prodBlock(rep, p, ro)));
-  pg.append(meta, tools); if (rUI.note && rUI.noteFor === rep.id && !viewer && !sub) { const nt = el('p', 'rnote' + (rUI.err ? ' bad' : ''), rUI.note); nt.setAttribute('role', 'status'); pg.append(nt); } pg.append(body);
+  pg.append(meta, tools);
+  if (!viewer && !sub && canBuild()) {
+    if (!rUI.auto[rep.id]) { rUI.auto[rep.id] = 1; setTimeout(() => sync(rep, false, false, true), 0); }   /* a draft follows its sources: opening it brings in what changed (edited lines are never touched) */
+    const ck = reportChecks(rep, S.reports, monthCardsOf(rep), monthOf(rep.a));
+    if (ck.length) { const bx = el('div', 'rnote rchecks'); bx.setAttribute('role', 'status'); bx.append(el('b', '', 'Worth a look before you save (' + ck.length + ')')); const ul = el('ul'); ck.forEach(t => ul.append(el('li', '', t))); bx.append(ul); pg.append(bx); }
+  }
+  if (rUI.note && rUI.noteFor === rep.id && !viewer && !sub) { const nt = el('p', 'rnote' + (rUI.err ? ' bad' : ''), rUI.note); nt.setAttribute('role', 'status'); pg.append(nt); } pg.append(body);
 }
 
 export function renderReports() {

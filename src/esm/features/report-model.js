@@ -5,7 +5,8 @@
  * Rule: a line or summary a person has edited ALWAYS wins over a re-sync or the AI.
  */
 
-import { monthText } from './month-model.js';
+import { monthText, TAGS, clampPct, monthLabel } from './month-model.js';
+import { sameWords } from './sprint-cover.js';
 
 /** Report sections (one per product). `squads` are the roadmap/sprint squad keys that belong to the product. Editable in Settings. */
 export const DEFAULT_PRODUCTS = [
@@ -47,7 +48,7 @@ export function jiraUrl(base, key) {
  * @param {Array} sitems sprint items ({id,squad,t,jira,kind,st})
  * @param {Array} road roadmap items ({id,t,sq,d0,d1,st}) plus `ka`,`kb` = week as day indexes
  */
-export function sourceLines(prod, sitems, road, ka, kb, a, b) {
+export function sourceLines(prod, sitems, road, ka, kb, a, b, cards, prevDone) {
   const out = [];
   const mine = sitems.filter(s => prod.squads.includes(s.squad)), ids = new Set(mine.map(s => s.id)), kids = {}, tops = [];
   mine.forEach(s => { if (s.par && ids.has(s.par)) (kids[s.par] = kids[s.par] || []).push(s); else tops.push(s); });
@@ -64,6 +65,49 @@ export function sourceLines(prod, sitems, road, ka, kb, a, b) {
       out.push({ src: 'rf:' + r.id, g: 'road', st: r.st === 'done' ? 'done' : (r.st === 'decide' || r.st === 'contract') ? 'risk' : 'on', t: r.t, jira: '', kind: r.ms ? 'milestone' : 'roadmap', ord: 1e6 + r.d0 });
     });
   }
+  return withCards(prod, out, cards, prevDone);
+}
+
+/** Monthly tags that belong to a report product: the tags of its squads, or the tag with the same key (SCHS, Warif, ...). */
+export const tagKeysOf = prod => TAGS.filter(t => t.k === prod.k || t.squads.some(s => (prod.squads || []).includes(s))).map(t => t.k);
+/**
+ * The Monthly cards of the report's month join the lines of a product: a card that has started (1-99%) is "In progress", a card at 100% is
+ * "Delivered" (unless the previous report already showed it as delivered). A card replaces the roadmap bar it was made from (`rid`) and
+ * the sprint item that has the same words (its Jira key is kept). Notes and details of a card are internal and never copied.
+ * @param {Array} cards live Monthly cards of the month (not ad hoc)
+ * @param {Set} prevDone `src` of the cards the previous report already delivered
+ */
+function withCards(prod, out, cards, prevDone) {
+  const keys = tagKeysOf(prod), mine = (cards || []).filter(c => keys.includes(c.k) && clampPct(c.pct) > 0);
+  if (!mine.length) return out;
+  const rids = new Set(mine.filter(c => c.rid).map(c => c.rid)), res = [];
+  const jira = {}; mine.forEach(c => { const m = out.find(o => o.src.startsWith('si:') && sameWords(o.t, c.t)); if (m && m.jira) jira[c.id] = m.jira; });
+  out.forEach(o => { if (o.src.startsWith('rf:') && rids.has(o.src.slice(3))) return; if (o.src.startsWith('si:') && mine.some(c => sameWords(o.t, c.t))) return; res.push(o); });
+  mine.forEach(c => {
+    const pc = clampPct(c.pct), src = 'mo:' + c.id; if (pc >= 100 && prevDone && prevDone.has(src)) return;
+    res.push({ src: src, g: pc >= 100 ? 'done' : 'prog', st: pc >= 100 ? 'done' : 'on', t: c.t, h: '', pct: pc, fid: c.id, jira: jira[c.id] || '', kind: 'feature', tg: [], ord: 0 });
+  });
+  return res;
+}
+/** Report sections for Monthly tags that no product of the report covers (Finance, SCHS, Warif, New initiative), only when such a card has started. */
+export function monthSections(cards, products) {
+  const out = [];
+  TAGS.forEach(t => { if (products.some(p => tagKeysOf(p).includes(t.k)) || out.some(p => p.k === t.k)) return; if ((cards || []).some(c => c.k === t.k && clampPct(c.pct) > 0)) out.push({ k: t.k, n: t.n, squads: [], c: t.c }); });
+  return out;
+}
+/** Source lines already delivered (100%) in the latest report before `a`. */
+export function prevDoneOf(reports, a) {
+  const ids = Object.keys(reports || {}).filter(id => /^rp\d{8}/.test(id) && reports[id] && reports[id].a && reports[id].a < a).sort((x, y) => (reports[x].a < reports[y].a ? 1 : -1));
+  const done = new Set(); if (!ids.length) return done;
+  const prev = reports[ids[0]]; Object.keys(prev.prods || {}).forEach(k => ((prev.prods[k] || {}).items || []).forEach(l => { if (!l.hide && String(l.src || '').startsWith('mo:') && linePct(l) >= 100) done.add(l.src); }));
+  return done;
+}
+/** What is worth a look before the report is saved: started cards that did not move since the previous report, and cards of the month not started. */
+export function reportChecks(rep, reports, cards, month) {
+  const out = [], ids = Object.keys(reports || {}).filter(id => /^rp\d{8}/.test(id) && reports[id] && reports[id].a && reports[id].a < rep.a).sort((x, y) => (reports[x].a < reports[y].a ? 1 : -1));
+  const prev = {}; if (ids.length) Object.keys(reports[ids[0]].prods || {}).forEach(k => ((reports[ids[0]].prods[k] || {}).items || []).forEach(l => { if (l.src) prev[l.src] = linePct(l); }));
+  Object.keys(rep.prods || {}).forEach(k => ((rep.prods[k] || {}).items || []).forEach(l => { if (!l.hide && String(l.src || '').startsWith('mo:') && linePct(l) < 100 && prev[l.src] === linePct(l)) out.push('"' + l.t + '" is still at ' + linePct(l) + '%, the same as last week.'); }));
+  const idle = (cards || []).filter(c => clampPct(c.pct) === 0).length; if (idle) out.push(idle + ' card' + (idle === 1 ? '' : 's') + ' of ' + monthLabel(month) + ' ' + (idle === 1 ? 'has' : 'have') + ' not started (0%).');
   return out;
 }
 
@@ -75,9 +119,9 @@ export function mergeLines(prev, fresh) {
   const by = new Map((prev || []).map(p => [p.src, p])), seen = new Set(), out = [];
   fresh.forEach(f => {
     seen.add(f.src); const p = by.get(f.src);
-    if (!p) out.push({ id: uid(), src: f.src, g: f.g, st: f.st, t: f.t, h: f.h || '', t0: f.t, jira: f.jira, kind: f.kind, tg: f.tg || [], hide: false, edited: false });
+    if (!p) out.push(Object.assign({ id: uid(), src: f.src, g: f.g, st: f.st, t: f.t, h: f.h || '', t0: f.t, jira: f.jira, kind: f.kind, tg: f.tg || [], hide: false, edited: false }, Number.isFinite(f.pct) ? { pct: f.pct } : {}, f.fid ? { fid: f.fid, lk: { t: f.t, pct: f.pct } } : {}));
     else if (p.edited) out.push(p);
-    else out.push(Object.assign({}, p, { g: f.g, st: f.st, t: f.t, t0: f.t, jira: f.jira, kind: f.kind, tg: f.tg || [], h: f.h || '' }));
+    else out.push(Object.assign({}, p, { g: f.g, st: f.st, t: f.t, t0: f.t, jira: f.jira, kind: f.kind, tg: f.tg || [], h: f.h || '' }, Number.isFinite(f.pct) ? { pct: f.pct } : {}, f.fid ? { fid: f.fid, lk: { t: f.t, pct: f.pct } } : {}));
   });
   (prev || []).forEach(p => { if (!seen.has(p.src) && (p.src === 'man' || p.edited)) out.push(p); });
   return out;
@@ -109,10 +153,10 @@ export function overall(lines) {
 }
 
 /** Rule-based draft for every product, merged into an existing report's `prods` (or {}). Keeps edited summaries. */
-export function buildProds(products, prevProds, sitems, road, ka, kb, a, b) {
+export function buildProds(products, prevProds, sitems, road, ka, kb, a, b, cards, prevDone) {
   const out = {};
   products.forEach(p => {
-    const old = (prevProds && prevProds[p.k]) || {}, lines = mergeLines(old.items, sourceLines(p, sitems, road, ka, kb, a, b)).filter(l => l.g !== 'next');   /* the "Next" list is not part of the report: it was long and hid what matters */
+    const old = (prevProds && prevProds[p.k]) || {}, lines = mergeLines(old.items, sourceLines(p, sitems, road, ka, kb, a, b, cards, prevDone)).filter(l => l.g !== 'next');   /* the "Next" list is not part of the report: it was long and hid what matters */
     lines.sort((a, b) => GROUPS.findIndex(g => g[0] === a.g) - GROUPS.findIndex(g => g[0] === b.g));
     out[p.k] = { items: lines, sum: old.sumEdited ? old.sum : ruleSummary(p.n, lines), sumH: old.sumEdited ? (old.sumH || '') : '', sumEdited: !!old.sumEdited };
   });

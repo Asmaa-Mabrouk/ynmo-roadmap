@@ -33,20 +33,21 @@ with sync_playwright() as pw:
     ok('L9 the card is in step again', card('Link me v2').locator('.fschip').count()==0 and A.locator('#mdcheck').count()==0)
     # weekly report item by id
     A.evaluate("""()=>{const d=JSON.parse(localStorage.getItem('fk3'));d.sprints.sp1={n:1,a:'2026-10-12',b:'2026-10-25',note:'',secs:{tifli:{people:['Lea']}}};localStorage.setItem('fk3',JSON.stringify(d));}"""); A.reload(); A.wait_for_timeout(1500)
-    A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(400); A.click('button:has-text("New report for week of")'); A.wait_for_timeout(700)
+    A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(400); A.click('button:has-text("Build report for week of")'); A.wait_for_timeout(700)
     tf=A.locator('#pg-reports .rprod[data-k="tifli"]'); tf.locator('.spadd textarea').fill('Report copy'); tf.locator('button:text-is("Add items")').click(); A.wait_for_timeout(500)
-    fi=A.locator('#pg-reports .rline input[aria-label^="Feature id"]').first
+    A.locator('#pg-reports .rline').first.locator('button[aria-label="Delete item"]').click(); A.wait_for_timeout(300)   # the report already has a line for the card (from Monthly): remove it, this test links a typed line
+    fi=A.locator('#pg-reports .rline input[aria-label^="Feature id"]').last
     fi.fill('XX#999'); fi.press('Tab'); A.wait_for_timeout(400)
     ok('L10 an unknown id is refused', A.locator('#pg-reports .rline .fschip').count()==0 and fi.input_value()=='')
     fi.fill(fid.lower()); fi.press('Tab'); A.wait_for_timeout(600)
-    ok('L11 the item links by id (any letter case)', A.locator('#pg-reports .rline input[aria-label^="Feature id"]').first.input_value()==fid)
+    ok('L11 the item links by id (any letter case)', A.locator('#pg-reports .rline input[aria-label^="Feature id"]').last.input_value()==fid)
     ok('L12 the roadmap title/progress differ, so the report offers Check updates', A.locator('#rpcheck').count()==1 and A.locator('#pg-reports .rline .fschip.in').count()==1)
     A.click('#rpcheck'); A.wait_for_timeout(300)
     ok('L13 the dialog lists title and progress separately', A.locator('#xdlg .fsrow').count()==2)
     A.locator('#xdlg button[aria-label="Apply Title of %s"]'%fid).click(); A.wait_for_timeout(500)
     ok('L14 applying one change leaves the other for you to decide', A.locator('#xdlg .fsrow').count()==1)
     A.locator('#xdlg button[aria-label="Apply Progress of %s"]'%fid).click(); A.wait_for_timeout(500); A.click('#xdlg button:text-is("Close")'); A.wait_for_timeout(500)
-    ok('L15 the report item took the roadmap title and 50%', 'Link me v2' in A.locator('#pg-reports .rline .sptext').first.inner_text() and A.locator('#pg-reports .rline select[aria-label="Percent complete"]').first.input_value()=='50' and A.locator('#rpcheck').count()==0)
+    ok('L15 the report item took the roadmap title and 50%', 'Link me v2' in A.locator('#pg-reports .rline .sptext').last.inner_text() and A.locator('#pg-reports .rline select[aria-label="Percent complete"]').last.input_value()=='50' and A.locator('#rpcheck').count()==0)
     # progress changed on the roadmap
     A.click('#nav button[data-p="roadmap"]'); A.wait_for_timeout(700)
     bid=A.evaluate("()=>{const o=JSON.parse(localStorage.getItem('fk3')).items;return Object.keys(o).find(i=>o[i]&&o[i].card)}")
@@ -61,13 +62,13 @@ with sync_playwright() as pw:
     # the report item: keep mine -> request -> reject
     A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(500); A.locator('#pg-reports .rlist, #pg-reports').first
     A.locator('#pg-reports .rpcard a.splink').first.click(); A.wait_for_timeout(600)
-    A.click('#rpcheck'); A.wait_for_timeout(300); A.locator('#xdlg button[aria-label="Keep mine for Progress of %s"]'%fid).click(); A.wait_for_timeout(500); A.click('#xdlg button:text-is("Close")'); A.wait_for_timeout(400)
+    A.click('#rpcheck'); A.wait_for_timeout(300); A.locator('#xdlg button[aria-label="Keep mine for Progress of %s"]'%fid).first.click(); A.wait_for_timeout(500); A.click('#xdlg button:text-is("Close")'); A.wait_for_timeout(400)
     ok('L20 "Keep mine" turns the item into a request', A.locator('#pg-reports .rline .fschip.out').count()==1)
     A.click('#nav button[data-p="admin"]'); A.wait_for_timeout(900)
     ok('L21 the admin sees the request from the weekly report', A.locator('#roadreq .fsrow').count()==1 and 'weekly report' in A.locator('#roadreq').inner_text() and '80%' in A.locator('#roadreq .fsdiff').inner_text())
     A.locator('#roadreq button[aria-label="Reject Progress of %s"]'%fid).click(); A.wait_for_timeout(600)
     ok('L22 rejecting sends the item back to the roadmap value', A.locator('#roadreq .fsrow').count()==0)
     A.click('#nav button[data-p="reports"]'); A.wait_for_timeout(500); A.locator('#pg-reports .rpcard a.splink').first.click(); A.wait_for_timeout(600)
-    ok('L23 the report item is 80% again', A.locator('#pg-reports .rline select[aria-label="Percent complete"]').first.input_value()=='80' and A.locator('#pg-reports .rline .fschip').count()==0)
+    ok('L23 the report item is 80% again', A.locator('#pg-reports .rline select[aria-label="Percent complete"]').last.input_value()=='80' and A.locator('#pg-reports .rline').last.locator('.fschip').count()==0)
     ok('no page errors', errs==[]); print('errors:',errs[:3])
     print(sum(1 for _,c in R if c),'/',len(R))

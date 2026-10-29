@@ -2,6 +2,8 @@ import sys, os; sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspa
 from h18 import *
 """Capacity: points per role on cards (Monthly) and the Capacity dashboard (months at a glance, what to fix, room per track, team with leave and leaving), warning before a move, order (needs), settings, executive view. Fake database only."""
 R=[]
+def carry(A):
+    if A.locator('#xdlg select[aria-label="Reason for the carry over"]').count(): A.click('#xdlg button:text-is("Carry over")'); A.wait_for_timeout(500)
 def ok(n,c): R.append((n,bool(c))); print(('PASS ' if c else 'FAIL ')+n)
 def add(P,mo,text):
     c=P.locator('.mdcol[data-mo="%s"]'%mo); c.locator('.mdopen').click(); ta=c.locator('.mdadd textarea'); ta.fill(text); ta.press('Enter'); P.wait_for_timeout(500); P.keyboard.press('Escape'); P.wait_for_timeout(250)
@@ -61,11 +63,11 @@ with sync_playwright() as pw:
     ok('C3 the room table adds up the points of the cards (21 of 22.4)', meter(A,'2026-11','be')=='21 / 22.4' and meter(A,'2026-11','fe')=='5 / 16.8')
     ok('C3b November tile says it is almost full', 'almost full' in A.locator('.cptile[data-mo="2026-11"]').inner_text() and 'Tight' in A.locator('.cptile[data-mo="2026-11"]').inner_text()); back(A)
     ok('C4 the card shows its points', card(A,'alpha').locator('.mdpts').inner_text()=='18 pts')
-    card(A,'gamma').locator('.kebab').click(); A.locator('#ctx .mi:text-is("November 2026")').click(); A.wait_for_timeout(500)
+    card(A,'gamma').locator('.kebab').click(); A.locator('#ctx .mi:text-is("November 2026")').click(); A.wait_for_timeout(500); carry(A)
     ok('C5 moving a card that breaks BE capacity warns first', 'BE would be 29 of 22.4' in A.locator('#xdlg').inner_text())
     A.click('#xdlg button:text-is("Cancel")'); A.wait_for_timeout(300)
     ok('C6 Cancel leaves the card where it was', A.locator('.mdcol[data-mo="2026-10"] .mdcard:has-text("gamma")').count()==1)
-    card(A,'gamma').locator('.kebab').click(); A.locator('#ctx .mi:text-is("November 2026")').click(); A.wait_for_timeout(400); A.click('#xdlg button:text-is("Move anyway")'); A.wait_for_timeout(600)
+    card(A,'gamma').locator('.kebab').click(); A.locator('#ctx .mi:text-is("November 2026")').click(); A.wait_for_timeout(400); carry(A); A.click('#xdlg button:text-is("Move anyway")'); A.wait_for_timeout(600)
     ok('C7 Move anyway moves it and the dashboard shows November over', A.locator('.mdcol[data-mo="2026-11"] .mdcard:has-text("gamma")').count()==1 and meter(A,'2026-11','be')=='29 / 22.4' and A.locator('#cpheat .cpcell.over').count()==1 and 'Over' in A.locator('.cptile[data-mo="2026-11"]').inner_text())
     t=A.locator('#cp-fix').inner_text()
     ok('C8 What needs fixing names the track and how much it is over', 'BE is over by 6.6 points' in t and A.locator('#cpnone').count()==0)
@@ -88,7 +90,7 @@ with sync_playwright() as pw:
     # names come from Resources
     dash(A)
     ok('N1 the official names are used as they are (Hamid Shahien, not Hamid)', A.locator('#cpheatp .cprl[data-name="Hamid Shahien"]').count()==1 and A.locator('#cpheatp .cprl[data-name="Hamid"]').count()==0)
-    ok('N2 PMs are not on the Dashboard: no PM track, no PM people; Design\'s Khalid Abdelfattah is listed as Resources lists him', A.locator('#cpheatp .cprl[data-name="Asmaa"]').count()==0 and 'Design' in A.locator('#cpheatp .cprl[data-name="Khalid Abdelfattah"]').inner_text() and A.locator('#cpheatp .cprl').count()==18)
+    ok('N2 PMs are not on the Dashboard: no PM track, no PM people; Design and Quality people are left out of the people heat map', A.locator('#cpheatp .cprl[data-name="Asmaa"]').count()==0 and A.locator('#cpheatp .cprl[data-name="Khalid Abdelfattah"]').count()==0 and A.locator('#cpheatp .cprl').count()==12)
     ok('N3 names that Resources does not list are called out', 'Mohamed Altramsi' not in A.locator('#cpmissing').inner_text() and 'Hamid Shahien' not in A.locator('#cpmissing').inner_text() and 'Khalid Nazim' not in A.locator('#cpmissing').inner_text())
     A.click('#cpaddres'); A.wait_for_timeout(500)
     ok('N4 "Add them to Resources" adds them and the notice goes away', A.locator('#cpmissing').count()==0)
@@ -106,10 +108,10 @@ with sync_playwright() as pw:
     for n,d in [('Ahmed Adnan','2026-11-20'),('Mona Mohamed','2026-10-01'),('Mohamed Zahran','2027-06-30')]:
         A.locator('#leavesec select[aria-label="Person leaving"]').select_option(n); A.locator('#leavesec input[type=date]').fill(d); A.click('#leaveadd'); A.wait_for_timeout(200)
     A.click('#xdlg button:text-is("Save")'); A.wait_for_timeout(700)
-    ad=A.locator('#cpheatp .cprl[data-name="Ahmed Adnan"]').inner_text(); mo=A.locator('#cpheatp .cprl[data-name="Mona Mohamed"]').inner_text(); za=A.locator('#cpheatp .cprl[data-name="Mohamed Zahran"]').inner_text()
+    ad=A.locator('#cpheatp .cprl[data-name="Ahmed Adnan"]').inner_text()
     ok('T3 someone leaving within 60 days is marked "Leaving ... (soon)"', 'Leaving' in ad and '(soon)' in ad)
-    ok('T4 someone who has left is marked "Left on"', 'Left on' in mo)
-    ok('T5 a far departure shows the date without "soon"', 'Leaving' in za and '(soon)' not in za)
+    ok('T4 Design and Quality people (here Mona, who has left) are not rows of the people heat map', A.locator('#cpheatp .cprl[data-name="Mona Mohamed"]').count()==0)
+    ok('T5 ... but the Quality track still counts the leaver (3 people)', A.locator('#cpheatp .cprl[data-name="Mohamed Zahran"]').count()==0)
     ok('T7 Quality capacity of November counts three people (3 x 10 x 70% = 21)', meter(A,'2026-11','qa').endswith('/ 21'))
     # leave from the Vacations page shows next to the person
     A.evaluate("()=>{const s=JSON.parse(localStorage.getItem('fk3')); s.vacations['v1']={p:'Amal Saleem',a0:'2026-10-19',a1:'2026-10-22',t:'Annual',n:''}; s.vacations['v2']={p:'Mo\\'men Sayeh',a0:'2026-11-03',a1:'2026-11-05',t:'Annual',n:''}; localStorage.setItem('fk3',JSON.stringify(s));}")
@@ -133,9 +135,9 @@ with sync_playwright() as pw:
     dash(A); A.locator('.cptile[data-mo="2026-11"]').click(); A.wait_for_timeout(300)
     be=A.locator('#cpheat .cpcell[data-lane="be"][data-m="2026-11"]'); ai=A.locator('#cpheat .cpcell[data-lane="ai"][data-m="2026-11"]')
     ok('H1 the track heat map marks an over-capacity cell with a triangle, the share and a red fill', 'over' in (be.get_attribute('class') or '') and '▲' in be.inner_text() and '%' in be.inner_text() and 'color-mix' in (ai.get_attribute('style') or ''))
-    ok('H2 the people heat map has one row per person (18 seats without PMs)', A.locator('#cpheatp .cprl').count()==18)
+    ok('H2 the people heat map has one row per planned person (12: 18 seats without PMs, minus 4 Quality and 2 Design)', A.locator('#cpheatp .cprl').count()==12)
     ok('H3 a person over what they can take is flagged in the people heat map', 'over' in (A.locator('#cpheatp .cpcell[data-name="Ahmed Soliman"][data-m="2026-11"]').get_attribute('class') or ''))
-    ok('H4 someone who has left shows a dash, not a bar, in later months', A.locator('#cpheatp .cpcell.na[data-name="Mona Mohamed"]').count()>=1)
+    ok('H4 someone who has left shows a dash, not a bar, in later months (Ahmed Adnan leaves on 20 Nov)', A.locator('#cpheatp .cpcell.na[data-name="Ahmed Adnan"]').count()>=1)
     ok('H5 the bars show the over part of BE in red and say how much', A.locator('#cpbars .cpbrow[data-lane="be"] .cpbover').count()==1 and 'over' in A.locator('#cpbars .cpbrow[data-lane="be"] .cpbval').inner_text())
     A.locator('.cptile[data-mo="2026-12"]').click(); A.wait_for_timeout(300)
     ok('H6 the bars follow the chosen month (no red in December)', A.locator('#cpbars .cpbover').count()==0 and 'December 2026' in A.locator('#cp-bars h2').inner_text())
@@ -162,7 +164,7 @@ with sync_playwright() as pw:
     ok('L3 the numbers row shows four figures', A.locator('#cpkpi .cpkpi').count()==4)
     ok('L4 month cards carry a status icon and pill', A.locator('button.cptile .cpicob svg').count()>=4 and A.locator('button.cptile .cppill').count()>=4)
     E.reload(); E.wait_for_timeout(1500); dash(E)
-    ok('C13 executives see the dashboard but cannot change settings', E.locator('#cpheat .cpcell').count()==24 and E.locator('#cpsettings').count()==0 and E.locator('#cpheatp .cprl').count()==18)
+    ok('C13 executives see the dashboard but cannot change settings', E.locator('#cpheat .cpcell').count()==24 and E.locator('#cpsettings').count()==0 and E.locator('#cpheatp .cprl').count()==12)
     E.click('#nav button[data-p="monthly"]'); E.wait_for_timeout(900)
     ok('C14 executives see the points on cards but no Points menu', E.locator('.mdcard .mdpts').count()>=1 and E.locator('.mdcard .kebab').count()==0)
     ok('no page errors', errs==[]); print('errors:',errs[:3]); print(sum(1 for _,c in R if c),'/',len(R))

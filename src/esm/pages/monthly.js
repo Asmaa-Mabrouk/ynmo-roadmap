@@ -22,7 +22,7 @@ import { openDlg, closeDlg } from '../features/safety.js';
 import { saveIdea } from './ideas.js';
 import { guardMove, openPoints, ptsChips } from '../features/capacity-view.js';
 import { diffDoc, undoChanges } from '../features/month-undo.js';
-import { adhocStats, cardId, sortByProduct, PRODUCT_ORDER, notesOf, clampPct, monthId, monthLabel, monthProgress, monthRange, monthText, newLine, nextMonth, pctBand, SIZES, TAGS, legacyTag } from '../features/month-model.js';
+import { CARRY_REASONS, carryText, assignees, pointsMatch, prevMonth, adhocStats, cardId, sortByProduct, PRODUCT_ORDER, notesOf, clampPct, monthId, monthLabel, monthProgress, monthRange, monthText, newLine, nextMonth, pctBand, SIZES, TAGS, legacyTag } from '../features/month-model.js';
 import { NOTE_ICON, setupBanner } from './reports.js';
 import { openHistory, keepVersion } from './monthly-history.js';
 import { snapReason, cardCount, versionsOf } from '../features/month-history.js';
@@ -34,7 +34,7 @@ let blOpen = false; try { blOpen = localStorage.getItem('ynmo-backlog') === '1';
 let sortOn = true; try { sortOn = localStorage.getItem('ynmo-month-sort') !== '0'; } catch (e) { /* no storage */ }
 const setSort = v => { sortOn = v; try { localStorage.setItem('ynmo-month-sort', v ? '1' : '0'); } catch (e) { /* no storage */ } };
 const setBl = v => { blOpen = v; try { localStorage.setItem('ynmo-backlog', v ? '1' : '0'); } catch (e) { /* no storage */ } };
-const ui = { q: '', pr: 'all', fl: 'all', past: false, prod: '', open: '' };
+const ui = { q: '', pr: 'all', fl: 'all', who: 'all', pts: 'all', past: false, prod: '', open: '' };
 const canBuild = () => modLevel('monthly') >= 2 && canWrite();
 const canDel = () => modLevel('monthly') >= 3 && canWrite();
 const curMonth = () => todayIso().slice(0, 7);
@@ -155,10 +155,30 @@ function deleteMonth(m) {
 }
 const copyMonth = m => { const txt = monthText(docOf(m), boardProducts(), fmtIso).join('\n') || lab(m) + '\nNo deliverables yet.'; (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify('Month text copied to the clipboard'), () => notify('Could not copy. Select the text and copy it manually.', 'err')); };
 /** Moves a card to month `to`, before the card `before` (or to the end). Within one month this re-orders. */
-const moveCard = (from, id, to, before, guarded) => {
+/** Moving an unfinished card on to a LATER month is a carry over: the person says why (optional) and the card gets the tag. */
+const carryable = (line, from, to) => from !== BL && to !== BL && to > from && clampPct(line.pct) < 100 && !line.adhoc;
+/** Dialog: why does this card carry over? `done(co)` gets { from, why, by, at }. */
+function askCarry(l, from, to, done, title) {
+  openDlg(title || 'Carry "' + String(l.t).slice(0, 60) + '" over to ' + lab(to) + '?', box => {
+    box.append(el('p', 'meta', 'The card gets the tag "Carry over from ' + lab(from) + '". Say why it was not finished, so the team and the executives can see it.'));
+    const sel = el('select'); sel.setAttribute('aria-label', 'Reason for the carry over'); const e0 = el('option', '', 'Choose a reason (optional)'); e0.value = ''; sel.append(e0);
+    CARRY_REASONS.forEach(r => { const o = el('option', '', r); o.value = r; sel.append(o); });
+    if (l.co && l.co.why) { const base = CARRY_REASONS.find(r => l.co.why === r || l.co.why.startsWith(r + ': ')); if (base) sel.value = base; }
+    const txt = el('input'); txt.type = 'text'; txt.maxLength = 160; txt.placeholder = 'More detail (optional)'; txt.setAttribute('aria-label', 'More detail about the reason');
+    if (l.co && l.co.why) { const base = CARRY_REASONS.find(r => l.co.why === r || l.co.why.startsWith(r + ': ')); txt.value = base ? l.co.why.slice(base.length).replace(/^:\s*/, '') : l.co.why; }
+    const ok = el('button', 'btn primary', 'Carry over'), no = el('button', 'btn', 'Cancel'); ok.type = no.type = 'button'; no.addEventListener('click', closeDlg);
+    ok.addEventListener('click', () => { const why = [sel.value, txt.value.replace(/\s+/g, ' ').trim()].filter(Boolean).join(': ').slice(0, 200); closeDlg(); done({ from: from, why: why, by: (S.me && (S.me.name || S.me.email)) || '', at: new Date().toISOString() }); });
+    const row = el('div', 'row'); row.append(ok, no); box.append(sel, txt, row); setTimeout(() => sel.focus(), 0);
+  });
+}
+/** Sets or removes the carry-over tag of a card of month `m`. */
+const setCarry = (m, l, co, label) => { saveMonth(m, d => { const x = d.lines.find(z => z.id === l.id); if (x) { if (co) x.co = co; else delete x.co; } }, label); renderMonthly(); };
+const moveCard = (from, id, to, before, guarded, co) => {
   if (from === to && before === id) return;
   const src = docOf(from), line = src && src.lines.find(l => l.id === id); if (!line) return;
-  if (from !== to && !guarded) { guardMove(line, to, () => moveCard(from, id, to, before, true)); return; } const copy = JSON.parse(JSON.stringify(line));
+  if (from !== to && co === undefined && carryable(line, from, to)) { askCarry(line, from, to, c => moveCard(from, id, to, before, guarded, c)); return; }
+  if (from !== to && !guarded) { guardMove(line, to, () => moveCard(from, id, to, before, true, co)); return; } const copy = JSON.parse(JSON.stringify(line));
+  if (from !== to) { if (co) copy.co = co; else if (to === BL || (copy.co && to <= copy.co.from)) delete copy.co; }
   const put = (d) => { const i = before ? d.lines.findIndex(l => l.id === before) : -1; if (i >= 0) d.lines.splice(i, 0, copy); else d.lines.push(copy); };
   grouped(() => {
     if (from === to) saveMonth(from, d => { d.lines = d.lines.filter(l => l.id !== id); put(d); }, null);
@@ -269,6 +289,7 @@ function card(m, l, prods, ed) {
       openCtx(b.right - 200, b.bottom + 4, mm => {
         Object.keys(SIZES).forEach(k => mi(mm, (l.sz === k ? '✓ ' : '') + SIZES[k], () => put({ sz: l.sz === k ? '' : k }, l.sz === k ? 'removed the ' + SIZES[k] + ' flag' : 'flagged "' + l.t + '" as ' + SIZES[k])));
         mi(mm, 'Points and people…', () => openPoints(m, l, put));
+        if (m !== BL) { if (l.co) { mi(mm, 'Carry-over reason…', () => askCarry(l, l.co.from, m, c => setCarry(m, l, c, 'changed the carry-over reason of "' + l.t + '"'), 'Why does this card carry over?')); mi(mm, 'Remove carry-over tag', () => setCarry(m, l, null, 'removed the carry-over tag from "' + l.t + '"')); } else if (!l.adhoc) mi(mm, 'Mark as carry over from last month…', () => askCarry(l, prevMonth(m), m, c => setCarry(m, l, c, 'marked "' + l.t + '" as carried over from ' + lab(prevMonth(m))), 'Carry over from ' + lab(prevMonth(m)) + '?')); }
         if (m === BL) { /* backlog cards are not scheduled yet */ } else if (onRoadmap(l)) mi(mm, 'Show on roadmap', () => { if (l.rm) useRoadmap(l.rm); showPage('roadmap'); }); else mi(mm, 'Add to roadmap…', () => addToRoadmap(m, l, p));
         mm.append(el('div', 'msep'));
         if (l.adhoc) mi(mm, 'Mark as planned (not ad hoc)', () => put({ adhoc: false }, 'marked as planned'));
@@ -284,6 +305,7 @@ function card(m, l, prods, ed) {
   ptsChips(l).forEach(c => foot.append(c));
   if (SIZES[l.sz]) { const z = el('span', 'chip mdsz mdsz-' + l.sz); z.innerHTML = (l.sz === 'enh' ? STAR + ' ' : '') + SIZES[l.sz]; foot.append(z); }
   if (l.adhoc) foot.append(el('span', 'chip mdadhoc', 'Ad hoc'));
+  if (carryText(l)) { const w = String(l.co.why || '').trim(), c = el('span', 'chip mdco', '↪ Carry over from ' + monthLabel(l.co.from).replace(/ \d{4}$/, '') + (w ? ': ' + (w.length > 34 ? w.slice(0, 33) + '…' : w) : '')); c.title = carryText(l) + (l.co.by ? ' (' + l.co.by + ')' : ''); foot.append(c); }
   if (m !== BL && !onRoadmap(l) && !l.src && String(l.t || '').trim()) { r.classList.add('noroad'); const b = el('span', 'chip mdnoroad', '⚠ Not on roadmap'); b.title = 'This card is not planned on the roadmap yet' + (ed ? '. Use ⋯ → Add to roadmap…' : '.'); foot.append(b); }
   if (onRoadmap(l)) { const b = el('span', 'chip mdroad', 'On roadmap'); b.title = 'This card is a bar on the roadmap'; foot.append(b); } else if (l.src) { const b = el('span', 'chip mdroad', 'From roadmap'); b.title = 'Brought in from the roadmap'; foot.append(b); }
   { const k = lkMap.get(l.id); if (k) { if (k.cmp.incoming.length) { const b = el('span', 'chip fschip in', 'Roadmap changed'); b.title = 'The roadmap has a newer ' + k.cmp.incoming.map(x => x.f === 't' ? 'title' : 'progress').join(' and ') + '. Use Check updates.'; foot.append(b); } if (k.cmp.outgoing.length) { const b = el('span', 'chip fschip out', 'Waiting for admin'); b.title = 'Your change to the ' + k.cmp.outgoing.map(x => x.f === 't' ? 'title' : 'progress').join(' and ') + ' is waiting for an admin to approve it on the roadmap.'; foot.append(b); } } }
@@ -324,7 +346,7 @@ function composer(m, prods) {
 function column(m, prods, ed) {
   const d = docOf(m), isBl = m === BL, now = m === curMonth(), col = el('div', 'col mdcol' + (now ? ' now' : '') + (isBl ? ' mdbl' : '')); if (isBl) col.id = 'mdbacklog'; col.dataset.mo = m; col.style.setProperty('--c', isBl ? '#8a6d3b' : now ? 'var(--brand)' : '#55608a');
   const fq = ui.q.trim().toLowerCase();
-  const lines = d.lines.filter(l => String(l.t || '').trim()), shown = lines.filter(l => (ui.pr === 'all' || l.k === ui.pr) && (ui.fl === 'all' || (ui.fl === 'hp' ? l.hp : l.sz === ui.fl)) && (!fq || (String(l.t) + ' ' + cardId(l)).toLowerCase().includes(fq)));
+  const lines = d.lines.filter(l => String(l.t || '').trim()), shown = lines.filter(l => (ui.pr === 'all' || l.k === ui.pr) && (ui.fl === 'all' || (ui.fl === 'hp' ? l.hp : l.sz === ui.fl)) && pointsMatch(l, ui.who, ui.pts) && (!fq || (String(l.t) + ' ' + cardId(l)).toLowerCase().includes(fq)));
   const h = el('h2'); h.append(document.createTextNode(lab(m)), el('span', 'badge', String(lines.length)));
   if (now) h.append(el('span', 'chip mdnow', 'This month'));
   { const nb = noteBtn(m, d, ed, true); if (!nb.hidden) h.append(nb); }
@@ -375,7 +397,12 @@ export function renderMonthly() {
   fp.addEventListener('change', () => { ui.pr = fp.value; renderMonthly(); });
   const ff = el('select'); ff.setAttribute('aria-label', 'Filter by flag'); [['all', 'All cards'], ['hp', 'Business priority'], ['quick', 'Quick wins'], ['enh', 'Small enhancements']].forEach(x => { const o = el('option', '', x[1]); o.value = x[0]; o.selected = x[0] === ui.fl; ff.append(o); });
   ff.addEventListener('change', () => { ui.fl = ff.value; renderMonthly(); });
-  tools.append(q, fp, ff);
+  const peopleAll = assignees([].concat(...rawDocs().map(d => d.lines)));
+  const fw = el('select'); fw.setAttribute('aria-label', 'Filter by assigned person'); [['all', 'Everyone']].concat(peopleAll.map(n => [n, n])).forEach(x => { const o = el('option', '', x[1]); o.value = x[0]; o.selected = x[0] === ui.who; fw.append(o); });
+  fw.addEventListener('change', () => { ui.who = fw.value; renderMonthly(); });
+  const fq2 = el('select'); fq2.setAttribute('aria-label', 'Filter by points'); [['all', 'Any points'], ['with', 'With points'], ['none', 'No points yet']].concat([1, 2, 3, 5, 8, 13, 21].map(v => [String(v), v + (v === 1 ? ' point' : ' points')])).forEach(x => { const o = el('option', '', x[1]); o.value = x[0]; o.selected = x[0] === ui.pts; fq2.append(o); });
+  fq2.addEventListener('change', () => { ui.pts = fq2.value; renderMonthly(); });
+  tools.append(q, fp, ff); if (ed) tools.append(fw, fq2);   /* points and people are internal: executives do not get these filters */
   { const cb = el('button', 'btn sm', 'Dashboard'); cb.type = 'button'; cb.id = 'mdtocap'; cb.title = 'Open the Dashboard: what fits, what to fix, who is available'; cb.addEventListener('click', () => showPage('capacity')); tools.append(cb); }
   { const sb = el('button', 'btn sm mdsort' + (sortOn ? ' on' : ''), sortOn ? '✓ Sorted by product' : 'Sort by product'); sb.type = 'button'; sb.id = 'mdsort'; sb.setAttribute('aria-pressed', String(sortOn)); sb.title = 'In every column: ' + PRODUCT_ORDER.slice(0, 6).map(k => (TAGS.find(t => t.k === k) || {}).n).join(', then ') + '. Click again to go back to your own order.'; sb.addEventListener('click', () => { setSort(!sortOn); renderMonthly(); }); tools.append(sb); }
   if (ed) { const ub = el('button', 'btn sm mdundo', '↶ Undo'); ub.type = 'button'; ub.id = 'mdundo'; ub.disabled = !undoStack.length; ub.title = 'Undo the last change on this board (Ctrl+Z)'; ub.addEventListener('click', undoMonthly); tools.append(ub); }

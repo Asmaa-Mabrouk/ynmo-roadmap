@@ -1411,6 +1411,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 .covchip.cov-missing { background: #fdecea; color: #b3261e; border: 1px solid #f3b8b3; }
 .covchip.cov-unassigned { background: #fff4e0; color: #8a5a00; border: 1px solid #f0d49a; }
 .covbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: #fff8ec; border: 1px solid #f0d49a; color: #6b4a00; border-radius: 12px; padding: 8px 12px; margin-bottom: 10px; font-size: 13px; }
+.rchecks { margin: 8px 0 0; }
+.rchecks ul { margin: 6px 0 0; padding-inline-start: 18px; }
+.mdco { font-size: .72rem; padding: 1px 8px; background: #eaf0ff; border-color: #aab9ee; color: #26408b; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -2353,15 +2356,15 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     });
     return out;
   }
-  function dependencyProblems(line, to, monthOf, labelOf2, dependants2) {
+  function dependencyProblems(line, to, monthOf2, labelOf2, dependants2) {
     const out = [];
     if (line.needs) {
-      const pm = monthOf(line.needs);
+      const pm = monthOf2(line.needs);
       if (!pm) out.push("It needs " + labelOf2(line.needs) + ", which is not planned in a month yet.");
       else if (pm > to) out.push("It needs " + labelOf2(line.needs) + ", which is planned later (" + pm + ").");
     }
     (dependants2 || []).forEach((d) => {
-      const dm = monthOf(d.id);
+      const dm = monthOf2(d.id);
       if (dm && dm < to) out.push(labelOf2(d.id) + " needs this card and is planned earlier (" + dm + ").");
     });
     return out;
@@ -4554,7 +4557,13 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   var addD = (iso4, n) => new Date(Date.parse(iso4 + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
   var isMonth = (m) => /^\d{4}-(0[1-9]|1[0-2])$/.test(m || "");
   var monthId = (m) => "mo" + m.replace("-", "");
+  var monthOf = (weekStart) => addD(weekStart, 3).slice(0, 7);
   var monthLabel = (m) => isMonth(m) ? (/* @__PURE__ */ new Date(m + "-01T00:00:00Z")).toLocaleString("en", { month: "long", year: "numeric", timeZone: "UTC" }) : "";
+  var prevMonth = (m) => {
+    const d = /* @__PURE__ */ new Date(m + "-01T00:00:00Z");
+    d.setUTCMonth(d.getUTCMonth() - 1);
+    return d.toISOString().slice(0, 7);
+  };
   var nextMonth = (m) => {
     const d = /* @__PURE__ */ new Date(m + "-01T00:00:00Z");
     d.setUTCMonth(d.getUTCMonth() + 1);
@@ -4607,8 +4616,24 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     return (t ? t.ab : String(l.k || "??").slice(0, 2).toUpperCase()) + "#" + l.no;
   };
   var notesOf = (l) => l && Array.isArray(l.notes) ? l.notes : l && l.note ? [{ id: "n0", t: String(l.note), by: "", at: "" }] : [];
+  var CARRY_REASONS = ["Blocked by a dependency", "Waiting for approval or input", "Re-prioritised", "Not enough capacity", "Scope grew", "Needs more testing", "Other"];
+  var carryText = (l) => l && l.co && isMonth(l.co.from) ? "Carry over from " + monthLabel(l.co.from) + (String(l.co.why || "").trim() ? ": " + String(l.co.why).trim() : "") : "";
+  var whoPairs = (l) => {
+    const out = [];
+    Object.keys(l && l.who || {}).forEach((t) => Object.keys(l.who[t] || {}).forEach((n) => out.push([n, Number(l.who[t][n]) || 0, t])));
+    return out;
+  };
+  var assignees = (lines) => [...new Set([].concat(...(lines || []).map((l) => whoPairs(l).filter((x) => x[1] > 0).map((x) => x[0]))))].sort((a, b) => a.localeCompare(b));
+  function pointsMatch(l, person, pts) {
+    const all = whoPairs(l), mine = person === "all" ? all : all.filter((x) => x[0] === person), has = mine.some((x) => x[1] > 0);
+    if (person !== "all" && !has) return false;
+    if (pts === "all") return true;
+    if (pts === "with") return has;
+    if (pts === "none") return !all.some((x) => x[1] > 0);
+    return mine.some((x) => x[1] === Number(pts));
+  }
   var SIZES = { quick: "Quick win", enh: "Small enhancement" };
-  var tagsOf = (l) => (l.hp ? " [BUSINESS PRIORITY]" : "") + (SIZES[l.sz] ? " [" + SIZES[l.sz].toUpperCase() + "]" : "");
+  var tagsOf = (l) => (l.hp ? " [BUSINESS PRIORITY]" : "") + (carryText(l) ? " [" + carryText(l).toUpperCase() + "]" : "") + (SIZES[l.sz] ? " [" + SIZES[l.sz].toUpperCase() + "]" : "");
   function monthText(doc2, products, fmt4) {
     if (!doc2 || !live(doc2.lines).length) return [];
     const prog = monthProgress(doc2.lines), out = ["MONTHLY DELIVERABLES - " + monthLabel(doc2.mo) + (prog.pct === null ? "" : " - " + prog.pct + "% complete (" + prog.done + " of " + prog.n + " done)"), ""];
@@ -6773,6 +6798,34 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     });
   }
 
+  // src/esm/features/sprint-cover.js
+  var KEY = /\b([A-Z][A-Z0-9_]+-\d+)\b/;
+  function parseJira(text) {
+    const t = String(text || "").trim(), m = KEY.exec(t.toUpperCase().replace(/[^A-Z0-9_\-\/:.?=&%]/g, " "));
+    if (!m) return null;
+    const u = /^(https:\/\/[^\s/]+)\/(?:browse|jira\/software\/[^\s]*?\/issues)\b/i.exec(t) || /^(https:\/\/[^\s/]+\.atlassian\.net)\b/i.exec(t);
+    return { key: m[1], base: u ? u[1] : "" };
+  }
+  var norm = (s) => String(s || "").toLowerCase().replace(/\(?\b[a-z][a-z0-9_]+-\d+\b\)?/g, " ").replace(/#\S+/g, " ").replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim();
+  var toks = (s) => norm(s).split(" ").filter((w) => w.length >= 3);
+  function sameWords(a, b) {
+    const x = norm(a), y = norm(b);
+    if (!x || !y) return false;
+    if (x === y) return true;
+    if (Math.min(x.length, y.length) >= 6 && (x.includes(y) || y.includes(x))) return true;
+    const A = toks(a), B = toks(b);
+    if (A.length < 2 || B.length < 2) return false;
+    const [s, l] = A.length <= B.length ? [A, B] : [B, A], hit = s.filter((w) => l.includes(w)).length;
+    return hit / s.length >= 0.75;
+  }
+  var hasKey = (title, key) => !!key && String(title || "").toUpperCase().includes(String(key).toUpperCase());
+  function cover(scope, person, pool) {
+    const key = scope.jk || (KEY.exec(String(scope.t || "").toUpperCase()) || [])[1] || "";
+    const hits = (pool || []).filter((p) => key && (hasKey(p.t, key) || p.jk && p.jk.toUpperCase() === key.toUpperCase()) || sameWords(scope.t, p.t));
+    const mine = hits.filter((p) => (p.names || []).some((n) => sameName(n, person) || sameName(person, n)));
+    return { state: mine.length ? "ok" : hits.length ? "unassigned" : "missing", hits, mine };
+  }
+
   // src/esm/features/report-model.js
   var DEFAULT_PRODUCTS = [
     { k: "plan_daycare", n: "Plan / Daycare", squads: ["plan", "daycare"] },
@@ -6800,7 +6853,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     if (!key || !/^https:\/\//i.test(base3 || "")) return "";
     return base3.replace(/\/+$/, "") + "/browse/" + encodeURIComponent(key);
   }
-  function sourceLines(prod, sitems, road, ka, kb, a, b) {
+  function sourceLines(prod, sitems, road, ka, kb, a, b, cards2, prevDone) {
     const out = [];
     const mine = sitems.filter((s) => prod.squads.includes(s.squad)), ids = new Set(mine.map((s) => s.id)), kids = {}, tops = [];
     mine.forEach((s) => {
@@ -6823,6 +6876,59 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         out.push({ src: "rf:" + r.id, g: "road", st: r.st === "done" ? "done" : r.st === "decide" || r.st === "contract" ? "risk" : "on", t: r.t, jira: "", kind: r.ms ? "milestone" : "roadmap", ord: 1e6 + r.d0 });
       });
     }
+    return withCards(prod, out, cards2, prevDone);
+  }
+  var tagKeysOf = (prod) => TAGS.filter((t) => t.k === prod.k || t.squads.some((s) => (prod.squads || []).includes(s))).map((t) => t.k);
+  function withCards(prod, out, cards2, prevDone) {
+    const keys = tagKeysOf(prod), mine = (cards2 || []).filter((c) => keys.includes(c.k) && clampPct(c.pct) > 0);
+    if (!mine.length) return out;
+    const rids = new Set(mine.filter((c) => c.rid).map((c) => c.rid)), res = [];
+    const jira = {};
+    mine.forEach((c) => {
+      const m = out.find((o) => o.src.startsWith("si:") && sameWords(o.t, c.t));
+      if (m && m.jira) jira[c.id] = m.jira;
+    });
+    out.forEach((o) => {
+      if (o.src.startsWith("rf:") && rids.has(o.src.slice(3))) return;
+      if (o.src.startsWith("si:") && mine.some((c) => sameWords(o.t, c.t))) return;
+      res.push(o);
+    });
+    mine.forEach((c) => {
+      const pc = clampPct(c.pct), src = "mo:" + c.id;
+      if (pc >= 100 && prevDone && prevDone.has(src)) return;
+      res.push({ src, g: pc >= 100 ? "done" : "prog", st: pc >= 100 ? "done" : "on", t: c.t, h: "", pct: pc, fid: c.id, jira: jira[c.id] || "", kind: "feature", tg: [], ord: 0 });
+    });
+    return res;
+  }
+  function monthSections(cards2, products) {
+    const out = [];
+    TAGS.forEach((t) => {
+      if (products.some((p) => tagKeysOf(p).includes(t.k)) || out.some((p) => p.k === t.k)) return;
+      if ((cards2 || []).some((c) => c.k === t.k && clampPct(c.pct) > 0)) out.push({ k: t.k, n: t.n, squads: [], c: t.c });
+    });
+    return out;
+  }
+  function prevDoneOf(reports, a) {
+    const ids = Object.keys(reports || {}).filter((id) => /^rp\d{8}/.test(id) && reports[id] && reports[id].a && reports[id].a < a).sort((x, y) => reports[x].a < reports[y].a ? 1 : -1);
+    const done2 = /* @__PURE__ */ new Set();
+    if (!ids.length) return done2;
+    const prev = reports[ids[0]];
+    Object.keys(prev.prods || {}).forEach((k) => ((prev.prods[k] || {}).items || []).forEach((l) => {
+      if (!l.hide && String(l.src || "").startsWith("mo:") && linePct(l) >= 100) done2.add(l.src);
+    }));
+    return done2;
+  }
+  function reportChecks(rep, reports, cards2, month) {
+    const out = [], ids = Object.keys(reports || {}).filter((id) => /^rp\d{8}/.test(id) && reports[id] && reports[id].a && reports[id].a < rep.a).sort((x, y) => reports[x].a < reports[y].a ? 1 : -1);
+    const prev = {};
+    if (ids.length) Object.keys(reports[ids[0]].prods || {}).forEach((k) => ((reports[ids[0]].prods[k] || {}).items || []).forEach((l) => {
+      if (l.src) prev[l.src] = linePct(l);
+    }));
+    Object.keys(rep.prods || {}).forEach((k) => ((rep.prods[k] || {}).items || []).forEach((l) => {
+      if (!l.hide && String(l.src || "").startsWith("mo:") && linePct(l) < 100 && prev[l.src] === linePct(l)) out.push('"' + l.t + '" is still at ' + linePct(l) + "%, the same as last week.");
+    }));
+    const idle = (cards2 || []).filter((c) => clampPct(c.pct) === 0).length;
+    if (idle) out.push(idle + " card" + (idle === 1 ? "" : "s") + " of " + monthLabel(month) + " " + (idle === 1 ? "has" : "have") + " not started (0%).");
     return out;
   }
   function mergeLines(prev, fresh) {
@@ -6830,9 +6936,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     fresh.forEach((f) => {
       seen.add(f.src);
       const p = by.get(f.src);
-      if (!p) out.push({ id: uid2(), src: f.src, g: f.g, st: f.st, t: f.t, h: f.h || "", t0: f.t, jira: f.jira, kind: f.kind, tg: f.tg || [], hide: false, edited: false });
+      if (!p) out.push(Object.assign({ id: uid2(), src: f.src, g: f.g, st: f.st, t: f.t, h: f.h || "", t0: f.t, jira: f.jira, kind: f.kind, tg: f.tg || [], hide: false, edited: false }, Number.isFinite(f.pct) ? { pct: f.pct } : {}, f.fid ? { fid: f.fid, lk: { t: f.t, pct: f.pct } } : {}));
       else if (p.edited) out.push(p);
-      else out.push(Object.assign({}, p, { g: f.g, st: f.st, t: f.t, t0: f.t, jira: f.jira, kind: f.kind, tg: f.tg || [], h: f.h || "" }));
+      else out.push(Object.assign({}, p, { g: f.g, st: f.st, t: f.t, t0: f.t, jira: f.jira, kind: f.kind, tg: f.tg || [], h: f.h || "" }, Number.isFinite(f.pct) ? { pct: f.pct } : {}, f.fid ? { fid: f.fid, lk: { t: f.t, pct: f.pct } } : {}));
     });
     (prev || []).forEach((p) => {
       if (!seen.has(p.src) && (p.src === "man" || p.edited)) out.push(p);
@@ -6858,10 +6964,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const risks = v.filter((l) => l.st === "risk" || l.st === "late").length;
     return name + ": " + bits + (risks ? ". " + plural(risks, "item") + " at risk or waiting on a decision." : ".");
   }
-  function buildProds(products, prevProds, sitems, road, ka, kb, a, b) {
+  function buildProds(products, prevProds, sitems, road, ka, kb, a, b, cards2, prevDone) {
     const out = {};
     products.forEach((p) => {
-      const old = prevProds && prevProds[p.k] || {}, lines = mergeLines(old.items, sourceLines(p, sitems, road, ka, kb, a, b)).filter((l) => l.g !== "next");
+      const old = prevProds && prevProds[p.k] || {}, lines = mergeLines(old.items, sourceLines(p, sitems, road, ka, kb, a, b, cards2, prevDone)).filter((l) => l.g !== "next");
       lines.sort((a2, b2) => GROUPS.findIndex((g) => g[0] === a2.g) - GROUPS.findIndex((g) => g[0] === b2.g));
       out[p.k] = { items: lines, sum: old.sumEdited ? old.sum : ruleSummary(p.n, lines), sumH: old.sumEdited ? old.sumH || "" : "", sumEdited: !!old.sumEdited };
     });
@@ -7408,7 +7514,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   }
 
   // src/esm/pages/reports.js
-  var rUI = { busy: false, note: "", noteFor: "", err: false, wait: false, last: "" };
+  var rUI = { busy: false, note: "", noteFor: "", err: false, wait: false, last: "", auto: {} };
   var routeId = () => {
     const m = /^#\/reports\/(\w+)/.exec(location.hash);
     return m ? m[1] : null;
@@ -7481,6 +7587,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     if (!rm) return { road: [], ka: NaN, kb: NaN };
     return withRm(rm.id, () => ({ road: items().map((i) => ({ id: i.id, t: i.t, sq: i.sq, d0: i.d0, d1: i.d1, st: i.st, ms: !!i.ms })), ka: kOfIso(a), kb: kOfIso(b) }));
   }
+  var monthCardsOf = (rep) => {
+    const m = monthOf(rep.a), d = isMonth(m) ? S.reports[monthId(m)] : null;
+    return d ? (d.lines || []).filter((l) => !l.adhoc && String(l.t || "").trim()) : [];
+  };
   var addDays2 = (s, n) => new Date(Date.parse(s + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
   function missingWeeks() {
     const out = [];
@@ -7498,6 +7608,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     }
     const rep = { id, sp: wk.sp, n: wk.n, w: wk.w, a: wk.a, b: wk.b, status: "draft", pl: productsOf(cfg()), prods: {} };
     location.hash = "#/reports/" + id;
+    rUI.auto[id] = 1;
     sync(rep, false, true);
   }
   async function aiWhy(e) {
@@ -7527,15 +7638,17 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     toast(txt);
     notify(txt, bad ? "err" : "ok");
   };
-  async function sync(rep, ai, isNew) {
+  async function sync(rep, ai, isNew, quiet) {
     if (rUI.busy) return;
     rUI.busy = true;
     rUI.note = "";
     rUI.err = false;
-    const fill = !isNew && !ai, pl = productsOf(cfg()), { road, ka, kb } = fill ? roadFor(rep.a, rep.b) : { road: [], ka: NaN, kb: NaN }, sitems = fill ? itemsOf(rep.sp) : [];
+    const fill = !ai, pl = productsOf(cfg()), { road, ka, kb } = fill ? roadFor(rep.a, rep.b) : { road: [], ka: NaN, kb: NaN }, sitems = fill ? itemsOf(rep.sp) : [], cards2 = fill ? monthCardsOf(rep) : [];
+    const before = quiet ? JSON.stringify([rep.pl, rep.prods, rep.srcN]) : "";
     EXTRA_SECTIONS.forEach((x) => {
       if (sitems.some((i) => i.squad === x.k) && !pl.some((q) => q.squads.includes(x.k))) pl.push({ k: x.k, n: x.n, squads: [x.k] });
     });
+    monthSections(cards2, pl).forEach((x) => pl.push(x));
     (rep.pl || []).filter((x) => x.custom).forEach((x) => {
       if (!pl.some((q) => q.k === x.k)) pl.push(x);
     });
@@ -7546,7 +7659,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       if (o) q.n = o.n;
     });
     rep.pl = pl;
-    if (fill) rep.prods = buildProds(pl, rep.prods, sitems, road, ka, kb, rep.a, rep.b);
+    if (fill) rep.prods = buildProds(pl, rep.prods, sitems, road, ka, kb, rep.a, rep.b, cards2, prevDoneOf(S.reports, rep.a));
     else {
       const keep = rep.prods || {};
       rep.prods = {};
@@ -7554,11 +7667,24 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         rep.prods[p.k] = keep[p.k] || { items: [], sum: "", sumH: "", sumEdited: false };
       });
     }
-    if (fill) rep.srcN = { si: sitems.length, rf: road.filter((r) => Number.isFinite(ka) && r.d0 <= kb && r.d1 >= ka).length };
+    if (fill) rep.srcN = { si: sitems.length, rf: road.filter((r) => Number.isFinite(ka) && r.d0 <= kb && r.d1 >= ka).length, mo: cards2.filter((c) => Number(c.pct) > 0).length };
     const lines = countLines(rep.prods);
-    save(rep, isNew ? "created the weekly report for " + fmtIso(rep.a) : "synced the weekly report for " + fmtIso(rep.a), "Sync from sprint and roadmap");
+    if (quiet) {
+      rUI.busy = false;
+      if (JSON.stringify([rep.pl, rep.prods, rep.srcN]) === before) return;
+      save(rep, "", "Refresh from the sources");
+      renderReports();
+      return;
+    }
+    save(rep, isNew ? "created the weekly report for " + fmtIso(rep.a) : "synced the weekly report for " + fmtIso(rep.a), "Sync from sprint, roadmap and Monthly");
+    if (isNew && lines) {
+      say(rep, "Report built from the sprint plan, the roadmap and Monthly (" + lines + " items). Check it, then press Save.", false);
+      rUI.busy = false;
+      renderReports();
+      return;
+    }
     if (isNew) {
-      say(rep, "Report created. Add your items under each product.", false);
+      say(rep, "Report created, but no data was found for this week yet. Add items on the Sprints page or in Monthly, then press Sync.", false);
       rUI.busy = false;
       renderReports();
       return;
@@ -7570,12 +7696,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       return;
     }
     if (!lines) {
-      say(rep, "No data found for this week: Sprint " + rep.n + " has no items for these products and no roadmap bar overlaps " + fmtIso(rep.a) + ". Add items on the Sprints page (or check Report settings), then sync again.", true);
+      say(rep, "No data found for this week: Sprint " + rep.n + " has no items for these products, no roadmap bar overlaps " + fmtIso(rep.a) + " and no Monthly card has started. Add items on the Sprints page (or check Report settings), then sync again.", true);
       rUI.busy = false;
       renderReports();
       return;
     }
-    say(rep, fill ? "Synced from Sprint and Roadmap" : "Report updated", false);
+    say(rep, fill ? "Synced from Sprint, Roadmap and Monthly" : "Report updated", false);
     renderReports();
     if (ai) {
       rUI.note = "Writing with Gemini…";
@@ -8036,7 +8162,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     if (!viewer) {
       const free = missingWeeks(), t = todayIso(), pick2 = free.find((w) => w.a <= t) || free[free.length - 1];
       if (pick2) {
-        const nb = el("button", "btn primary", "+ New report for week of " + fmtIso(pick2.a));
+        const nb = el("button", "btn primary", "+ Build report for week of " + fmtIso(pick2.a));
         nb.type = "button";
         nb.disabled = !canBuild();
         nb.addEventListener("click", () => newReport(pick2));
@@ -8099,7 +8225,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     pg.append(pageHead("Weekly report", "Sprint " + rep.n + " · week " + (rep.w || 1) + " of 2" + (viewer ? "" : ro ? ". You can read this report." : ". Edit anything, then press Save to show it to the executives.")));
     const sb0 = viewer ? null : setupBanner();
     if (sb0) pg.append(sb0);
-    const srcTxt = rep.srcN ? " · built from " + rep.srcN.si + " sprint items + " + rep.srcN.rf + " roadmap bars" : "";
+    const srcTxt = rep.srcN ? " · built from " + rep.srcN.si + " sprint items + " + rep.srcN.rf + " roadmap bars" + (rep.srcN.mo !== void 0 ? " + " + rep.srcN.mo + " Monthly cards" : "") : "";
     const meta = el("p", "sub rmeta", (sub ? "Saved" + (rep.subBy ? " by " + rep.subBy : "") + (rep.subAt ? " on " + fmtIso(rep.subAt.slice(0, 10)) : "") + " · visible to the executives" : "Not saved yet · the executives cannot see it") + (viewer ? "" : " · last edit " + (rep.by || "") + srcTxt));
     const tools = el("div", "row spbar rtools");
     const btn2 = (t, cls, fn, dis) => {
@@ -8111,7 +8237,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       return b;
     };
     if (!viewer) {
-      btn2("Sync from Sprint & Roadmap", "", () => sync(rep, false), !canBuild() || rUI.busy);
+      btn2("Sync from Sprint, Roadmap & Monthly", "", () => sync(rep, false), !canBuild() || rUI.busy);
     }
     if (!viewer) {
       const U = undoR(rep.id), ub = btn2("↶ Undo", "", () => reportUndo("undo"), true), rb = btn2("↷ Redo", "", () => reportUndo("redo"), true);
@@ -8211,6 +8337,22 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     body.append(progressBlock("Overall progress", fmtIso(rep.a) + " – " + fmtIso(rep.b), pls, rep.prods || {}, colOf));
     pls.forEach((p) => body.append(prodBlock(rep, p, ro)));
     pg.append(meta, tools);
+    if (!viewer && !sub && canBuild()) {
+      if (!rUI.auto[rep.id]) {
+        rUI.auto[rep.id] = 1;
+        setTimeout(() => sync(rep, false, false, true), 0);
+      }
+      const ck = reportChecks(rep, S.reports, monthCardsOf(rep), monthOf(rep.a));
+      if (ck.length) {
+        const bx = el("div", "rnote rchecks");
+        bx.setAttribute("role", "status");
+        bx.append(el("b", "", "Worth a look before you save (" + ck.length + ")"));
+        const ul = el("ul");
+        ck.forEach((t) => ul.append(el("li", "", t)));
+        bx.append(ul);
+        pg.append(bx);
+      }
+    }
     if (rUI.note && rUI.noteFor === rep.id && !viewer && !sub) {
       const nt = el("p", "rnote" + (rUI.err ? " bad" : ""), rUI.note);
       nt.setAttribute("role", "status");
@@ -8339,34 +8481,6 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     });
     out.added = fresh.length;
     return out;
-  }
-
-  // src/esm/features/sprint-cover.js
-  var KEY = /\b([A-Z][A-Z0-9_]+-\d+)\b/;
-  function parseJira(text) {
-    const t = String(text || "").trim(), m = KEY.exec(t.toUpperCase().replace(/[^A-Z0-9_\-\/:.?=&%]/g, " "));
-    if (!m) return null;
-    const u = /^(https:\/\/[^\s/]+)\/(?:browse|jira\/software\/[^\s]*?\/issues)\b/i.exec(t) || /^(https:\/\/[^\s/]+\.atlassian\.net)\b/i.exec(t);
-    return { key: m[1], base: u ? u[1] : "" };
-  }
-  var norm = (s) => String(s || "").toLowerCase().replace(/\(?\b[a-z][a-z0-9_]+-\d+\b\)?/g, " ").replace(/#\S+/g, " ").replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim();
-  var toks = (s) => norm(s).split(" ").filter((w) => w.length >= 3);
-  function sameWords(a, b) {
-    const x = norm(a), y = norm(b);
-    if (!x || !y) return false;
-    if (x === y) return true;
-    if (Math.min(x.length, y.length) >= 6 && (x.includes(y) || y.includes(x))) return true;
-    const A = toks(a), B = toks(b);
-    if (A.length < 2 || B.length < 2) return false;
-    const [s, l] = A.length <= B.length ? [A, B] : [B, A], hit = s.filter((w) => l.includes(w)).length;
-    return hit / s.length >= 0.75;
-  }
-  var hasKey = (title, key) => !!key && String(title || "").toUpperCase().includes(String(key).toUpperCase());
-  function cover(scope, person, pool) {
-    const key = scope.jk || (KEY.exec(String(scope.t || "").toUpperCase()) || [])[1] || "";
-    const hits = (pool || []).filter((p) => key && (hasKey(p.t, key) || p.jk && p.jk.toUpperCase() === key.toUpperCase()) || sameWords(scope.t, p.t));
-    const mine = hits.filter((p) => (p.names || []).some((n) => sameName(n, person) || sameName(person, n)));
-    return { state: mine.length ? "ok" : hits.length ? "unassigned" : "missing", hits, mine };
   }
 
   // src/esm/features/jira-link.js
@@ -10261,7 +10375,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     } catch (e) {
     }
   };
-  var ui2 = { q: "", pr: "all", fl: "all", past: false, prod: "", open: "" };
+  var ui2 = { q: "", pr: "all", fl: "all", who: "all", pts: "all", past: false, prod: "", open: "" };
   var canBuild2 = () => modLevel("monthly") >= 2 && canWrite();
   var canDel = () => modLevel("monthly") >= 3 && canWrite();
   var curMonth = () => todayIso().slice(0, 7);
@@ -10513,15 +10627,74 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const txt = monthText(docOf(m), boardProducts(), fmtIso).join("\n") || lab(m) + "\nNo deliverables yet.";
     (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => notify("Month text copied to the clipboard"), () => notify("Could not copy. Select the text and copy it manually.", "err"));
   };
-  var moveCard = (from, id, to, before, guarded) => {
+  var carryable = (line, from, to) => from !== BL && to !== BL && to > from && clampPct(line.pct) < 100 && !line.adhoc;
+  function askCarry(l, from, to, done2, title) {
+    openDlg(title || 'Carry "' + String(l.t).slice(0, 60) + '" over to ' + lab(to) + "?", (box2) => {
+      box2.append(el("p", "meta", 'The card gets the tag "Carry over from ' + lab(from) + '". Say why it was not finished, so the team and the executives can see it.'));
+      const sel = el("select");
+      sel.setAttribute("aria-label", "Reason for the carry over");
+      const e0 = el("option", "", "Choose a reason (optional)");
+      e0.value = "";
+      sel.append(e0);
+      CARRY_REASONS.forEach((r) => {
+        const o = el("option", "", r);
+        o.value = r;
+        sel.append(o);
+      });
+      if (l.co && l.co.why) {
+        const base3 = CARRY_REASONS.find((r) => l.co.why === r || l.co.why.startsWith(r + ": "));
+        if (base3) sel.value = base3;
+      }
+      const txt = el("input");
+      txt.type = "text";
+      txt.maxLength = 160;
+      txt.placeholder = "More detail (optional)";
+      txt.setAttribute("aria-label", "More detail about the reason");
+      if (l.co && l.co.why) {
+        const base3 = CARRY_REASONS.find((r) => l.co.why === r || l.co.why.startsWith(r + ": "));
+        txt.value = base3 ? l.co.why.slice(base3.length).replace(/^:\s*/, "") : l.co.why;
+      }
+      const ok = el("button", "btn primary", "Carry over"), no = el("button", "btn", "Cancel");
+      ok.type = no.type = "button";
+      no.addEventListener("click", closeDlg);
+      ok.addEventListener("click", () => {
+        const why3 = [sel.value, txt.value.replace(/\s+/g, " ").trim()].filter(Boolean).join(": ").slice(0, 200);
+        closeDlg();
+        done2({ from, why: why3, by: S.me && (S.me.name || S.me.email) || "", at: (/* @__PURE__ */ new Date()).toISOString() });
+      });
+      const row = el("div", "row");
+      row.append(ok, no);
+      box2.append(sel, txt, row);
+      setTimeout(() => sel.focus(), 0);
+    });
+  }
+  var setCarry = (m, l, co, label) => {
+    saveMonth(m, (d) => {
+      const x = d.lines.find((z) => z.id === l.id);
+      if (x) {
+        if (co) x.co = co;
+        else delete x.co;
+      }
+    }, label);
+    renderMonthly();
+  };
+  var moveCard = (from, id, to, before, guarded, co) => {
     if (from === to && before === id) return;
     const src = docOf(from), line = src && src.lines.find((l) => l.id === id);
     if (!line) return;
+    if (from !== to && co === void 0 && carryable(line, from, to)) {
+      askCarry(line, from, to, (c) => moveCard(from, id, to, before, guarded, c));
+      return;
+    }
     if (from !== to && !guarded) {
-      guardMove(line, to, () => moveCard(from, id, to, before, true));
+      guardMove(line, to, () => moveCard(from, id, to, before, true, co));
       return;
     }
     const copy = JSON.parse(JSON.stringify(line));
+    if (from !== to) {
+      if (co) copy.co = co;
+      else if (to === BL || copy.co && to <= copy.co.from) delete copy.co;
+    }
     const put2 = (d) => {
       const i = before ? d.lines.findIndex((l) => l.id === before) : -1;
       if (i >= 0) d.lines.splice(i, 0, copy);
@@ -10841,6 +11014,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         openCtx(b.right - 200, b.bottom + 4, (mm) => {
           Object.keys(SIZES).forEach((k) => mi(mm, (l.sz === k ? "✓ " : "") + SIZES[k], () => put2({ sz: l.sz === k ? "" : k }, l.sz === k ? "removed the " + SIZES[k] + " flag" : 'flagged "' + l.t + '" as ' + SIZES[k])));
           mi(mm, "Points and people…", () => openPoints(m, l, put2));
+          if (m !== BL) {
+            if (l.co) {
+              mi(mm, "Carry-over reason…", () => askCarry(l, l.co.from, m, (c2) => setCarry(m, l, c2, 'changed the carry-over reason of "' + l.t + '"'), "Why does this card carry over?"));
+              mi(mm, "Remove carry-over tag", () => setCarry(m, l, null, 'removed the carry-over tag from "' + l.t + '"'));
+            } else if (!l.adhoc) mi(mm, "Mark as carry over from last month…", () => askCarry(l, prevMonth(m), m, (c2) => setCarry(m, l, c2, 'marked "' + l.t + '" as carried over from ' + lab(prevMonth(m))), "Carry over from " + lab(prevMonth(m)) + "?"));
+          }
           if (m === BL) {
           } else if (onRoadmap(l)) mi(mm, "Show on roadmap", () => {
             if (l.rm) useRoadmap(l.rm);
@@ -10873,6 +11052,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       foot.append(z);
     }
     if (l.adhoc) foot.append(el("span", "chip mdadhoc", "Ad hoc"));
+    if (carryText(l)) {
+      const w = String(l.co.why || "").trim(), c2 = el("span", "chip mdco", "↪ Carry over from " + monthLabel(l.co.from).replace(/ \d{4}$/, "") + (w ? ": " + (w.length > 34 ? w.slice(0, 33) + "…" : w) : ""));
+      c2.title = carryText(l) + (l.co.by ? " (" + l.co.by + ")" : "");
+      foot.append(c2);
+    }
     if (m !== BL && !onRoadmap(l) && !l.src && String(l.t || "").trim()) {
       r.classList.add("noroad");
       const b = el("span", "chip mdnoroad", "⚠ Not on roadmap");
@@ -11023,7 +11207,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     col.dataset.mo = m;
     col.style.setProperty("--c", isBl ? "#8a6d3b" : now ? "var(--brand)" : "#55608a");
     const fq = ui2.q.trim().toLowerCase();
-    const lines = d.lines.filter((l) => String(l.t || "").trim()), shown = lines.filter((l) => (ui2.pr === "all" || l.k === ui2.pr) && (ui2.fl === "all" || (ui2.fl === "hp" ? l.hp : l.sz === ui2.fl)) && (!fq || (String(l.t) + " " + cardId(l)).toLowerCase().includes(fq)));
+    const lines = d.lines.filter((l) => String(l.t || "").trim()), shown = lines.filter((l) => (ui2.pr === "all" || l.k === ui2.pr) && (ui2.fl === "all" || (ui2.fl === "hp" ? l.hp : l.sz === ui2.fl)) && pointsMatch(l, ui2.who, ui2.pts) && (!fq || (String(l.t) + " " + cardId(l)).toLowerCase().includes(fq)));
     const h = el("h2");
     h.append(document.createTextNode(lab(m)), el("span", "badge", String(lines.length)));
     if (now) h.append(el("span", "chip mdnow", "This month"));
@@ -11186,7 +11370,33 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       ui2.fl = ff.value;
       renderMonthly();
     });
+    const peopleAll = assignees([].concat(...rawDocs().map((d) => d.lines)));
+    const fw = el("select");
+    fw.setAttribute("aria-label", "Filter by assigned person");
+    [["all", "Everyone"]].concat(peopleAll.map((n) => [n, n])).forEach((x) => {
+      const o = el("option", "", x[1]);
+      o.value = x[0];
+      o.selected = x[0] === ui2.who;
+      fw.append(o);
+    });
+    fw.addEventListener("change", () => {
+      ui2.who = fw.value;
+      renderMonthly();
+    });
+    const fq2 = el("select");
+    fq2.setAttribute("aria-label", "Filter by points");
+    [["all", "Any points"], ["with", "With points"], ["none", "No points yet"]].concat([1, 2, 3, 5, 8, 13, 21].map((v) => [String(v), v + (v === 1 ? " point" : " points")])).forEach((x) => {
+      const o = el("option", "", x[1]);
+      o.value = x[0];
+      o.selected = x[0] === ui2.pts;
+      fq2.append(o);
+    });
+    fq2.addEventListener("change", () => {
+      ui2.pts = fq2.value;
+      renderMonthly();
+    });
     tools.append(q, fp, ff);
+    if (ed) tools.append(fw, fq2);
     {
       const cb = el("button", "btn sm", "Dashboard");
       cb.type = "button";
@@ -11418,6 +11628,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     l.append(o, el("span", "", "Over the limit"));
     return l;
   }
+  var NOHEAT = ["des", "qa"];
   function heatTracks(rev) {
     const g = el("div", "cpheat");
     g.id = "cpheat";
@@ -11447,7 +11658,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   var short = (iso4) => fmtIso(iso4).replace(/ \d{4}$/, "");
   function heatPeople(rev, cfg4, vacs, today) {
     const s = settings(cfg4), seen = {}, people = [];
-    s.lanes.forEach((l) => l.people.forEach((p) => {
+    s.lanes.filter((l) => !NOHEAT.includes(l.k)).forEach((l) => l.people.forEach((p) => {
       if (!seen[p]) {
         seen[p] = { n: p, tracks: [] };
         people.push(seen[p]);
