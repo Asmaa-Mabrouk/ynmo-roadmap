@@ -56,6 +56,18 @@ Open / flagged: scheduled auto-creation each week (server job) not built; AI sum
 Changelog: weekly report built from Monthly + roadmap
 ```
 
+### 2026-10-29 - Outage outbox branch merged into main
+```
+🔄 YNMO LEDGER UPDATE - 2026-10-29
+Request: deploy the finished branches
+Surface: Ynmo Roadmaps tool (reliability)
+Outcome: `fix/outage-outbox` (retry of PGRST002, browser outbox, tab-close prompt) brought onto `main` with the new work and deployed after a full regression
+New facts / decisions locked: the outage fix is now on `main`; the extension patches 0001-0003 are no longer needed for it
+Corrections to this skill: Section 6b said the outbox fix was not on main; it is now
+Open / flagged: nothing
+Changelog: outage outbox fix on main
+```
+
 ### 2026-10-29 - Monthly filters, people heat map
 ```
 🔄 YNMO LEDGER UPDATE - 2026-10-29
