@@ -305,8 +305,7 @@ function openCard(m, l0, ed, p) {
   const l = live(), c = colOf(p);
   openDlg(cardId(l) ? 'Card ' + cardId(l) : 'Card', box => {
     box.classList.add('cdet'); box.style.setProperty('--c', c);
-    const top = el('div', 'cdtop'); top.append(el('span', 'cdtag', p.n)); if (cardId(l)) top.append(el('span', 'cdid', cardId(l)));
-    if (m === BL) top.append(el('span', 'cdflag', 'Backlog')); else top.append(el('span', 'cdflag', lab(m)));
+    const top = el('div', 'cdtop'); top.append(el('span', 'cdtag', p.n));     if (m === BL) top.append(el('span', 'cdflag', 'Backlog')); else top.append(el('span', 'cdflag', lab(m)));
     if (l.hp) top.append(el('span', 'cdflag gold', '⚑ Business priority')); if (SIZES[l.sz]) top.append(el('span', 'cdflag', SIZES[l.sz])); if (l.adhoc) top.append(el('span', 'cdflag', 'Ad hoc'));
     if (carryText(l)) top.append(el('span', 'cdflag', '↪ Carry over'));
     const ttl = el('h3', 'cdtitle', l.t), info = String(l.info || '').trim(), desc = el('div', 'cddesc' + (info ? '' : ' none'), info || 'No details written yet.');

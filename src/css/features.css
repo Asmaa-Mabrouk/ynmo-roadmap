@@ -1027,3 +1027,19 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 .cdet .cdav { width: 22px; height: 22px; border-radius: 50%; background: var(--c); color: #fff; display: inline-grid; place-items: center; font-size: 11px; }
 .cdet .cdpts { font-weight: 400; color: #626d90; font-size: 12px; }
 .cdet .cdbar { height: 8px; background: #e8eaf3; border-radius: 99px; overflow: hidden; margin-top: 6px; } .cdet .cdfill { height: 100%; background: var(--c); border-radius: 99px; }
+/* details card: more room */
+.xbox.cdet { padding: 28px 32px 26px; }
+.cdet > h2 { margin: 0 0 14px; }
+.cdet .cdtop { gap: 8px; margin-bottom: 18px; }
+.cdet .cdtag, .cdet .cdflag { padding: 4px 12px; }
+.cdet .cdtitle { margin: 0 0 18px; padding-block: 2px; padding-inline-start: 14px; }
+.cdet .cddesc { padding: 14px 16px; margin-bottom: 20px; }
+.cdet .cdgrid { gap: 14px; margin-bottom: 24px; }
+.cdet .cdcell { padding: 14px 16px; }
+.cdet .cdk { margin-bottom: 8px; }
+.cdet .cdpeople { gap: 8px; }
+.cdet .cdperson { padding: 3px 12px 3px 4px; gap: 8px; }
+.cdet .cdbar { margin-top: 10px; }
+.cdet .row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+@media (max-width: 520px) { .xbox.cdet { padding: 22px 18px 20px; } }
+.mdcard .mdhead .cdopen { margin-inline-start: 8px; padding: 5px 8px; font-size: 16px; }
