@@ -17,7 +17,7 @@ import { openDlg, closeDlg, canWrite } from '../features/safety.js';
 import { SSTATUS, scopeStatus } from '../features/report-model.js';
 import { itemPct, scopePct, statusFor } from '../features/sprint-percent.js';
 import { openCardLink, openPlanPick } from '../features/sprint-review.js';
-import { cardId } from '../features/month-model.js';
+import { cardId, TAGS } from '../features/month-model.js';
 import { cardByFid, fidLabel } from '../features/feature-sync.js';
 import { EXTRA_SECTIONS, RANK, KIND_NAME, TAG_COLORS, derive, deeper, shallower, nextKind, tagKey, migrate, ordBetween, parseOutline } from '../features/sprint-doc.js';
 import { setupBanner } from './reports.js';
@@ -46,10 +46,10 @@ const DEFAULT_TAGS = { fix: 'red', support: 'blue' };
 /** Everything a sprint line can be matched with: the features of every roadmap and the cards of every month (with the people assigned to each). */
 function coverPool() {
   const pool = [];
-  allRoadmaps().forEach(rm => withRm(rm.id, () => items().forEach(it => pool.push({ kind: 'feature', t: it.t, where: rm.n, names: (it.res || []).slice() }))));
+  allRoadmaps().forEach(rm => withRm(rm.id, () => items().forEach(it => pool.push({ kind: 'feature', t: it.t, where: rm.n, names: (it.res || []).slice(), color: lane(it.sq).c, tag: lane(it.sq).n, pts: {} }))));
   Object.keys(S.reports || {}).filter(k => /^mo\d{6}$/.test(k) || k === 'mobacklog').forEach(k => {
     const d = S.reports[k]; if (!d || !Array.isArray(d.lines)) return; const where = k === 'mobacklog' ? 'Monthly backlog' : 'Monthly ' + k.slice(2, 6) + '-' + k.slice(6);
-    d.lines.forEach(l => { if (!l || !l.t) return; const names = []; Object.keys(l.who || {}).forEach(t => Object.keys(l.who[t] || {}).forEach(n => names.push(n))); pool.push({ kind: 'card', t: l.t, where: where, names: names, cid: l.id, id: cardId(l) }); });
+    d.lines.forEach(l => { if (!l || !l.t) return; const names = [], pts = {}; Object.keys(l.who || {}).forEach(t => Object.keys(l.who[t] || {}).forEach(n => { names.push(n); pts[n] = (pts[n] || 0) + (Number(l.who[t][n]) || 0); })); const tg = TAGS.find(x => x.k === l.k); pool.push({ kind: 'card', t: l.t, where: where, names: names, cid: l.id, id: cardId(l), color: tg ? tg.c : '#7b8099', tag: tg ? tg.n : '', pts: pts }); });
   });
   return pool;
 }

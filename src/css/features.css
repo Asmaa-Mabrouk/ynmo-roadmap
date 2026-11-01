@@ -1043,3 +1043,14 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 .cdet .row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
 @media (max-width: 520px) { .xbox.cdet { padding: 22px 18px 20px; } }
 .mdcard .mdhead .cdopen { margin-inline-start: 8px; padding: 5px 8px; font-size: 16px; }
+/* Pick from the plan: product colour, left aligned, points of the person */
+#xdlg input[type=search][aria-label="Search the plan"] { width: 100%; box-sizing: border-box; margin: 4px 0 10px; }
+.ppick { display: grid; gap: 8px; max-height: 52vh; overflow: auto; padding: 2px; }
+.ppickrow { text-align: start; background: #fff; border-inline-start: 5px solid var(--c, #7b8099); font: inherit; width: 100%; }
+.ppickrow:hover, .ppickrow:focus-visible { background: color-mix(in srgb, var(--c, #7b8099) 8%, #fff); }
+.ppicktop { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 4px; }
+.pptag { background: var(--c); color: #fff; font-weight: 700; font-size: 11px; padding: 2px 9px; border-radius: 999px; }
+.ppid { font-weight: 700; font-size: 11px; color: #4a4f6a; background: #eef0f6; padding: 2px 7px; border-radius: 6px; }
+.pppts { font-weight: 700; font-size: 11px; color: var(--c); border: 1px solid var(--c); padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, var(--c) 10%, #fff); }
+.pppts.none { font-weight: 600; opacity: .85; }
+.pptitle { font-weight: 600; overflow-wrap: anywhere; }

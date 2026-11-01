@@ -9,6 +9,7 @@ import { openDlg, closeDlg } from './safety.js';
 import { allCards, fidFromText, fidLabel } from './feature-sync.js';
 import { cardId } from './month-model.js';
 import { suggest } from './sprint-cover.js';
+import { sameName } from './capacity.js';
 
 /** Link (or unlink) one sprint item to a Monthly card. `o` = { b, saveItem, redraw, notify } */
 export function openCardLink(o) {
@@ -67,8 +68,11 @@ export function openPlanPick(o) {
       list.textContent = ''; const rows = suggest(q.value, o.person, o.pool, 12);
       if (!rows.length) { list.append(el('p', 'sub', 'Nothing on the plan looks like this. Add it to Monthly or to the roadmap first, or tag the line #fix or #support if it is not planned work.')); return; }
       rows.forEach(p => {
-        const b = el('button', 'srrow ppickrow'); b.type = 'button'; const body = el('div', 'srbody');
-        body.append(el('div', '', (p.id ? p.id + ' · ' : '') + p.t), el('div', 'sub2', p.where + ' · ' + (p.mine ? '✓ ' + first + ' is on it' : (p.names || []).length ? 'Assigned to ' + p.names.slice(0, 3).join(', ') : 'Nobody assigned')));
+        const b = el('button', 'srrow ppickrow'); b.type = 'button'; b.style.setProperty('--c', p.color || '#7b8099'); const body = el('div', 'srbody');
+        const top = el('div', 'ppicktop'); if (p.tag) top.append(el('span', 'pptag', p.tag)); if (p.id) top.append(el('span', 'ppid', p.id));
+        const pk = Object.keys(p.pts || {}).find(n => sameName(n, o.person) || sameName(o.person, n)), mine = pk ? Number(p.pts[pk]) || 0 : 0;
+        if (p.mine) top.append(el('span', 'pppts' + (mine ? '' : ' none'), mine ? mine + ' pt for ' + first : first + ' is on it')); 
+        body.append(top, el('div', 'pptitle', p.t), el('div', 'sub2', p.where + (p.mine ? '' : ' · ' + ((p.names || []).length ? 'Assigned to ' + p.names.slice(0, 3).join(', ') : 'Nobody assigned'))));
         b.append(body); b.addEventListener('click', () => pick(p)); list.append(b);
       });
     };
