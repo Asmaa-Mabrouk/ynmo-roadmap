@@ -25,6 +25,9 @@ import { diffDoc, undoChanges } from '../features/month-undo.js';
 import { CARRY_REASONS, carryText, assignees, pointsMatch, prevMonth, adhocStats, cardId, sortByProduct, PRODUCT_ORDER, notesOf, clampPct, monthId, monthLabel, monthProgress, monthRange, monthText, newLine, nextMonth, pctBand, SIZES, TAGS, legacyTag } from '../features/month-model.js';
 import { NOTE_ICON, setupBanner } from './reports.js';
 import { openHistory, keepVersion } from './monthly-history.js';
+import { itemsOf, sprintList } from './sprints.js';
+import { monthCards, openReview } from '../features/sprint-review.js';
+import { proposals } from '../features/sprint-percent.js';
 import { snapReason, cardCount, versionsOf } from '../features/month-history.js';
 import { scan, ensureRecords, openCheckUpdates } from '../features/feature-sync.js';
 let lkMap = new Map();
@@ -403,6 +406,7 @@ export function renderMonthly() {
   const fq2 = el('select'); fq2.setAttribute('aria-label', 'Filter by points'); [['all', 'Any points'], ['with', 'With points'], ['none', 'No points yet']].concat([1, 2, 3, 5, 8, 13, 21].map(v => [String(v), v + (v === 1 ? ' point' : ' points')])).forEach(x => { const o = el('option', '', x[1]); o.value = x[0]; o.selected = x[0] === ui.pts; fq2.append(o); });
   fq2.addEventListener('change', () => { ui.pts = fq2.value; renderMonthly(); });
   tools.append(q, fp, ff); if (ed) tools.append(fw, fq2);   /* points and people are internal: executives do not get these filters */
+  if (ed) { const sl = proposals(sprintList(), itemsOf, monthCards()); if (sl.length) { const rb = el('button', 'btn sm primary', 'Review sprint updates (' + sl.length + ')'); rb.type = 'button'; rb.id = 'mdsprint'; rb.title = 'The completion of the sprint items gives new percentages for some cards. Review them and apply the ones you want.'; rb.addEventListener('click', () => openReview({ list: sl, apply: sel => grouped(() => sel.forEach(p => saveMonth(p.mo, d => { const x = d.lines.find(z => z.id === p.card.id); if (x) { x.pct = p.to; x.pe = true; } }, 'updated "' + p.card.t + '" to ' + p.to + '% from the sprint items'))), done: n => { renderMonthly(); notify(n + ' card' + (n === 1 ? '' : 's') + ' updated from the sprint items'); } })); tools.append(rb); } }
   { const cb = el('button', 'btn sm', 'Dashboard'); cb.type = 'button'; cb.id = 'mdtocap'; cb.title = 'Open the Dashboard: what fits, what to fix, who is available'; cb.addEventListener('click', () => showPage('capacity')); tools.append(cb); }
   { const sb = el('button', 'btn sm mdsort' + (sortOn ? ' on' : ''), sortOn ? '✓ Sorted by product' : 'Sort by product'); sb.type = 'button'; sb.id = 'mdsort'; sb.setAttribute('aria-pressed', String(sortOn)); sb.title = 'In every column: ' + PRODUCT_ORDER.slice(0, 6).map(k => (TAGS.find(t => t.k === k) || {}).n).join(', then ') + '. Click again to go back to your own order.'; sb.addEventListener('click', () => { setSort(!sortOn); renderMonthly(); }); tools.append(sb); }
   if (ed) { const ub = el('button', 'btn sm mdundo', '↶ Undo'); ub.type = 'button'; ub.id = 'mdundo'; ub.disabled = !undoStack.length; ub.title = 'Undo the last change on this board (Ctrl+Z)'; ub.addEventListener('click', undoMonthly); tools.append(ub); }

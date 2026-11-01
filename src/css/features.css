@@ -991,3 +991,13 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 .rchecks { margin: 8px 0 0; }
 .rchecks ul { margin: 6px 0 0; padding-inline-start: 18px; }
 .mdco { font-size: .72rem; padding: 1px 8px; background: #eaf0ff; border-color: #aab9ee; color: #26408b; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sdoc .pcp { border: 1px solid var(--line, #d9dde8); background: #fff; border-radius: 99px; padding: 1px 8px; font: inherit; font-size: .74rem; font-weight: 700; cursor: pointer; margin-top: 3px; color: #46506e; }
+.sdoc .pcp.derived { cursor: default; opacity: .85; }
+.sdoc .cardchip { border: 1px solid #aab9ee; background: #eaf0ff; color: #26408b; border-radius: 99px; padding: 1px 8px; font: inherit; font-size: .72rem; font-weight: 700; cursor: pointer; margin-top: 3px; white-space: nowrap; }
+.srlist { display: grid; gap: 8px; max-height: 55vh; overflow: auto; margin: 8px 0; }
+.srrow { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line, #d9dde8); border-radius: 10px; padding: 8px 10px; cursor: pointer; }
+.srbody { flex: 1; min-width: 0; }
+.srhead { display: flex; justify-content: space-between; gap: 10px; }
+.srpct { font-weight: 800; white-space: nowrap; color: #1d7a52; }
+.srpct.down { color: #a33; }
+.srit { margin: 4px 0 0; padding-inline-start: 18px; font-size: .82rem; color: #46506e; }

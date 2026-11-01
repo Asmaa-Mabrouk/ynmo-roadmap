@@ -42,6 +42,19 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-11-01 - Sprint item percentage -> Monthly review
+```
+🔄 YNMO LEDGER UPDATE - 2026-11-01
+Request: every sprint-plan item has a completion %, and Monthly is updated by a button: review the updates, pick, apply
+Surface: Ynmo Roadmaps tool (Sprints, Monthly)
+Outcome: percentage chip per sprint item, link to a card by id, Review sprint updates on Monthly with ticks and Apply
+New facts / decisions locked:
+  - Sprint items carry `pc` and `fid`; proposal = average of linked items (plus same-title items of the month's sprints, not ticked by default); never automatic
+Corrections to this skill: none
+Open / flagged: percentage by points instead of item count not built; Jira status does not set the percentage except done = 100
+Changelog: sprint percentage to Monthly review
+```
+
 ### 2026-10-29 - Weekly report from Monthly + roadmap
 ```
 🔄 YNMO LEDGER UPDATE - 2026-10-29

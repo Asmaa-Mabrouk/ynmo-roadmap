@@ -1414,6 +1414,16 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 .rchecks { margin: 8px 0 0; }
 .rchecks ul { margin: 6px 0 0; padding-inline-start: 18px; }
 .mdco { font-size: .72rem; padding: 1px 8px; background: #eaf0ff; border-color: #aab9ee; color: #26408b; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sdoc .pcp { border: 1px solid var(--line, #d9dde8); background: #fff; border-radius: 99px; padding: 1px 8px; font: inherit; font-size: .74rem; font-weight: 700; cursor: pointer; margin-top: 3px; color: #46506e; }
+.sdoc .pcp.derived { cursor: default; opacity: .85; }
+.sdoc .cardchip { border: 1px solid #aab9ee; background: #eaf0ff; color: #26408b; border-radius: 99px; padding: 1px 8px; font: inherit; font-size: .72rem; font-weight: 700; cursor: pointer; margin-top: 3px; white-space: nowrap; }
+.srlist { display: grid; gap: 8px; max-height: 55vh; overflow: auto; margin: 8px 0; }
+.srrow { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line, #d9dde8); border-radius: 10px; padding: 8px 10px; cursor: pointer; }
+.srbody { flex: 1; min-width: 0; }
+.srhead { display: flex; justify-content: space-between; gap: 10px; }
+.srpct { font-weight: 800; white-space: nowrap; color: #1d7a52; }
+.srpct.down { color: #a33; }
+.srit { margin: 4px 0 0; padding-inline-start: 18px; font-size: .82rem; color: #46506e; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -6947,6 +6957,171 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     return out.join("\n").trim() + "\n";
   }
 
+  // src/esm/features/sprint-percent.js
+  var itemPct = (i) => i && i.st === "done" ? 100 : Number.isFinite(i && i.pc) ? clampPct(i.pc) : 0;
+  var scopePct = (scope, kids) => kids && kids.length ? Math.round(kids.reduce((a, k) => a + itemPct(k), 0) / kids.length) : itemPct(scope);
+  function statusFor(st, pc) {
+    if (pc >= 100) return "done";
+    if (st === "done") return pc > 0 ? "progress" : "planned";
+    return pc > 0 && (!st || st === "planned") ? "progress" : st || "planned";
+  }
+  function sameTitle(a, b) {
+    const x = norm(a), y = norm(b);
+    if (!x || !y) return false;
+    if (x === y) return true;
+    const A = toks(a), B = toks(b);
+    if (A.length < 2 || B.length < 2) return false;
+    const [sm, lg] = A.length <= B.length ? [A, B] : [B, A];
+    return sm.filter((w) => lg.includes(w)).length / sm.length >= 0.75;
+  }
+  var overlaps = (sp, r) => sp.a <= r.b && sp.b >= r.a;
+  function proposals(sprints, itemsOf2, cards2) {
+    const per = (sprints || []).map((sp) => {
+      const all2 = itemsOf2(sp.id) || [], ids = new Set(all2.map((i) => i.id)), kids = {}, tops = [];
+      all2.forEach((i) => {
+        if (i.par && ids.has(i.par)) (kids[i.par] = kids[i.par] || []).push(i);
+        else tops.push(i);
+      });
+      const ent = [];
+      tops.forEach((t) => ent.push({ id: t.id, t: t.t, pc: scopePct(t, kids[t.id]), fid: t.fid || "", kind: t.kind, n: sp.n, sp }));
+      Object.keys(kids).forEach((k) => kids[k].forEach((c) => {
+        if (c.fid) ent.push({ id: c.id, t: c.t, pc: itemPct(c), fid: c.fid, kind: c.kind, n: sp.n, sp });
+      }));
+      return ent;
+    });
+    const all = [].concat(...per), out = [];
+    (cards2 || []).forEach((c) => {
+      const r = c.mo ? monthRange(c.mo) : null, mine = [];
+      all.forEach((e) => {
+        if (e.fid) {
+          if (e.fid === c.l.id) mine.push({ t: e.t, pc: e.pc, n: e.n, auto: false });
+          return;
+        }
+        if (e.kind === "feature" && r && overlaps(e.sp, r) && sameTitle(e.t, c.l.t)) mine.push({ t: e.t, pc: e.pc, n: e.n, auto: true });
+      });
+      if (!mine.length) return;
+      const to = clampPct(Math.round(mine.reduce((a, x) => a + x.pc, 0) / mine.length)), from = clampPct(c.l.pct);
+      if (to === from) return;
+      out.push({ did: c.did, mo: c.mo, card: c.l, id: cardId(c.l), from, to, down: to < from, items: mine, auto: mine.every((x) => x.auto) });
+    });
+    return out.sort((a, b) => a.id < b.id ? -1 : 1);
+  }
+
+  // src/esm/features/sprint-review.js
+  function openCardLink(o) {
+    openDlg("Link to a Monthly card", (box2) => {
+      box2.append(el("p", "sub", 'Type the id of the card (for example DC#12). The completion percentage of this item then counts towards that card in "Review sprint updates" on Monthly.'));
+      const dl2 = el("datalist");
+      dl2.id = "sprintcardlist";
+      allCards().map((x) => cardId(x.l)).filter(Boolean).sort().forEach((v) => {
+        const op = el("option");
+        op.value = v;
+        dl2.append(op);
+      });
+      const inp = el("input");
+      inp.type = "text";
+      inp.maxLength = 12;
+      inp.placeholder = "Card id";
+      inp.setAttribute("aria-label", "Monthly card id");
+      inp.setAttribute("list", "sprintcardlist");
+      inp.value = o.b.fid ? fidLabel(o.b.fid) : "";
+      const err = el("p", "sub bad");
+      err.setAttribute("role", "alert");
+      const ok = el("button", "btn primary", "Link"), un = el("button", "btn", "Remove link"), no = el("button", "btn", "Cancel");
+      ok.type = un.type = no.type = "button";
+      un.hidden = !o.b.fid;
+      no.addEventListener("click", closeDlg);
+      const go = () => {
+        const id = fidFromText(inp.value);
+        if (!id) {
+          err.textContent = "No Monthly card has the id " + (inp.value.trim() || "(empty)") + ".";
+          return;
+        }
+        o.saveItem(o.b.id, { fid: id });
+        closeDlg();
+        o.redraw(o.b.id);
+        o.notify("Linked to " + fidLabel(id));
+      };
+      ok.addEventListener("click", go);
+      inp.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          go();
+        }
+      });
+      un.addEventListener("click", () => {
+        const p = Object.assign({}, S.sitems[o.b.id] || {});
+        delete p.fid;
+        o.saveItem(o.b.id, { fid: "" });
+        closeDlg();
+        o.redraw(o.b.id);
+        o.notify("Link removed");
+      });
+      const row = el("div", "row");
+      row.append(ok, un, no);
+      box2.append(dl2, inp, err, row);
+      setTimeout(() => inp.focus(), 0);
+    });
+  }
+  var monthCards = () => {
+    const out = [];
+    Object.keys(S.reports || {}).filter((id) => /^mo\d{6}$/.test(id)).forEach((did) => {
+      const d = S.reports[did];
+      if (d && d.mo) (d.lines || []).forEach((l) => {
+        if (l && String(l.t || "").trim()) out.push({ did, mo: d.mo, l });
+      });
+    });
+    return out;
+  };
+  function openReview(o) {
+    openDlg("Review sprint updates", (box2) => {
+      if (!o.list.length) {
+        box2.append(el("p", "sub", "Every card already has the percentage its sprint items give."));
+        const c = el("button", "btn", "Close");
+        c.type = "button";
+        c.addEventListener("click", closeDlg);
+        box2.append(c);
+        return;
+      }
+      box2.append(el("p", "sub", "The completion of the sprint items gives these new percentages. Tick the cards to update and press Apply. Items matched only by words are not ticked: check them first."));
+      const wrap = el("div", "srlist"), picks = [];
+      o.list.forEach((p) => {
+        const row2 = el("label", "srrow"), cb = el("input");
+        cb.type = "checkbox";
+        cb.checked = !p.auto;
+        cb.setAttribute("aria-label", "Update " + p.id);
+        picks.push({ cb, p });
+        const head = el("div", "srhead");
+        head.append(el("b", "", p.id + " " + p.card.t), el("span", "srpct" + (p.down ? " down" : ""), p.from + "% → " + p.to + "%"));
+        const items2 = el("ul", "srit");
+        p.items.forEach((x) => items2.append(el("li", "", x.t + " · " + x.pc + "% · Sprint " + x.n + (x.auto ? " · matched by words" : ""))));
+        const body = el("div", "srbody");
+        body.append(head, items2);
+        row2.append(cb, body);
+        wrap.append(row2);
+      });
+      const ok = el("button", "btn primary", "Apply"), no = el("button", "btn", "Close");
+      ok.type = no.type = "button";
+      no.addEventListener("click", closeDlg);
+      const upd = () => {
+        const n = picks.filter((x) => x.cb.checked).length;
+        ok.disabled = !n;
+        ok.textContent = n ? "Apply (" + n + ")" : "Apply";
+      };
+      picks.forEach((x) => x.cb.addEventListener("change", upd));
+      upd();
+      ok.addEventListener("click", () => {
+        const sel = picks.filter((x) => x.cb.checked);
+        o.apply(sel.map((x) => x.p));
+        closeDlg();
+        o.done(sel.length);
+      });
+      const row = el("div", "row");
+      row.append(ok, no);
+      box2.append(wrap, row);
+    });
+  }
+
   // src/esm/features/sprint-doc.js
   var EXTRA_SECTIONS = [
     { k: "x_deploy", n: "Deployments", c: "#475569" },
@@ -6982,7 +7157,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       if (b.k !== "s" && b.k !== "u") return;
       if (!t) return;
       const tg = (b.tags || []).map((n) => ({ n, c: (tagColors || {})[n] || "gray" }));
-      const base3 = { id: b.id, sp: b.sp, squad, person, t, h: "", jira: b.jk || "", kind: kindFromTags(b.tags), st: b.st || "planned", dn: b.dn || "", ord: b.ord || 0, tg };
+      const base3 = { id: b.id, sp: b.sp, squad, person, t, h: "", jira: b.jk || "", kind: kindFromTags(b.tags), st: b.st || "planned", pc: Number.isFinite(b.pc) ? b.pc : null, fid: b.fid || "", dn: b.dn || "", ord: b.ord || 0, tg };
       if (b.k === "s" || !scope) {
         scope = b;
         out.push(Object.assign(base3, { par: "" }));
@@ -9326,7 +9501,23 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const statusMenu = (b, at) => openMenu(at, Object.keys(SSTATUS).map((k) => ({ label: SSTATUS[k], value: k })), {
       label: "Status",
       onPick: (it) => {
-        saveItem(b.id, { st: it.value, dn: it.value === "done" ? todayIso() : "" });
+        const cur2 = S.sitems[b.id] || b, patch = { st: it.value, dn: it.value === "done" ? todayIso() : "" };
+        if (it.value === "done") patch.pc = 100;
+        else if (cur2.pc === 100) patch.pc = 0;
+        saveItem(b.id, patch);
+        redraw();
+      },
+      onClose: () => {
+        const s = host2.querySelector('.blk[data-id="' + b.id + '"] .bt');
+        if (s) focusKeep(s);
+      }
+    });
+    const pcMenu = (b, at) => openMenu(at, [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((v) => ({ label: v + "%", value: String(v) })), {
+      label: "Percent complete",
+      search: false,
+      onPick: (it) => {
+        const v = Number(it.value), cur2 = S.sitems[b.id] || b, st = statusFor(cur2.st || "planned", v);
+        saveItem(b.id, { pc: v, st, dn: st === "done" ? cur2.dn || todayIso() : "" });
         redraw();
       },
       onClose: () => {
@@ -9458,7 +9649,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       const cur2 = S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, into = b.k === "h" ? [] : ["s", "u", "n"].filter((k) => k !== b.k).map((k) => ({ label: "Turn into " + KIND_NAME[k].toLowerCase(), value: "k:" + k }));
       const all = list(), g = groupOf(all, all.findIndex((z) => z.id === b.id));
       setPicked(g.map((z) => z.id));
-      const jl = b.k === "s" || b.k === "u" ? [{ label: cur2.jk ? "Change Jira link (" + cur2.jk + ")…" : "Link to Jira…", value: "jira" }] : [];
+      const jl = b.k === "s" || b.k === "u" ? [{ label: cur2.jk ? "Change Jira link (" + cur2.jk + ")…" : "Link to Jira…", value: "jira" }, { label: cur2.fid && fidLabel(cur2.fid) ? "Change Monthly card (" + fidLabel(cur2.fid) + ")…" : "Link to a Monthly card…", value: "card" }] : [];
       openMenu(x, [{ label: "Move up", value: "up" }, { label: "Move down", value: "down" }].concat(into, jl, [{ label: "Delete", value: "del" }]), {
         label: "Line options",
         onPick: (it) => {
@@ -9466,6 +9657,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           else if (it.value === "down") move(cur2, 1);
           else if (it.value === "del") removeGroup(cur2);
           else if (it.value === "jira") openJiraLink({ b: cur2, saveItem, redraw, notify });
+          else if (it.value === "card") openCardLink({ b: cur2, saveItem, redraw, notify });
           else {
             saveItem(b.id, { k: it.value.slice(2) });
             redraw(b.id);
@@ -9561,6 +9753,16 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
             r.append(s);
           }
         }
+        if (b.k === "s" || b.k === "u") {
+          const pv = info.derived ? info.derivedPct : itemPct(b), pb = el(info.derived || ro ? "span" : "button", "pcp" + (info.derived ? " derived" : ""), pv + "%");
+          if (!info.derived && !ro) {
+            pb.type = "button";
+            pb.setAttribute("aria-label", "Percent complete");
+            pb.setAttribute("aria-haspopup", "listbox");
+            pb.addEventListener("click", () => pcMenu(b, pb));
+          } else pb.title = info.derived ? "Average of the sub-sections" : "Percent complete";
+          r.append(pb);
+        }
         const bt = el("div", "bt", b.t || "");
         bt.dataset.ph = { p: "Person name (or press @)", s: "Scope", u: "Sub-section", n: "Note" }[b.k];
         bt.setAttribute("role", "textbox");
@@ -9581,6 +9783,18 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           bt.addEventListener("paste", (e) => onPaste(e, Object.assign({ id: b.id }, S.sitems[b.id] || b), bt));
         }
         r.append(bt);
+        if (b.fid && (b.k === "s" || b.k === "u")) {
+          const cd = cardByFid(b.fid);
+          if (cd) {
+            const cc = el(ro ? "span" : "button", "cardchip", "⛓ " + fidLabel(b.fid) + " · " + (Number(cd.pct) || 0) + "%");
+            cc.title = "Linked to the Monthly card " + fidLabel(b.fid) + " (" + cd.t + "), now at " + (Number(cd.pct) || 0) + "%";
+            if (!ro) {
+              cc.type = "button";
+              cc.addEventListener("click", () => openCardLink({ b: S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, saveItem, redraw, notify }));
+            }
+            r.append(cc);
+          }
+        }
         if (b.jk && (b.k === "s" || b.k === "u")) {
           const u = issueUrl(b.jk), jc = el(u ? "a" : "span", "jkchip", b.jk);
           if (u) {
@@ -9691,7 +9905,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         if (b.k === "s") {
           const kids = [];
           for (let j = i + 1; j < all.length && all[j].k === "u"; j++) kids.push(all[j]);
-          if (kids.length) info.derived = scopeStatus(kids, b.st);
+          if (kids.length) {
+            info.derived = scopeStatus(kids, b.st);
+            info.derivedPct = scopePct(b, kids);
+          }
         }
         host2.append(blockRow(b, c, info));
       });
@@ -11328,6 +11545,26 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     });
     tools.append(q, fp, ff);
     if (ed) tools.append(fw, fq2);
+    if (ed) {
+      const sl = proposals(sprintList(), itemsOf, monthCards());
+      if (sl.length) {
+        const rb = el("button", "btn sm primary", "Review sprint updates (" + sl.length + ")");
+        rb.type = "button";
+        rb.id = "mdsprint";
+        rb.title = "The completion of the sprint items gives new percentages for some cards. Review them and apply the ones you want.";
+        rb.addEventListener("click", () => openReview({ list: sl, apply: (sel) => grouped(() => sel.forEach((p) => saveMonth(p.mo, (d) => {
+          const x = d.lines.find((z) => z.id === p.card.id);
+          if (x) {
+            x.pct = p.to;
+            x.pe = true;
+          }
+        }, 'updated "' + p.card.t + '" to ' + p.to + "% from the sprint items"))), done: (n) => {
+          renderMonthly();
+          notify(n + " card" + (n === 1 ? "" : "s") + " updated from the sprint items");
+        } }));
+        tools.append(rb);
+      }
+    }
     {
       const cb = el("button", "btn sm", "Dashboard");
       cb.type = "button";

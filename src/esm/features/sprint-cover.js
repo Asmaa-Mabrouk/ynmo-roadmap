@@ -16,7 +16,7 @@ export function parseJira(text) {
   return { key: m[1], base: u ? u[1] : '' };
 }
 export const norm = s => String(s || '').toLowerCase().replace(/\(?\b[a-z][a-z0-9_]+-\d+\b\)?/g, ' ').replace(/#\S+/g, ' ').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
-const toks = s => norm(s).split(' ').filter(w => w.length >= 3);
+export const toks = s => norm(s).split(' ').filter(w => w.length >= 3);
 /** Same words: equal, one contains the other (at least 6 letters), or most of the shorter title's words are in the other. */
 export function sameWords(a, b) {
   const x = norm(a), y = norm(b); if (!x || !y) return false;

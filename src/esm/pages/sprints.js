@@ -15,6 +15,9 @@ import { fld, fmtIso, logAct, pageHead, todayIso } from '../core/shared.js';
 import { write } from '../core/saving.js';
 import { openDlg, closeDlg, canWrite } from '../features/safety.js';
 import { SSTATUS, scopeStatus } from '../features/report-model.js';
+import { itemPct, scopePct, statusFor } from '../features/sprint-percent.js';
+import { openCardLink } from '../features/sprint-review.js';
+import { cardByFid, fidLabel } from '../features/feature-sync.js';
 import { EXTRA_SECTIONS, RANK, KIND_NAME, TAG_COLORS, derive, deeper, shallower, nextKind, tagKey, migrate, ordBetween, parseOutline } from '../features/sprint-doc.js';
 import { setupBanner } from './reports.js';
 import { notify } from '../ui/notify.js';
@@ -244,7 +247,10 @@ function docEditor(sp, ro) {
     });
   };
   const statusMenu = (b, at) => openMenu(at, Object.keys(SSTATUS).map(k => ({ label: SSTATUS[k], value: k })), {
-    label: 'Status', onPick: it => { saveItem(b.id, { st: it.value, dn: it.value === 'done' ? todayIso() : '' }); redraw(); }, onClose: () => { const s = host.querySelector('.blk[data-id="' + b.id + '"] .bt'); if (s) focusKeep(s); }
+    label: 'Status', onPick: it => { const cur = S.sitems[b.id] || b, patch = { st: it.value, dn: it.value === 'done' ? todayIso() : '' }; if (it.value === 'done') patch.pc = 100; else if (cur.pc === 100) patch.pc = 0; saveItem(b.id, patch); redraw(); }, onClose: () => { const s = host.querySelector('.blk[data-id="' + b.id + '"] .bt'); if (s) focusKeep(s); }
+  });
+  const pcMenu = (b, at) => openMenu(at, [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map(v => ({ label: v + '%', value: String(v) })), {
+    label: 'Percent complete', search: false, onPick: it => { const v = Number(it.value), cur = S.sitems[b.id] || b, st = statusFor(cur.st || 'planned', v); saveItem(b.id, { pc: v, st: st, dn: st === 'done' ? (cur.dn || todayIso()) : '' }); redraw(); }, onClose: () => { const s = host.querySelector('.blk[data-id="' + b.id + '"] .bt'); if (s) focusKeep(s); }
   });
 
   /* keys inside a line */
@@ -297,9 +303,9 @@ function docEditor(sp, ro) {
   const handleMenu = (b, x) => {
     const cur = S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, into = b.k === 'h' ? [] : ['s', 'u', 'n'].filter(k => k !== b.k).map(k => ({ label: 'Turn into ' + KIND_NAME[k].toLowerCase(), value: 'k:' + k }));
     const all = list(), g = groupOf(all, all.findIndex(z => z.id === b.id)); setPicked(g.map(z => z.id));
-    const jl = (b.k === 's' || b.k === 'u') ? [{ label: cur.jk ? 'Change Jira link (' + cur.jk + ')…' : 'Link to Jira…', value: 'jira' }] : [];
+    const jl = (b.k === 's' || b.k === 'u') ? [{ label: cur.jk ? 'Change Jira link (' + cur.jk + ')…' : 'Link to Jira…', value: 'jira' }, { label: cur.fid && fidLabel(cur.fid) ? 'Change Monthly card (' + fidLabel(cur.fid) + ')…' : 'Link to a Monthly card…', value: 'card' }] : [];
     openMenu(x, [{ label: 'Move up', value: 'up' }, { label: 'Move down', value: 'down' }].concat(into, jl, [{ label: 'Delete', value: 'del' }]), {
-      label: 'Line options', onPick: it => { if (it.value === 'up') move(cur, -1); else if (it.value === 'down') move(cur, 1); else if (it.value === 'del') removeGroup(cur); else if (it.value === 'jira') openJiraLink({ b: cur, saveItem: saveItem, redraw: redraw, notify: notify }); else { saveItem(b.id, { k: it.value.slice(2) }); redraw(b.id); } }, onClose: p => { setPicked(null); if (!p) focusLater(b.id); }
+      label: 'Line options', onPick: it => { if (it.value === 'up') move(cur, -1); else if (it.value === 'down') move(cur, 1); else if (it.value === 'del') removeGroup(cur); else if (it.value === 'jira') openJiraLink({ b: cur, saveItem: saveItem, redraw: redraw, notify: notify }); else if (it.value === 'card') openCardLink({ b: cur, saveItem: saveItem, redraw: redraw, notify: notify }); else { saveItem(b.id, { k: it.value.slice(2) }); redraw(b.id); } }, onClose: p => { setPicked(null); if (!p) focusLater(b.id); }
     });
   };
   function startDrag(e, b, x) {
@@ -331,6 +337,11 @@ function docEditor(sp, ro) {
         if (info.derived) r.append(el('span', 'stp derived sst-' + info.derived, SSTATUS[info.derived]));
         else { const s = el('button', 'stp sst-' + (b.st || 'planned'), SSTATUS[b.st || 'planned']); s.type = 'button'; s.disabled = ro; s.setAttribute('aria-label', 'Status'); s.setAttribute('aria-haspopup', 'listbox'); s.addEventListener('click', () => statusMenu(b, s)); r.append(s); }
       }
+      if (b.k === 's' || b.k === 'u') {
+        const pv = info.derived ? info.derivedPct : itemPct(b), pb = el(info.derived || ro ? 'span' : 'button', 'pcp' + (info.derived ? ' derived' : ''), pv + '%');
+        if (!info.derived && !ro) { pb.type = 'button'; pb.setAttribute('aria-label', 'Percent complete'); pb.setAttribute('aria-haspopup', 'listbox'); pb.addEventListener('click', () => pcMenu(b, pb)); } else pb.title = info.derived ? 'Average of the sub-sections' : 'Percent complete';
+        r.append(pb);
+      }
       const bt = el('div', 'bt', b.t || ''); bt.dataset.ph = { p: 'Person name (or press @)', s: 'Scope', u: 'Sub-section', n: 'Note' }[b.k]; bt.setAttribute('role', 'textbox'); bt.setAttribute('aria-label', KIND_NAME[b.k]);
       if (!ro) {
         bt.contentEditable = 'plaintext-only'; if (bt.contentEditable !== 'plaintext-only') bt.contentEditable = 'true'; bt.spellcheck = true;
@@ -340,6 +351,7 @@ function docEditor(sp, ro) {
         bt.addEventListener('paste', e => onPaste(e, Object.assign({ id: b.id }, S.sitems[b.id] || b), bt));
       }
       r.append(bt);
+      if (b.fid && (b.k === 's' || b.k === 'u')) { const cd = cardByFid(b.fid); if (cd) { const cc = el(ro ? 'span' : 'button', 'cardchip', '⛓ ' + fidLabel(b.fid) + ' · ' + (Number(cd.pct) || 0) + '%'); cc.title = 'Linked to the Monthly card ' + fidLabel(b.fid) + ' (' + cd.t + '), now at ' + (Number(cd.pct) || 0) + '%'; if (!ro) { cc.type = 'button'; cc.addEventListener('click', () => openCardLink({ b: S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, saveItem: saveItem, redraw: redraw, notify: notify })); } r.append(cc); } }
       if (b.jk && (b.k === 's' || b.k === 'u')) { const u = issueUrl(b.jk), jc = el(u ? 'a' : 'span', 'jkchip', b.jk); if (u) { jc.href = u; jc.target = '_blank'; jc.rel = 'noopener noreferrer'; jc.title = 'Open ' + b.jk + ' in Jira'; } else jc.title = 'Linked to Jira ' + b.jk; r.append(jc); }
       if (info.cover && info.cover.state !== 'ok') {
         const cc = info.cover, ch = el('span', 'covchip cov-' + cc.state, cc.state === 'missing' ? 'Not on the plan' : 'Not assigned to ' + info.person.split(' ')[0]);
@@ -381,7 +393,7 @@ function docEditor(sp, ro) {
       if (b.k === 'h') { sec = b.sq || ''; person = ''; } else if (b.k === 'p') person = String(b.t || '').trim();
       else if (b.k === 's' && person && !/^x_/.test(sec) && String(b.t || '').trim() && (b.st || 'planned') !== 'done' && !(b.tags || []).some(n => n === 'fix' || n === 'support')) { info.cover = cover(b, person, pool); info.person = person; if (info.cover.state !== 'ok') cv[info.cover.state]++; }
       if (b.k === 'h') { const g = groupOf(all, i), ns = g.filter(x => x.k === 's').length, leaf = g.filter((x, n) => x.k === 'u' || (x.k === 's' && !(g[n + 1] && g[n + 1].k === 'u'))); info.count = ns + ' scope' + (ns === 1 ? '' : 's') + ' · ' + leaf.filter(x => x.st === 'done').length + '/' + leaf.length + ' done'; }
-      if (b.k === 's') { const kids = []; for (let j = i + 1; j < all.length && all[j].k === 'u'; j++) kids.push(all[j]); if (kids.length) info.derived = scopeStatus(kids, b.st); }
+      if (b.k === 's') { const kids = []; for (let j = i + 1; j < all.length && all[j].k === 'u'; j++) kids.push(all[j]); if (kids.length) { info.derived = scopeStatus(kids, b.st); info.derivedPct = scopePct(b, kids); } }
       host.append(blockRow(b, c, info));
     });
     if (cv.missing || cv.unassigned) {
