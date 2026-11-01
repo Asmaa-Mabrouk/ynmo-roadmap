@@ -111,7 +111,7 @@ with sync_playwright() as pw:
     # Trello-like drag: reorder inside a month, drop into another month
     oc=A.locator('.mdcol[data-mo="2026-10"]'); oc.locator('.mdopen').click(); ta=oc.locator('.mdadd textarea'); ta.fill('Drag A\nDrag B'); ta.press('Enter'); A.wait_for_timeout(500); A.keyboard.press('Escape'); A.wait_for_timeout(300)
     ttl=lambda m: A.evaluate("m=>[...document.querySelectorAll('.mdcol[data-mo=\"'+m+'\"] .mdtext')].map(e=>e.innerText)", m)
-    g=oc.locator('.mdcard:has-text("Drag B") .grip'); tg=oc.locator('.mdcard:has-text("Board pack")'); g.hover(); A.mouse.down(); bx=tg.bounding_box(); A.mouse.move(bx['x']+40,bx['y']+4,steps=8); A.mouse.up(); A.wait_for_timeout(600)
+    g=oc.locator('.mdcard:has-text("Drag B") .grip'); tg=oc.locator('.mdcard:has-text("Board pack")'); g.hover(); A.wait_for_timeout(150); A.mouse.down(); A.wait_for_timeout(150); bx=tg.bounding_box(); A.mouse.move(bx['x']+40,bx['y']+4,steps=20); A.wait_for_timeout(150); A.mouse.up(); A.wait_for_timeout(900)
     ok('dragging a card above another re-orders the column', ttl('2026-10')[0]=='Drag B' and ttl('2026-10').index('Board pack')>ttl('2026-10').index('Drag B'))
     g=oc.locator('.mdcard:has-text("Drag A") .grip'); nv=A.locator('.mdcol[data-mo="2026-11"]'); g.hover(); A.mouse.down(); nb=nv.bounding_box(); A.mouse.move(nb['x']+60,nb['y']+200,steps=10); A.mouse.up(); A.wait_for_timeout(600); carry(A)
     ok('dragging a card into another month moves it there', 'Drag A' in ttl('2026-11') and 'Drag A' not in ttl('2026-10'))
