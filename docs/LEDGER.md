@@ -42,6 +42,19 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-11-01 - Details card for Monthly cards
+```
+🔄 YNMO LEDGER UPDATE - 2026-11-01
+Request: a simple, clear details card when clicking a Monthly card: title, info, dates as sprint, assignees, card
+Surface: Ynmo Roadmaps tool (Monthly)
+Outcome: click a card (or the open button) to see tag/id, title, details, sprint, people, progress
+New facts / decisions locked:
+  - Dates are shown as the sprint ("Planned in Sprint 229"), from items linked by id or matched by title in the month's sprints
+Corrections to this skill: none
+Open / flagged: no sprint dates are stored on the card itself; notes thread not shown on the card
+Changelog: Monthly card details view added.
+```
+
 ### 2026-11-01 - Sync from Monthly on the Gantt
 ```
 🔄 YNMO LEDGER UPDATE - 2026-11-01

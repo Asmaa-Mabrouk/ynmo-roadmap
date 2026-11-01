@@ -1,0 +1,10 @@
+import { sprintsOf, sprintWords } from '../src/esm/features/card-details.js';
+let bad = 0; const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) bad++; };
+const sp = [{ id: 'a', n: 229, a: '2026-11-01', b: '2026-11-14' }, { id: 'b', n: 230, a: '2026-11-15', b: '2026-11-28' }, { id: 'c', n: 228, a: '2026-10-04', b: '2026-10-17' }];
+const data = { a: [{ id: 'i1', t: 'Parent invoice download page', kind: 'feature' }], b: [{ id: 'j1', t: 'Other', fid: 'k1', kind: 'feature' }], c: [{ id: 'o1', t: 'Parent invoice download page', kind: 'feature' }] };
+const itemsOf = id => data[id] || [];
+const r = sprintsOf({ id: 'k1', t: 'Parent invoice download page' }, '2026-11', sp, itemsOf);
+ok('a link by id counts, a same-title feature in a sprint of the month counts as matched by words, a sprint of another month does not', r.map(x => x.n).join() === '229,230' && r[0].auto && !r[1].auto);
+ok('nothing in the backlog by words', sprintsOf({ id: 'k1', t: 'Parent invoice download page' }, 'backlog', sp, itemsOf).length === 1);
+ok('words', sprintWords([{ n: 229 }]) === 'Planned in Sprint 229' && sprintWords([{ n: 229 }, { n: 230 }]) === 'Planned in Sprints 229 and 230' && sprintWords([{ n: 1 }, { n: 2 }, { n: 3 }]) === 'Planned in Sprints 1, 2 and 3' && sprintWords([]) === '');
+process.exit(bad ? 1 : 0);

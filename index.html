@@ -1424,6 +1424,32 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 .srpct { font-weight: 800; white-space: nowrap; color: #1d7a52; }
 .srpct.down { color: #a33; }
 .srit { margin: 4px 0 0; padding-inline-start: 18px; font-size: .82rem; color: #46506e; }
+
+/* ---- details card of a Monthly card ---- */
+.mdcard { cursor: pointer; }
+.mdcard .mdtext[contenteditable], .mdcard button, .mdcard select, .mdcard .grip { cursor: auto; }
+.mdcard .cdopen { margin-inline-start: 2px; border: 0; background: transparent; color: #7b8099; font-size: 15px; line-height: 1; padding: 3px 5px; border-radius: 6px; cursor: pointer; opacity: 0; }
+.mdcard:hover .cdopen, .mdcard .cdopen:focus-visible { opacity: 1; } .mdcard .cdopen:hover { background: #eef0f6; color: #2b2f44; }
+@media (hover: none) { .mdcard .cdopen { opacity: 1; } }
+.cdet { --c: #7b8099; }
+.cdet .cdtop { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+.cdet .cdtag { background: var(--c); color: #fff; font-weight: 700; font-size: 12px; padding: 3px 10px; border-radius: 999px; }
+.cdet .cdid { font-weight: 700; font-size: 12px; color: #4a4f6a; background: #eef0f6; padding: 3px 8px; border-radius: 6px; }
+.cdet .cdflag { font-size: 12px; color: #4a4f6a; border: 1px solid #dfe2ee; padding: 2px 8px; border-radius: 999px; }
+.cdet .cdflag.gold { color: #8a5a00; border-color: #f0c96a; background: #fff7e0; }
+.cdet .cdtitle { margin: 0 0 8px; font-size: 20px; line-height: 1.3; overflow-wrap: anywhere; border-inline-start: 4px solid var(--c); padding-inline-start: 10px; }
+.cdet .cddesc { white-space: pre-wrap; line-height: 1.55; background: #f6f7fb; border-radius: 10px; padding: 10px 12px; max-height: 32vh; overflow: auto; overflow-wrap: anywhere; margin-bottom: 12px; }
+.cdet .cddesc.none, .cdet .cdnone { color: #8a8fa8; font-style: italic; }
+.cdet .cdgrid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 14px; }
+@media (min-width: 560px) { .cdet .cdgrid { grid-template-columns: 1fr 1fr; } }
+.cdet .cdcell { border: 1px solid #e4e7f1; border-radius: 10px; padding: 9px 12px; min-width: 0; }
+.cdet .cdk { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #7b8099; margin-bottom: 4px; }
+.cdet .cdv { font-weight: 600; } .cdet .cdsub { font-weight: 400; font-size: 12.5px; color: #626d90; margin-top: 2px; }
+.cdet .cdpeople { display: flex; flex-wrap: wrap; gap: 6px; }
+.cdet .cdperson { display: inline-flex; align-items: center; gap: 6px; background: #f1f2f9; border-radius: 999px; padding: 2px 10px 2px 3px; font-weight: 600; font-size: 13px; }
+.cdet .cdav { width: 22px; height: 22px; border-radius: 50%; background: var(--c); color: #fff; display: inline-grid; place-items: center; font-size: 11px; }
+.cdet .cdpts { font-weight: 400; color: #626d90; font-size: 12px; }
+.cdet .cdbar { height: 8px; background: #e8eaf3; border-radius: 99px; overflow: hidden; margin-top: 6px; } .cdet .cdfill { height: 100%; background: var(--c); border-radius: 99px; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -10498,6 +10524,26 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   }
   var missingInResources = () => unmatched(cfg2(), resources());
 
+  // src/esm/features/card-details.js
+  function sprintsOf(card2, mo, sprints, itemsOf2) {
+    const r = mo && mo !== "backlog" ? monthRange(mo) : null, out = [];
+    (sprints || []).forEach((sp) => {
+      const its = itemsOf2(sp.id) || [];
+      if (its.some((i) => i.fid && i.fid === card2.id)) {
+        out.push({ id: sp.id, n: sp.n, a: sp.a, b: sp.b, auto: false });
+        return;
+      }
+      if (r && sp.a <= r.b && sp.b >= r.a && its.some((i) => !i.fid && i.kind === "feature" && sameTitle(i.t, card2.t))) out.push({ id: sp.id, n: sp.n, a: sp.a, b: sp.b, auto: true });
+    });
+    return out.sort((x, y) => x.n - y.n);
+  }
+  function sprintWords(list) {
+    const ns = (list || []).map((s) => s.n);
+    if (!ns.length) return "";
+    if (ns.length === 1) return "Planned in Sprint " + ns[0];
+    return "Planned in Sprints " + ns.slice(0, -1).join(", ") + " and " + ns[ns.length - 1];
+  }
+
   // src/esm/features/roadmap-from-monthly.js
   function planRows(o) {
     const out = [];
@@ -11202,6 +11248,81 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       setTimeout(() => ta.focus(), 0);
     });
   }
+  function openCard(m, l0, ed, p) {
+    const live2 = () => {
+      const d = S.reports[monthId(m)];
+      return d && (d.lines || []).find((z) => z.id === l0.id) || l0;
+    };
+    const l = live2(), c = colOf2(p);
+    openDlg(cardId(l) ? "Card " + cardId(l) : "Card", (box2) => {
+      box2.classList.add("cdet");
+      box2.style.setProperty("--c", c);
+      const top = el("div", "cdtop");
+      top.append(el("span", "cdtag", p.n));
+      if (cardId(l)) top.append(el("span", "cdid", cardId(l)));
+      if (m === BL) top.append(el("span", "cdflag", "Backlog"));
+      else top.append(el("span", "cdflag", lab(m)));
+      if (l.hp) top.append(el("span", "cdflag gold", "⚑ Business priority"));
+      if (SIZES[l.sz]) top.append(el("span", "cdflag", SIZES[l.sz]));
+      if (l.adhoc) top.append(el("span", "cdflag", "Ad hoc"));
+      if (carryText(l)) top.append(el("span", "cdflag", "↪ Carry over"));
+      const ttl = el("h3", "cdtitle", l.t), info = String(l.info || "").trim(), desc = el("div", "cddesc" + (info ? "" : " none"), info || "No details written yet.");
+      const grid = el("div", "cdgrid");
+      const cell = (k, v) => {
+        const d = el("div", "cdcell");
+        d.append(el("div", "cdk", k));
+        if (typeof v === "string") d.append(el("div", "cdv", v));
+        else d.append(v);
+        return d;
+      };
+      const sps = m === BL ? [] : sprintsOf(l, m, sprintList(), itemsOf), spv = el("div", "cdv");
+      if (sps.length) {
+        spv.append(el("div", "", sprintWords(sps)));
+        sps.forEach((s) => spv.append(el("div", "cdsub", "Sprint " + s.n + " · " + fmtIso(s.a) + " – " + fmtIso(s.b) + (s.auto ? " · matched by words" : ""))));
+      } else spv.append(el("div", "cdnone", m === BL ? "Not scheduled yet" : "Not planned in a sprint yet"));
+      const pe = whoPairs(l).filter((x) => x[1] > 0), wv = el("div", "cdpeople");
+      if (pe.length) pe.forEach((x) => {
+        const t = el("span", "cdperson");
+        t.append(el("span", "cdav", (x[0].trim()[0] || "?").toUpperCase()), x[0], el("span", "cdpts", x[1] + " pt"));
+        wv.append(t);
+      });
+      else wv.append(el("span", "cdnone", "Nobody assigned yet"));
+      const pct3 = clampPct(l.pct), pv = el("div", "cdv"), bar4 = el("div", "cdbar"), fill = el("div", "cdfill");
+      fill.style.width = pct3 + "%";
+      bar4.append(fill);
+      pv.append(el("div", "", pct3 >= 100 ? "Delivered" : pct3 + "% complete"), bar4);
+      grid.append(cell("Sprint", spv), cell("Assigned to", wv), cell("Progress", pv));
+      if (onRoadmap(l)) {
+        const o = S.over[l.rid];
+        grid.append(cell("On the roadmap", fmtIso(iso(Math.max(0, o.d0))) + " – " + fmtIso(iso(Math.min(NDAYS - 1, o.d1)))));
+      }
+      const row = el("div", "row"), cl2 = el("button", "btn primary", "Close");
+      cl2.type = "button";
+      cl2.addEventListener("click", closeDlg);
+      if (ed) {
+        const e1 = el("button", "btn", info ? "Edit details" : "Write details");
+        e1.type = "button";
+        e1.addEventListener("click", () => {
+          closeDlg();
+          openInfo(m, l, ed);
+        });
+        const e2 = el("button", "btn", pe.length ? "Change people" : "Add people");
+        e2.type = "button";
+        e2.addEventListener("click", () => {
+          closeDlg();
+          openPoints(m, l, (patch, label) => {
+            saveMonth(m, (d) => {
+              const x = d.lines.find((z) => z.id === l.id);
+              if (x) Object.assign(x, patch);
+            }, label);
+            renderMonthly();
+          });
+        });
+        row.append(cl2, e1, e2);
+      } else row.append(cl2);
+      box2.append(top, ttl, desc, grid, row);
+    });
+  }
   function card(m, l, prods, ed) {
     const p = prods.find((x) => x.k === l.k) || { k: l.k, n: l.k, squads: [] }, c = colOf2(p), pct3 = clampPct(l.pct);
     const r = el("div", "icard mdcard" + (l.adhoc ? " adhoc" : "") + (pct3 >= 100 ? " fin" : "") + (l.hp ? " hp" : ""));
@@ -11360,6 +11481,21 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       }
     }
     foot.append(infoBtn(m, l, ed), noteBtn2(m, l, ed));
+    {
+      const ob = el("button", "cdopen", "⤢");
+      ob.type = "button";
+      ob.title = "Open the card";
+      ob.setAttribute("aria-label", "Open " + l.t);
+      ob.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openCard(m, l, ed, p);
+      });
+      head.append(ob);
+    }
+    r.addEventListener("click", (e) => {
+      if (e.target.closest("button,input,select,textarea,a,label,[contenteditable],.grip,.dragging") || ed && e.target.closest(".mdtext")) return;
+      openCard(m, l, ed, p);
+    });
     r.append(head, t, foot);
     if (ed) {
       const g = el("div", "grip", "⋮⋮");

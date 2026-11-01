@@ -6,7 +6,7 @@
  * A month is the doc `reports/mo<yyyymm>` (see features/month-model.js). The board always saves a month as `submitted`, so executives (viewers) see it all.
  */
 import { S } from '../core/state.js';
-import { $, LANES, NDAYS, canEdit, directory, el, items, modLevel, state } from '../core/model.js';
+import { $, LANES, NDAYS, canEdit, directory, el, iso, items, modLevel, state } from '../core/model.js';
 import { fld, fmtIso, kOfIso, logAct, pageHead, selOf, toast, todayIso } from '../core/shared.js';
 import { sb } from '../core/supabase.js';
 import { persist, pushHistory, write } from '../core/saving.js';
@@ -22,12 +22,13 @@ import { openDlg, closeDlg } from '../features/safety.js';
 import { saveIdea } from './ideas.js';
 import { guardMove, openPoints, ptsChips } from '../features/capacity-view.js';
 import { diffDoc, undoChanges } from '../features/month-undo.js';
-import { CARRY_REASONS, carryText, assignees, pointsMatch, prevMonth, adhocStats, cardId, sortByProduct, PRODUCT_ORDER, notesOf, clampPct, monthId, monthLabel, monthProgress, monthRange, monthText, newLine, nextMonth, pctBand, SIZES, TAGS, legacyTag } from '../features/month-model.js';
+import { whoPairs, CARRY_REASONS, carryText, assignees, pointsMatch, prevMonth, adhocStats, cardId, sortByProduct, PRODUCT_ORDER, notesOf, clampPct, monthId, monthLabel, monthProgress, monthRange, monthText, newLine, nextMonth, pctBand, SIZES, TAGS, legacyTag } from '../features/month-model.js';
 import { NOTE_ICON, setupBanner } from './reports.js';
 import { openHistory, keepVersion } from './monthly-history.js';
 import { itemsOf, sprintList } from './sprints.js';
 import { monthCards, openReview } from '../features/sprint-review.js';
 import { proposals } from '../features/sprint-percent.js';
+import { sprintsOf, sprintWords } from '../features/card-details.js';
 import { planRows, barOf } from '../features/roadmap-from-monthly.js';
 import { snapReason, cardCount, versionsOf } from '../features/month-history.js';
 import { scan, ensureRecords, openCheckUpdates } from '../features/feature-sync.js';
@@ -298,6 +299,32 @@ function openInfo(m, l, ed) {
     const row = el('div', 'row'); row.append(ok, rm, no); box.append(ta, row); setTimeout(() => ta.focus(), 0);
   });
 }
+/** The details card of a Monthly card: everything about it in one simple view (tag and id, title, info, the sprint it is planned in, who it is assigned to, progress). */
+function openCard(m, l0, ed, p) {
+  const live = () => { const d = S.reports[monthId(m)]; return (d && (d.lines || []).find(z => z.id === l0.id)) || l0; };
+  const l = live(), c = colOf(p);
+  openDlg(cardId(l) ? 'Card ' + cardId(l) : 'Card', box => {
+    box.classList.add('cdet'); box.style.setProperty('--c', c);
+    const top = el('div', 'cdtop'); top.append(el('span', 'cdtag', p.n)); if (cardId(l)) top.append(el('span', 'cdid', cardId(l)));
+    if (m === BL) top.append(el('span', 'cdflag', 'Backlog')); else top.append(el('span', 'cdflag', lab(m)));
+    if (l.hp) top.append(el('span', 'cdflag gold', '⚑ Business priority')); if (SIZES[l.sz]) top.append(el('span', 'cdflag', SIZES[l.sz])); if (l.adhoc) top.append(el('span', 'cdflag', 'Ad hoc'));
+    if (carryText(l)) top.append(el('span', 'cdflag', '↪ Carry over'));
+    const ttl = el('h3', 'cdtitle', l.t), info = String(l.info || '').trim(), desc = el('div', 'cddesc' + (info ? '' : ' none'), info || 'No details written yet.');
+    const grid = el('div', 'cdgrid');
+    const cell = (k, v) => { const d = el('div', 'cdcell'); d.append(el('div', 'cdk', k)); if (typeof v === 'string') d.append(el('div', 'cdv', v)); else d.append(v); return d; };
+    const sps = m === BL ? [] : sprintsOf(l, m, sprintList(), itemsOf), spv = el('div', 'cdv');
+    if (sps.length) { spv.append(el('div', '', sprintWords(sps))); sps.forEach(s => spv.append(el('div', 'cdsub', 'Sprint ' + s.n + ' · ' + fmtIso(s.a) + ' – ' + fmtIso(s.b) + (s.auto ? ' · matched by words' : '')))); }
+    else spv.append(el('div', 'cdnone', m === BL ? 'Not scheduled yet' : 'Not planned in a sprint yet'));
+    const pe = whoPairs(l).filter(x => x[1] > 0), wv = el('div', 'cdpeople');
+    if (pe.length) pe.forEach(x => { const t = el('span', 'cdperson'); t.append(el('span', 'cdav', (x[0].trim()[0] || '?').toUpperCase()), x[0], el('span', 'cdpts', x[1] + ' pt')); wv.append(t); }); else wv.append(el('span', 'cdnone', 'Nobody assigned yet'));
+    const pct = clampPct(l.pct), pv = el('div', 'cdv'), bar = el('div', 'cdbar'), fill = el('div', 'cdfill'); fill.style.width = pct + '%'; bar.append(fill); pv.append(el('div', '', pct >= 100 ? 'Delivered' : pct + '% complete'), bar);
+    grid.append(cell('Sprint', spv), cell('Assigned to', wv), cell('Progress', pv));
+    if (onRoadmap(l)) { const o = S.over[l.rid]; grid.append(cell('On the roadmap', fmtIso(iso(Math.max(0, o.d0))) + ' – ' + fmtIso(iso(Math.min(NDAYS - 1, o.d1))))); }
+    const row = el('div', 'row'), cl = el('button', 'btn primary', 'Close'); cl.type = 'button'; cl.addEventListener('click', closeDlg);
+    if (ed) { const e1 = el('button', 'btn', info ? 'Edit details' : 'Write details'); e1.type = 'button'; e1.addEventListener('click', () => { closeDlg(); openInfo(m, l, ed); }); const e2 = el('button', 'btn', pe.length ? 'Change people' : 'Add people'); e2.type = 'button'; e2.addEventListener('click', () => { closeDlg(); openPoints(m, l, (patch, label) => { saveMonth(m, d => { const x = d.lines.find(z => z.id === l.id); if (x) Object.assign(x, patch); }, label); renderMonthly(); }); }); row.append(cl, e1, e2); } else row.append(cl);
+    box.append(top, ttl, desc, grid, row);
+  });
+}
 function card(m, l, prods, ed) {
   const p = prods.find(x => x.k === l.k) || { k: l.k, n: l.k, squads: [] }, c = colOf(p), pct = clampPct(l.pct);
   const r = el('div', 'icard mdcard' + (l.adhoc ? ' adhoc' : '') + (pct >= 100 ? ' fin' : '') + (l.hp ? ' hp' : ''));
@@ -347,6 +374,8 @@ function card(m, l, prods, ed) {
   if (onRoadmap(l)) { const b = el('span', 'chip mdroad', 'On roadmap'); b.title = 'This card is a bar on the roadmap'; foot.append(b); } else if (l.src) { const b = el('span', 'chip mdroad', 'From roadmap'); b.title = 'Brought in from the roadmap'; foot.append(b); }
   { const k = lkMap.get(l.id); if (k) { if (k.cmp.incoming.length) { const b = el('span', 'chip fschip in', 'Roadmap changed'); b.title = 'The roadmap has a newer ' + k.cmp.incoming.map(x => x.f === 't' ? 'title' : 'progress').join(' and ') + '. Use Check updates.'; foot.append(b); } if (k.cmp.outgoing.length) { const b = el('span', 'chip fschip out', 'Waiting for admin'); b.title = 'Your change to the ' + k.cmp.outgoing.map(x => x.f === 't' ? 'title' : 'progress').join(' and ') + ' is waiting for an admin to approve it on the roadmap.'; foot.append(b); } } }
   foot.append(infoBtn(m, l, ed), noteBtn(m, l, ed));
+  { const ob = el('button', 'cdopen', '⤢'); ob.type = 'button'; ob.title = 'Open the card'; ob.setAttribute('aria-label', 'Open ' + l.t); ob.addEventListener('click', e => { e.stopPropagation(); openCard(m, l, ed, p); }); head.append(ob); }
+  r.addEventListener('click', e => { if (e.target.closest('button,input,select,textarea,a,label,[contenteditable],.grip,.dragging') || (ed && e.target.closest('.mdtext'))) return; openCard(m, l, ed, p); });
   r.append(head, t, foot);
   if (ed) { // drag the card to another month
     const g = el('div', 'grip', '⋮⋮'); g.title = 'Drag to another month'; g.setAttribute('aria-hidden', 'true'); r.prepend(g);
