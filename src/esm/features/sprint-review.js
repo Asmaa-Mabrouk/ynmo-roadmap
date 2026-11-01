@@ -8,6 +8,7 @@ import { S } from '../core/state.js';
 import { openDlg, closeDlg } from './safety.js';
 import { allCards, fidFromText, fidLabel } from './feature-sync.js';
 import { cardId } from './month-model.js';
+import { suggest } from './sprint-cover.js';
 
 /** Link (or unlink) one sprint item to a Monthly card. `o` = { b, saveItem, redraw, notify } */
 export function openCardLink(o) {
@@ -43,5 +44,35 @@ export function openReview(o) {
     const upd = () => { const n = picks.filter(x => x.cb.checked).length; ok.disabled = !n; ok.textContent = n ? 'Apply (' + n + ')' : 'Apply'; }; picks.forEach(x => x.cb.addEventListener('change', upd)); upd();
     ok.addEventListener('click', () => { const sel = picks.filter(x => x.cb.checked); o.apply(sel.map(x => x.p)); closeDlg(); o.done(sel.length); });
     const row = el('div', 'row'); row.append(ok, no); box.append(wrap, row);
+  });
+}
+
+/**
+ * "Pick from the plan": the closest roadmap features and Monthly cards for what was typed (typing slips forgiven), people on it first.
+ * Picking a card links the line to it (so the check never depends on the words again); the line can take the plan's name.
+ * `o` = { b: line, person, pool, saveItem(id, patch), redraw(id), notify(text) }
+ */
+export function openPlanPick(o) {
+  openDlg('Pick from the plan', box => {
+    const first = (o.person || '').split(' ')[0] || 'this person';
+    box.append(el('p', 'sub', 'Choose the card or feature this line is about, instead of typing it. The line is then linked to it. Type to search; ' + first + "'s work is listed first."));
+    const q = el('input'); q.type = 'search'; q.value = o.b.t || ''; q.setAttribute('aria-label', 'Search the plan'); q.placeholder = 'Search cards and features';
+    const useName = el('input'); useName.type = 'checkbox'; useName.checked = true; const ul = el('label', 'sub'); ul.append(useName, ' Use the name from the plan for this line');
+    const list = el('div', 'srlist ppick'); list.setAttribute('aria-live', 'polite');
+    const pick = p => {
+      const patch = {}; if (p.cid) patch.fid = p.cid; else patch.fid = ''; if (useName.checked || !p.cid) patch.t = p.t;
+      o.saveItem(o.b.id, patch); closeDlg(); o.redraw(o.b.id); o.notify(p.cid ? 'Linked to ' + (p.id || 'the card') : 'Name taken from the plan');
+    };
+    const draw = () => {
+      list.textContent = ''; const rows = suggest(q.value, o.person, o.pool, 12);
+      if (!rows.length) { list.append(el('p', 'sub', 'Nothing on the plan looks like this. Add it to Monthly or to the roadmap first, or tag the line #fix or #support if it is not planned work.')); return; }
+      rows.forEach(p => {
+        const b = el('button', 'srrow ppickrow'); b.type = 'button'; const body = el('div', 'srbody');
+        body.append(el('div', '', (p.id ? p.id + ' · ' : '') + p.t), el('div', 'sub2', p.where + ' · ' + (p.mine ? '✓ ' + first + ' is on it' : (p.names || []).length ? 'Assigned to ' + p.names.slice(0, 3).join(', ') : 'Nobody assigned')));
+        b.append(body); b.addEventListener('click', () => pick(p)); list.append(b);
+      });
+    };
+    q.addEventListener('input', draw); draw();
+    const no = el('button', 'btn', 'Cancel'); no.type = 'button'; no.addEventListener('click', closeDlg); const row = el('div', 'row'); row.append(no); box.append(q, ul, list, row); setTimeout(() => { q.focus(); q.select(); }, 0);
   });
 }

@@ -27,7 +27,7 @@ with sync_playwright() as pw:
     ok('S3 the same feature under someone who is not assigned is marked as not assigned', [f['t'],'unassigned'] in chips)
     ok('S4 a #support line and a done line are not marked', not any(t in ('Urgent thing from support','Done wallet idea') for t,s in chips))
     ok('S5 the top bar counts them', '1 not on any roadmap' in A.locator('#covbar').inner_text() and '1 on the plan but not assigned' in A.locator('#covbar').inner_text())
-    ok('S6 hovering explains what to do', 'Add it to the roadmap or to Monthly' in A.locator('.covchip.cov-missing').first.get_attribute('title'))
+    ok('S6 hovering explains what to do', 'pick the right one from the plan' in A.locator('.covchip.cov-missing').first.get_attribute('title'))
     # a Monthly card with the same words and the person assigned makes the line ok
     A.evaluate("()=>{const j=JSON.parse(localStorage.getItem('fk3')); j.reports=j.reports||{}; const d=j.reports.mo202611||{mo:'2026-11',lines:[],status:'draft'}; d.lines=d.lines||[]; d.lines.push({id:'c9',t:'Brand new wallet idea nobody planned',who:{be:{'%s':3}},pts:{be:3}}); j.reports.mo202611=d; localStorage.setItem('fk3',JSON.stringify(j))}"%f['p'])
     A.reload(); A.wait_for_timeout(1500); A.evaluate("id=>{location.hash='#/sprints/'+id}",sp); A.wait_for_timeout(900)

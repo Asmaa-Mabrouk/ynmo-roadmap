@@ -16,7 +16,8 @@ import { write } from '../core/saving.js';
 import { openDlg, closeDlg, canWrite } from '../features/safety.js';
 import { SSTATUS, scopeStatus } from '../features/report-model.js';
 import { itemPct, scopePct, statusFor } from '../features/sprint-percent.js';
-import { openCardLink } from '../features/sprint-review.js';
+import { openCardLink, openPlanPick } from '../features/sprint-review.js';
+import { cardId } from '../features/month-model.js';
 import { cardByFid, fidLabel } from '../features/feature-sync.js';
 import { EXTRA_SECTIONS, RANK, KIND_NAME, TAG_COLORS, derive, deeper, shallower, nextKind, tagKey, migrate, ordBetween, parseOutline } from '../features/sprint-doc.js';
 import { setupBanner } from './reports.js';
@@ -48,7 +49,7 @@ function coverPool() {
   allRoadmaps().forEach(rm => withRm(rm.id, () => items().forEach(it => pool.push({ kind: 'feature', t: it.t, where: rm.n, names: (it.res || []).slice() }))));
   Object.keys(S.reports || {}).filter(k => /^mo\d{6}$/.test(k) || k === 'mobacklog').forEach(k => {
     const d = S.reports[k]; if (!d || !Array.isArray(d.lines)) return; const where = k === 'mobacklog' ? 'Monthly backlog' : 'Monthly ' + k.slice(2, 6) + '-' + k.slice(6);
-    d.lines.forEach(l => { if (!l || !l.t) return; const names = []; Object.keys(l.who || {}).forEach(t => Object.keys(l.who[t] || {}).forEach(n => names.push(n))); pool.push({ kind: 'card', t: l.t, where: where, names: names }); });
+    d.lines.forEach(l => { if (!l || !l.t) return; const names = []; Object.keys(l.who || {}).forEach(t => Object.keys(l.who[t] || {}).forEach(n => names.push(n))); pool.push({ kind: 'card', t: l.t, where: where, names: names, cid: l.id, id: cardId(l) }); });
   });
   return pool;
 }
@@ -303,9 +304,10 @@ function docEditor(sp, ro) {
   const handleMenu = (b, x) => {
     const cur = S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, into = b.k === 'h' ? [] : ['s', 'u', 'n'].filter(k => k !== b.k).map(k => ({ label: 'Turn into ' + KIND_NAME[k].toLowerCase(), value: 'k:' + k }));
     const all = list(), g = groupOf(all, all.findIndex(z => z.id === b.id)); setPicked(g.map(z => z.id));
-    const jl = (b.k === 's' || b.k === 'u') ? [{ label: cur.jk ? 'Change Jira link (' + cur.jk + ')…' : 'Link to Jira…', value: 'jira' }, { label: cur.fid && fidLabel(cur.fid) ? 'Change Monthly card (' + fidLabel(cur.fid) + ')…' : 'Link to a Monthly card…', value: 'card' }] : [];
+    let who = ''; for (let q = all.findIndex(z => z.id === b.id) - 1; q >= 0; q--) { if (all[q].k === 'p') { who = String(all[q].t || '').trim(); break; } if (all[q].k === 'h') break; }
+    const jl = (b.k === 's' || b.k === 'u') ? (b.k === 's' && who ? [{ label: 'Pick from the plan…', sub: 'Choose the card instead of typing it', value: 'plan' }] : []).concat([{ label: cur.jk ? 'Change Jira link (' + cur.jk + ')…' : 'Link to Jira…', value: 'jira' }, { label: cur.fid && fidLabel(cur.fid) ? 'Change Monthly card (' + fidLabel(cur.fid) + ')…' : 'Link to a Monthly card…', value: 'card' }]) : [];
     openMenu(x, [{ label: 'Move up', value: 'up' }, { label: 'Move down', value: 'down' }].concat(into, jl, [{ label: 'Delete', value: 'del' }]), {
-      label: 'Line options', onPick: it => { if (it.value === 'up') move(cur, -1); else if (it.value === 'down') move(cur, 1); else if (it.value === 'del') removeGroup(cur); else if (it.value === 'jira') openJiraLink({ b: cur, saveItem: saveItem, redraw: redraw, notify: notify }); else if (it.value === 'card') openCardLink({ b: cur, saveItem: saveItem, redraw: redraw, notify: notify }); else { saveItem(b.id, { k: it.value.slice(2) }); redraw(b.id); } }, onClose: p => { setPicked(null); if (!p) focusLater(b.id); }
+      label: 'Line options', onPick: it => { if (it.value === 'up') move(cur, -1); else if (it.value === 'down') move(cur, 1); else if (it.value === 'del') removeGroup(cur); else if (it.value === 'jira') openJiraLink({ b: cur, saveItem: saveItem, redraw: redraw, notify: notify }); else if (it.value === 'plan') openPlanPick({ b: cur, person: who, pool: coverPool(), saveItem: saveItem, redraw: redraw, notify: notify }); else if (it.value === 'card') openCardLink({ b: cur, saveItem: saveItem, redraw: redraw, notify: notify }); else { saveItem(b.id, { k: it.value.slice(2) }); redraw(b.id); } }, onClose: p => { setPicked(null); if (!p) focusLater(b.id); }
     });
   };
   function startDrag(e, b, x) {
@@ -354,8 +356,9 @@ function docEditor(sp, ro) {
       if (b.fid && (b.k === 's' || b.k === 'u')) { const cd = cardByFid(b.fid); if (cd) { const cc = el(ro ? 'span' : 'button', 'cardchip', '⛓ ' + fidLabel(b.fid) + ' · ' + (Number(cd.pct) || 0) + '%'); cc.title = 'Linked to the Monthly card ' + fidLabel(b.fid) + ' (' + cd.t + '), now at ' + (Number(cd.pct) || 0) + '%'; if (!ro) { cc.type = 'button'; cc.addEventListener('click', () => openCardLink({ b: S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, saveItem: saveItem, redraw: redraw, notify: notify })); } r.append(cc); } }
       if (b.jk && (b.k === 's' || b.k === 'u')) { const u = issueUrl(b.jk), jc = el(u ? 'a' : 'span', 'jkchip', b.jk); if (u) { jc.href = u; jc.target = '_blank'; jc.rel = 'noopener noreferrer'; jc.title = 'Open ' + b.jk + ' in Jira'; } else jc.title = 'Linked to Jira ' + b.jk; r.append(jc); }
       if (info.cover && info.cover.state !== 'ok') {
-        const cc = info.cover, ch = el('span', 'covchip cov-' + cc.state, cc.state === 'missing' ? 'Not on the plan' : 'Not assigned to ' + info.person.split(' ')[0]);
-        ch.title = cc.state === 'missing' ? 'No roadmap feature or Monthly card matches this line. Add it to the roadmap or to Monthly, or tag it #fix or #support if it is not planned work.' : 'Found on the plan (' + cc.hits.slice(0, 3).map(h => h.t + ' · ' + h.where).join('; ') + ') but ' + info.person + ' is not assigned there.';
+        const cc = info.cover, ch = el(ro ? 'span' : 'button', 'covchip cov-' + cc.state, cc.state === 'missing' ? 'Not on the plan' : 'Not assigned to ' + info.person.split(' ')[0]);
+        if (!ro) { ch.type = 'button'; ch.addEventListener('click', () => openPlanPick({ b: S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, person: info.person, pool: coverPool(), saveItem: saveItem, redraw: redraw, notify: notify })); }
+        ch.title = cc.state === 'missing' ? 'No roadmap feature or Monthly card matches this line. Click to pick the right one from the plan, or tag it #fix or #support if it is not planned work.' : 'Found on the plan (' + cc.hits.slice(0, 3).map(h => h.t + ' · ' + h.where).join('; ') + ') but ' + info.person + ' is not assigned there.';
         ch.dataset.state = cc.state; r.append(ch);
       }
       if (b.k === 'p') { const inf = directory().get(b.t); if (inf) r.append(el('span', 'role', inf.domain)); }

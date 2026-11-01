@@ -42,6 +42,7 @@ The bundle is an IIFE, so tests reach internals through `window.__ynmo` (`items,
 - `report_from_monthly.py` (14 checks) and `report_sources_unit.mjs` (18): Monthly cards in the weekly report, no repeat delivery, dedupe with the roadmap and sprint item, draft follows the card, checks box, notes never copied.
 - `monthly_carry_over.py` (11 checks): the carry-over tag and its reason (ask on a later month, none for finished cards, change/remove, clears on the backlog, saved).
 - `monthly_filters.py` (8 checks): the Assigned to and Points filters of Monthly.
+- `sprint_pick.py` (9 checks): typing slips, Pick from the plan, link by card.
 - `card_details.py` (10 checks) and `card_details_unit.mjs` (3): the details card of a Monthly card.
 - `roadmap_from_monthly.py` (11 checks) and `roadmap_from_monthly_unit.mjs` (7): Sync from Monthly on the Gantt.
 - `sprint_percent.py` (14 checks) and `sprint_percent_unit.mjs` (9): the percentage of sprint items, linking to a card, Review sprint updates with ticks and Apply.

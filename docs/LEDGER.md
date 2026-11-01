@@ -42,6 +42,19 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-11-01 - Easier sprint planning
+```
+🔄 YNMO LEDGER UPDATE - 2026-11-01
+Request: make sprint planning easier; a typing slip marks a feature as not on the plan / not on this person
+Surface: Ynmo Roadmaps tool (Sprints)
+Outcome: typing slips forgiven, link by card id wins over words, Pick from the plan dialog
+New facts / decisions locked:
+  - A sprint line with a Monthly card link is checked against that card only
+Corrections to this skill: none
+Open / flagged: assigning the person to the card from the sprint line (one click) not built; typing autocomplete inside the line not built
+Changelog: Sprint plan check forgives slips; pick lines from the plan.
+```
+
 ### 2026-11-01 - Details card for Monthly cards
 ```
 🔄 YNMO LEDGER UPDATE - 2026-11-01
