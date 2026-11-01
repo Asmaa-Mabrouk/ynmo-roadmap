@@ -17,6 +17,7 @@ node tests/undo_unit.mjs | grep -q '^FAIL' && { echo 'undo_unit.mjs: FAIL'; fail
 node tests/sprint_cover_unit.mjs | grep -q '^FAIL' && { echo 'sprint_cover_unit.mjs: FAIL'; fail=1; }
 node tests/report_sources_unit.mjs | grep -q '^FAIL' && { echo 'report_sources_unit.mjs: FAIL'; fail=1; }
 node tests/sprint_percent_unit.mjs | grep -q '^FAIL' && { echo 'sprint_percent_unit.mjs: FAIL'; fail=1; }
+node tests/roadmap_from_monthly_unit.mjs | grep -q '^FAIL' && { echo 'roadmap_from_monthly_unit.mjs: FAIL'; fail=1; }
 node build.mjs --dist >/dev/null && python3 tests/csp_check.py || fail=1
 python3 tests/e2e_qa.py | tee tests/out/qa.log | tail -1
 exit $fail

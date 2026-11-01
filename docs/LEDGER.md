@@ -42,6 +42,20 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-11-01 - Sync from Monthly on the Gantt
+```
+🔄 YNMO LEDGER UPDATE - 2026-11-01
+Request: sync from Monthly only until the Gantt is updated: bring down people and their tasks, then I edit
+Surface: Ynmo Roadmaps tool (Gantt, Monthly)
+Outcome: Sync from Monthly button with a tick list and Add n bars
+New facts / decisions locked:
+  - One bar per card; people = those with points on the card; dates = the month cut to the roadmap; squad = tag, else first person
+  - Never automatic; nothing changes before the button; synced cards are linked (rid) so they are not listed again
+Corrections to this skill: none
+Open / flagged: re-syncing does not refresh bars already made (Check updates still does that); per-person dates not set
+Changelog: Gantt Sync from Monthly added.
+```
+
 ### 2026-11-01 - Sprint item percentage -> Monthly review
 ```
 🔄 YNMO LEDGER UPDATE - 2026-11-01

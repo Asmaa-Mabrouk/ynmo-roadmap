@@ -42,6 +42,7 @@ The bundle is an IIFE, so tests reach internals through `window.__ynmo` (`items,
 - `report_from_monthly.py` (14 checks) and `report_sources_unit.mjs` (18): Monthly cards in the weekly report, no repeat delivery, dedupe with the roadmap and sprint item, draft follows the card, checks box, notes never copied.
 - `monthly_carry_over.py` (11 checks): the carry-over tag and its reason (ask on a later month, none for finished cards, change/remove, clears on the backlog, saved).
 - `monthly_filters.py` (8 checks): the Assigned to and Points filters of Monthly.
+- `roadmap_from_monthly.py` (11 checks) and `roadmap_from_monthly_unit.mjs` (7): Sync from Monthly on the Gantt.
 - `sprint_percent.py` (14 checks) and `sprint_percent_unit.mjs` (9): the percentage of sprint items, linking to a card, Review sprint updates with ticks and Apply.
 - `sprint_cover.py` (10 checks) and `sprint_cover_unit.mjs` (16): the not-on-the-plan and not-assigned marks on sprint lines, the exemptions, the top bar, and pasting a Jira address.
 - `new_resource.py` (17 checks): a new resource in Resources, Vacations, Roadmap, Monthly points (per track), the Dashboard team and capacity; ambiguous domain picks nothing; PM has no track; the Manage pop-up changes the tracks; "+ Add person" with role Quality.

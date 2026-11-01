@@ -94,7 +94,7 @@ export function render() {
   const list = visible();
   renderSummary(list);
   $('undo').disabled = !S.undoStack.length || !canEdit();
-  $('add').disabled = !canEdit();
+  $('add').disabled = !canEdit(); $('syncmonthly').disabled = !canEdit();
   const dw = ZOOM[state.zoom] || 26;
   document.documentElement.style.setProperty('--dw', dw + 'px');
   const g = $('grid'); g.textContent = ''; g.classList.remove('hov');

@@ -28,6 +28,7 @@ import { openHistory, keepVersion } from './monthly-history.js';
 import { itemsOf, sprintList } from './sprints.js';
 import { monthCards, openReview } from '../features/sprint-review.js';
 import { proposals } from '../features/sprint-percent.js';
+import { planRows, barOf } from '../features/roadmap-from-monthly.js';
 import { snapReason, cardCount, versionsOf } from '../features/month-history.js';
 import { scan, ensureRecords, openCheckUpdates } from '../features/feature-sync.js';
 let lkMap = new Map();
@@ -143,6 +144,39 @@ function addToRoadmap(m, l, tag) {
       closeDlg(); render(); renderMonthly(); toast('Added "' + l.t + '" to ' + r.n + '.');
     });
     const row = el('div', 'row'); row.append(ok, no); box.append(grid, err, row);
+  });
+}
+/** "Sync from Monthly" on the Gantt: lists the cards of the months in this roadmap that are not on it yet, with their people. Tick and Apply makes one bar per card (dates = the month, cut to the roadmap); the person then edits the bars. Nothing is changed before Apply. */
+export function syncFromMonthly() {
+  if (!canEdit()) return; const r = curRm();
+  const rows = planRows({ cards: monthCards(), rm: r, onRoad: onRoadmap, laneKeys: LANES.map(x => x.k), sqOf: primarySq });
+  openDlg('Sync from Monthly into ' + r.n, box => {
+    if (!rows.length) { box.append(el('p', 'sub', 'Every Monthly card in these dates is already on this roadmap (or there are no cards yet).')); const c = el('button', 'btn', 'Close'); c.type = 'button'; c.addEventListener('click', closeDlg); box.append(c); return; }
+    box.append(el('p', 'sub', 'Each card becomes one bar for its people, from the first to the last day of its month. Untick what you do not want; you can edit every bar afterwards. Cards already on the roadmap are not touched.'));
+    const list = el('div', 'srlist'), boxes = []; let last = null;
+    rows.forEach(w => {
+      const who = w.people[0] || 'Unassigned'; if (who !== last) { last = who; const h = el('div', 'srhead', who); list.append(h); }
+      const row = el('label', 'srrow'), cb = el('input'); cb.type = 'checkbox'; cb.checked = w.tick; cb.setAttribute('aria-label', 'Add ' + w.t); boxes.push([cb, w]);
+      const body = el('div', 'srbody'); body.append(el('div', '', (w.id ? w.id + ' · ' : '') + w.t), el('div', 'sub2', (w.people.length ? w.people.join(', ') : 'No people yet') + ' · ' + fmtIso(w.a) + ' – ' + fmtIso(w.b) + ' · ' + w.pct + '%'));
+      row.append(cb, body); list.append(row);
+    });
+    const ok = el('button', 'btn primary'), no = el('button', 'btn', 'Cancel'), all = el('button', 'btn sm', 'Tick all'), none = el('button', 'btn sm', 'Untick all'); ok.type = no.type = all.type = none.type = 'button'; ok.id = 'rmsyncok';
+    const upd = () => { const n = boxes.filter(x => x[0].checked).length; ok.textContent = 'Add ' + n + (n === 1 ? ' bar' : ' bars'); ok.disabled = !n; }; upd();
+    boxes.forEach(x => x[0].addEventListener('change', upd)); all.addEventListener('click', () => { boxes.forEach(x => { x[0].checked = true; }); upd(); }); none.addEventListener('click', () => { boxes.forEach(x => { x[0].checked = false; }); upd(); }); no.addEventListener('click', closeDlg);
+    ok.addEventListener('click', () => {
+      const pick = boxes.filter(x => x[0].checked).map(x => x[1]); if (!pick.length) return;
+      pushHistory(); const ords = {}; const made = [];
+      pick.forEach(w => {
+        const k0 = Math.max(0, kOfIso(w.a)), k1 = Math.min(NDAYS - 1, kOfIso(w.b)); if (isNaN(k0) || isNaN(k1) || k1 < k0) return;
+        const nid = 'c' + Date.now().toString(36) + made.length.toString(36); if (ords[w.sq] === undefined) { const same = items().filter(x => x.sq === w.sq); ords[w.sq] = same.length ? Math.max.apply(null, same.map(x => x.ord)) + 1 : 0; }
+        S.over[nid] = barOf(Object.assign({}, w, { k0: k0, k1: k1 }), state.rm, ords[w.sq]++, notesOf(w.l).map(q => q.t).join(' | ')); persist(nid); made.push([w, nid]);
+      });
+      const months = [...new Set(made.map(x => x[0].mo))];
+      months.forEach(m => saveMonth(m, d => { made.filter(x => x[0].mo === m).forEach(x => { const c = d.lines.find(z => z.id === x[0].l.id); if (c) { c.rid = x[1]; c.rm = state.rm; c.lk = { t: c.t, pct: clampPct(c.pct) }; } }); }, null, true));
+      logAct('roadmap', 'synced ' + made.length + ' Monthly card' + (made.length === 1 ? '' : 's') + ' into ' + r.n);
+      closeDlg(); render(); toast('Added ' + made.length + (made.length === 1 ? ' bar' : ' bars') + ' from Monthly. Edit them as you need.');
+    });
+    const row = el('div', 'row'); row.append(ok, no, all, none); box.append(list, row);
   });
 }
 function deleteMonth(m) {

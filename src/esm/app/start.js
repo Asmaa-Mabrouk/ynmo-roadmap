@@ -14,6 +14,7 @@ import { exportPdf } from '../ui/export-pdf.js';
 import { initExtras } from '../app/extras-wiring.js';
 import { LOGO } from '../core/supabase.js';
 import { useRoadmap } from '../pages/roadmaps.js';
+import { syncFromMonthly } from '../pages/monthly.js';
 import { boot } from '../app/shell.js';
 import { registerUndo } from '../features/undo-router.js';
 import { onLanesChanged } from '../features/squad-names.js';
@@ -69,6 +70,7 @@ export function init() {
   window.addEventListener('resize', closeCtx);
   document.addEventListener('pointerdown', e => { const c = $('ctx'); if (!c.hidden && !c.contains(e.target)) closeCtx(); }, true);
   $('add').addEventListener('click', () => { if (canEdit()) addItem(); });
+  $('syncmonthly').addEventListener('click', () => syncFromMonthly());
   $('undo').addEventListener('click', undo);
   registerUndo('roadmap', { ready: () => canEdit(), undo: () => undo() });
   $('daysoff').addEventListener('click', e => openOff(e.currentTarget));
