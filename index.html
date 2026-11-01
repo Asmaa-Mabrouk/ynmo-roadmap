@@ -6853,6 +6853,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     out.sort((a, b) => Math.round(b.score * 10) - Math.round(a.score * 10) || Number(b.mine) - Number(a.mine) || b.score - a.score || String(a.t).localeCompare(String(b.t)));
     return limit ? out.slice(0, limit) : out;
   }
+  var withCode = (text, code) => {
+    const base3 = String(text || "").replace(/\s*\(\s*[A-Za-z]{1,4}#\d+\s*\)\s*$/, "").trim();
+    return code ? base3 ? base3 + " (" + code + ")" : "(" + code + ")" : base3;
+  };
   var hasKey = (title, key) => !!key && String(title || "").toUpperCase().includes(String(key).toUpperCase());
   function cover(scope, person, pool) {
     const key = scope.jk || (KEY.exec(String(scope.t || "").toUpperCase()) || [])[1] || "";
@@ -7131,7 +7135,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           err.textContent = "No Monthly card has the id " + (inp.value.trim() || "(empty)") + ".";
           return;
         }
-        o.saveItem(o.b.id, { fid: id });
+        o.saveItem(o.b.id, { fid: id, t: withCode(o.b.t, fidLabel(id)) });
         closeDlg();
         o.redraw(o.b.id);
         o.notify("Linked to " + fidLabel(id));
@@ -7146,7 +7150,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       un.addEventListener("click", () => {
         const p = Object.assign({}, S.sitems[o.b.id] || {});
         delete p.fid;
-        o.saveItem(o.b.id, { fid: "" });
+        o.saveItem(o.b.id, { fid: "", t: withCode(o.b.t, "") });
         closeDlg();
         o.redraw(o.b.id);
         o.notify("Link removed");
@@ -7218,7 +7222,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   function openPlanPick(o) {
     openDlg("Pick from the plan", (box2) => {
       const first = (o.person || "").split(" ")[0] || "this person";
-      box2.append(el("p", "sub", "Choose the card or feature this line is about, instead of typing it. The line is then linked to it. Type to search; " + first + "'s work is listed first."));
+      box2.append(el("p", "sub", "Choose the card or feature this line is about, instead of typing it. The line is then linked to it and gets its code, for example (TF#35). Type to search; " + first + "'s work is listed first."));
       const q = el("input");
       q.type = "search";
       q.value = o.b.t || "";
@@ -7235,7 +7239,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         const patch = {};
         if (p.cid) patch.fid = p.cid;
         else patch.fid = "";
-        if (useName.checked || !p.cid) patch.t = p.t;
+        if (p.cid) patch.t = withCode(useName.checked ? p.t : o.b.t, p.id);
+        else patch.t = p.t;
         o.saveItem(o.b.id, patch);
         closeDlg();
         o.redraw(o.b.id);

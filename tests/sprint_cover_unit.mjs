@@ -1,5 +1,5 @@
 // Sprint lines against the plan: parseJira, sameWords, cover.
-import { parseJira, sameWords, cover, suggest, fuzzyWord } from '../src/esm/features/sprint-cover.js';
+import { parseJira, sameWords, cover, suggest, fuzzyWord, withCode } from '../src/esm/features/sprint-cover.js';
 let bad = 0; const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) bad++; };
 const j1 = parseJira('https://ynmo.atlassian.net/browse/DYC-123'), j2 = parseJira('dyc-45'), j3 = parseJira('https://ynmo.atlassian.net/jira/software/projects/DYC/boards/1?selectedIssue=DYC-9');
 ok('parse: an address gives the key and the site', j1 && j1.key === 'DYC-123' && j1.base === 'https://ynmo.atlassian.net');
@@ -33,4 +33,6 @@ ok('link: the link wins over the words (the card the person is not on says unass
 const sg = suggest('sanr integraton', 'Aya Fathy', pl, 5);
 ok('suggest: finds the card despite slips and leaves far ones out', sg.length === 1 && sg[0].cid === 'c1' && sg[0].mine);
 ok('suggest: an empty search lists the person\'s work first', suggest('', 'Aya Fathy', pl)[0].cid === 'c1');
+ok('code: added at the end, replaced when one is there, removed when none, a plain # in the text is kept', withCode('Sanar integration', 'TF#35') === 'Sanar integration (TF#35)' && withCode('Sanar integration (TF#35)', 'DC#2') === 'Sanar integration (DC#2)' && withCode('Sanar (TF#35)', '') === 'Sanar' && withCode('Fix #12 bug', 'TF#1') === 'Fix #12 bug (TF#1)');
+ok('code: the code does not break matching', sameWords('Sanar Integration production (TF#35)', 'Sanar Integration production'));
 process.exit(bad ? 1 : 0);

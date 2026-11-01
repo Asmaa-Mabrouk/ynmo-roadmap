@@ -8,7 +8,7 @@ import { S } from '../core/state.js';
 import { openDlg, closeDlg } from './safety.js';
 import { allCards, fidFromText, fidLabel } from './feature-sync.js';
 import { cardId } from './month-model.js';
-import { suggest } from './sprint-cover.js';
+import { suggest, withCode } from './sprint-cover.js';
 import { sameName } from './capacity.js';
 
 /** Link (or unlink) one sprint item to a Monthly card. `o` = { b, saveItem, redraw, notify } */
@@ -19,9 +19,9 @@ export function openCardLink(o) {
     const inp = el('input'); inp.type = 'text'; inp.maxLength = 12; inp.placeholder = 'Card id'; inp.setAttribute('aria-label', 'Monthly card id'); inp.setAttribute('list', 'sprintcardlist'); inp.value = o.b.fid ? fidLabel(o.b.fid) : '';
     const err = el('p', 'sub bad'); err.setAttribute('role', 'alert');
     const ok = el('button', 'btn primary', 'Link'), un = el('button', 'btn', 'Remove link'), no = el('button', 'btn', 'Cancel'); ok.type = un.type = no.type = 'button'; un.hidden = !o.b.fid; no.addEventListener('click', closeDlg);
-    const go = () => { const id = fidFromText(inp.value); if (!id) { err.textContent = 'No Monthly card has the id ' + (inp.value.trim() || '(empty)') + '.'; return; } o.saveItem(o.b.id, { fid: id }); closeDlg(); o.redraw(o.b.id); o.notify('Linked to ' + fidLabel(id)); };
+    const go = () => { const id = fidFromText(inp.value); if (!id) { err.textContent = 'No Monthly card has the id ' + (inp.value.trim() || '(empty)') + '.'; return; } o.saveItem(o.b.id, { fid: id, t: withCode(o.b.t, fidLabel(id)) }); closeDlg(); o.redraw(o.b.id); o.notify('Linked to ' + fidLabel(id)); };
     ok.addEventListener('click', go); inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
-    un.addEventListener('click', () => { const p = Object.assign({}, S.sitems[o.b.id] || {}); delete p.fid; o.saveItem(o.b.id, { fid: '' }); closeDlg(); o.redraw(o.b.id); o.notify('Link removed'); });
+    un.addEventListener('click', () => { const p = Object.assign({}, S.sitems[o.b.id] || {}); delete p.fid; o.saveItem(o.b.id, { fid: '', t: withCode(o.b.t, '') }); closeDlg(); o.redraw(o.b.id); o.notify('Link removed'); });
     const row = el('div', 'row'); row.append(ok, un, no); box.append(dl, inp, err, row); setTimeout(() => inp.focus(), 0);
   });
 }
@@ -56,12 +56,12 @@ export function openReview(o) {
 export function openPlanPick(o) {
   openDlg('Pick from the plan', box => {
     const first = (o.person || '').split(' ')[0] || 'this person';
-    box.append(el('p', 'sub', 'Choose the card or feature this line is about, instead of typing it. The line is then linked to it. Type to search; ' + first + "'s work is listed first."));
+    box.append(el('p', 'sub', 'Choose the card or feature this line is about, instead of typing it. The line is then linked to it and gets its code, for example (TF#35). Type to search; ' + first + "'s work is listed first."));
     const q = el('input'); q.type = 'search'; q.value = o.b.t || ''; q.setAttribute('aria-label', 'Search the plan'); q.placeholder = 'Search cards and features';
     const useName = el('input'); useName.type = 'checkbox'; useName.checked = true; const ul = el('label', 'sub'); ul.append(useName, ' Use the name from the plan for this line');
     const list = el('div', 'srlist ppick'); list.setAttribute('aria-live', 'polite');
     const pick = p => {
-      const patch = {}; if (p.cid) patch.fid = p.cid; else patch.fid = ''; if (useName.checked || !p.cid) patch.t = p.t;
+      const patch = {}; if (p.cid) patch.fid = p.cid; else patch.fid = ''; if (p.cid) patch.t = withCode(useName.checked ? p.t : o.b.t, p.id); else patch.t = p.t;
       o.saveItem(o.b.id, patch); closeDlg(); o.redraw(o.b.id); o.notify(p.cid ? 'Linked to ' + (p.id || 'the card') : 'Name taken from the plan');
     };
     const draw = () => {

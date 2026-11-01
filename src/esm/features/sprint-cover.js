@@ -57,6 +57,8 @@ export function suggest(query, person, pool, limit) {
   out.sort((a, b) => (Math.round(b.score * 10) - Math.round(a.score * 10)) || (Number(b.mine) - Number(a.mine)) || (b.score - a.score) || String(a.t).localeCompare(String(b.t)));
   return limit ? out.slice(0, limit) : out;
 }
+/** The text of a line with the card code at its end: "Sanar Integration (TF#35)". A code already at the end is replaced; no code removes it. */
+export const withCode = (text, code) => { const base = String(text || '').replace(/\s*\(\s*[A-Za-z]{1,4}#\d+\s*\)\s*$/, '').trim(); return code ? (base ? base + ' (' + code + ')' : '(' + code + ')') : base; };
 const hasKey = (title, key) => !!key && String(title || '').toUpperCase().includes(String(key).toUpperCase());
 /**
  * @param {{t:string, jk?:string}} scope  the sprint line

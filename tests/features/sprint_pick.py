@@ -30,7 +30,7 @@ with sync_playwright() as pw:
     ok('K5 searching shows other cards', 'Reports export' in d.inner_text() and 'Nobody assigned' not in d.inner_text() and 'Assigned to Mona' in d.inner_text())
     d.locator('input[type=search]').fill('sanar'); A.wait_for_timeout(250)
     d.locator('.ppickrow').first.click(); A.wait_for_timeout(700)
-    ok('K6 picking a card renames the line, links it and clears the mark', A.locator('.blk[data-id="s2"] .bt').inner_text().strip()=='Sanar Integration - Production Integration' and A.locator('.blk[data-id="s2"] .cardchip').count()==1 and A.locator('.blk[data-id="s2"] .covchip').count()==0)
+    ok('K6 picking a card renames the line, links it and clears the mark', A.locator('.blk[data-id="s2"] .bt').inner_text().strip()=='Sanar Integration - Production Integration (TF#35)' and A.locator('.blk[data-id="s2"] .cardchip').count()==1 and A.locator('.blk[data-id="s2"] .covchip').count()==0)
     A.locator('.blk[data-id="s3"] .blkh').focus(); A.keyboard.press('Enter'); A.wait_for_timeout(250)
     ok('K7 the line menu has Pick from the plan', A.locator('[role=dialog].cmenu .copt', has_text='Pick from the plan').count()==1)
     A.locator('[role=dialog].cmenu .copt', has_text='Pick from the plan').click(); A.wait_for_timeout(300)
