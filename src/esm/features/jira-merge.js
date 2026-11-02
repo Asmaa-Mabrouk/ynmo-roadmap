@@ -38,9 +38,11 @@ const groupEnd = (blocks, i) => { const r = RANK[blocks[i].k]; let j = i + 1; if
 export function mergeJira(blocks, tickets, o) {
   const out = { updates: [], inserts: [], added: 0, updated: 0, unassigned: 0, unmatched: [] };
   const known = new Map(blocks.filter(b => b.jk).map(b => [b.jk, b]));
+  const extra = new Set([].concat(...blocks.map(b => (b.jx || []).map(k => String(k).toUpperCase()))));   // extra tickets of a line: known, but the line status follows its main ticket only
   const fresh = [];
   tickets.forEach(t => {
     const ex = known.get(t.key), st = statusOf(t);
+    if (!ex && extra.has(String(t.key).toUpperCase())) return;
     if (ex) { const patch = {}; if ((ex.st || 'planned') !== st) patch.st = st; const dn = st === 'done' ? (t.done || ex.dn || '') : ''; if ((ex.dn || '') !== dn) patch.dn = dn; if (Object.keys(patch).length) { out.updates.push({ id: ex.id, patch: patch }); out.updated++; } return; }
     if (!t.assignee) { out.unassigned++; return; }
     const person = matchPerson(t.assignee, t.email, o.names) || t.assignee;

@@ -8721,9 +8721,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   function mergeJira(blocks, tickets, o) {
     const out = { updates: [], inserts: [], added: 0, updated: 0, unassigned: 0, unmatched: [] };
     const known2 = new Map(blocks.filter((b) => b.jk).map((b) => [b.jk, b]));
+    const extra = new Set([].concat(...blocks.map((b) => (b.jx || []).map((k) => String(k).toUpperCase()))));
     const fresh = [];
     tickets.forEach((t) => {
       const ex = known2.get(t.key), st = statusOf2(t);
+      if (!ex && extra.has(String(t.key).toUpperCase())) return;
       if (ex) {
         const patch = {};
         if ((ex.st || "planned") !== st) patch.st = st;
@@ -9154,7 +9156,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         const u = o.jiraUrl(k);
         return u ? ' <a href="' + esc2(u) + '">' + esc2(k) + "</a>" : " " + esc2(k);
       }).join("");
-      const shown = b.jk ? txt.replace(new RegExp("\\s*\\(" + b.jk.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\)\\s*$"), "") : txt;
+      const shown = b.jk ? txt.replace(new RegExp("\\s*\\(" + b.jk.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\)(?=\\s*(?:\\([A-Za-z]{1,4}#\\d+\\))?\\s*$)"), "") : txt;
       h.push("<li>" + esc2(shown) + status + links + (tags ? " <i>" + esc2(tags) + "</i>" : "") + "</li>");
       t.push((lvl === 2 ? "    - " : "  - ") + shown + " [" + ST(b.st) + "]" + (ks.length ? " " + ks.join(" ") : "") + (tags ? " " + tags : ""));
     });

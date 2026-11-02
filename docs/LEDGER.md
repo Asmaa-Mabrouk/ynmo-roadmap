@@ -42,6 +42,18 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-11-02 - Card code with Jira tickets
+```
+🔄 YNMO LEDGER UPDATE - 2026-11-02
+Request: if a line has a Monthly card code and also Jira tickets, is that handled?
+Surface: Ynmo Roadmaps tool (Sprints)
+Outcome: two gaps found and fixed (pull duplicated extra tickets; export repeated the main key)
+New facts / decisions locked: none
+Corrections to this skill: none
+Open / flagged: none new
+Changelog: Card code and Jira tickets now work together.
+```
+
 ### 2026-11-02 - Several Jira tickets per sprint line
 ```
 🔄 YNMO LEDGER UPDATE - 2026-11-02

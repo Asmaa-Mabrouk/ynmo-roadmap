@@ -43,6 +43,7 @@ The bundle is an IIFE, so tests reach internals through `window.__ynmo` (`items,
 - `monthly_carry_over.py` (11 checks): the carry-over tag and its reason (ask on a later month, none for finished cards, change/remove, clears on the backlog, saved).
 - `monthly_filters.py` (8 checks): the Assigned to and Points filters of Monthly.
 - Timing-sensitive scripts (`login_hang.py` waits for a sign-in gate, `monthly_page.py` drags a card with the mouse) failed now and then when the machine was busy; their waits were lengthened on 2026-11-02 (drag: slower mouse, longer pauses; gate: 25 s). A failure of only these two in a full run is re-run alone before it is treated as real.
+- `jira_code_unit.mjs` (3): a line with a card code and Jira tickets (export, pull).
 - `sprint_pick.py` (9 checks): typing slips, Pick from the plan, link by card.
 - `card_details.py` (10 checks) and `card_details_unit.mjs` (3): the details card of a Monthly card.
 - `roadmap_from_monthly.py` (11 checks) and `roadmap_from_monthly_unit.mjs` (7): Sync from Monthly on the Gantt.

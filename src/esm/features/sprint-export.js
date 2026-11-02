@@ -33,7 +33,7 @@ export function sprintDoc(sp, blocks, o) {
     const ks = [b.jk].concat(b.jx || []).filter((k, i, a) => k && a.indexOf(k) === i), tags = (b.tags || []).map(x => '#' + x).join(' ');
     const status = ' <b>[' + esc(ST(b.st)) + ']</b>', links = ks.map(k => { const u = o.jiraUrl(k); return u ? ' <a href="' + esc(u) + '">' + esc(k) + '</a>' : ' ' + esc(k); }).join('');
     // the ticket key is already part of the text when it was pulled from Jira: show it once, as a link
-    const shown = b.jk ? txt.replace(new RegExp('\\s*\\(' + b.jk.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\)\\s*$'), '') : txt;
+    const shown = b.jk ? txt.replace(new RegExp('\\s*\\(' + b.jk.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\)(?=\\s*(?:\\([A-Za-z]{1,4}#\\d+\\))?\\s*$)'), '') : txt;
     h.push('<li>' + esc(shown) + status + links + (tags ? ' <i>' + esc(tags) + '</i>' : '') + '</li>');
     t.push((lvl === 2 ? '    - ' : '  - ') + shown + ' [' + ST(b.st) + ']' + (ks.length ? ' ' + ks.join(' ') : '') + (tags ? ' ' + tags : ''));
   });
