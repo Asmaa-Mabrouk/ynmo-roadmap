@@ -1,5 +1,5 @@
 // Sprint lines against the plan: parseJira, sameWords, cover.
-import { parseJira, sameWords, cover, suggest, fuzzyWord, withCode } from '../src/esm/features/sprint-cover.js';
+import { parseJira, sameWords, cover, suggest, fuzzyWord, withCode, parseJiraAll, keysOf, keyPatch } from '../src/esm/features/sprint-cover.js';
 let bad = 0; const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) bad++; };
 const j1 = parseJira('https://ynmo.atlassian.net/browse/DYC-123'), j2 = parseJira('dyc-45'), j3 = parseJira('https://ynmo.atlassian.net/jira/software/projects/DYC/boards/1?selectedIssue=DYC-9');
 ok('parse: an address gives the key and the site', j1 && j1.key === 'DYC-123' && j1.base === 'https://ynmo.atlassian.net');
@@ -35,4 +35,8 @@ ok('suggest: finds the card despite slips and leaves far ones out', sg.length ==
 ok('suggest: an empty search lists the person\'s work first', suggest('', 'Aya Fathy', pl)[0].cid === 'c1');
 ok('code: added at the end, replaced when one is there, removed when none, a plain # in the text is kept', withCode('Sanar integration', 'TF#35') === 'Sanar integration (TF#35)' && withCode('Sanar integration (TF#35)', 'DC#2') === 'Sanar integration (DC#2)' && withCode('Sanar (TF#35)', '') === 'Sanar' && withCode('Fix #12 bug', 'TF#1') === 'Fix #12 bug (TF#1)');
 ok('code: the code does not break matching', sameWords('Sanar Integration production (TF#35)', 'Sanar Integration production'));
+const pa = parseJiraAll('dyc-1, https://x.atlassian.net/browse/FAS-22\nDYC-1 and abc-3');
+ok('jira: several keys and links in one text, no repeats, the site is taken from an address', pa.map(x => x.key).join() === 'DYC-1,FAS-22,ABC-3' && pa[0].base === 'https://x.atlassian.net' && parseJiraAll('hello').length === 0);
+ok('jira: keysOf puts the main key first without repeats, keyPatch splits it back', keysOf({ jk: 'dyc-1', jx: ['FAS-2', 'DYC-1'] }).join() === 'DYC-1,FAS-2' && keyPatch(['A-1', 'B-2', 'C-3']).jx.join() === 'B-2,C-3' && keyPatch([]).jk === '' && keysOf({}).length === 0);
+ok('jira: a line is covered through any of its tickets', cover({ t: 'x', jk: 'AAA-1', jx: ['DYC-9'] }, 'Mona', [{ kind: 'card', t: 'Other name (DYC-9)', where: 'M', names: ['Mona'], cid: 'q' }]).state === 'ok');
 process.exit(bad ? 1 : 0);

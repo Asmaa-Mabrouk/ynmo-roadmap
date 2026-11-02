@@ -33,7 +33,7 @@ import { crumbs } from '../ui/crumbs.js';
 import { createUndo } from '../features/undo-stack.js';
 import { registerUndo } from '../features/undo-router.js';
 import { state, items } from '../core/model.js';
-import { cover } from '../features/sprint-cover.js';
+import { cover, keysOf } from '../features/sprint-cover.js';
 import { allRoadmaps, withRm } from './roadmaps.js';
 
 const iso = t => new Date(t).toISOString().slice(0, 10);
@@ -305,7 +305,7 @@ function docEditor(sp, ro) {
     const cur = S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, into = b.k === 'h' ? [] : ['s', 'u', 'n'].filter(k => k !== b.k).map(k => ({ label: 'Turn into ' + KIND_NAME[k].toLowerCase(), value: 'k:' + k }));
     const all = list(), g = groupOf(all, all.findIndex(z => z.id === b.id)); setPicked(g.map(z => z.id));
     let who = ''; for (let q = all.findIndex(z => z.id === b.id) - 1; q >= 0; q--) { if (all[q].k === 'p') { who = String(all[q].t || '').trim(); break; } if (all[q].k === 'h') break; }
-    const jl = (b.k === 's' || b.k === 'u') ? (b.k === 's' && who ? [{ label: 'Pick from the plan…', sub: 'Choose the card instead of typing it', value: 'plan' }] : []).concat([{ label: cur.jk ? 'Change Jira link (' + cur.jk + ')…' : 'Link to Jira…', value: 'jira' }, { label: cur.fid && fidLabel(cur.fid) ? 'Change Monthly card (' + fidLabel(cur.fid) + ')…' : 'Link to a Monthly card…', value: 'card' }]) : [];
+    const jl = (b.k === 's' || b.k === 'u') ? (b.k === 's' && who ? [{ label: 'Pick from the plan…', sub: 'Choose the card instead of typing it', value: 'plan' }] : []).concat([{ label: keysOf(cur).length ? 'Jira tickets (' + keysOf(cur).length + ')…' : 'Link to Jira…', sub: 'Link one or many tickets', value: 'jira' }, { label: cur.fid && fidLabel(cur.fid) ? 'Change Monthly card (' + fidLabel(cur.fid) + ')…' : 'Link to a Monthly card…', value: 'card' }]) : [];
     openMenu(x, [{ label: 'Move up', value: 'up' }, { label: 'Move down', value: 'down' }].concat(into, jl, [{ label: 'Delete', value: 'del' }]), {
       label: 'Line options', onPick: it => { if (it.value === 'up') move(cur, -1); else if (it.value === 'down') move(cur, 1); else if (it.value === 'del') removeGroup(cur); else if (it.value === 'jira') openJiraLink({ b: cur, saveItem: saveItem, redraw: redraw, notify: notify }); else if (it.value === 'plan') openPlanPick({ b: cur, person: who, pool: coverPool(), saveItem: saveItem, redraw: redraw, notify: notify }); else if (it.value === 'card') openCardLink({ b: cur, saveItem: saveItem, redraw: redraw, notify: notify }); else { saveItem(b.id, { k: it.value.slice(2) }); redraw(b.id); } }, onClose: p => { setPicked(null); if (!p) focusLater(b.id); }
     });
@@ -354,7 +354,7 @@ function docEditor(sp, ro) {
       }
       r.append(bt);
       if (b.fid && (b.k === 's' || b.k === 'u')) { const cd = cardByFid(b.fid); if (cd) { const cc = el(ro ? 'span' : 'button', 'cardchip', '⛓ ' + fidLabel(b.fid) + ' · ' + (Number(cd.pct) || 0) + '%'); cc.title = 'Linked to the Monthly card ' + fidLabel(b.fid) + ' (' + cd.t + '), now at ' + (Number(cd.pct) || 0) + '%'; if (!ro) { cc.type = 'button'; cc.addEventListener('click', () => openCardLink({ b: S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, saveItem: saveItem, redraw: redraw, notify: notify })); } r.append(cc); } }
-      if (b.jk && (b.k === 's' || b.k === 'u')) { const u = issueUrl(b.jk), jc = el(u ? 'a' : 'span', 'jkchip', b.jk); if (u) { jc.href = u; jc.target = '_blank'; jc.rel = 'noopener noreferrer'; jc.title = 'Open ' + b.jk + ' in Jira'; } else jc.title = 'Linked to Jira ' + b.jk; r.append(jc); }
+      if (b.k === 's' || b.k === 'u') keysOf(b).forEach((k, n) => { const u = issueUrl(k), jc = el(u ? 'a' : 'span', 'jkchip' + (n ? ' extra' : ''), k); if (u) { jc.href = u; jc.target = '_blank'; jc.rel = 'noopener noreferrer'; jc.title = 'Open ' + k + ' in Jira' + (n ? '' : (keysOf(b).length > 1 ? ' (main ticket: the status follows it)' : '')); } else jc.title = 'Linked to Jira ' + k; r.append(jc); });
       if (info.cover && info.cover.state !== 'ok') {
         const cc = info.cover, ch = el(ro ? 'span' : 'button', 'covchip cov-' + cc.state, cc.state === 'missing' ? 'Not on the plan' : 'Not assigned to ' + info.person.split(' ')[0]);
         if (!ro) { ch.type = 'button'; ch.addEventListener('click', () => openPlanPick({ b: S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, person: info.person, pool: coverPool(), saveItem: saveItem, redraw: redraw, notify: notify })); }

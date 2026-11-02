@@ -1054,3 +1054,21 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 .pppts { font-weight: 700; font-size: 11px; color: var(--c); border: 1px solid var(--c); padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, var(--c) 10%, #fff); }
 .pppts.none { font-weight: 600; opacity: .85; }
 .pptitle { font-weight: 600; overflow-wrap: anywhere; }
+/* several Jira tickets on one line */
+.jkchip.extra { background: #eef0f6; color: #3d4a7a; }
+.jklinked { display: grid; gap: 8px; margin: 6px 0 14px; }
+.jkl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; border: 1px solid #d6e2fb; background: #f4f8ff; border-radius: 10px; padding: 8px 10px; }
+.jkl.main { border-color: #a9c3f5; background: #eaf1ff; }
+.jklk { font-weight: 700; color: #1a56c4; text-decoration: none; } a.jklk:hover { text-decoration: underline; }
+.jklt { flex: 1 1 140px; min-width: 0; color: #4a4f6a; font-size: 13px; overflow-wrap: anywhere; }
+.jklm { font-size: 11px; font-weight: 700; color: #1a56c4; border: 1px solid #a9c3f5; border-radius: 999px; padding: 1px 8px; background: #fff; }
+.jklb { border: 0; background: transparent; color: #1a56c4; font: inherit; font-size: 12px; cursor: pointer; padding: 2px 6px; border-radius: 6px; } .jklb:hover { background: #dbe7fd; }
+.jklx { margin-inline-start: auto; border: 0; background: transparent; font-size: 18px; line-height: 1; color: #7b8099; cursor: pointer; padding: 0 6px; border-radius: 6px; } .jklx:hover { background: #fde8e8; color: #c0392b; }
+.jkopt.on { background: #eaf1ff; border-color: #a9c3f5; }
+/* Jira tickets dialog: stacked, full-width fields */
+.xbox:has(.jklinked) label { display: grid; gap: 4px; margin-bottom: 8px; }
+.xbox:has(.jklinked) label > span { font-weight: 600; font-size: 13px; }
+.xbox:has(.jklinked) input[type=text] { width: 100%; box-sizing: border-box; }
+.xbox:has(.jklinked) .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.xbox:has(.jklinked) .row > input { flex: 1 1 220px; min-width: 0; }
+.xbox:has(.jklinked) .jklist { margin-bottom: 14px; }

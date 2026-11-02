@@ -38,7 +38,7 @@ with sync_playwright() as pw:
     h=A.locator('.blk.k-s .blkh').first; h.focus(); A.keyboard.press('Enter'); A.wait_for_timeout(250)
     A.locator('[role=dialog].cmenu .copt', has_text='Link to Jira').click(); A.wait_for_timeout(300)
     ok('S8 the Jira dialog opens on a paste field', A.locator('#jkpaste').count()==1 and A.evaluate("document.activeElement.id")=='jkpaste')
-    A.fill('#jkpaste','https://ynmo.atlassian.net/browse/DYC-321'); A.click('#jkpastego'); A.wait_for_timeout(600)
+    A.fill('#jkpaste','https://ynmo.atlassian.net/browse/DYC-321'); A.click('#jkpastego'); A.wait_for_timeout(600); A.click('#xdlg button:text-is("Done")'); A.wait_for_timeout(300)
     chip=A.locator('.blk.k-s a.jkchip').first
     ok('S9 the pasted address links the line: key shown and the chip opens that ticket', chip.inner_text()=='DYC-321' and chip.get_attribute('href')=='https://ynmo.atlassian.net/browse/DYC-321')
     ok('S10 no page errors', errs==[]); print('errors:',errs[:3])

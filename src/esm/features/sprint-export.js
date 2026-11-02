@@ -30,12 +30,12 @@ export function sprintDoc(sp, blocks, o) {
     if (b.k === 'p') { closeLists(0); if (txt) { h.push('<h3>' + esc(txt) + '</h3>'); t.push('', txt); } return; }
     if (!txt) return;
     const lvl = b.k === 'u' ? 2 : 1; if (open < lvl) { while (open < lvl) { h.push('<ul>'); open++; } } else closeLists(lvl);
-    const jk = b.jk ? o.jiraUrl(b.jk) : '', tags = (b.tags || []).map(x => '#' + x).join(' ');
-    const status = ' <b>[' + esc(ST(b.st)) + ']</b>', link = jk ? ' <a href="' + esc(jk) + '">' + esc(b.jk) + '</a>' : '';
+    const ks = [b.jk].concat(b.jx || []).filter((k, i, a) => k && a.indexOf(k) === i), tags = (b.tags || []).map(x => '#' + x).join(' ');
+    const status = ' <b>[' + esc(ST(b.st)) + ']</b>', links = ks.map(k => { const u = o.jiraUrl(k); return u ? ' <a href="' + esc(u) + '">' + esc(k) + '</a>' : ' ' + esc(k); }).join('');
     // the ticket key is already part of the text when it was pulled from Jira: show it once, as a link
     const shown = b.jk ? txt.replace(new RegExp('\\s*\\(' + b.jk.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\)\\s*$'), '') : txt;
-    h.push('<li>' + esc(shown) + status + (b.jk ? (jk ? link : ' ' + esc(b.jk)) : '') + (tags ? ' <i>' + esc(tags) + '</i>' : '') + '</li>');
-    t.push((lvl === 2 ? '    - ' : '  - ') + shown + ' [' + ST(b.st) + ']' + (b.jk ? ' ' + b.jk : '') + (tags ? ' ' + tags : ''));
+    h.push('<li>' + esc(shown) + status + links + (tags ? ' <i>' + esc(tags) + '</i>' : '') + '</li>');
+    t.push((lvl === 2 ? '    - ' : '  - ') + shown + ' [' + ST(b.st) + ']' + (ks.length ? ' ' + ks.join(' ') : '') + (tags ? ' ' + tags : ''));
   });
   closeLists(0);
   return { html: '<meta charset="utf-8">' + h.join(''), text: t.join('\n') };

@@ -1477,6 +1477,24 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 .pppts { font-weight: 700; font-size: 11px; color: var(--c); border: 1px solid var(--c); padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, var(--c) 10%, #fff); }
 .pppts.none { font-weight: 600; opacity: .85; }
 .pptitle { font-weight: 600; overflow-wrap: anywhere; }
+/* several Jira tickets on one line */
+.jkchip.extra { background: #eef0f6; color: #3d4a7a; }
+.jklinked { display: grid; gap: 8px; margin: 6px 0 14px; }
+.jkl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; border: 1px solid #d6e2fb; background: #f4f8ff; border-radius: 10px; padding: 8px 10px; }
+.jkl.main { border-color: #a9c3f5; background: #eaf1ff; }
+.jklk { font-weight: 700; color: #1a56c4; text-decoration: none; } a.jklk:hover { text-decoration: underline; }
+.jklt { flex: 1 1 140px; min-width: 0; color: #4a4f6a; font-size: 13px; overflow-wrap: anywhere; }
+.jklm { font-size: 11px; font-weight: 700; color: #1a56c4; border: 1px solid #a9c3f5; border-radius: 999px; padding: 1px 8px; background: #fff; }
+.jklb { border: 0; background: transparent; color: #1a56c4; font: inherit; font-size: 12px; cursor: pointer; padding: 2px 6px; border-radius: 6px; } .jklb:hover { background: #dbe7fd; }
+.jklx { margin-inline-start: auto; border: 0; background: transparent; font-size: 18px; line-height: 1; color: #7b8099; cursor: pointer; padding: 0 6px; border-radius: 6px; } .jklx:hover { background: #fde8e8; color: #c0392b; }
+.jkopt.on { background: #eaf1ff; border-color: #a9c3f5; }
+/* Jira tickets dialog: stacked, full-width fields */
+.xbox:has(.jklinked) label { display: grid; gap: 4px; margin-bottom: 8px; }
+.xbox:has(.jklinked) label > span { font-weight: 600; font-size: 13px; }
+.xbox:has(.jklinked) input[type=text] { width: 100%; box-sizing: border-box; }
+.xbox:has(.jklinked) .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.xbox:has(.jklinked) .row > input { flex: 1 1 220px; min-width: 0; }
+.xbox:has(.jklinked) .jklist { margin-bottom: 14px; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -6796,12 +6814,28 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 
   // src/esm/features/sprint-cover.js
   var KEY = /\b([A-Z][A-Z0-9_]+-\d+)\b/;
-  function parseJira(text) {
-    const t = String(text || "").trim(), m = KEY.exec(t.toUpperCase().replace(/[^A-Z0-9_\-\/:.?=&%]/g, " "));
-    if (!m) return null;
-    const u = /^(https:\/\/[^\s/]+)\/(?:browse|jira\/software\/[^\s]*?\/issues)\b/i.exec(t) || /^(https:\/\/[^\s/]+\.atlassian\.net)\b/i.exec(t);
-    return { key: m[1], base: u ? u[1] : "" };
+  function parseJiraAll(text) {
+    const t = String(text || ""), out = [], seen = /* @__PURE__ */ new Set(), base3 = (/(https:\/\/[^\s/]+\.atlassian\.net)\b/i.exec(t) || [])[1] || "";
+    const re = /\b([A-Za-z][A-Za-z0-9_]+-\d+)\b/g;
+    let m;
+    while (m = re.exec(t)) {
+      const k = m[1].toUpperCase();
+      if (!seen.has(k)) {
+        seen.add(k);
+        out.push({ key: k, base: base3 });
+      }
+    }
+    return out;
   }
+  var keysOf = (b) => {
+    const out = [];
+    [b && b.jk].concat(b && b.jx || []).forEach((k) => {
+      k = String(k || "").toUpperCase();
+      if (k && !out.includes(k)) out.push(k);
+    });
+    return out;
+  };
+  var keyPatch = (keys) => ({ jk: keys[0] || "", jx: keys.slice(1) });
   var norm = (s) => String(s || "").toLowerCase().replace(/\(?\b[a-z][a-z0-9_]+-\d+\b\)?/g, " ").replace(/#\S+/g, " ").replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim();
   var toks = (s) => norm(s).split(" ").filter((w) => w.length >= 3);
   function lev(a, b, max) {
@@ -6859,8 +6893,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   };
   var hasKey = (title, key) => !!key && String(title || "").toUpperCase().includes(String(key).toUpperCase());
   function cover(scope, person, pool) {
-    const key = scope.jk || (KEY.exec(String(scope.t || "").toUpperCase()) || [])[1] || "";
-    const hits = (pool || []).filter((p) => scope.fid && p.cid === scope.fid || key && (hasKey(p.t, key) || p.jk && p.jk.toUpperCase() === key.toUpperCase()) || !scope.fid && sameWords(scope.t, p.t));
+    const keys = keysOf(scope), inTitle = (KEY.exec(String(scope.t || "").toUpperCase()) || [])[1];
+    if (inTitle && !keys.includes(inTitle)) keys.push(inTitle);
+    const hits = (pool || []).filter((p) => scope.fid && p.cid === scope.fid || keys.some((key) => hasKey(p.t, key) || p.jk && p.jk.toUpperCase() === key.toUpperCase()) || !scope.fid && sameWords(scope.t, p.t));
     const mine = hits.filter((p) => (p.names || []).some((n) => sameName(n, person) || sameName(person, n)));
     return { state: mine.length ? "ok" : hits.length ? "unassigned" : "missing", hits, mine };
   }
@@ -7319,7 +7354,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       if (b.k !== "s" && b.k !== "u") return;
       if (!t) return;
       const tg = (b.tags || []).map((n) => ({ n, c: (tagColors || {})[n] || "gray" }));
-      const base3 = { id: b.id, sp: b.sp, squad, person, t, h: "", jira: b.jk || "", kind: kindFromTags(b.tags), st: b.st || "planned", pc: Number.isFinite(b.pc) ? b.pc : null, fid: b.fid || "", dn: b.dn || "", ord: b.ord || 0, tg };
+      const base3 = { id: b.id, sp: b.sp, squad, person, t, h: "", jira: b.jk || "", jiras: [b.jk].concat(b.jx || []).filter((k, i, a) => k && a.indexOf(k) === i), kind: kindFromTags(b.tags), st: b.st || "planned", pc: Number.isFinite(b.pc) ? b.pc : null, fid: b.fid || "", dn: b.dn || "", ord: b.ord || 0, tg };
       if (b.k === "s" || !scope) {
         scope = b;
         out.push(Object.assign(base3, { par: "" }));
@@ -8788,11 +8823,101 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     return msg || "Jira search failed" + (e && e.message ? ": " + String(e.message).slice(0, 120) : "") + ".";
   }
   function openJiraLink(o) {
-    openDlg("Link to Jira", (box2) => {
-      box2.append(el("p", "sub", "Type a few letters of the ticket title, or its key (for example DYC-123). Pick the ticket to link this task to it. Nothing is changed in Jira."));
+    openDlg("Jira tickets", (box2) => {
+      let keys = keysOf(o.b);
+      const titles = {};
+      const linked = el("div", "jklinked");
+      linked.setAttribute("aria-label", "Linked tickets");
+      const save2 = (extra, note) => {
+        o.saveItem(o.b.id, Object.assign(keyPatch(keys), extra || {}));
+        o.b = Object.assign({}, o.b, keyPatch(keys));
+        o.redraw(o.b.id);
+        drawLinked();
+        if (note) o.notify(note);
+      };
+      function drawLinked() {
+        linked.textContent = "";
+        if (!keys.length) {
+          linked.append(el("p", "sub", "No ticket linked yet."));
+          return;
+        }
+        keys.forEach((k, n) => {
+          const u = issueUrl(k), c = el("span", "jkl" + (n === 0 ? " main" : "")), a = el(u ? "a" : "span", "jklk", k);
+          if (u) {
+            a.href = u;
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
+          }
+          c.append(a);
+          if (titles[k]) c.append(el("span", "jklt", titles[k]));
+          if (n === 0 && keys.length > 1) c.append(el("span", "jklm", "main"));
+          if (n > 0) {
+            const mk = el("button", "jklb", "Make main");
+            mk.type = "button";
+            mk.title = "The task status follows the main ticket";
+            mk.addEventListener("click", () => {
+              keys = [k].concat(keys.filter((x2) => x2 !== k));
+              save2({}, k + " is now the main ticket");
+            });
+            c.append(mk);
+          }
+          const x = el("button", "jklx", "×");
+          x.type = "button";
+          x.setAttribute("aria-label", "Remove " + k);
+          x.title = "Remove " + k;
+          x.addEventListener("click", () => {
+            keys = keys.filter((v) => v !== k);
+            save2({}, "Removed " + k);
+          });
+          c.append(x);
+          linked.append(c);
+        });
+      }
+      const add = (list2, t) => {
+        const fresh = list2.filter((k) => !keys.includes(k));
+        if (!fresh.length) return 0;
+        const wasEmpty = !keys.length;
+        keys = keys.concat(fresh);
+        save2(wasEmpty && t ? { st: statusOf2(t), dn: statusOf2(t) === "done" ? (/* @__PURE__ */ new Date()).toISOString().slice(0, 10) : "" } : {}, "Linked " + fresh.join(", "));
+        return fresh.length;
+      };
+      box2.append(el("p", "sub", "Link one or many Jira tickets to this line. The first is the main one: the status of the line follows it. Nothing is changed in Jira."), linked);
+      drawLinked();
+      const pa = el("input");
+      pa.type = "text";
+      pa.id = "jkpaste";
+      pa.placeholder = "Paste links or keys: ABC-123, https://…/browse/ABC-124";
+      pa.setAttribute("aria-label", "Jira links or keys");
+      pa.autocomplete = "off";
+      const pm = el("p", "sub");
+      pm.setAttribute("aria-live", "polite");
+      const pb = el("button", "btn primary", "Add");
+      pb.type = "button";
+      pb.id = "jkpastego";
+      const useIt = () => {
+        const r = parseJiraAll(pa.value);
+        if (!r.length) {
+          pm.textContent = "No Jira key found. A key looks like ABC-123.";
+          return;
+        }
+        if (r[0].base) rememberBase(r[0].base);
+        const n = add(r.map((x) => x.key));
+        pm.textContent = n ? "" : "Already linked.";
+        pa.value = "";
+        pa.focus();
+      };
+      pb.addEventListener("click", useIt);
+      pa.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          useIt();
+        }
+      });
+      const pr0 = el("div", "row");
+      pr0.append(pa, pb);
       const q = el("input");
       q.type = "text";
-      q.value = (o.b.t || "").replace(/\s*\([A-Z][A-Z0-9_]+-\d+\)\s*$/, "").slice(0, 60);
+      q.value = (o.b.t || "").replace(/\s*\([A-Z][A-Z0-9_]+-\d+\)\s*$/, "").replace(/\s*\([A-Za-z]{1,4}#\d+\)\s*$/, "").slice(0, 60);
       q.setAttribute("aria-label", "Search Jira");
       q.autocomplete = "off";
       const pr = el("input");
@@ -8806,12 +8931,6 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       const msg = el("p", "sub");
       msg.setAttribute("aria-live", "polite");
       let seq = 0, timer = 0;
-      const pick2 = (t) => {
-        o.saveItem(o.b.id, { jk: t.key, st: statusOf2(t), dn: statusOf2(t) === "done" ? (/* @__PURE__ */ new Date()).toISOString().slice(0, 10) : "" });
-        closeDlg();
-        o.redraw(o.b.id);
-        o.notify("Linked to " + t.key);
-      };
       const run = async () => {
         const text = q.value.trim(), mine = ++seq;
         list.textContent = "";
@@ -8829,14 +8948,20 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           if (d.base) put(BASE2, d.base);
           put(PRJ, projects.join(", "));
           const iss = d.issues || [];
-          msg.textContent = iss.length ? "" : "No ticket found. Try other words or the key.";
+          msg.textContent = iss.length ? "Click a ticket to add it. You can add several." : "No ticket found. Try other words or the key.";
           iss.forEach((t) => {
-            const b = el("button", "jkopt");
+            const b = el("button", "jkopt" + (keys.includes(t.key) ? " on" : ""));
             b.type = "button";
             b.setAttribute("role", "option");
             b.dataset.key = t.key;
-            b.append(el("b", "", t.key), el("span", "jkt", t.t), el("span", "jks", [t.statusName, t.assignee].filter(Boolean).join(" · ")));
-            b.addEventListener("click", () => pick2(t));
+            b.append(el("b", "", t.key), el("span", "jkt", t.t), el("span", "jks", keys.includes(t.key) ? "Linked" : [t.statusName, t.assignee].filter(Boolean).join(" · ")));
+            b.addEventListener("click", () => {
+              titles[t.key] = t.t;
+              if (add([t.key], t)) {
+                b.classList.add("on");
+                b.lastChild.textContent = "Linked";
+              }
+            });
             list.append(b);
           });
         } catch (e) {
@@ -8855,54 +8980,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           run();
         }
       });
-      const row = el("div", "row"), no = el("button", "btn", "Cancel");
-      no.type = "button";
-      no.addEventListener("click", closeDlg);
-      if (o.b.jk) {
-        const un = el("button", "btn", "Unlink " + o.b.jk);
-        un.type = "button";
-        un.addEventListener("click", () => {
-          o.saveItem(o.b.id, { jk: "" });
-          closeDlg();
-          o.redraw(o.b.id);
-          o.notify("Unlinked from " + o.b.jk);
-        });
-        row.append(un);
-      }
-      row.append(no);
-      const pa = el("input");
-      pa.type = "text";
-      pa.id = "jkpaste";
-      pa.placeholder = "https://your-site.atlassian.net/browse/ABC-123, or ABC-123";
-      pa.setAttribute("aria-label", "Jira link or key");
-      pa.autocomplete = "off";
-      const pm = el("p", "sub");
-      pm.setAttribute("aria-live", "polite");
-      const pb = el("button", "btn primary", "Link");
-      pb.type = "button";
-      pb.id = "jkpastego";
-      const useIt = () => {
-        const r = parseJira(pa.value);
-        if (!r) {
-          pm.textContent = "No Jira key found. A key looks like ABC-123.";
-          return;
-        }
-        if (r.base) rememberBase(r.base);
-        o.saveItem(o.b.id, { jk: r.key });
-        closeDlg();
-        o.redraw(o.b.id);
-        o.notify("Linked to " + r.key);
-      };
-      pb.addEventListener("click", useIt);
-      pa.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          useIt();
-        }
-      });
-      const pr0 = el("div", "row");
-      pr0.append(pa, pb);
-      box2.append(fld("Paste the ticket link or key", pr0), pm, el("p", "sub", "Or search Jira by words:"), fld("Search", q), fld("Limit to projects (optional)", pr), msg, list, row);
+      const row = el("div", "row"), done2 = el("button", "btn primary", "Done");
+      done2.type = "button";
+      done2.addEventListener("click", closeDlg);
+      row.append(done2);
+      box2.append(fld("Paste ticket links or keys", pr0), pm, el("p", "sub", "Or search Jira by words:"), fld("Search", q), fld("Limit to projects (optional)", pr), msg, list, row);
       setTimeout(() => {
         pa.focus();
         if (q.value.trim().length >= 2) run();
@@ -9067,11 +9149,14 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           open++;
         }
       } else closeLists(lvl);
-      const jk = b.jk ? o.jiraUrl(b.jk) : "", tags = (b.tags || []).map((x) => "#" + x).join(" ");
-      const status = " <b>[" + esc2(ST(b.st)) + "]</b>", link = jk ? ' <a href="' + esc2(jk) + '">' + esc2(b.jk) + "</a>" : "";
+      const ks = [b.jk].concat(b.jx || []).filter((k, i2, a) => k && a.indexOf(k) === i2), tags = (b.tags || []).map((x) => "#" + x).join(" ");
+      const status = " <b>[" + esc2(ST(b.st)) + "]</b>", links = ks.map((k) => {
+        const u = o.jiraUrl(k);
+        return u ? ' <a href="' + esc2(u) + '">' + esc2(k) + "</a>" : " " + esc2(k);
+      }).join("");
       const shown = b.jk ? txt.replace(new RegExp("\\s*\\(" + b.jk.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\)\\s*$"), "") : txt;
-      h.push("<li>" + esc2(shown) + status + (b.jk ? jk ? link : " " + esc2(b.jk) : "") + (tags ? " <i>" + esc2(tags) + "</i>" : "") + "</li>");
-      t.push((lvl === 2 ? "    - " : "  - ") + shown + " [" + ST(b.st) + "]" + (b.jk ? " " + b.jk : "") + (tags ? " " + tags : ""));
+      h.push("<li>" + esc2(shown) + status + links + (tags ? " <i>" + esc2(tags) + "</i>" : "") + "</li>");
+      t.push((lvl === 2 ? "    - " : "  - ") + shown + " [" + ST(b.st) + "]" + (ks.length ? " " + ks.join(" ") : "") + (tags ? " " + tags : ""));
     });
     closeLists(0);
     return { html: '<meta charset="utf-8">' + h.join(""), text: t.join("\n") };
@@ -9823,7 +9908,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         }
         if (all[q].k === "h") break;
       }
-      const jl = b.k === "s" || b.k === "u" ? (b.k === "s" && who2 ? [{ label: "Pick from the plan…", sub: "Choose the card instead of typing it", value: "plan" }] : []).concat([{ label: cur2.jk ? "Change Jira link (" + cur2.jk + ")…" : "Link to Jira…", value: "jira" }, { label: cur2.fid && fidLabel(cur2.fid) ? "Change Monthly card (" + fidLabel(cur2.fid) + ")…" : "Link to a Monthly card…", value: "card" }]) : [];
+      const jl = b.k === "s" || b.k === "u" ? (b.k === "s" && who2 ? [{ label: "Pick from the plan…", sub: "Choose the card instead of typing it", value: "plan" }] : []).concat([{ label: keysOf(cur2).length ? "Jira tickets (" + keysOf(cur2).length + ")…" : "Link to Jira…", sub: "Link one or many tickets", value: "jira" }, { label: cur2.fid && fidLabel(cur2.fid) ? "Change Monthly card (" + fidLabel(cur2.fid) + ")…" : "Link to a Monthly card…", value: "card" }]) : [];
       openMenu(x, [{ label: "Move up", value: "up" }, { label: "Move down", value: "down" }].concat(into, jl, [{ label: "Delete", value: "del" }]), {
         label: "Line options",
         onPick: (it) => {
@@ -9970,16 +10055,16 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
             r.append(cc);
           }
         }
-        if (b.jk && (b.k === "s" || b.k === "u")) {
-          const u = issueUrl(b.jk), jc = el(u ? "a" : "span", "jkchip", b.jk);
+        if (b.k === "s" || b.k === "u") keysOf(b).forEach((k, n) => {
+          const u = issueUrl(k), jc = el(u ? "a" : "span", "jkchip" + (n ? " extra" : ""), k);
           if (u) {
             jc.href = u;
             jc.target = "_blank";
             jc.rel = "noopener noreferrer";
-            jc.title = "Open " + b.jk + " in Jira";
-          } else jc.title = "Linked to Jira " + b.jk;
+            jc.title = "Open " + k + " in Jira" + (n ? "" : keysOf(b).length > 1 ? " (main ticket: the status follows it)" : "");
+          } else jc.title = "Linked to Jira " + k;
           r.append(jc);
-        }
+        });
         if (info.cover && info.cover.state !== "ok") {
           const cc = info.cover, ch = el(ro ? "span" : "button", "covchip cov-" + cc.state, cc.state === "missing" ? "Not on the plan" : "Not assigned to " + info.person.split(" ")[0]);
           if (!ro) {

@@ -15,6 +15,17 @@ export function parseJira(text) {
   const u = /^(https:\/\/[^\s/]+)\/(?:browse|jira\/software\/[^\s]*?\/issues)\b/i.exec(t) || /^(https:\/\/[^\s/]+\.atlassian\.net)\b/i.exec(t);
   return { key: m[1], base: u ? u[1] : '' };
 }
+/** Every Jira key in a pasted text (addresses, bare keys, several at once separated by spaces, commas or lines), without repeats; `base` = the site of the first address. */
+export function parseJiraAll(text) {
+  const t = String(text || ''), out = [], seen = new Set(), base = (/(https:\/\/[^\s/]+\.atlassian\.net)\b/i.exec(t) || [])[1] || '';
+  const re = /\b([A-Za-z][A-Za-z0-9_]+-\d+)\b/g; let m;
+  while ((m = re.exec(t))) { const k = m[1].toUpperCase(); if (!seen.has(k)) { seen.add(k); out.push({ key: k, base: base }); } }
+  return out;
+}
+/** All Jira keys of a sprint line: the main one (`jk`, the status follows it) then the others (`jx`). */
+export const keysOf = b => { const out = []; [b && b.jk].concat((b && b.jx) || []).forEach(k => { k = String(k || '').toUpperCase(); if (k && !out.includes(k)) out.push(k); }); return out; };
+/** The fields to save for a list of keys. */
+export const keyPatch = keys => ({ jk: keys[0] || '', jx: keys.slice(1) });
 export const norm = s => String(s || '').toLowerCase().replace(/\(?\b[a-z][a-z0-9_]+-\d+\b\)?/g, ' ').replace(/#\S+/g, ' ').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
 export const toks = s => norm(s).split(' ').filter(w => w.length >= 3);
 /** Edit distance, stops early when it is above `max` (returns max + 1). */
@@ -67,8 +78,8 @@ const hasKey = (title, key) => !!key && String(title || '').toUpperCase().includ
  * @returns {{state:'ok'|'unassigned'|'missing', hits:Array, mine:Array}}
  */
 export function cover(scope, person, pool) {
-  const key = scope.jk || (KEY.exec(String(scope.t || '').toUpperCase()) || [])[1] || '';
-  const hits = (pool || []).filter(p => (scope.fid && p.cid === scope.fid) || (key && (hasKey(p.t, key) || (p.jk && p.jk.toUpperCase() === key.toUpperCase()))) || (!scope.fid && sameWords(scope.t, p.t)));
+  const keys = keysOf(scope), inTitle = (KEY.exec(String(scope.t || '').toUpperCase()) || [])[1]; if (inTitle && !keys.includes(inTitle)) keys.push(inTitle);
+  const hits = (pool || []).filter(p => (scope.fid && p.cid === scope.fid) || keys.some(key => hasKey(p.t, key) || (p.jk && p.jk.toUpperCase() === key.toUpperCase())) || (!scope.fid && sameWords(scope.t, p.t)));
   const mine = hits.filter(p => (p.names || []).some(n => sameName(n, person) || sameName(person, n)));
   return { state: mine.length ? 'ok' : hits.length ? 'unassigned' : 'missing', hits: hits, mine: mine };
 }

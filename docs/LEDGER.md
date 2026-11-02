@@ -42,6 +42,19 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-11-02 - Several Jira tickets per sprint line
+```
+🔄 YNMO LEDGER UPDATE - 2026-11-02
+Request: link multiple Jira ticket links to one line in sprint planning
+Surface: Ynmo Roadmaps tool (Sprints)
+Outcome: Jira tickets dialog with main + extra tickets, paste many, search, make main, remove
+New facts / decisions locked:
+  - Sprint item field `jx` = extra Jira keys; `jk` stays the main ticket and the status follows it
+Corrections to this skill: none
+Open / flagged: Jira pull and the weekly report use the main ticket only; status of extra tickets is not combined
+Changelog: Sprint lines accept several Jira tickets.
+```
+
 ### 2026-11-01 - Easier sprint planning
 ```
 🔄 YNMO LEDGER UPDATE - 2026-11-01
