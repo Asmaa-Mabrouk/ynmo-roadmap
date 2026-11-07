@@ -42,6 +42,22 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-11-08 - Ynmo Flow phase 1 (tickets)
+```
+🔄 YNMO LEDGER UPDATE - 2026-11-08
+Request: Asmaa saw the phase-0 placeholder and asked for a working Jira-like system
+Surface: Ynmo Roadmaps tool (Ynmo Flow module)
+Outcome: working tickets: create all 8 types with parent/epic rules, keys YNMO-n, list with filters, My work, ticket window with status moves, sub-tickets, history, delete; SQL 09 added
+New facts / decisions locked:
+  - Tickets use the same generic {id, data} tables (flow_issues, flow_cfg), filtered in the browser; relational tables stay a later option
+  - Sub-bug only under a story; sub-task under story/task/bug/enhancement/hotfix; epics hold non-sub tickets; no deeper nesting
+  - Key numbering is max + 1 on the client (two people creating at the same second could get the same number; the id stays unique)
+  - Defaults used without waiting for her answers: project key YNMO, name Ynmo Flow
+Corrections to this skill: none
+Open / flagged: supabase/sql/09-flow.sql must be run by Asmaa before tickets persist; phases 2-6 (workflow designer, backlog and sprints, comments/mentions/notifications/attachments, AI, Jira import); saved filters not built; the six decisions in FLOW_PLAN section 10 still open
+Changelog: Ynmo Flow phase 1: working ticket system.
+```
+
 ### 2026-11-08 - Ynmo Flow planned
 ```
 🔄 YNMO LEDGER UPDATE - 2026-11-08

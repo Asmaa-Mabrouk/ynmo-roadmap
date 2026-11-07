@@ -103,6 +103,10 @@ export function start() {
     S.db.collection('sprints').onSnapshot(s => { const n = snapDocs('sprints', s, S.sprints); if (same(n, S.sprints)) return; S.sprints = n; if (state.page === 'sprints' && !document.activeElement.closest('#pg-sprints')) renderSprints({ keep: true }); if (state.page === 'reports') renderReports(); }, e => { if (e && e.code === 'missing_table') { S.setup['sprints'] = true; if (state.page === 'reports' || state.page === 'sprints') refreshPage(); } });
     S.db.collection('sprint_items').onSnapshot(s => { const n = snapDocs('sprint_items', s, S.sitems); if (same(n, S.sitems)) return; S.sitems = n; if (state.page === 'sprints' && !document.activeElement.closest('#pg-sprints')) renderSprints({ keep: true }); }, e => { if (e && e.code === 'missing_table') { S.setup['sprint_items'] = true; if (state.page === 'reports' || state.page === 'sprints') refreshPage(); } });
   }
+  if (modLevel('flow') >= 1) {
+    S.db.collection('flow_issues').onSnapshot(s => { const n = snapDocs('flow_issues', s, S.fissues); if (same(n, S.fissues)) return; S.fissues = n; if (state.page === 'flow' && !document.activeElement.closest('#pg-flow') && !$('xdlg')) renderFlow({ keep: true }); }, e => { if (e && e.code === 'missing_table') { S.setup['flow_issues'] = true; if (state.page === 'flow') refreshPage(); } });
+    S.db.collection('flow_cfg').onSnapshot(s => { const n = snapDocs('flow_cfg', s, S.fcfg); if (same(n, S.fcfg)) return; S.fcfg = n; }, () => {});
+  }
   S.db.collection('vacations').onSnapshot(s => { const n = snapDocs('vacations', s, S.vacs); if (same(n, S.vacs)) return; S.vacs = n; softRender(); if (state.page === 'vacations') renderVacations(); if (state.page === 'capacity') renderCapacity(); }, () => {});
   S.db.collection('activity').onSnapshot(s => { S.logs = s.docs.map(d => ({ id: d.id, data: d.data() })).sort((a, b) => a.data.at < b.data.at ? 1 : -1); if (!S.logsOld.length) S.logsMore = s.docs.length >= ACTIVE_LOG_PAGE; if (state.page === 'log') renderLog(); }, () => {});
   setSave('ready'); fillRm(); startExtras(); watchOutbox();

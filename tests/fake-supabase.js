@@ -1,5 +1,5 @@
 (function(){
-const T=['items','people','daysoff','roadmaps','ideas','vacations','activity','baselines','share_links','sprints','sprint_items','reports'];
+const T=['flow_issues','flow_cfg','items','people','daysoff','roadmaps','ideas','vacations','activity','baselines','share_links','sprints','sprint_items','reports'];
 const fresh=()=>{const s={profiles:[]};T.forEach(t=>s[t]={});return s};
 const rd=()=>{const s=JSON.parse(localStorage.getItem('fk3')||'null')||fresh();T.forEach(t=>{if(!s[t])s[t]={}});return s};
 const wr=s=>localStorage.setItem('fk3',JSON.stringify(s));

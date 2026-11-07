@@ -50,6 +50,8 @@ replaced by creating new roadmaps with their own date range.
 
 ## 5. Key workflows
 
+**Tickets in Ynmo Flow:** anyone with the Ynmo Flow module creates tickets (story, task, bug, report enhancement, report hotfix, epic; sub-task or sub-bug under a parent), assigns them to a person and moves them through Open, In progress, RFQA, Blocked, Ready for deployment, Deployed and Done. Each person sees their own work under **My work**. Every change is kept in the ticket's history. Needs the one-time database script 09.
+
 **Keeping a feature in step:** a feature on the roadmap has one id (for example DC#12) shown on its Monthly card and in the weekly report. Title and progress stay linked. People in Monthly or the report propose changes and an admin approves them onto the roadmap; changes made on the roadmap are checked and applied by the team one by one in Monthly and the report.
 1. **Onboarding:** sign up → confirm email → "pending approval" screen → admin approves as Editor/Viewer → user enters.
 2. **Planning a period:** create roadmap (range) → add features per squad → assign people → set dependencies.

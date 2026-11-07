@@ -24,6 +24,7 @@ only usability. The only key in the client is the *publishable* key. Never commi
 
 | A person doing more than their module permissions allow | SQL 08: write policies call `perm_level(module)` (edit = 2, delete = 3); only admins can change `profiles.perms` / `is_admin` (guard trigger); the last admin cannot be removed; the app hides what a person cannot do (never the only protection) |
 | Changing a roadmap bar through Monthly or the weekly report without an admin | App rule only: those edits are proposals and the admin's Approve writes the bar. A person with Edit on Roadmap can still change a bar directly (by design), so this is a workflow control, not a database barrier |
+| Seeing or changing Ynmo Flow tickets without access | `flow_issues` / `flow_cfg` RLS by `perm_level('flow')`: 1 read, 2 add/change, 3 delete (09-flow.sql). |
 | Executives seeing unsent drafts / sprint internals | `reports` readable by viewers only when `status='submitted'`; `sprints`/`sprint_items` editor-only; editors/admins submit; only admins delete submitted reports | sql/06 |
 | Gemini key leak / prompt injection | Key only in Edge Function secrets; caller must be an editor; item text treated as untrusted data; output schema-constrained and filtered to known ids; only titles are sent | functions/weekly-draft |
 

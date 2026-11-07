@@ -1503,6 +1503,27 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 .flowphases li { counter-increment: ph; display: grid; grid-template-columns: 30px 1fr; column-gap: 12px; align-items: start; }
 .flowphases li::before { content: counter(ph); grid-row: span 2; width: 28px; height: 28px; border-radius: 50%; background: #6d48a8; color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 13px; }
 .flowphases li b { font-size: 15px; } .flowphases li span { color: #626d90; font-size: 13.5px; line-height: 1.45; }
+
+/* ---- Ynmo Flow (tickets) ---- */
+.flowbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0 8px; }
+.flowbar input[type=search] { min-width: 240px; flex: 1 1 240px; }
+.flowopen { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); }
+.flowchips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.flowtabs { margin: 8px 0 4px; }
+.ftype { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.ftype::before { content: ''; width: 9px; height: 9px; border-radius: 3px; background: var(--c, var(--muted)); }
+.fkey { font-weight: 700; white-space: nowrap; color: var(--muted); }
+.flowrow { cursor: pointer; }
+.flowrow:hover td, .flowrow:focus-visible td { background: color-mix(in srgb, var(--focus) 7%, transparent); }
+.flowsec { margin: 14px 0 6px; }
+.flowsec h3, .flowkids h3, .flowhist h3 { margin: 0 0 6px; font-size: 14px; }
+.flowempty { padding: 10px 2px; }
+.flowdlg { width: min(640px, 100%); }
+.flowdlg label { display: grid; gap: 3px; margin: 0 0 10px; }
+.flowhd { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; }
+.flowkids, .flowhist { margin: 10px 0; }
+.flowkid { display: flex; align-items: center; gap: 4px; width: 100%; text-align: start; font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); margin: 0 0 4px; cursor: pointer; }
+.flowhist p { margin: 2px 0; font-size: 12.5px; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -1616,6 +1637,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     shares: {},
     sprints: {},
     sitems: {},
+    fissues: {},
+    fcfg: {},
     reports: {},
     hist: {},
     setup: {}
@@ -1630,7 +1653,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     { k: "monthly", n: "Monthly deliverables", d: "The monthly board and the backlog", max: 3 },
     { k: "resources", n: "Resources", d: "Team members and products", max: 3 },
     { k: "vacations", n: "Vacations", d: "Leave of the team", max: 3 },
-    { k: "flow", n: "Ynmo Flow", d: "Tasks and tickets: projects, backlog, sprints, workflow (being built)", max: 3 },
+    { k: "flow", n: "Ynmo Flow", d: "Tickets: create, assign, filter, My work (backlog, sprints and workflow are coming)", max: 3 },
     { k: "log", n: "Log", d: "The activity log", max: 1 }
   ];
   var LEVELS = ["No access", "View", "Edit", "Delete"];
@@ -2160,13 +2183,13 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const at = +srv.ts || now;
     return !lastAt || at - lastAt >= GAP_MS ? "time" : "";
   }
-  function makeVersion(m, doc2, named, name, who2, now, slot) {
+  function makeVersion(m, doc2, named, name, who3, now, slot) {
     const at = named ? now : +doc2.ts || now, d = clone3(doc2);
-    return { id: histId(m, at, named, slot || 0), v: { hist: 1, of: m, at, by: named ? who2 : doc2.by || "", n: cardCount(doc2), named: !!named, name: name || "", doc: d } };
+    return { id: histId(m, at, named, slot || 0), v: { hist: 1, of: m, at, by: named ? who3 : doc2.by || "", n: cardCount(doc2), named: !!named, name: name || "", doc: d } };
   }
   var versionsOf = (hist, m) => Object.keys(hist || {}).filter((id) => isHistId(id) && hist[id] && hist[id].of === m).map((id) => Object.assign({ id }, hist[id])).sort((a, b) => b.at - a.at);
-  function autoSlot(list) {
-    const autos = list.filter((v) => !v.named), used = new Map(autos.map((v) => [+(/_a(\d+)$/.exec(v.id) || [])[1], v]));
+  function autoSlot(list2) {
+    const autos = list2.filter((v) => !v.named), used = new Map(autos.map((v) => [+(/_a(\d+)$/.exec(v.id) || [])[1], v]));
     for (let i = 0; i < KEEP_AUTO; i++) if (!used.has(i)) return i;
     const oldest = autos[autos.length - 1];
     return oldest ? +(/_a(\d+)$/.exec(oldest.id) || [0, 0])[1] : 0;
@@ -2226,9 +2249,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   ];
   var DOMAIN_OF = { ai: "AI / ML", fe: "Frontend", mob: "Mobile", be: "Backend", des: "UX / Design", qa: "QA" };
   function matchResource(name, resources2, domain) {
-    const f = fold(name), list = resources2 || [], exact = list.find((r) => fold(r.name) === f);
+    const f = fold(name), list2 = resources2 || [], exact = list2.find((r) => fold(r.name) === f);
     if (exact) return exact.name;
-    const near = list.filter((r) => sameName(r.name, name) && (fold(r.name).startsWith(f + " ") || r.domain === domain));
+    const near = list2.filter((r) => sameName(r.name, name) && (fold(r.name).startsWith(f + " ") || r.domain === domain));
     const pick2 = near.length > 1 ? near.filter((r) => r.domain === domain) : near;
     return pick2.length === 1 ? pick2[0].name : "";
   }
@@ -2806,18 +2829,18 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       const have = allLogs().length;
       const r = await sb.from("activity").select("id,data").order("updated_at", { ascending: false }).range(have, have + ACTIVE_LOG_PAGE - 1);
       if (r.error) throw new Error(r.error.message);
-      const rows2 = (r.data || []).map((x) => ({ id: x.id, data: x.data || {} }));
-      S.logsOld = S.logsOld.concat(rows2);
-      S.logsMore = rows2.length >= ACTIVE_LOG_PAGE;
+      const rows3 = (r.data || []).map((x) => ({ id: x.id, data: x.data || {} }));
+      S.logsOld = S.logsOld.concat(rows3);
+      S.logsMore = rows3.length >= ACTIVE_LOG_PAGE;
     } catch (e) {
       toast("Could not load older entries. Try again.");
     }
     S.logsBusy = false;
     if (state.page === "log") renderLog();
   }
-  async function exportLog(rows2) {
+  async function exportLog(rows3) {
     const lines = [["When", "Who", "Type", "Change", "Roadmap"].map(csvCell).join(",")];
-    rows2.forEach((d) => lines.push([d.at, d.name, d.act, d.sum, d.rm || ""].map(csvCell).join(",")));
+    rows3.forEach((d) => lines.push([d.at, d.name, d.act, d.sum, d.rm || ""].map(csvCell).join(",")));
     try {
       await dl.save({ filename: "ynmo-log-" + todayIso() + ".csv", data: "\uFEFF" + lines.join("\n") });
     } catch (e) {
@@ -2910,18 +2933,18 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       logUI.a = sa.value;
       renderLog();
     });
-    const rows2 = every.filter((l) => (logUI.u === "all" || l.data.name === logUI.u) && (logUI.a === "all" || l.data.act === logUI.a));
+    const rows3 = every.filter((l) => (logUI.u === "all" || l.data.name === logUI.u) && (logUI.a === "all" || l.data.act === logUI.a));
     const ex = el("button", "btn", "Export CSV");
     ex.type = "button";
     ex.id = "logexport";
-    ex.addEventListener("click", () => exportLog(rows2.map((l) => l.data)));
+    ex.addEventListener("click", () => exportLog(rows3.map((l) => l.data)));
     const tools = el("div", "formrow");
     tools.append(su, sa, ex);
     root.append(pageHead("Log", "Who changed what, and when. Newest first. Times show in your time zone." + (canEdit() ? " Undo puts an edit back the way it was." : ""), tools));
     const card2 = el("div", "card");
     let day = "";
-    if (!rows2.length) card2.append(el("div", "hint", "No changes recorded yet."));
-    rows2.forEach((l) => {
+    if (!rows3.length) card2.append(el("div", "hint", "No changes recorded yet."));
+    rows3.forEach((l) => {
       const d = l.data;
       const dd = new Date(d.at).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
       if (dd !== day) {
@@ -3119,11 +3142,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   }
 
   // src/esm/pages/monthly-history.js
-  function keepVersion(m, doc2, named, name, who2) {
+  function keepVersion(m, doc2, named, name, who3) {
     S.hist = S.hist || {};
     const vs = versionsOf(S.hist, m), at = +doc2.ts || 0;
     if (!named && at && vs.some((v) => !v.named && v.at === at)) return "";
-    const mk = makeVersion(m, doc2, named, name, who2, Date.now(), named ? 0 : autoSlot(vs));
+    const mk = makeVersion(m, doc2, named, name, who3, Date.now(), named ? 0 : autoSlot(vs));
     mk.v._p = Date.now();
     if (S.hist[mk.id] && S.hist[mk.id].at === mk.v.at) return mk.id;
     S.hist[mk.id] = mk.v;
@@ -3154,16 +3177,16 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         draw();
       });
       top.append(inp, sv3);
-      const body = el("div", "vhbody"), list = el("div", "vhlist"), det = el("div", "vhdetail");
-      list.id = "vhlist";
+      const body = el("div", "vhbody"), list2 = el("div", "vhlist"), det = el("div", "vhdetail");
+      list2.id = "vhlist";
       det.id = "vhdetail";
-      list.setAttribute("role", "listbox");
-      list.setAttribute("aria-label", "Versions");
-      body.append(list, det);
+      list2.setAttribute("role", "listbox");
+      list2.setAttribute("aria-label", "Versions");
+      body.append(list2, det);
       box2.append(el("p", "hint", "Every change to a month is kept as a version. The board always shows the latest one. Pick a version to see what is different from now."), top, body);
       function draw() {
         const cur2 = cb.docOf(m), vs = versionsOf(S.hist, m);
-        list.textContent = "";
+        list2.textContent = "";
         det.textContent = "";
         const cb0 = el("button", "vhitem" + (sel ? "" : " on"), "");
         cb0.type = "button";
@@ -3173,8 +3196,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           sel = "";
           draw();
         });
-        list.append(cb0);
-        if (!vs.length) list.append(el("p", "hint vhnone", "No earlier versions yet. One is kept automatically when the month changes."));
+        list2.append(cb0);
+        if (!vs.length) list2.append(el("p", "hint vhnone", "No earlier versions yet. One is kept automatically when the month changes."));
         vs.forEach((v2) => {
           const b = el("button", "vhitem" + (sel === v2.id ? " on" : "") + (v2.named ? " named" : ""), "");
           b.type = "button";
@@ -3186,7 +3209,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
             sel = v2.id;
             draw();
           });
-          list.append(b);
+          list2.append(b);
         });
         const v = vs.find((x) => x.id === sel);
         if (!v) {
@@ -3356,10 +3379,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   var vacUI = { open: /* @__PURE__ */ new Set() };
   var VT_CLASS = (t) => "t" + Math.max(0, VTYPES.indexOf(t));
   function personStats(name) {
-    const list = vacsOf(name).sort((x, y) => x.a0 < y.a0 ? -1 : 1), td = todayIso();
+    const list2 = vacsOf(name).sort((x, y) => x.a0 < y.a0 ? -1 : 1), td = todayIso();
     let cal = 0, work = 0, taken = 0, upcoming = null;
     const byType = {};
-    list.forEach((v) => {
+    list2.forEach((v) => {
       const a1 = v.a1 || v.a0, w = wdays(v.a0, a1);
       cal += Math.round((parseIso(a1) - parseIso(v.a0)) / DAY) + 1;
       work += w;
@@ -3367,17 +3390,17 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       if (a1 < td) taken += w;
       else if (!upcoming) upcoming = v;
     });
-    return { list, cal, work, taken, byType, upcoming };
+    return { list: list2, cal, work, taken, byType, upcoming };
   }
-  function leaveCalendar(list) {
+  function leaveCalendar(list2) {
     const r = curRm();
     let a = r.a, b = r.b;
-    list.forEach((v) => {
+    list2.forEach((v) => {
       if (v.a0 < a) a = v.a0;
       if ((v.a1 || v.a0) > b) b = v.a1 || v.a0;
     });
     const map = {};
-    list.forEach((v) => {
+    list2.forEach((v) => {
       for (let t = parseIso(v.a0); t <= parseIso(v.a1 || v.a0); t += DAY) map[new Date(t).toISOString().slice(0, 10)] = v;
     });
     const wrap = el("div", "mcals"), td = todayIso(), pad = (n) => (n < 10 ? "0" : "") + n;
@@ -3407,12 +3430,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     return wrap;
   }
   function renderTeamLeave(root) {
-    const names = [...new Set(Object.keys(S.vacs).map((id) => S.vacs[id]).filter((v) => v.a0).map((v) => v.p))].sort((x, y) => x.localeCompare(y));
-    if (!names.length) return;
+    const names2 = [...new Set(Object.keys(S.vacs).map((id) => S.vacs[id]).filter((v) => v.a0).map((v) => v.p))].sort((x, y) => x.localeCompare(y));
+    if (!names2.length) return;
     const card2 = el("div", "card");
     card2.append(el("h2", "", "Team leave"), el("div", "hint", "Select a person to see their leave stats and calendar."));
     const td = todayIso();
-    names.forEach((nm) => {
+    names2.forEach((nm) => {
       const st = personStats(nm), open = vacUI.open.has(nm), row = el("div", "tlrow");
       const hb = el("button", "tlhead");
       hb.type = "button";
@@ -3480,10 +3503,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     root.append(pageHead("Vacations", "Leave shows on the person's row in every roadmap with a ⚑ flag. Features that overlap the leave get a flag too, so you can move them or extend them."));
     const f = el("form", "card");
     f.append(el("h2", "", "Add leave"));
-    const names = [...directory().keys()].sort((x, y) => x.localeCompare(y));
-    const who2 = selOf([["", "Choose a person…"]].concat(names.map((n) => [n, n])), ""), a = el("input"), b = el("input"), ty = selOf(VTYPES, "Annual leave"), nt = el("input");
-    who2.required = true;
-    who2.setAttribute("aria-label", "Person");
+    const names2 = [...directory().keys()].sort((x, y) => x.localeCompare(y));
+    const who3 = selOf([["", "Choose a person…"]].concat(names2.map((n) => [n, n])), ""), a = el("input"), b = el("input"), ty = selOf(VTYPES, "Annual leave"), nt = el("input");
+    who3.required = true;
+    who3.setAttribute("aria-label", "Person");
     a.type = b.type = "date";
     a.required = true;
     nt.type = "text";
@@ -3492,16 +3515,16 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const td = todayIso();
     a.value = td;
     const r1 = el("div", "formrow");
-    r1.append(fld("Person", who2), fld("From", a), fld("To", b), fld("Type", ty), fld("Note", nt));
+    r1.append(fld("Person", who3), fld("From", a), fld("To", b), fld("Type", ty), fld("Note", nt));
     const msg = el("div", "gerr"), go = el("button", "btn primary", "Add leave");
     go.type = "submit";
     go.disabled = !canEdit();
     f.append(r1, msg, go);
     f.addEventListener("submit", (e) => {
       e.preventDefault();
-      if (!who2.value) {
+      if (!who3.value) {
         msg.textContent = "Choose a person first.";
-        who2.focus();
+        who3.focus();
         return;
       }
       const x0 = a.value, x1 = b.value || a.value;
@@ -3509,12 +3532,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         msg.textContent = "Pick a valid date range.";
         return;
       }
-      const clash = vacsOf(who2.value).find((v) => x0 <= (v.a1 || v.a0) && x1 >= v.a0);
+      const clash = vacsOf(who3.value).find((v) => x0 <= (v.a1 || v.a0) && x1 >= v.a0);
       if (clash) {
-        msg.textContent = who2.value + " already has leave on " + fmtIso(clash.a0) + (clash.a1 > clash.a0 ? " to " + fmtIso(clash.a1) : "") + ". Remove it first or pick other dates.";
+        msg.textContent = who3.value + " already has leave on " + fmtIso(clash.a0) + (clash.a1 > clash.a0 ? " to " + fmtIso(clash.a1) : "") + ". Remove it first or pick other dates.";
         return;
       }
-      addVacation(who2.value, x0, x1, ty.value, nt.value.trim());
+      addVacation(who3.value, x0, x1, ty.value, nt.value.trim());
     });
     root.append(f);
     if (S.vacNotice) {
@@ -3556,8 +3579,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     renderTeamLeave(root);
     const card2 = el("div", "card");
     card2.append(el("h2", "", "All leave"));
-    const list = Object.keys(S.vacs).map((id) => Object.assign({ id }, S.vacs[id])).filter((v) => v.a0).sort((x, y) => x.a0 < y.a0 ? -1 : 1);
-    if (!list.length) card2.append(el("div", "hint", "No leave added yet."));
+    const list2 = Object.keys(S.vacs).map((id) => Object.assign({ id }, S.vacs[id])).filter((v) => v.a0).sort((x, y) => x.a0 < y.a0 ? -1 : 1);
+    if (!list2.length) card2.append(el("div", "hint", "No leave added yet."));
     else {
       const t = el("table", "tbl"), th = el("thead"), hr = el("tr");
       ["Person", "Dates", "Type", "Working days", "Affects", ""].forEach((x) => {
@@ -3568,7 +3591,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       th.append(hr);
       t.append(th);
       const tb = el("tbody");
-      list.forEach((v) => {
+      list2.forEach((v) => {
         const aff = affectedBy(v), tr = el("tr");
         tr.append(el("td", "", v.p), el("td", "", fmtIso(v.a0) + (v.a1 > v.a0 ? " to " + fmtIso(v.a1) : "")), el("td", "", v.t + (v.n ? " · " + v.n : "")), el("td", "", String(wdays(v.a0, v.a1 || v.a0))));
         const c = el("td");
@@ -3608,9 +3631,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       return Object.assign(n, { d0: Math.max(0, a), d1: Math.min(NDAYS - 1, b), inside: Number.isFinite(a) && Number.isFinite(b) && b >= 0 && a <= NDAYS - 1 });
     }).filter((n) => n.inside).sort((x, y) => x.d0 - y.d0 || x.d1 - y.d1 || (x.id < y.id ? -1 : 1));
   }
-  function packNotes(list) {
+  function packNotes(list2) {
     const lanes = [], out = [];
-    list.forEach((n) => {
+    list2.forEach((n) => {
       let i = lanes.findIndex((l) => l.every((o) => o.d1 < n.d0 || o.d0 > n.d1));
       if (i < 0) {
         i = lanes.length;
@@ -3624,19 +3647,19 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   var personNotes = (name) => packNotes(notesHere("person").filter((n) => n.p === name));
   var hasPersonNotes = (name) => notesHere("person").some((n) => n.p === name);
   function leaveByDay() {
-    const counts = new Array(NDAYS).fill(0), who2 = Array.from({ length: NDAYS }, () => []);
-    const names = state.person === "all" ? [...directory().keys()] : [state.person];
-    names.forEach((n) => vacsOf(n).forEach((v) => {
+    const counts = new Array(NDAYS).fill(0), who3 = Array.from({ length: NDAYS }, () => []);
+    const names2 = state.person === "all" ? [...directory().keys()] : [state.person];
+    names2.forEach((n) => vacsOf(n).forEach((v) => {
       const a = Math.max(0, kOfIso(v.a0)), b = Math.min(NDAYS - 1, kOfIso(v.a1 || v.a0));
-      for (let k = a; k <= b; k++) if (!who2[k].includes(n)) {
-        who2[k].push(n);
+      for (let k = a; k <= b; k++) if (!who3[k].includes(n)) {
+        who3[k].push(n);
         counts[k]++;
       }
     }));
-    return { counts, who: who2 };
+    return { counts, who: who3 };
   }
   function leaveRuns() {
-    const { counts, who: who2 } = leaveByDay(), runs = [];
+    const { counts, who: who3 } = leaveByDay(), runs = [];
     let k = 0;
     while (k < NDAYS) {
       if (!counts[k]) {
@@ -3645,7 +3668,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       }
       let e = k;
       while (e + 1 < NDAYS && counts[e + 1] === counts[k]) e++;
-      runs.push({ d0: k, d1: e, n: counts[k], who: who2[k] });
+      runs.push({ d0: k, d1: e, n: counts[k], who: who3[k] });
       k = e + 1;
     }
     return runs;
@@ -3682,17 +3705,17 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         return w;
       };
       box2.append(fld2("Text", tx));
-      let who2 = null;
+      let who3 = null;
       if (k === "person") {
-        who2 = el("select");
-        who2.setAttribute("aria-label", "Person");
+        who3 = el("select");
+        who3.setAttribute("aria-label", "Person");
         [...directory().keys()].sort((a, b) => a.localeCompare(b)).forEach((n) => {
           const o = el("option", "", n);
           o.value = n;
           if (n === note.p) o.selected = true;
-          who2.append(o);
+          who3.append(o);
         });
-        box2.append(fld2("Person", who2));
+        box2.append(fld2("Person", who3));
       }
       const d0 = el("input"), d1 = el("input");
       d0.type = d1.type = "date";
@@ -3755,7 +3778,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           return;
         }
         const patch = { k, t, a0: d0.value, a1: d1.value, c: col };
-        if (k === "person") patch.p = who2.value;
+        if (k === "person") patch.p = who3.value;
         closeDlg();
         saveNote(note.id, patch, (editing ? "edited" : "added") + " the " + (k === "person" ? "note for " + patch.p : "period note") + ' "' + t + '"');
         notify("Note saved");
@@ -3870,31 +3893,31 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     bindDrag(b, n);
     return b;
   }
-  function drawNotesRow(put2, row) {
+  function drawNotesRow(put3, row) {
     const periods = packNotes(notesHere("period")), runs = leaveRuns();
     const h = 10 + Math.max(1, periods.lanes) * NOTE_H + 12;
     const c1 = el("div", "c1 notesrow");
     c1.style.minHeight = h + "px";
     c1.append(el("span", "", "Notes"), el("small", "", "leave and periods"));
-    put2(c1, row, 1);
+    put3(c1, row, 1);
     const bg = el("div", "rowbg tstrip");
     bg.style.minHeight = h + "px";
-    put2(bg, row, null);
+    put3(bg, row, null);
     runs.forEach((r) => {
       const d = el("div", "vheat");
       d.style.setProperty("--n", String(Math.min(1, r.n / 4)));
       d.title = r.n + (r.n === 1 ? " person" : " people") + " on leave: " + r.who.join(", ");
       if (r.d1 - r.d0 >= 1) d.append(el("span", "", String(r.n)));
-      put2(d, row, r.d0 + 2 + " / " + (r.d1 + 3));
+      put3(d, row, r.d0 + 2 + " / " + (r.d1 + 3));
     });
-    periods.out.forEach((x) => put2(noteNode(x.n, x.lane, "chip"), row, x.n.d0 + 2 + " / " + (x.n.d1 + 3)));
+    periods.out.forEach((x) => put3(noteNode(x.n, x.lane, "chip"), row, x.n.d0 + 2 + " / " + (x.n.d1 + 3)));
   }
-  function drawBands(put2, fromRow, toRow) {
+  function drawBands(put3, fromRow, toRow) {
     notesHere("period").forEach((n) => {
       const b = el("div", "tband");
       b.style.setProperty("--c", isHex(n.c) ? n.c : DEFAULT_COLOR.period);
       b.title = n.t;
-      put2(b, fromRow + " / " + toRow, n.d0 + 2 + " / " + (n.d1 + 3));
+      put3(b, fromRow + " / " + toRow, n.d0 + 2 + " / " + (n.d1 + 3));
     });
   }
 
@@ -4033,13 +4056,13 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   }
   var rowsOf = () => [...cpop.querySelectorAll(".copt:not(.dis):not([hidden])")];
   function cpopMove(d) {
-    const rows2 = rowsOf();
-    if (!rows2.length) return;
-    let i = rows2.findIndex((r) => r.classList.contains("act"));
-    i = Math.max(0, Math.min(rows2.length - 1, i + d));
+    const rows3 = rowsOf();
+    if (!rows3.length) return;
+    let i = rows3.findIndex((r) => r.classList.contains("act"));
+    i = Math.max(0, Math.min(rows3.length - 1, i + d));
     cpop.querySelectorAll(".act").forEach((r) => r.classList.remove("act"));
-    rows2[i].classList.add("act");
-    rows2[i].scrollIntoView({ block: "nearest" });
+    rows3[i].classList.add("act");
+    rows3[i].scrollIntoView({ block: "nearest" });
   }
   function cpopPick(opt) {
     const s = cpopSel;
@@ -4090,9 +4113,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     q.setAttribute("enterkeyhint", "search");
     ["input", "keyup", "search", "change", "compositionend"].forEach((ev) => q.addEventListener(ev, () => cpopFilter(q.value)));
     box2.append(q);
-    const list = el("div", "clist");
-    list.setAttribute("role", "listbox");
-    box2.append(list);
+    const list2 = el("div", "clist");
+    list2.setAttribute("role", "listbox");
+    box2.append(list2);
     [...s.options].forEach((o) => {
       const r = el("div", "copt" + (o.selected ? " sel act" : "") + (o.disabled ? " dis" : ""));
       r.dataset.opt = "1";
@@ -4107,11 +4130,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         box2.querySelectorAll(".act").forEach((x) => x.classList.remove("act"));
         if (!o.disabled) r.classList.add("act");
       });
-      list.append(r);
+      list2.append(r);
     });
     const none = el("div", "copt dis cnone", "No matches");
     none.hidden = true;
-    list.append(none);
+    list2.append(none);
     document.body.append(box2);
     cpop = box2;
     openedAt = Date.now();
@@ -4251,8 +4274,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     p.textContent = "";
     p.append(el("h3", "", "Days off"), el("div", "sub2", "Shade holidays or team leave across every row. Company-wide closures. For individual leave use the Vacations page."));
     const ids = Object.keys(S.daysoff);
-    const list = el("div", "plist");
-    if (!ids.length) list.append(el("div", "sub2", "No days off yet."));
+    const list2 = el("div", "plist");
+    if (!ids.length) list2.append(el("div", "sub2", "No days off yet."));
     ids.sort((a, b) => (offRange(S.daysoff[a]) || [0])[0] - (offRange(S.daysoff[b]) || [0])[0]).forEach((id) => {
       const x = S.daysoff[id], row = el("div", "prow"), t = el("span");
       t.append(document.createTextNode(x.n || "Day off"), el("small", "", offLabel(x)));
@@ -4266,7 +4289,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         buildOff();
       });
       row.append(t, rm);
-      list.append(row);
+      list2.append(row);
     });
     const add = el("div", "padd");
     const nn = el("input");
@@ -4300,7 +4323,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const done2 = el("button", "btn primary", "Done");
     done2.type = "button";
     done2.addEventListener("click", closePicker);
-    p.append(list, add, done2);
+    p.append(list2, add, done2);
   }
   function openPicker(id, anchor) {
     if (!canEdit()) return;
@@ -4327,18 +4350,18 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     q.type = "search";
     q.id = "pk-q";
     q.placeholder = "Search people";
-    const list = el("div", "plist");
+    const list2 = el("div", "plist");
     const draw = () => {
       const cur2 = pickerItem();
       if (!cur2) return;
-      list.textContent = "";
+      list2.textContent = "";
       const ws = fold3(q.value).split(/\s+/).filter(Boolean);
       const dir = [...directory().values()].filter((x) => {
         const t = fold3(x.name);
         return ws.every((w) => t.includes(w));
       });
       dir.sort((a, b) => b.sqs.has(cur2.sq) - a.sqs.has(cur2.sq) || a.name.localeCompare(b.name));
-      if (!dir.length) list.append(el("div", "sub2", "No one matches. Add them below."));
+      if (!dir.length) list2.append(el("div", "sub2", "No one matches. Add them below."));
       dir.forEach((x) => {
         const row = el("label", "prow"), cb = el("input");
         cb.type = "checkbox";
@@ -4354,7 +4377,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         const sq = [...x.sqs].map((k) => (LANES.find((l) => l.k === k) || { n: k }).n).join(", ");
         t.append(el("small", "", [...x.roles].map((r) => ROLES[r]).join(", ") + " · " + sq));
         row.append(cb, t);
-        list.append(row);
+        list2.append(row);
       });
     };
     q.addEventListener("input", draw);
@@ -4403,7 +4426,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const done2 = el("button", "btn primary", "Done");
     done2.type = "button";
     done2.addEventListener("click", closePicker);
-    p.append(q, list, add, done2);
+    p.append(q, list2, add, done2);
     draw();
   }
   document.addEventListener("pointerdown", (e) => {
@@ -4458,10 +4481,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       q.setAttribute("aria-label", "Search features");
       q.style.width = "100%";
       box2.append(q);
-      const list = el("div", "deplist");
-      box2.append(list);
+      const list2 = el("div", "deplist");
+      box2.append(list2);
       const draw = () => {
-        list.textContent = "";
+        list2.textContent = "";
         const t = q.value.trim().toLowerCase();
         cands.filter((i) => !t || i.t.toLowerCase().includes(t) || i.res.join(" ").toLowerCase().includes(t) || cur2.has(i.id)).forEach((i) => {
           const l = el("label", "deprow"), c = el("input");
@@ -4472,9 +4495,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
             else cur2.delete(i.id);
           });
           l.append(c, el("span", "", (i.ms ? "◆ " : "") + i.t), el("small", "", dlabel(i.d0) + (i.ms ? "" : " to " + dlabel(i.d1)) + (i.res.length ? " · " + i.res.join(", ") : "")));
-          list.append(l);
+          list2.append(l);
         });
-        if (!list.children.length) list.append(el("div", "hint", "Nothing matches."));
+        if (!list2.children.length) list2.append(el("div", "hint", "Nothing matches."));
       };
       q.addEventListener("input", draw);
       draw();
@@ -4734,13 +4757,13 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   }
   var cardIdsList = () => allCards().filter((x) => x.l.rid).map((x) => cardId(x.l)).filter(Boolean).sort();
   function scan() {
-    const rows2 = [];
+    const rows3 = [];
     const cards2 = allCards();
     cards2.forEach(({ did, l }) => {
       const bar4 = barOf(l.rid);
       if (!bar4) return;
       const cur2 = { t: l.t, pct: clampPct(l.pct) }, base3 = l.lk || null;
-      rows2.push({ kind: "card", did, l, id: cardId(l), label: l.t, bar: bar4, rid: l.rid, cur: cur2, base: base3, cmp: compare2(cur2, base3, roadVals(bar4)) });
+      rows3.push({ kind: "card", did, l, id: cardId(l), label: l.t, bar: bar4, rid: l.rid, cur: cur2, base: base3, cmp: compare2(cur2, base3, roadVals(bar4)) });
     });
     Object.keys(S.reports || {}).filter(isReportDoc).forEach((did) => {
       const d = S.reports[did] || {};
@@ -4749,10 +4772,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         const c = cards2.find((x) => x.l.id === l.fid), bar4 = c && barOf(c.l.rid);
         if (!bar4) return;
         const cur2 = { t: l.t, pct: linePctOf(l) }, base3 = l.lk || null;
-        rows2.push({ kind: "line", did, pk: k, l, id: cardId(c.l), label: l.t, bar: bar4, rid: c.l.rid, cur: cur2, base: base3, cmp: compare2(cur2, base3, roadVals(bar4)), week: d.a });
+        rows3.push({ kind: "line", did, pk: k, l, id: cardId(c.l), label: l.t, bar: bar4, rid: c.l.rid, cur: cur2, base: base3, cmp: compare2(cur2, base3, roadVals(bar4)), week: d.a });
       }));
     });
-    return rows2;
+    return rows3;
   }
   var incoming = (kind) => scan().filter((r) => r.kind === kind && r.cmp.incoming.length);
   var outgoing = () => scan().filter((r) => r.cmp.outgoing.length);
@@ -4825,7 +4848,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   var ensuring = false;
   function ensureRecords() {
     if (ensuring || !canEdit()) return;
-    const rows2 = scan(), todo = rows2.filter((r) => !r.base || Object.keys(r.cmp.rebase).length);
+    const rows3 = scan(), todo = rows3.filter((r) => !r.base || Object.keys(r.cmp.rebase).length);
     if (!todo.length) return;
     ensuring = true;
     try {
@@ -4857,9 +4880,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     openDlg("Check updates from the roadmap", (box2) => {
       const draw = () => {
         box2.textContent = "";
-        const rows2 = incoming(kind).filter((r) => !did || r.did === did);
+        const rows3 = incoming(kind).filter((r) => !did || r.did === did);
         box2.append(el("p", "sub2", 'These features changed on the roadmap. Apply each change you agree with. "Keep mine" leaves your value and asks an admin to change the roadmap instead.'));
-        if (!rows2.length) {
+        if (!rows3.length) {
           box2.append(el("p", "hint", "Everything is up to date."));
           box2.append(btn("Close", "", () => {
             closeDlg();
@@ -4867,7 +4890,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           }));
           return;
         }
-        rows2.forEach((r) => r.cmp.incoming.forEach((x) => {
+        rows3.forEach((r) => r.cmp.incoming.forEach((x) => {
           const a = btn("Apply", "primary", () => {
             applyIncoming(r, x.f, x.to);
             toast("Applied.");
@@ -4889,14 +4912,14 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     });
   }
   function requestsCard(again) {
-    const rows2 = outgoing(), c = el("div", "card fsreq");
+    const rows3 = outgoing(), c = el("div", "card fsreq");
     c.id = "roadreq";
-    c.append(el("h2", "", "Roadmap update requests" + (rows2.length ? " (" + rows2.reduce((n, r) => n + r.cmp.outgoing.length, 0) + ")" : "")), el("p", "sub", "Changes made in Monthly deliverables or the weekly report to a feature that is on the roadmap. Nothing changes on the roadmap until you approve it."));
-    if (!rows2.length) {
+    c.append(el("h2", "", "Roadmap update requests" + (rows3.length ? " (" + rows3.reduce((n, r) => n + r.cmp.outgoing.length, 0) + ")" : "")), el("p", "sub", "Changes made in Monthly deliverables or the weekly report to a feature that is on the roadmap. Nothing changes on the roadmap until you approve it."));
+    if (!rows3.length) {
       c.append(el("p", "hint", "No requests waiting."));
       return c;
     }
-    rows2.forEach((r) => r.cmp.outgoing.forEach((x) => {
+    rows3.forEach((r) => r.cmp.outgoing.forEach((x) => {
       const a = btn("Approve", "primary", () => {
         approve(r, x.f, x.to);
         toast("Roadmap updated.");
@@ -5212,18 +5235,18 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   }
   function newOrd(id, lane2, y) {
     const g = $("grid"), all = items().filter((i) => i.sq === lane2 && i.id !== id).sort(byOrd);
-    const rows2 = [...g.querySelectorAll('.rowbg[data-lane="' + lane2 + '"]')].filter((x) => x.dataset.id !== id);
-    if (!rows2.length) return all.length ? all[all.length - 1].ord + 1 : 0;
-    let idx = rows2.length;
-    for (let i = 0; i < rows2.length; i++) {
-      const r = rows2[i].getBoundingClientRect();
+    const rows3 = [...g.querySelectorAll('.rowbg[data-lane="' + lane2 + '"]')].filter((x) => x.dataset.id !== id);
+    if (!rows3.length) return all.length ? all[all.length - 1].ord + 1 : 0;
+    let idx = rows3.length;
+    for (let i = 0; i < rows3.length; i++) {
+      const r = rows3[i].getBoundingClientRect();
       if (y < r.top + r.height / 2) {
         idx = i;
         break;
       }
     }
-    const at = (i) => all.find((a) => a.id === rows2[i].dataset.id);
-    const before = idx < rows2.length ? at(idx) : null, after = idx > 0 ? at(idx - 1) : null;
+    const at = (i) => all.find((a) => a.id === rows3[i].dataset.id);
+    const before = idx < rows3.length ? at(idx) : null, after = idx > 0 ? at(idx - 1) : null;
     if (before && after) return (before.ord + after.ord) / 2;
     if (before) return before.ord - 1;
     return after.ord + 1;
@@ -5360,14 +5383,14 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   }
   function movePerson(name, target, after) {
     if (!canEdit() || name === target) return;
-    const list = allNamesInOrder().filter((n) => n !== name), at = list.indexOf(target);
+    const list2 = allNamesInOrder().filter((n) => n !== name), at = list2.indexOf(target);
     if (at < 0) return;
-    list.splice(at + (after ? 1 : 0), 0, name);
-    saveIdea("peopleorder", { cfg: true, ord: list }, "resource", "reordered team rows (" + name + ")");
+    list2.splice(at + (after ? 1 : 0), 0, name);
+    saveIdea("peopleorder", { cfg: true, ord: list2 }, "resource", "reordered team rows (" + name + ")");
     render();
   }
   function step(name, delta) {
-    const list = allNamesInOrder(), i = list.indexOf(name), t = list[i + delta];
+    const list2 = allNamesInOrder(), i = list2.indexOf(name), t = list2[i + delta];
     if (t) movePerson(name, t, delta > 0);
   }
   function hiddenHere() {
@@ -5375,10 +5398,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     return h && h.byRm && h.byRm[state.rm] || [];
   }
   var featureCount = (name) => items().filter((i) => i.res.includes(name)).length;
-  function setHidden(names, sum) {
+  function setHidden(names2, sum) {
     const old = S.ideas.peoplehide && S.ideas.peoplehide.byRm || {}, byRm = Object.assign({}, old);
-    byRm[state.rm] = names;
-    if (!names.length) delete byRm[state.rm];
+    byRm[state.rm] = names2;
+    if (!names2.length) delete byRm[state.rm];
     saveIdea("peoplehide", { cfg: true, byRm }, "resource", sum);
     render();
   }
@@ -5393,9 +5416,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   }
   function openHiddenDialog() {
     openDlg("Hidden on " + curRm().n, (box2) => {
-      const names = hiddenHere().filter((n) => directory().has(n));
+      const names2 = hiddenHere().filter((n) => directory().has(n));
       box2.append(el("p", "sub", "These people are still on the team and on other roadmaps. They only have no row here."));
-      names.forEach((n) => {
+      names2.forEach((n) => {
         const row2 = el("div", "formrow"), b = el("button", "btn sm", "Show");
         b.type = "button";
         b.addEventListener("click", () => {
@@ -5440,10 +5463,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     more.setAttribute("aria-haspopup", "menu");
     more.addEventListener("click", (e) => {
       e.stopPropagation();
-      const r = more.getBoundingClientRect(), list = allNamesInOrder(), i = list.indexOf(name);
+      const r = more.getBoundingClientRect(), list2 = allNamesInOrder(), i = list2.indexOf(name);
       openCtx(r.right - 200, r.bottom + 4, (m) => {
         if (i > 0) mi(m, "Move up", () => step(name, -1));
-        if (i < list.length - 1) mi(m, "Move down", () => step(name, 1));
+        if (i < list2.length - 1) mi(m, "Move down", () => step(name, 1));
         m.append(el("div", "msep"));
         mi(m, "Hide " + name + " from this roadmap", () => hideHere(name), "danger");
       });
@@ -5463,21 +5486,21 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       if (!c1.contains(e.relatedTarget)) c1.classList.remove("dropbefore", "dropafter");
     });
     c1.addEventListener("drop", (e) => {
-      const who2 = e.dataTransfer.getData("text/person");
-      if (!who2) return;
+      const who3 = e.dataTransfer.getData("text/person");
+      if (!who3) return;
       e.preventDefault();
       c1.classList.remove("dropbefore", "dropafter");
-      movePerson(who2, name, side(e));
+      movePerson(who3, name, side(e));
     });
     c1.append(grip, more);
   }
 
   // src/esm/ui/gantt-render.js
-  function renderSummary(list) {
+  function renderSummary(list2) {
     const s = $("summary");
     s.textContent = "";
-    const cnt = (k) => list.filter((i) => i.st === k).length;
-    [[list.length, "features shown"], [cnt("planned"), "planned"], [cnt("decide"), "need a decision"], [cnt("contract"), "wait on contract"], [cnt("done"), "done"]].forEach(function(p) {
+    const cnt = (k) => list2.filter((i) => i.st === k).length;
+    [[list2.length, "features shown"], [cnt("planned"), "planned"], [cnt("decide"), "need a decision"], [cnt("contract"), "wait on contract"], [cnt("done"), "done"]].forEach(function(p) {
       const w = el("div");
       w.append(el("b", "", String(p[0])), document.createTextNode(" "), el("span", "", p[1]));
       s.append(w);
@@ -5613,8 +5636,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   var ZOOM = { day: 26, week: 12, month: 4 };
   function render() {
     hideBarTip();
-    const list = visible();
-    renderSummary(list);
+    const list2 = visible();
+    renderSummary(list2);
     $("undo").disabled = !S.undoStack.length || !canEdit();
     $("add").disabled = !canEdit();
     $("syncmonthly").disabled = !canEdit();
@@ -5625,13 +5648,13 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     g.classList.remove("hov");
     g.style.gridTemplateColumns = "var(--c1) repeat(" + NDAYS + ", var(--dw))";
     g.style.setProperty("--sh", "calc(-" + STARTDOW + " * var(--dw))");
-    const put2 = (n, row, col) => {
+    const put3 = (n, row, col) => {
       n.style.gridRow = row;
       if (col) n.style.gridColumn = col;
       g.append(n);
       return n;
     };
-    put2(el("div", "hc r1 first", curRm().n), 1, 1);
+    put3(el("div", "hc r1 first", curRm().n), 1, 1);
     MGROUPS.forEach((m, i) => {
       const c = el("div", "mh");
       c.append(el("span", "", m.n));
@@ -5640,31 +5663,31 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         s.title = "Marked LOW PRIORITY in the September checkpoint";
         c.querySelector("span").append(document.createTextNode(" "), s);
       }
-      put2(c, 1, m.from + 2 + " / " + (m.to + 3));
+      put3(c, 1, m.from + 2 + " / " + (m.to + 3));
     });
-    put2(el("div", "hc r2 first", "Team member"), 2, 1);
+    put3(el("div", "hc r2 first", "Team member"), 2, 1);
     DAYS.forEach((x) => {
       const off = offAt(x.k), full = dw >= 20, lab2 = dw >= 10 && dw < 20 && x.dow === 0;
       const c = el("div", "wk" + (x.we ? " we" : "") + (x.k === todayK ? " today" : "") + (off ? " offd" : "") + (full ? "" : " sparse") + (lab2 ? " lab" : ""), full || lab2 ? String(x.d.getUTCDate()) : "");
       c.title = dlabel(x.k) + (x.k === todayK ? " (today)" : "") + (off ? " · " + off.n : "");
-      put2(c, 2, x.k + 2 + "");
+      put3(c, 2, x.k + 2 + "");
     });
     const strip = stripNeeded(), r0 = strip ? 4 : 3;
-    if (strip) drawNotesRow(put2, 3);
-    const end = renderPeople(g, put2, list, r0);
-    drawBands(put2, r0, end);
+    if (strip) drawNotesRow(put3, 3);
+    const end = renderPeople(g, put3, list2, r0);
+    drawBands(put3, r0, end);
     Object.keys(S.daysoff).forEach((id) => {
       const x = S.daysoff[id], r = offRange(x);
       if (!r || r[1] < 0 || r[0] > NDAYS - 1) return;
       const a = Math.max(0, r[0]), b = Math.min(NDAYS - 1, r[1]);
       const o = el("div", "off");
       o.title = x.n || "Day off";
-      put2(o, "3 / " + end, a + 2 + " / " + (b + 3));
+      put3(o, "3 / " + end, a + 2 + " / " + (b + 3));
     });
     if (todayK >= 0) {
       const t = el("div", "todayline");
       t.title = "Today";
-      put2(t, "3 / " + end, todayK + 2 + "");
+      put3(t, "3 / " + end, todayK + 2 + "");
     }
     const ei = g.querySelector("input.bi");
     if (ei && state.needFocus) {
@@ -5696,14 +5719,14 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     });
     return { out, n: Math.max(1, lanes.length) };
   }
-  function renderPeople(g, put2, list, r0) {
+  function renderPeople(g, put3, list2, r0) {
     const dir = directory(), map = /* @__PURE__ */ new Map(), H3 = 34;
     const ensure = (n) => {
       if (!map.has(n)) map.set(n, { name: n, its: [] });
       return map.get(n);
     };
     dir.forEach((p, n) => ensure(n));
-    list.forEach((it) => {
+    list2.forEach((it) => {
       if (!it.res.length) ensure("__none").its.push(it);
       else it.res.forEach((n) => ensure(n).its.push(eff(it, n)));
     });
@@ -5746,11 +5769,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         c1.append(vs);
       }
       if (title === p.name) decoratePersonRow(c1, p.name);
-      put2(c1, r, 1);
+      put3(c1, r, 1);
       const bg = el("div", "rowbg");
       bg.dataset.person = p.name;
       bg.style.minHeight = minH;
-      put2(bg, r, null);
+      put3(bg, r, null);
       let k = 0;
       while (k < NDAYS) {
         if (counts[k] > 1) {
@@ -5758,7 +5781,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           while (e + 1 < NDAYS && counts[e + 1] > 1) e++;
           const o = el("div", "ov");
           o.dataset.person = p.name;
-          put2(o, r, k + 2 + " / " + (e + 3));
+          put3(o, r, k + 2 + " / " + (e + 3));
           k = e + 1;
         } else k++;
       }
@@ -5768,12 +5791,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         const a = Math.max(0, ra), b2 = Math.min(NDAYS - 1, rb), tip3 = p.name + ": " + v.t + ", " + fmtIso(v.a0) + (v.a1 > v.a0 ? " to " + fmtIso(v.a1) : "") + (v.n ? " (" + v.n + ")" : "");
         const o = el("div", "vac");
         o.title = tip3;
-        put2(o, r, a + 2 + " / " + (b2 + 3));
+        put3(o, r, a + 2 + " / " + (b2 + 3));
         const fl = el("div", "vflag", "⚑");
         fl.title = tip3;
-        put2(fl, r, a + 2 + " / " + (a + 3));
+        put3(fl, r, a + 2 + " / " + (a + 3));
       });
-      pnotes.out.forEach((x) => put2(noteNode(x.n, x.lane, "ribbon"), r, x.n.d0 + 2 + " / " + (x.n.d1 + 3)));
+      pnotes.out.forEach((x) => put3(noteNode(x.n, x.lane, "ribbon"), r, x.n.d0 + 2 + " / " + (x.n.d1 + 3)));
       pk.out.forEach((x) => {
         const b = buildBar(x.it, p.name);
         b.classList.add("pb");
@@ -5784,7 +5807,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           b.append(el("span", "vbadge", "⚑ leave"));
           b.dataset.tipSub += " · overlaps leave: " + hit.map((v) => fmtIso(v.a0)).join(", ");
         }
-        put2(b, r, x.it.d0 + 2 + " / " + (x.it.d1 + 3));
+        put3(b, r, x.it.d0 + 2 + " / " + (x.it.d1 + 3));
       });
       r++;
     };
@@ -5807,7 +5830,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       ab.id = "addp";
       const c = el("div", "c1 addrow");
       c.append(ab);
-      put2(c, r, 1);
+      put3(c, r, 1);
       const nh = hid.filter((n) => dir.has(n) && !(map.get(n) && map.get(n).its.length)).length;
       if (nh) {
         const sh = el("button", "addp", "Show hidden (" + nh + ")");
@@ -5817,7 +5840,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         c.append(sh);
       }
       ab.addEventListener("click", () => openAddPerson(ab));
-      put2(el("div", "rowbg"), r, null).style.minHeight = "44px";
+      put3(el("div", "rowbg"), r, null).style.minHeight = "44px";
     }
     return r;
   }
@@ -5919,9 +5942,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const card2 = el("div", "card permpage");
     card2.id = "permissions";
     card2.append(el("h2", "", "Users & permissions"), el("p", "sub", "Pick a person, then choose what they can do in each module. Delete includes Edit, and Edit includes View. Admins can approve new people and manage everyone's permissions."));
-    const lay = el("div", "permlay"), list = el("div", "permusers");
-    list.setAttribute("role", "listbox");
-    list.setAttribute("aria-label", "People");
+    const lay = el("div", "permlay"), list2 = el("div", "permusers");
+    list2.setAttribute("role", "listbox");
+    list2.setAttribute("aria-label", "People");
     people.forEach((p) => {
       const b = el("button", "permuser" + (p.id === cur2.id ? " on" : ""));
       b.type = "button";
@@ -5939,13 +5962,13 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         ui.draft = null;
         reload(true);
       });
-      list.append(b);
+      list2.append(b);
     });
     const det = el("div", "permdetail");
     det.setAttribute("aria-live", "polite");
-    const head = el("div", "permhead"), who2 = el("div");
-    who2.append(el("h3", "", nameOf(cur2)), el("div", "hint", (cur2.role ? cur2.role + " · " : "") + (cur2.email || "")));
-    head.append(avatarEl(cur2.avatar, 48, cur2.name), who2);
+    const head = el("div", "permhead"), who3 = el("div");
+    who3.append(el("h3", "", nameOf(cur2)), el("div", "hint", (cur2.role ? cur2.role + " · " : "") + (cur2.email || "")));
+    head.append(avatarEl(cur2.avatar, 48, cur2.name), who3);
     det.append(head);
     const self = cur2.id === S.me.id, admins = S.members.filter((x) => x.approved && x.is_admin);
     const ar = el("div", "permadmin"), at = el("div");
@@ -6026,7 +6049,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     });
     foot.append(save2, undo2, el("span", "hint", dirty ? "Unsaved changes" : ""));
     det.append(foot);
-    lay.append(list, det);
+    lay.append(list2, det);
     card2.append(lay);
     root.append(card2);
   }
@@ -6171,11 +6194,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       renderResources();
       return;
     }
-    const names = Object.assign({}, squadNames()), ex = extraSquads().map((e) => e.k === k ? Object.assign({}, e, { n: v }) : e);
-    if (isBaseSquad(k) && v === defaultSquadName(k)) delete names[k];
-    else if (isBaseSquad(k)) names[k] = v;
-    else delete names[k];
-    saveLanes({ names, extra: ex }, "renamed the product " + name + " to " + v, "Renamed to " + v);
+    const names2 = Object.assign({}, squadNames()), ex = extraSquads().map((e) => e.k === k ? Object.assign({}, e, { n: v }) : e);
+    if (isBaseSquad(k) && v === defaultSquadName(k)) delete names2[k];
+    else if (isBaseSquad(k)) names2[k] = v;
+    else delete names2[k];
+    saveLanes({ names: names2, extra: ex }, "renamed the product " + name + " to " + v, "Renamed to " + v);
   }
   function recolorSquad(k, c) {
     const l = LANES.find((x) => x.k === k);
@@ -6188,10 +6211,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     saveLanes({ colors, extra: ex }, "changed the colour of " + l.n + " to " + c, l.n + " colour changed");
   }
   function resetSquad(k) {
-    const names = Object.assign({}, squadNames()), colors = Object.assign({}, squadColors());
-    delete names[k];
+    const names2 = Object.assign({}, squadNames()), colors = Object.assign({}, squadColors());
+    delete names2[k];
     delete colors[k];
-    saveLanes({ names, colors }, "reset the product " + k, "Back to the default");
+    saveLanes({ names: names2, colors }, "reset the product " + k, "Back to the default");
   }
   function addProduct(name, c) {
     name = String(name || "").trim().replace(/\s+/g, " ").slice(0, 40);
@@ -6214,10 +6237,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       notify(l.n + " still has " + used + (used === 1 ? " feature" : " features") + " on the roadmap. Move or delete them first.", "err");
       return;
     }
-    const ex = extraSquads().filter((e) => e.k !== k), names = Object.assign({}, squadNames()), colors = Object.assign({}, squadColors());
-    delete names[k];
+    const ex = extraSquads().filter((e) => e.k !== k), names2 = Object.assign({}, squadNames()), colors = Object.assign({}, squadColors());
+    delete names2[k];
     delete colors[k];
-    saveLanes({ extra: ex, names, colors }, "removed the product " + l.n, l.n + " removed");
+    saveLanes({ extra: ex, names: names2, colors }, "removed the product " + l.n, l.n + " removed");
   }
   function assignedWork(name) {
     const out = [];
@@ -6435,9 +6458,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       by[k] = ph.byRm[k].slice();
     });
     allRoadmaps().forEach((rm) => {
-      const list = (by[rm.id] || []).filter((x) => x !== name);
-      if (!picked.has(rm.id) && hideRest) list.push(name);
-      if (list.length || by[rm.id]) by[rm.id] = list;
+      const list2 = (by[rm.id] || []).filter((x) => x !== name);
+      if (!picked.has(rm.id) && hideRest) list2.push(name);
+      if (list2.length || by[rm.id]) by[rm.id] = list2;
     });
     saveIdea("peoplehide", { cfg: true, byRm: by });
     return allRoadmaps().filter((rm) => !(by[rm.id] || []).includes(name)).map((rm) => rm.n);
@@ -6791,8 +6814,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     pend.forEach((m) => {
       const row = el("div", "formrow");
       row.style.alignItems = "center";
-      const who2 = el("div");
-      who2.append(el("b", "", m.name || m.email), el("div", "hint", (m.role ? m.role + " · " : "") + (m.email || "")));
+      const who3 = el("div");
+      who3.append(el("b", "", m.name || m.email), el("div", "hint", (m.role ? m.role + " · " : "") + (m.email || "")));
       const acc = selOf([["editor", "Editor"], ["viewer", "Viewer"]], "editor");
       acc.style.marginInlineStart = "auto";
       acc.setAttribute("aria-label", "Access for " + (m.name || m.email));
@@ -6811,7 +6834,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         toast("Approved. " + (m.name || m.email) + " can now open the tool.");
         await loadMembers();
       });
-      row.append(avatarEl(m.avatar, 36, m.name), who2, acc, ok);
+      row.append(avatarEl(m.avatar, 36, m.name), who3, acc, ok);
       ac.append(row);
     });
     root.append(ac);
@@ -6822,31 +6845,453 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     });
   }
 
+  // src/esm/features/flow-model.js
+  var PREFIX = "YNMO";
+  var TYPES = [
+    { id: "story", n: "Story", c: "#2a9d6f" },
+    { id: "task", n: "Task", c: "#3b6fd4" },
+    { id: "bug", n: "Bug", c: "#d64545" },
+    { id: "enhancement", n: "Report enhancement", c: "#8a5cc7" },
+    { id: "hotfix", n: "Report hotfix", c: "#e0782b" },
+    { id: "epic", n: "Epic", c: "#6d48a8" },
+    { id: "subtask", n: "Sub-task", c: "#5f8fe0", sub: true, parents: ["story", "task", "bug", "enhancement", "hotfix"] },
+    { id: "subbug", n: "Sub-bug", c: "#e06a6a", sub: true, parents: ["story"] }
+  ];
+  var STATUSES = [
+    { id: "open", n: "Open", c: "#8b93a7" },
+    { id: "progress", n: "In progress", c: "#3b6fd4" },
+    { id: "rfqa", n: "RFQA", c: "#8a5cc7" },
+    { id: "blocked", n: "Blocked", c: "#d64545" },
+    { id: "ready", n: "Ready for deployment", c: "#e0a02b" },
+    { id: "deployed", n: "Deployed", c: "#2a9d6f" },
+    { id: "done", n: "Done", c: "#1f7a55" }
+  ];
+  var PRIORITIES = [{ id: "highest", n: "Highest" }, { id: "high", n: "High" }, { id: "medium", n: "Medium" }, { id: "low", n: "Low" }];
+  var CLOSED = ["deployed", "done"];
+  var typeOf = (id) => TYPES.find((t) => t.id === id) || TYPES[1];
+  var statusOf2 = (id) => STATUSES.find((s) => s.id === id) || STATUSES[0];
+  var isClosed = (i) => CLOSED.includes(i.st);
+  function parentProblem(type, parent) {
+    const t = typeOf(type);
+    if (t.sub) {
+      if (!parent) return t.n + " needs a parent ticket.";
+      if (!t.parents.includes(parent.type)) return t.n + " can only go under: " + t.parents.map((p) => typeOf(p).n).join(", ") + ".";
+      return "";
+    }
+    if (parent) return t.n + " cannot have a parent ticket.";
+    return "";
+  }
+  function epicProblem(type, epic) {
+    if (!epic) return "";
+    if (type === "epic" || typeOf(type).sub) return "Epics hold stories, tasks, bugs and reports, not " + typeOf(type).n.toLowerCase() + "s.";
+    return epic.type === "epic" ? "" : "The epic must be an Epic ticket.";
+  }
+  function nextNo(issues) {
+    let m = 0;
+    Object.values(issues || {}).forEach((i) => {
+      if (i && i.n > m) m = i.n;
+    });
+    return m + 1;
+  }
+  var keyOf = (n, prefix) => (prefix || PREFIX) + "-" + n;
+  var newId = () => "i" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  function makeIssue(o, issues, me, now) {
+    const title = String(o.t || "").trim();
+    if (!title) throw new Error("Give the ticket a title.");
+    const par = o.par ? issues[o.par] : null, ep = o.ep ? issues[o.ep] : null;
+    let p = parentProblem(o.type, par);
+    if (p) throw new Error(p);
+    p = epicProblem(o.type, ep);
+    if (p) throw new Error(p);
+    const n = nextNo(issues), at = now || (/* @__PURE__ */ new Date()).toISOString();
+    const i = { key: keyOf(n, o.prefix), n, type: o.type, t: title, d: String(o.d || ""), st: "open", pr: o.pr || "medium", as: o.as || "", rp: me || "", par: o.par || "", ep: o.ep || "", pts: o.pts === "" || o.pts == null ? null : Number(o.pts), lb: o.lb || [], cr: at, up: at, hist: [{ at, by: me || "", f: "created", a: "", b: keyOf(n, o.prefix) }] };
+    return i;
+  }
+  var LABEL = { t: "title", d: "description", st: "status", pr: "priority", as: "assignee", ep: "epic", pts: "points", lb: "labels", type: "type" };
+  function applyChange(i, ch, by, now) {
+    const at = now || (/* @__PURE__ */ new Date()).toISOString(), hist = (i.hist || []).slice(), out = Object.assign({}, i);
+    let changed = false;
+    Object.keys(ch).forEach((f) => {
+      const a = i[f], b = ch[f];
+      if (JSON.stringify(a == null ? "" : a) === JSON.stringify(b == null ? "" : b)) return;
+      changed = true;
+      out[f] = b;
+      hist.push({ at, by: by || "", f: LABEL[f] || f, a: f === "st" ? statusOf2(a).n : f === "pr" ? String(a || "") : (Array.isArray(a) ? a.join(", ") : String(a == null ? "" : a)).slice(0, 80), b: f === "st" ? statusOf2(b).n : (Array.isArray(b) ? b.join(", ") : String(b == null ? "" : b)).slice(0, 80) });
+    });
+    if (!changed) return i;
+    out.hist = hist;
+    out.up = at;
+    return out;
+  }
+  var list = (issues) => Object.keys(issues || {}).filter((k) => issues[k] && issues[k].key).map((k) => Object.assign({ id: k }, issues[k])).sort((a, b) => b.n - a.n);
+  function filterIssues(rows3, f) {
+    const words = String(f && f.q || "").toLowerCase().split(/\s+/).filter(Boolean);
+    return rows3.filter((i) => {
+      if (f.st && i.st !== f.st) return false;
+      if (f.type && i.type !== f.type) return false;
+      if (f.as === "@none" ? i.as : f.as && i.as !== f.as) return false;
+      if (f.ep && i.ep !== f.ep) return false;
+      if (f.open && isClosed(i)) return false;
+      if (words.length) {
+        const hay = (i.key + " " + i.t + " " + (i.d || "")).toLowerCase();
+        if (!words.every((w) => hay.includes(w))) return false;
+      }
+      return true;
+    });
+  }
+  function myWork(rows3, name, all) {
+    const mine = rows3.filter((i) => i.as === name && (all || !isClosed(i)));
+    return {
+      tickets: mine.filter((i) => !typeOf(i.type).sub && i.type !== "bug" && i.type !== "epic"),
+      subtasks: mine.filter((i) => typeOf(i.type).sub),
+      bugs: mine.filter((i) => i.type === "bug"),
+      epics: mine.filter((i) => i.type === "epic"),
+      reported: rows3.filter((i) => i.rp === name && i.as !== name && (all || !isClosed(i)))
+    };
+  }
+  var childrenOf = (rows3, id) => rows3.filter((i) => i.par === id || i.ep === id).sort((a, b) => a.n - b.n);
+  var countByStatus = (rows3) => STATUSES.map((s) => ({ id: s.id, n: s.n, count: rows3.filter((i) => i.st === s.id).length }));
+
   // src/esm/pages/flow.js
   var FLOW_NAME = "Ynmo Flow";
-  var FLOW_PHASES = [
-    { n: 1, t: "Issues", d: "Projects, stories, tasks, bugs, sub-tasks, epics. Filters, saved filters and My work." },
-    { n: 2, t: "Workflow", d: "Your own statuses (Open, In progress, RFQA, Blocked, Ready for deployment, Deployed, Done) and who can move a ticket where." },
-    { n: 3, t: "Backlog and sprints", d: "Backlog, create and run a sprint, board, sprint report." },
-    { n: 4, t: "Collaboration", d: "Comments, @mentions, notifications, images, PDF and video." },
-    { n: 5, t: "AI assistant", d: "Ask about workload, closure time and reported tickets, with charts." },
-    { n: 6, t: "Jira import", d: "Bring the tickets across, keep the keys, switch Jira off." }
-  ];
-  function renderFlow() {
-    const pg = $("pg-flow");
-    pg.textContent = "";
-    pg.append(pageHead(FLOW_NAME, "Tasks and tickets for the team, built to replace Jira. Planning stage: nothing to use yet."));
-    const c = el("div", "flowhero card");
-    c.id = "flowhero";
-    c.append(el("div", "flowtag", "Phase 0 · Planning"), el("h2", "", "Coming step by step"), el("p", "sub", "The full plan, with every Jira capability and what Flow will do about it, is in docs/FLOW_PLAN.md in the repository."));
-    const ol = el("ol", "flowphases");
-    FLOW_PHASES.forEach((p) => {
-      const li = el("li", "");
-      li.append(el("b", "", p.t), el("span", "", p.d));
-      ol.append(li);
+  var ui2 = { tab: "issues", f: { q: "", st: "", type: "", as: "", ep: "", open: true } };
+  var who2 = () => S.me && (S.me.name || S.me.email) || "";
+  var rows = () => list(S.fissues);
+  var names = () => [...new Set([...directory().keys(), who2()].filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  var dot = (c, t) => {
+    const s = el("span", "ftype", t);
+    s.style.setProperty("--c", c);
+    return s;
+  };
+  var typeTag = (id) => dot(typeOf(id).c, typeOf(id).n);
+  var stTag = (id) => dot(statusOf2(id).c, statusOf2(id).n);
+  function put(i) {
+    const d = Object.assign({}, i);
+    delete d.id;
+    S.fissues[i.id] = d;
+    write("flow_issues/" + i.id, d);
+  }
+  function drop(id) {
+    delete S.fissues[id];
+    write("flow_issues/" + id, null);
+  }
+  var redraw = () => {
+    if ($("pg-flow") && !$("pg-flow").hidden) renderFlow({ keep: true });
+  };
+  function setupBanner() {
+    if (!S.setup.flow_issues) return null;
+    const b = el("div", "rerr");
+    b.setAttribute("role", "alert");
+    b.append(el("b", "", "Database setup needed. "), document.createTextNode("Run supabase/sql/09-flow.sql in the Supabase SQL Editor. Until then tickets are NOT saved and nobody else can see them."));
+    return b;
+  }
+  function table(rs, empty) {
+    if (!rs.length) return el("p", "sub flowempty", empty);
+    const t = el("table", "tbl flowtbl"), h = el("tr");
+    ["Key", "Type", "Title", "Status", "Assignee", "Priority"].forEach((x) => h.append(el("th", "", x)));
+    t.append(el("thead"));
+    t.firstChild.append(h);
+    const tb = el("tbody");
+    rs.forEach((i) => {
+      const tr = el("tr", "flowrow");
+      tr.dataset.id = i.id;
+      tr.tabIndex = 0;
+      const k = el("td", "fkey", i.key), ty = el("td");
+      ty.append(typeTag(i.type));
+      const ti = el("td", "ftitle", i.t), st = el("td");
+      st.append(stTag(i.st));
+      tr.append(k, ty, ti, st, el("td", "", i.as || "Unassigned"), el("td", "", (PRIORITIES.find((p) => p.id === i.pr) || { n: "" }).n));
+      const open = () => openIssue(i.id);
+      tr.addEventListener("click", open);
+      tr.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") open();
+      });
+      tb.append(tr);
     });
-    c.append(ol);
-    pg.append(c);
+    t.append(tb);
+    return t;
+  }
+  function issuesTab(host2) {
+    const all = rows(), f = ui2.f, epics = all.filter((i) => i.type === "epic");
+    const bar4 = el("div", "flowbar");
+    const q = el("input");
+    q.type = "search";
+    q.id = "flowq";
+    q.placeholder = "Search key, title, description";
+    q.value = f.q;
+    q.setAttribute("aria-label", "Search tickets");
+    q.addEventListener("input", () => {
+      f.q = q.value;
+      paint();
+    });
+    const sel = (id, label, opts, key) => {
+      const s = selOf(opts, f[key]);
+      s.id = id;
+      s.setAttribute("aria-label", label);
+      s.addEventListener("change", () => {
+        f[key] = s.value;
+        paint();
+      });
+      return s;
+    };
+    const ck = el("label", "flowopen");
+    const cb = el("input");
+    cb.type = "checkbox";
+    cb.id = "flowopen";
+    cb.checked = f.open;
+    cb.addEventListener("change", () => {
+      f.open = cb.checked;
+      paint();
+    });
+    ck.append(cb, document.createTextNode(" Hide Deployed and Done"));
+    bar4.append(
+      q,
+      sel("flowst", "Status", [["", "All statuses"], ...STATUSES.map((s) => [s.id, s.n])], "st"),
+      sel("flowtype", "Type", [["", "All types"], ...TYPES.map((t) => [t.id, t.n])], "type"),
+      sel("flowas", "Assignee", [["", "Everyone"], ["@none", "Unassigned"], ...names()], "as"),
+      sel("flowep", "Epic", [["", "Any epic"], ...epics.map((e) => [e.id, e.key + " " + e.t])], "ep"),
+      ck
+    );
+    const chips = el("div", "flowchips"), res = el("div", "flowres");
+    host2.append(bar4, chips, res);
+    function paint() {
+      const rs = filterIssues(all, f);
+      chips.textContent = "";
+      res.textContent = "";
+      countByStatus(filterIssues(all, Object.assign({}, f, { st: "" }))).forEach((c) => {
+        const b = el("button", "chip", c.n + " " + c.count);
+        b.type = "button";
+        b.dataset.st = c.id;
+        b.style.setProperty("--c", statusOf2(c.id).c);
+        b.setAttribute("aria-pressed", f.st === c.id ? "true" : "false");
+        b.addEventListener("click", () => {
+          f.st = f.st === c.id ? "" : c.id;
+          renderFlow({ keep: true });
+        });
+        chips.append(b);
+      });
+      res.append(table(rs, all.length ? "No ticket matches these filters." : "No tickets yet. Create the first one."));
+    }
+    paint();
+  }
+  function mineTab(host2) {
+    const w = myWork(rows(), who2(), ui2.all), sec = (title, rs, id) => {
+      const s = el("section", "flowsec");
+      s.id = id;
+      s.append(el("h3", "", title + " (" + rs.length + ")"), table(rs, "Nothing here."));
+      host2.append(s);
+    };
+    const lab2 = el("label", "flowopen");
+    const cb = el("input");
+    cb.type = "checkbox";
+    cb.id = "flowall";
+    cb.checked = !!ui2.all;
+    cb.addEventListener("change", () => {
+      ui2.all = cb.checked;
+      renderFlow({ keep: true });
+    });
+    lab2.append(cb, document.createTextNode(" Include Deployed and Done"));
+    host2.append(lab2);
+    sec("Assigned to me", w.tickets, "mine-tickets");
+    sec("My sub-tasks and sub-bugs", w.subtasks, "mine-subs");
+    sec("Bugs assigned to me", w.bugs, "mine-bugs");
+    if (w.epics.length) sec("My epics", w.epics, "mine-epics");
+    sec("Reported by me, assigned to someone else", w.reported, "mine-reported");
+  }
+  function renderFlow(o) {
+    const pg = $("pg-flow");
+    const sc = pg.scrollTop;
+    pg.textContent = "";
+    const mk = el("button", "btn primary", "Create");
+    mk.type = "button";
+    mk.id = "flowcreate";
+    mk.disabled = !canEdit();
+    mk.addEventListener("click", () => openCreate());
+    pg.append(pageHead(FLOW_NAME, "Tickets for the team: stories, tasks, bugs, sub-tasks, epics and report requests.", mk));
+    const b = setupBanner();
+    if (b) pg.append(b);
+    const seg = el("div", "seg flowtabs");
+    [["issues", "Issues"], ["mine", "My work"]].forEach(([id, n]) => {
+      const x = el("button", "", n);
+      x.type = "button";
+      x.dataset.tab = id;
+      x.setAttribute("aria-pressed", ui2.tab === id ? "true" : "false");
+      x.addEventListener("click", () => {
+        ui2.tab = id;
+        renderFlow();
+      });
+      seg.append(x);
+    });
+    const host2 = el("div", "flowbody");
+    host2.id = "flowbody";
+    pg.append(seg, host2);
+    (ui2.tab === "mine" ? mineTab : issuesTab)(host2);
+    if (o && o.keep) pg.scrollTop = sc;
+  }
+  function openCreate(pre) {
+    pre = pre || {};
+    openDlg("Create ticket", (box2) => {
+      const all = rows();
+      const type = selOf(TYPES.map((t) => [t.id, t.n]), pre.type || "story");
+      type.id = "fc-type";
+      const title = el("input");
+      title.id = "fc-title";
+      title.placeholder = "What needs doing?";
+      const desc = el("textarea");
+      desc.id = "fc-desc";
+      desc.rows = 4;
+      const asg = selOf([["", "Unassigned"], ...names()], pre.as || "");
+      asg.id = "fc-as";
+      const pr = selOf(PRIORITIES.map((p) => [p.id, p.n]), "medium");
+      pr.id = "fc-pr";
+      const pts = el("input");
+      pts.type = "number";
+      pts.min = 0;
+      pts.step = 0.5;
+      pts.id = "fc-pts";
+      const epic = selOf([["", "No epic"], ...all.filter((i) => i.type === "epic").map((e) => [e.id, e.key + " " + e.t])], pre.ep || "");
+      epic.id = "fc-ep";
+      const par = selOf([["", "Choose the parent ticket"], ...all.filter((i) => !typeOf(i.type).sub && i.type !== "epic").map((p) => [p.id, p.key + " " + p.t])], pre.par || "");
+      par.id = "fc-par";
+      const parF = fld("Parent ticket", par), epF = fld("Epic", epic), err = el("p", "rerr");
+      err.id = "fc-err";
+      err.hidden = true;
+      err.setAttribute("role", "alert");
+      const sync2 = () => {
+        const s = typeOf(type.value).sub;
+        parF.hidden = !s;
+        epF.hidden = s || type.value === "epic";
+      };
+      type.addEventListener("change", sync2);
+      sync2();
+      const ok = el("button", "btn primary", "Create");
+      ok.type = "button";
+      ok.id = "fc-ok";
+      const no = el("button", "btn", "Cancel");
+      no.type = "button";
+      no.addEventListener("click", closeDlg);
+      ok.addEventListener("click", () => {
+        try {
+          const i = makeIssue({ type: type.value, t: title.value, d: desc.value, as: asg.value, pr: pr.value, pts: pts.value, ep: epF.hidden ? "" : epic.value, par: parF.hidden ? "" : par.value }, S.fissues, who2());
+          const id = newId();
+          put(Object.assign({ id }, i));
+          closeDlg();
+          redraw();
+        } catch (e) {
+          err.textContent = e.message;
+          err.hidden = false;
+        }
+      });
+      const row = el("div", "row");
+      row.append(ok, no);
+      box2.append(fld("Type", type), parF, fld("Title", title), fld("Description", desc), fld("Assignee", asg), fld("Priority", pr), fld("Points", pts), epF, err, row);
+      setTimeout(() => title.focus(), 0);
+    });
+  }
+  function openIssue(id) {
+    const i = S.fissues[id] && Object.assign({ id }, S.fissues[id]);
+    if (!i) return;
+    const edit = canEdit();
+    const all = rows();
+    openDlg(i.key, (box2) => {
+      box2.classList.add("flowdlg");
+      const head = el("div", "flowhd");
+      head.append(typeTag(i.type), el("span", "fkey", i.key));
+      box2.append(head);
+      const title = el("input");
+      title.id = "fi-title";
+      title.value = i.t;
+      const desc = el("textarea");
+      desc.id = "fi-desc";
+      desc.rows = 5;
+      desc.value = i.d || "";
+      const st = selOf(STATUSES.map((s) => [s.id, s.n]), i.st);
+      st.id = "fi-st";
+      const asg = selOf([["", "Unassigned"], ...names(), ...i.as && !names().includes(i.as) ? [i.as] : []], i.as || "");
+      asg.id = "fi-as";
+      const pr = selOf(PRIORITIES.map((p) => [p.id, p.n]), i.pr);
+      pr.id = "fi-pr";
+      const pts = el("input");
+      pts.type = "number";
+      pts.min = 0;
+      pts.step = 0.5;
+      pts.id = "fi-pts";
+      pts.value = i.pts == null ? "" : i.pts;
+      const ctl = [title, desc, st, asg, pr, pts];
+      ctl.forEach((c) => {
+        c.disabled = !edit;
+      });
+      box2.append(fld("Title", title), fld("Description", desc), fld("Status", st), fld("Assignee", asg), fld("Priority", pr), fld("Points", pts));
+      const meta = el("p", "sub", "Reported by " + (i.rp || "unknown") + " · created " + ago(i.cr) + " · updated " + ago(i.up));
+      box2.append(meta);
+      if (i.par && S.fissues[i.par]) box2.append(el("p", "sub", "Parent: " + S.fissues[i.par].key + " " + S.fissues[i.par].t));
+      if (i.ep && S.fissues[i.ep]) box2.append(el("p", "sub", "Epic: " + S.fissues[i.ep].key + " " + S.fissues[i.ep].t));
+      const kids = childrenOf(all, i.id);
+      if (kids.length || edit && !typeOf(i.type).sub && i.type !== "epic") {
+        const k = el("div", "flowkids");
+        k.append(el("h3", "", (i.type === "epic" ? "Tickets in this epic" : "Sub-tickets") + " (" + kids.length + ")"));
+        kids.forEach((c) => {
+          const b = el("button", "flowkid");
+          b.type = "button";
+          b.dataset.id = c.id;
+          b.append(typeTag(c.type), document.createTextNode(" " + c.key + " " + c.t + " · "), stTag(c.st));
+          b.addEventListener("click", () => openIssue(c.id));
+          k.append(b);
+        });
+        if (edit && i.type !== "epic" && !typeOf(i.type).sub) {
+          const r = el("div", "row");
+          [["subtask", "Add sub-task"], ...i.type === "story" ? [["subbug", "Add sub-bug"]] : []].forEach(([t, n]) => {
+            const b = el("button", "btn", n);
+            b.type = "button";
+            b.dataset.add = t;
+            b.addEventListener("click", () => openCreate({ type: t, par: i.id }));
+            r.append(b);
+          });
+          k.append(r);
+        }
+        box2.append(k);
+      }
+      const hist = el("div", "flowhist");
+      hist.append(el("h3", "", "History"));
+      (i.hist || []).slice().reverse().forEach((h) => hist.append(el("p", "sub", h.f === "created" ? h.by + " created " + h.b + " · " + ago(h.at) : h.by + " changed " + h.f + (h.a || h.b ? ": " + (h.a || "empty") + " → " + (h.b || "empty") : "") + " · " + ago(h.at))));
+      box2.append(hist);
+      const row = el("div", "row");
+      if (edit) {
+        const sv3 = el("button", "btn primary", "Save");
+        sv3.type = "button";
+        sv3.id = "fi-save";
+        sv3.addEventListener("click", () => {
+          const t = title.value.trim();
+          if (!t) {
+            title.focus();
+            return;
+          }
+          const n = applyChange(i, { t, d: desc.value, st: st.value, as: asg.value, pr: pr.value, pts: pts.value === "" ? null : Number(pts.value) }, who2());
+          if (n !== i) put(n);
+          closeDlg();
+          redraw();
+        });
+        row.append(sv3);
+      }
+      if (canDelete("flow")) {
+        const del = el("button", "btn danger", "Delete");
+        del.type = "button";
+        del.id = "fi-del";
+        del.addEventListener("click", () => confirmDlg("Delete " + i.key + "?", kids.length ? "Its " + kids.length + " sub-ticket(s) stay but lose their parent link." : "This cannot be undone.", "Delete", () => {
+          kids.forEach((c) => {
+            if (S.fissues[c.id]) put(Object.assign({}, S.fissues[c.id], { id: c.id, par: c.par === i.id ? "" : c.par, ep: c.ep === i.id ? "" : c.ep }));
+          });
+          drop(i.id);
+          redraw();
+        }));
+        row.append(del);
+      }
+      const cl2 = el("button", "btn", "Close");
+      cl2.type = "button";
+      cl2.addEventListener("click", closeDlg);
+      row.append(cl2);
+      box2.append(row);
+    });
   }
 
   // src/esm/features/sprint-cover.js
@@ -7305,8 +7750,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       useName.checked = true;
       const ul = el("label", "sub");
       ul.append(useName, " Use the name from the plan for this line");
-      const list = el("div", "srlist ppick");
-      list.setAttribute("aria-live", "polite");
+      const list2 = el("div", "srlist ppick");
+      list2.setAttribute("aria-live", "polite");
       const pick2 = (p) => {
         const patch = {};
         if (p.cid) patch.fid = p.cid;
@@ -7319,13 +7764,13 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         o.notify(p.cid ? "Linked to " + (p.id || "the card") : "Name taken from the plan");
       };
       const draw = () => {
-        list.textContent = "";
-        const rows2 = suggest(q.value, o.person, o.pool, 12);
-        if (!rows2.length) {
-          list.append(el("p", "sub", "Nothing on the plan looks like this. Add it to Monthly or to the roadmap first, or tag the line #fix or #support if it is not planned work."));
+        list2.textContent = "";
+        const rows3 = suggest(q.value, o.person, o.pool, 12);
+        if (!rows3.length) {
+          list2.append(el("p", "sub", "Nothing on the plan looks like this. Add it to Monthly or to the roadmap first, or tag the line #fix or #support if it is not planned work."));
           return;
         }
-        rows2.forEach((p) => {
+        rows3.forEach((p) => {
           const b = el("button", "srrow ppickrow");
           b.type = "button";
           b.style.setProperty("--c", p.color || "#7b8099");
@@ -7338,7 +7783,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           body.append(top, el("div", "pptitle", p.t), el("div", "sub2", p.where + (p.mine ? "" : " · " + ((p.names || []).length ? "Assigned to " + p.names.slice(0, 3).join(", ") : "Nobody assigned"))));
           b.append(body);
           b.addEventListener("click", () => pick2(p));
-          list.append(b);
+          list2.append(b);
         });
       };
       q.addEventListener("input", draw);
@@ -7348,7 +7793,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       no.addEventListener("click", closeDlg);
       const row = el("div", "row");
       row.append(no);
-      box2.append(q, ul, list, row);
+      box2.append(q, ul, list2, row);
       setTimeout(() => {
         q.focus();
         q.select();
@@ -7458,7 +7903,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       out.push({ id: null, doc: { sp: sp.id, k: "h", sq, t: laneName(sq), tags: [] } });
       const mine = tops.filter((i) => i.squad === sq), reg = ((sp.secs || {})[sq] || {}).people || [];
       const people = reg.concat(mine.map((i) => i.person || "").filter((p) => p && !reg.includes(p))).filter((p, i, a) => a.indexOf(p) === i);
-      const emit = (list) => list.forEach((sc) => {
+      const emit = (list2) => list2.forEach((sc) => {
         out.push(mk(sc, "s"));
         (kids[sc.id] || []).forEach((c) => out.push(mk(c, "u")));
       });
@@ -7504,9 +7949,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     q.autocomplete = "off";
     q.setAttribute("aria-label", o.label || "Search");
     if (o.search === false) q.classList.add("off");
-    const list = el("div", "clist");
-    list.setAttribute("role", "listbox");
-    box2.append(q, list);
+    const list2 = el("div", "clist");
+    list2.setAttribute("role", "listbox");
+    box2.append(q, list2);
     let picked = false;
     const pick2 = (it) => {
       if (it.disabled) return;
@@ -7517,14 +7962,14 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     };
     const draw = () => {
       const s = q.value.trim().toLowerCase(), ws = fold3(q.value).split(/\s+/).filter(Boolean);
-      list.textContent = "";
-      const rows2 = items2.filter((i) => {
+      list2.textContent = "";
+      const rows3 = items2.filter((i) => {
         const t = fold3(i.label + " " + (i.sub || ""));
         return ws.every((w) => t.includes(w));
       });
       const c = o.create && s ? o.create(q.value.trim()) : null;
-      if (c && !items2.some((i) => i.label.toLowerCase() === s)) rows2.push(c);
-      rows2.forEach((it) => {
+      if (c && !items2.some((i) => i.label.toLowerCase() === s)) rows3.push(c);
+      rows3.forEach((it) => {
         const r2 = el("div", "copt" + (it.disabled ? " dis" : ""));
         r2.setAttribute("role", "option");
         r2._it = it;
@@ -7538,23 +7983,23 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         r2.addEventListener("pointerdown", (e) => e.preventDefault());
         r2.addEventListener("click", () => pick2(it));
         r2.addEventListener("pointermove", () => {
-          list.querySelectorAll(".act").forEach((x) => x.classList.remove("act"));
+          list2.querySelectorAll(".act").forEach((x) => x.classList.remove("act"));
           if (!it.disabled) r2.classList.add("act");
         });
-        list.append(r2);
+        list2.append(r2);
       });
-      if (!rows2.length) list.append(el("div", "copt dis cnone", "No matches"));
-      const f = [...list.children].find((r2) => r2._it && !r2._it.disabled);
+      if (!rows3.length) list2.append(el("div", "copt dis cnone", "No matches"));
+      const f = [...list2.children].find((r2) => r2._it && !r2._it.disabled);
       if (f) f.classList.add("act");
     };
     const move = (d) => {
-      const rows2 = [...list.querySelectorAll(".copt")].filter((r2) => r2._it && !r2._it.disabled);
-      if (!rows2.length) return;
-      let i = rows2.findIndex((r2) => r2.classList.contains("act"));
-      i = Math.max(0, Math.min(rows2.length - 1, i + d));
-      list.querySelectorAll(".act").forEach((x) => x.classList.remove("act"));
-      rows2[i].classList.add("act");
-      rows2[i].scrollIntoView({ block: "nearest" });
+      const rows3 = [...list2.querySelectorAll(".copt")].filter((r2) => r2._it && !r2._it.disabled);
+      if (!rows3.length) return;
+      let i = rows3.findIndex((r2) => r2.classList.contains("act"));
+      i = Math.max(0, Math.min(rows3.length - 1, i + d));
+      list2.querySelectorAll(".act").forEach((x) => x.classList.remove("act"));
+      rows3[i].classList.add("act");
+      rows3[i].scrollIntoView({ block: "nearest" });
     };
     q.addEventListener("input", draw);
     q.addEventListener("keydown", (e) => {
@@ -7567,7 +8012,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       } else if (e.key === "Enter") {
         e.preventDefault();
         e.stopPropagation();
-        const a = list.querySelector(".copt.act");
+        const a = list2.querySelector(".copt.act");
         if (a && a._it) pick2(a._it);
       } else if (e.key === "Escape" || e.key === "Tab") {
         e.preventDefault();
@@ -8063,7 +8508,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     rUI.busy = false;
     renderReports();
   }
-  function setupBanner() {
+  function setupBanner2() {
     if (!(S.setup.reports || S.setup.sprints || S.setup.sprint_items)) return null;
     const b = el("div", "rerr");
     b.setAttribute("role", "alert");
@@ -8073,9 +8518,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   function settingsDlg() {
     const cur0 = productsOf(cfg()).map((p) => Object.assign({}, p, { squads: p.squads.slice() }));
     openDlg("Report settings", (box2) => {
-      const list = el("div", "rsets");
+      const list2 = el("div", "rsets");
       const draw = () => {
-        list.textContent = "";
+        list2.textContent = "";
         cur0.forEach((p, i) => {
           const r = el("div", "rsrow"), n = el("input");
           n.value = p.n;
@@ -8104,7 +8549,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
             draw();
           });
           r.append(x);
-          list.append(r);
+          list2.append(r);
         });
       };
       draw();
@@ -8130,7 +8575,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       no.addEventListener("click", closeDlg);
       const row = el("div", "row");
       row.append(ok, no);
-      box2.append(el("p", "sub", "One section per product. Tick the squads that belong to it."), list, add, row);
+      box2.append(el("p", "sub", "One section per product. Tick the squads that belong to it."), list2, add, row);
     });
   }
   function viewLine(l) {
@@ -8180,15 +8625,15 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       const ok = el("button", "btn primary", "Save"), no = el("button", "btn", "Cancel"), rm = el("button", "btn", "Remove note");
       ok.type = no.type = rm.type = "button";
       rm.hidden = !l.note;
-      const put2 = (v) => {
+      const put3 = (v) => {
         l.note = v;
         l.edited = true;
         save(rep, "", v ? "Edit note" : "Remove note");
         closeDlg();
         renderReports();
       };
-      ok.addEventListener("click", () => put2(ta.value.trim()));
-      rm.addEventListener("click", () => put2(""));
+      ok.addEventListener("click", () => put3(ta.value.trim()));
+      rm.addEventListener("click", () => put3(""));
       no.addEventListener("click", closeDlg);
       const row = el("div", "row");
       row.append(ok, rm, no);
@@ -8379,18 +8824,18 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       f.append(ta, go);
       f.addEventListener("submit", (e) => {
         e.preventDefault();
-        const rows2 = parsePaste(ta.value);
-        if (!rows2.length) {
+        const rows3 = parsePaste(ta.value);
+        if (!rows3.length) {
           notify("Type at least one line first", "err");
           return;
         }
-        rows2.forEach((r) => {
+        rows3.forEach((r) => {
           const n = newManualLine("prog", r.t);
           n.jira = r.jira;
           d.items.push(n);
         });
-        save(rep, "added " + rows2.length + " item" + (rows2.length === 1 ? "" : "s") + " to the weekly report", "Add " + rows2.length + " item" + (rows2.length === 1 ? "" : "s"));
-        notify(rows2.length + " item" + (rows2.length === 1 ? "" : "s") + " added to " + p.n);
+        save(rep, "added " + rows3.length + " item" + (rows3.length === 1 ? "" : "s") + " to the weekly report", "Add " + rows3.length + " item" + (rows3.length === 1 ? "" : "s"));
+        notify(rows3.length + " item" + (rows3.length === 1 ? "" : "s") + " added to " + p.n);
         renderReports();
       });
       gh.append(f);
@@ -8511,7 +8956,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       acts.append(settingsBtn());
     }
     pg.append(pageHead("Weekly report", viewer ? "Submitted weekly updates per product. Open one to read it." : "One report per week, built from the sprint plan and the roadmap. Open one to edit it, then submit it to the executives.", acts.children.length ? acts : null));
-    const sb0 = viewer ? null : setupBanner();
+    const sb0 = viewer ? null : setupBanner2();
     if (sb0) pg.append(sb0);
     if (!l.length) {
       pg.append(el("p", "empty", viewer ? "No report has been submitted yet." : sprintList().length ? 'No report yet. Click "+ New report" to create one for the latest sprint.' : "Create a sprint first (Sprints page), then build the report."));
@@ -8563,7 +9008,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const sub = rep.status === "submitted", ro = viewer || !canBuild();
     pg.append(crumbs([{ label: "Reports", href: "#/reports" }, { label: "Week of " + fmtIso(rep.a) }]));
     pg.append(pageHead("Weekly report", "Sprint " + rep.n + " · week " + (rep.w || 1) + " of 2" + (viewer ? "" : ro ? ". You can read this report." : ". Edit anything, then press Save to show it to the executives.")));
-    const sb0 = viewer ? null : setupBanner();
+    const sb0 = viewer ? null : setupBanner2();
     if (sb0) pg.append(sb0);
     const srcTxt = rep.srcN ? " · built from " + rep.srcN.si + " sprint items + " + rep.srcN.rf + " roadmap bars" + (rep.srcN.mo !== void 0 ? " + " + rep.srcN.mo + " Monthly cards" : "") : "";
     const meta = el("p", "sub rmeta", (sub ? "Saved" + (rep.subBy ? " by " + rep.subBy : "") + (rep.subAt ? " on " + fmtIso(rep.subAt.slice(0, 10)) : "") + " · visible to the executives" : "Not saved yet · the executives cannot see it") + (viewer ? "" : " · last edit " + (rep.by || "") + srcTxt));
@@ -8725,14 +9170,14 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   var PROJECT_SQUAD = { DYC: "daycare", FAS: "tifli", AU: "ai" };
   var DEFAULT_PROJECTS = ["DYC", "FAS", "AU"];
   var fold4 = (s) => String(s || "").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^\p{L}\p{N} ]+/gu, " ").replace(/\s+/g, " ").trim();
-  function statusOf2(t) {
+  function statusOf3(t) {
     if (/wait|block|hold/i.test(t.statusName || "")) return "blocked";
     return t.cat === "done" ? "done" : t.cat === "indeterminate" ? "progress" : "planned";
   }
-  function matchPerson(assignee, email, names) {
+  function matchPerson(assignee, email, names2) {
     const a = fold4(assignee);
     if (!a) return "";
-    const byFold = names.map((n) => ({ n, f: fold4(n) }));
+    const byFold = names2.map((n) => ({ n, f: fold4(n) }));
     const exact = byFold.filter((x) => x.f === a);
     if (exact.length === 1) return exact[0].n;
     const at = a.split(" ");
@@ -8761,7 +9206,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const extra = new Set([].concat(...blocks.map((b) => (b.jx || []).map((k) => String(k).toUpperCase()))));
     const fresh = [];
     tickets.forEach((t) => {
-      const ex = known2.get(t.key), st = statusOf2(t);
+      const ex = known2.get(t.key), st = statusOf3(t);
       if (!ex && extra.has(String(t.key).toUpperCase())) return;
       if (ex) {
         const patch = {};
@@ -8783,7 +9228,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       fresh.push({ t, person, sq: o.squadOf(t.project, person) });
     });
     const work = blocks.map((b) => Object.assign({}, b));
-    const spec = (t, kind) => ({ k: kind, t: t.t + " (" + t.key + ")", jk: t.key, st: statusOf2(t), dn: statusOf2(t) === "done" ? t.done || "" : "", tags: /bug/i.test(t.type) ? ["fix"] : [] });
+    const spec = (t, kind) => ({ k: kind, t: t.t + " (" + t.key + ")", jk: t.key, st: statusOf3(t), dn: statusOf3(t) === "done" ? t.done || "" : "", tags: /bug/i.test(t.type) ? ["fix"] : [] });
     const place = (afterId, specs) => {
       out.inserts.push({ after: afterId, specs });
       const i = afterId ? work.findIndex((b) => b.id === afterId) : work.length - 1;
@@ -8835,7 +9280,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       return "";
     }
   };
-  var put = (k, v) => {
+  var put2 = (k, v) => {
     try {
       localStorage.setItem(k, v);
     } catch (e) {
@@ -8843,7 +9288,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   };
   var jiraBase = () => (S.ideas && S.ideas.reportcfg || {}).jira || get(BASE2);
   var rememberBase = (b) => {
-    if (/^https:\/\//i.test(b || "")) put(BASE2, b);
+    if (/^https:\/\//i.test(b || "")) put2(BASE2, b);
   };
   var issueUrl = (key) => jiraUrl(jiraBase(), key);
   async function why(e) {
@@ -8912,12 +9357,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           linked.append(c);
         });
       }
-      const add = (list2, t) => {
-        const fresh = list2.filter((k) => !keys.includes(k));
+      const add = (list3, t) => {
+        const fresh = list3.filter((k) => !keys.includes(k));
         if (!fresh.length) return 0;
         const wasEmpty = !keys.length;
         keys = keys.concat(fresh);
-        save2(wasEmpty && t ? { st: statusOf2(t), dn: statusOf2(t) === "done" ? (/* @__PURE__ */ new Date()).toISOString().slice(0, 10) : "" } : {}, "Linked " + fresh.join(", "));
+        save2(wasEmpty && t ? { st: statusOf3(t), dn: statusOf3(t) === "done" ? (/* @__PURE__ */ new Date()).toISOString().slice(0, 10) : "" } : {}, "Linked " + fresh.join(", "));
         return fresh.length;
       };
       box2.append(el("p", "sub", "Link one or many Jira tickets to this line. The first is the main one: the status of the line follows it. Nothing is changed in Jira."), linked);
@@ -8964,15 +9409,15 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       pr.value = get(PRJ);
       pr.placeholder = "All projects, or keys like DYC, FAS";
       pr.setAttribute("aria-label", "Limit to Jira projects");
-      const list = el("div", "jklist");
-      list.setAttribute("role", "listbox");
-      list.setAttribute("aria-label", "Jira tickets");
+      const list2 = el("div", "jklist");
+      list2.setAttribute("role", "listbox");
+      list2.setAttribute("aria-label", "Jira tickets");
       const msg = el("p", "sub");
       msg.setAttribute("aria-live", "polite");
       let seq = 0, timer = 0;
       const run = async () => {
         const text = q.value.trim(), mine = ++seq;
-        list.textContent = "";
+        list2.textContent = "";
         if (text.length < 2) {
           msg.textContent = "Type at least 2 letters.";
           return;
@@ -8984,8 +9429,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           if (mine !== seq) return;
           if (r.error) throw r.error;
           const d = r.data || {};
-          if (d.base) put(BASE2, d.base);
-          put(PRJ, projects.join(", "));
+          if (d.base) put2(BASE2, d.base);
+          put2(PRJ, projects.join(", "));
           const iss = d.issues || [];
           msg.textContent = iss.length ? "Click a ticket to add it. You can add several." : "No ticket found. Try other words or the key.";
           iss.forEach((t) => {
@@ -9001,7 +9446,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
                 b.lastChild.textContent = "Linked";
               }
             });
-            list.append(b);
+            list2.append(b);
           });
         } catch (e) {
           if (mine === seq) msg.textContent = await why(e);
@@ -9023,7 +9468,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       done2.type = "button";
       done2.addEventListener("click", closeDlg);
       row.append(done2);
-      box2.append(fld("Paste ticket links or keys", pr0), pm, el("p", "sub", "Or search Jira by words:"), fld("Search", q), fld("Limit to projects (optional)", pr), msg, list, row);
+      box2.append(fld("Paste ticket links or keys", pr0), pm, el("p", "sub", "Or search Jira by words:"), fld("Search", q), fld("Limit to projects (optional)", pr), msg, list2, row);
       setTimeout(() => {
         pa.focus();
         if (q.value.trim().length >= 2) run();
@@ -9112,8 +9557,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
             go.disabled = false;
             return;
           }
-          const names = [...directory().keys()];
-          const res = mergeJira(o.blocks(), issues, { names, squadOf: (p, who2) => PROJECT_SQUAD[p] || primarySq(who2), squadName: o.laneName });
+          const names2 = [...directory().keys()];
+          const res = mergeJira(o.blocks(), issues, { names: names2, squadOf: (p, who3) => PROJECT_SQUAD[p] || primarySq(who3), squadName: o.laneName });
           res.updates.forEach((u) => o.saveItem(u.id, u.patch));
           const map = {};
           res.inserts.forEach((ins, i) => {
@@ -9155,7 +9600,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const h = [], t = [];
     h.push("<h1>Sprint " + esc2(sp.n) + "</h1>", "<p>" + esc2(o.fmt(sp.a) + " to " + o.fmt(sp.b)) + "</p>");
     t.push("Sprint " + sp.n, o.fmt(sp.a) + " to " + o.fmt(sp.b), "");
-    const list = blocks.filter((b) => b.k && b.k !== "n");
+    const list2 = blocks.filter((b) => b.k && b.k !== "n");
     let open = 0;
     const closeLists = (to) => {
       while (open > to) {
@@ -9163,7 +9608,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         open--;
       }
     };
-    list.forEach((b, i) => {
+    list2.forEach((b, i) => {
       const txt = String(b.t || "").trim();
       if (b.k === "h") {
         closeLists(0);
@@ -9374,23 +9819,23 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       const where = k === "mobacklog" ? "Monthly backlog" : "Monthly " + k.slice(2, 6) + "-" + k.slice(6);
       d.lines.forEach((l) => {
         if (!l || !l.t) return;
-        const names = [], pts = {};
+        const names2 = [], pts = {};
         Object.keys(l.who || {}).forEach((t) => Object.keys(l.who[t] || {}).forEach((n) => {
-          names.push(n);
+          names2.push(n);
           pts[n] = (pts[n] || 0) + (Number(l.who[t][n]) || 0);
         }));
         const tg = TAGS.find((x) => x.k === l.k);
-        pool.push({ kind: "card", t: l.t, where, names, cid: l.id, id: cardId(l), color: tg ? tg.c : "#7b8099", tag: tg ? tg.n : "", pts });
+        pool.push({ kind: "card", t: l.t, where, names: names2, cid: l.id, id: cardId(l), color: tg ? tg.c : "#7b8099", tag: tg ? tg.n : "", pts });
       });
     });
     return pool;
   }
   var sprintList = () => Object.keys(S.sprints).map((id) => Object.assign({ id }, S.sprints[id])).filter((s) => s.a && s.b).sort((x, y) => y.n - x.n);
-  var rows = (sp) => Object.keys(S.sitems).map((id) => Object.assign({ id }, S.sitems[id])).filter((i) => i.sp === sp).sort((a, b) => (a.ord || 0) - (b.ord || 0) || (a.id < b.id ? -1 : 1));
-  var blocksOf = (sp) => rows(sp).filter((i) => i.k);
+  var rows2 = (sp) => Object.keys(S.sitems).map((id) => Object.assign({ id }, S.sitems[id])).filter((i) => i.sp === sp).sort((a, b) => (a.ord || 0) - (b.ord || 0) || (a.id < b.id ? -1 : 1));
+  var blocksOf = (sp) => rows2(sp).filter((i) => i.k);
   var tagMap = (sp) => Object.assign({}, DEFAULT_TAGS, (S.sprints[sp] || {}).tags || {});
   function itemsOf(sp) {
-    const all = rows(sp), legacy = all.filter((i) => !i.k);
+    const all = rows2(sp), legacy = all.filter((i) => !i.k);
     if (legacy.length) return legacy.map((i) => Object.assign({ tg: [] }, i));
     return derive(all, tagMap(sp));
   }
@@ -9449,7 +9894,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   }
   function deleteSprint(sp) {
     confirmDlg("Delete Sprint " + sp.n + "?", "This deletes the sprint and everything written in it. Weekly reports already created from it are kept.", "Delete sprint", () => {
-      rows(sp.id).forEach((i) => delItem(i.id));
+      rows2(sp.id).forEach((i) => delItem(i.id));
       delete S.sprints[sp.id];
       write("sprints/" + sp.id, null);
       logAct("sprint", "deleted Sprint " + sp.n);
@@ -9464,7 +9909,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     nb.disabled = ro;
     nb.addEventListener("click", newSprint);
     pg.append(pageHead("Sprints", "All two-week sprints. Open one to write its plan. The weekly executive report is built from them and from the roadmap.", nb));
-    const sbn = setupBanner();
+    const sbn = setupBanner2();
     if (sbn) pg.append(sbn);
     const l = sprintList();
     if (!l.length) {
@@ -9474,7 +9919,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const wrap = el("div", "splist");
     l.forEach((sp) => {
       const t = tree(sp.id), leaf = t.all.filter((i) => !t.kids[i.id]), done2 = leaf.filter((i) => i.st === "done").length, pct3 = leaf.length ? Math.round(100 * done2 / leaf.length) : 0;
-      const secs = Object.keys(sp.secs || {}).concat(rows(sp.id).filter((i) => i.k === "h").map((i) => i.sq), t.tops.map((i) => i.squad)).filter((k, i, a2) => k && a2.indexOf(k) === i);
+      const secs = Object.keys(sp.secs || {}).concat(rows2(sp.id).filter((i) => i.k === "h").map((i) => i.sq), t.tops.map((i) => i.squad)).filter((k, i, a2) => k && a2.indexOf(k) === i);
       const card2 = el("div", "card spcard"), info = el("div");
       const a = el("a", "splink");
       a.href = "#/sprints/" + sp.id;
@@ -9548,7 +9993,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     renderSprints();
   }
   function ensureMigrated(sp) {
-    const all = rows(sp.id), legacy = all.filter((i) => !i.k);
+    const all = rows2(sp.id), legacy = all.filter((i) => !i.k);
     if (!legacy.length && !(Object.keys(sp.secs || {}).length && !all.length)) return;
     const plan = migrate(sp, legacy, (k) => lane(k).n);
     plan.forEach((p) => {
@@ -9609,12 +10054,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     host2.setAttribute("role", "group");
     host2.setAttribute("aria-label", "Sprint plan");
     const spId = sp.id;
-    const list = () => blocksOf(spId);
+    const list2 = () => blocksOf(spId);
     const focusLater = (id, pos) => {
       const bt = host2.querySelector('.blk[data-id="' + id + '"] .bt');
       if (bt) setCaret(bt, pos === void 0 ? "end" : pos);
     };
-    const redraw = (focusId, pos) => {
+    const redraw2 = (focusId, pos) => {
       draw();
       if (focusId) focusLater(focusId, pos);
     };
@@ -9632,7 +10077,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const flushAll = () => Object.keys(pendingBefore).forEach(flush);
     const insert = (afterId, specs) => {
       undoOf(spId).mark(specs.length > 1 ? "Add " + specs.length + " lines" : "Add line");
-      const all = list(), i = afterId ? all.findIndex((b2) => b2.id === afterId) : all.length - 1, a = i >= 0 ? all[i].ord : void 0, b = i >= 0 && all[i + 1] ? all[i + 1].ord : void 0;
+      const all = list2(), i = afterId ? all.findIndex((b2) => b2.id === afterId) : all.length - 1, a = i >= 0 ? all[i].ord : void 0, b = i >= 0 && all[i + 1] ? all[i + 1].ord : void 0;
       const ords = ordBetween(a, b, specs.length), ids = [];
       specs.forEach((s, n) => {
         const id = uid3("si");
@@ -9652,17 +10097,17 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         notify("You do not have permission to delete here.", "err");
         return;
       }
-      const all = list(), i = all.findIndex((x) => x.id === b.id), g = groupOf(all, i), go = () => {
+      const all = list2(), i = all.findIndex((x) => x.id === b.id), g = groupOf(all, i), go = () => {
         undoOf(spId).mark(g.length > 1 ? "Delete " + g.length + " lines" : "Delete line");
         g.forEach((x) => delItem(x.id));
         notify(g.length > 1 ? g.length + " lines deleted" : "Line deleted");
-        redraw();
+        redraw2();
       };
       if (g.length > 1) confirmDlg("Delete " + (KIND_NAME[b.k] || "line") + "?", "This also deletes the " + (g.length - 1) + " line" + (g.length === 2 ? "" : "s") + " inside it.", "Delete", go);
       else go();
     };
     const move = (b, d) => {
-      const all = list(), i = all.findIndex((x) => x.id === b.id), g = groupOf(all, i), gi = new Set(g.map((x) => x.id)), rest = all.filter((x) => !gi.has(x.id)), r = RANK[b.k], note = b.k === "n";
+      const all = list2(), i = all.findIndex((x) => x.id === b.id), g = groupOf(all, i), gi = new Set(g.map((x) => x.id)), rest = all.filter((x) => !gi.has(x.id)), r = RANK[b.k], note = b.k === "n";
       undoOf(spId).mark("Move line");
       let at;
       if (d < 0) {
@@ -9683,16 +10128,16 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       }
       const ords = ordBetween(rest[at - 1] ? rest[at - 1].ord : void 0, rest[at] ? rest[at].ord : void 0, g.length);
       g.forEach((x, n) => saveItem(x.id, { ord: ords[n] }));
-      redraw(b.id);
+      redraw2(b.id);
     };
     const freeLanes = () => {
-      const used = new Set(list().filter((b) => b.k === "h").map((b) => b.sq));
+      const used = new Set(list2().filter((b) => b.k === "h").map((b) => b.sq));
       return LANES.concat(EXTRA_SECTIONS).filter((l) => !used.has(l.k));
     };
     const peopleItems = (squad) => [...directory().values()].sort((a, b) => b.sqs.has(squad) - a.sqs.has(squad) || a.name.localeCompare(b.name)).map((p) => ({ label: p.name, sub: p.domain, value: p.name }));
     const squadAt = (b) => {
       let sq = "";
-      for (const x of list()) {
+      for (const x of list2()) {
         if (x.k === "h") sq = x.sq;
         if (x.id === b.id) break;
       }
@@ -9706,7 +10151,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         saveItem(b.id, { k: "p", t: it.value, tags: [] });
         const ids = after === false ? [] : insert(b.id, [{ k: "s" }]);
         notify(it.value + " added");
-        redraw(ids[0] || b.id);
+        redraw2(ids[0] || b.id);
       },
       onClose: (p) => {
         if (!p) focusLater(b.id);
@@ -9725,7 +10170,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           saveItem(b.id, { k: "h", sq: it.value, t: lane(it.value).n, tags: [] });
           const ids = insert(b.id, [{ k: "p" }]);
           notify(lane(it.value).n + " section added");
-          redraw(ids[0]);
+          redraw2(ids[0]);
         },
         onClose: (p) => {
           if (!p) focusLater(b.id);
@@ -9749,12 +10194,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         else if (it.value === "p") pickPerson(b, at);
         else {
           saveItem(b.id, { k: it.value, tags: [] });
-          redraw(b.id);
+          redraw2(b.id);
         }
       }
     });
     const tagMenu = (b, at) => {
-      const cur2 = tagMap(spId), have = new Set(b.tags || []), used = new Set(list().flatMap((x) => x.tags || []));
+      const cur2 = tagMap(spId), have = new Set(b.tags || []), used = new Set(list2().flatMap((x) => x.tags || []));
       const items2 = Object.keys(cur2).concat([...used].filter((n) => !cur2[n])).filter((n, i, a) => a.indexOf(n) === i && !have.has(n)).map((n) => ({ label: "#" + n, dot: "var(--tg-" + (cur2[n] || "gray") + ")", value: n }));
       openMenu(at, items2, {
         label: "Add a tag",
@@ -9766,7 +10211,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         onPick: (it) => {
           ensureTag(spId, it.value);
           saveItem(b.id, { tags: (S.sitems[b.id].tags || []).concat(it.value) });
-          redraw(b.id);
+          redraw2(b.id);
         },
         onClose: (p) => {
           if (!p) focusLater(b.id);
@@ -9780,7 +10225,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         onPick: (it) => {
           if (it.value === "rm") saveItem(b.id, { tags: (S.sitems[b.id].tags || []).filter((x) => x !== name) });
           else ensureTag(spId, name, it.value.slice(2));
-          redraw();
+          redraw2();
         },
         onClose: () => {
           const s = host2.querySelector('.blk[data-id="' + b.id + '"] .bt');
@@ -9795,7 +10240,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         if (it.value === "done") patch.pc = 100;
         else if (cur2.pc === 100) patch.pc = 0;
         saveItem(b.id, patch);
-        redraw();
+        redraw2();
       },
       onClose: () => {
         const s = host2.querySelector('.blk[data-id="' + b.id + '"] .bt');
@@ -9808,7 +10253,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       onPick: (it) => {
         const v = Number(it.value), cur2 = S.sitems[b.id] || b, st = statusFor(cur2.st || "planned", v);
         saveItem(b.id, { pc: v, st, dn: st === "done" ? cur2.dn || todayIso() : "" });
-        redraw();
+        redraw2();
       },
       onClose: () => {
         const s = host2.querySelector('.blk[data-id="' + b.id + '"] .bt');
@@ -9817,7 +10262,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     });
     const onKey = (e, b, bt) => {
       if (e.isComposing) return;
-      const txt = bt.textContent, pos = caretOf(bt), empty = !txt.trim(), all = list(), i = all.findIndex((x) => x.id === b.id);
+      const txt = bt.textContent, pos = caretOf(bt), empty = !txt.trim(), all = list2(), i = all.findIndex((x) => x.id === b.id);
       const nb = (d) => {
         const bts = [...host2.querySelectorAll(".bt[contenteditable]")], j = bts.indexOf(bt) + d;
         return bts[j];
@@ -9834,7 +10279,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           const k = shallower(b.k);
           if (k !== b.k) {
             saveItem(b.id, { k });
-            redraw(b.id);
+            redraw2(b.id);
           }
           return;
         }
@@ -9844,7 +10289,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           saveItem(b.id, { t: head.trim() });
         }
         const ids = insert(after, [{ k: nextKind(b.k), t: atEnd ? "" : tail.trim() }]);
-        redraw(ids[0], "start");
+        redraw2(ids[0], "start");
         return;
       }
       if (e.key === "Tab") {
@@ -9852,7 +10297,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         const k = e.shiftKey ? shallower(b.k) : deeper(b.k);
         if (k !== b.k) {
           saveItem(b.id, { k });
-          redraw(b.id, pos);
+          redraw2(b.id, pos);
         }
         return;
       }
@@ -9860,7 +10305,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         e.preventDefault();
         const prev = nb(-1), pid = prev && prev.closest(".blk").dataset.id;
         delItem(b.id);
-        redraw(pid, "end");
+        redraw2(pid, "end");
         return;
       }
       if (e.key === "ArrowUp" && pos === 0) {
@@ -9904,13 +10349,13 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       }
       const parsed = parseOutline(text, LANES);
       if (!parsed.length) return;
-      const all = list(), i = b ? all.findIndex((x) => x.id === b.id) : -1, empty = b && !bt.textContent.trim();
+      const all = list2(), i = b ? all.findIndex((x) => x.id === b.id) : -1, empty = b && !bt.textContent.trim();
       const ids = insert(b ? b.id : "", parsed);
       void i;
       if (empty) delItem(b.id);
       const scopes = parsed.filter((x) => x.k === "s").length;
       notify(parsed.length + " line" + (parsed.length === 1 ? "" : "s") + " added" + (scopes ? " (" + scopes + " scope" + (scopes === 1 ? "" : "s") + ")" : ""));
-      redraw(ids[ids.length - 1]);
+      redraw2(ids[ids.length - 1]);
     };
     let picked = /* @__PURE__ */ new Set();
     const applyPicked = () => host2.querySelectorAll(".blk").forEach((r) => r.classList.toggle("picked", picked.has(r.dataset.id)));
@@ -9919,7 +10364,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       applyPicked();
     };
     const relocate = (b, targetId, where) => {
-      const all = list(), i = all.findIndex((x) => x.id === b.id), g = groupOf(all, i), gi = new Set(g.map((x) => x.id)), rest = all.filter((x) => !gi.has(x.id)), r = RANK[b.k];
+      const all = list2(), i = all.findIndex((x) => x.id === b.id), g = groupOf(all, i), gi = new Set(g.map((x) => x.id)), rest = all.filter((x) => !gi.has(x.id)), r = RANK[b.k];
       let at = rest.findIndex((x) => x.id === targetId);
       if (at < 0) return;
       if (where === "after") {
@@ -9933,33 +10378,33 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       undoOf(spId).mark("Move line");
       g.forEach((x, n) => saveItem(x.id, { ord: ords[n] }));
       notify("Line moved");
-      redraw();
+      redraw2();
     };
     const handleMenu = (b, x) => {
       const cur2 = S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, into = b.k === "h" ? [] : ["s", "u", "n"].filter((k) => k !== b.k).map((k) => ({ label: "Turn into " + KIND_NAME[k].toLowerCase(), value: "k:" + k }));
-      const all = list(), g = groupOf(all, all.findIndex((z) => z.id === b.id));
+      const all = list2(), g = groupOf(all, all.findIndex((z) => z.id === b.id));
       setPicked(g.map((z) => z.id));
-      let who2 = "";
+      let who3 = "";
       for (let q = all.findIndex((z) => z.id === b.id) - 1; q >= 0; q--) {
         if (all[q].k === "p") {
-          who2 = String(all[q].t || "").trim();
+          who3 = String(all[q].t || "").trim();
           break;
         }
         if (all[q].k === "h") break;
       }
-      const jl = b.k === "s" || b.k === "u" ? (b.k === "s" && who2 ? [{ label: "Pick from the plan…", sub: "Choose the card instead of typing it", value: "plan" }] : []).concat([{ label: keysOf(cur2).length ? "Jira tickets (" + keysOf(cur2).length + ")…" : "Link to Jira…", sub: "Link one or many tickets", value: "jira" }, { label: cur2.fid && fidLabel(cur2.fid) ? "Change Monthly card (" + fidLabel(cur2.fid) + ")…" : "Link to a Monthly card…", value: "card" }]) : [];
+      const jl = b.k === "s" || b.k === "u" ? (b.k === "s" && who3 ? [{ label: "Pick from the plan…", sub: "Choose the card instead of typing it", value: "plan" }] : []).concat([{ label: keysOf(cur2).length ? "Jira tickets (" + keysOf(cur2).length + ")…" : "Link to Jira…", sub: "Link one or many tickets", value: "jira" }, { label: cur2.fid && fidLabel(cur2.fid) ? "Change Monthly card (" + fidLabel(cur2.fid) + ")…" : "Link to a Monthly card…", value: "card" }]) : [];
       openMenu(x, [{ label: "Move up", value: "up" }, { label: "Move down", value: "down" }].concat(into, jl, [{ label: "Delete", value: "del" }]), {
         label: "Line options",
         onPick: (it) => {
           if (it.value === "up") move(cur2, -1);
           else if (it.value === "down") move(cur2, 1);
           else if (it.value === "del") removeGroup(cur2);
-          else if (it.value === "jira") openJiraLink({ b: cur2, saveItem, redraw, notify });
-          else if (it.value === "plan") openPlanPick({ b: cur2, person: who2, pool: coverPool(), saveItem, redraw, notify });
-          else if (it.value === "card") openCardLink({ b: cur2, saveItem, redraw, notify });
+          else if (it.value === "jira") openJiraLink({ b: cur2, saveItem, redraw: redraw2, notify });
+          else if (it.value === "plan") openPlanPick({ b: cur2, person: who3, pool: coverPool(), saveItem, redraw: redraw2, notify });
+          else if (it.value === "card") openCardLink({ b: cur2, saveItem, redraw: redraw2, notify });
           else {
             saveItem(b.id, { k: it.value.slice(2) });
-            redraw(b.id);
+            redraw2(b.id);
           }
         },
         onClose: (p) => {
@@ -9969,7 +10414,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       });
     };
     function startDrag2(e, b, x) {
-      const all = list(), g = groupOf(all, all.findIndex((z) => z.id === b.id)), ids = new Set(g.map((z) => z.id)), sx = e.clientX, sy = e.clientY;
+      const all = list2(), g = groupOf(all, all.findIndex((z) => z.id === b.id)), ids = new Set(g.map((z) => z.id)), sx = e.clientX, sy = e.clientY;
       let dragging = false, target = null, where = "before";
       const line = el("div", "dropline");
       line.hidden = true;
@@ -10089,7 +10534,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
             cc.title = "Linked to the Monthly card " + fidLabel(b.fid) + " (" + cd.t + "), now at " + (Number(cd.pct) || 0) + "%";
             if (!ro) {
               cc.type = "button";
-              cc.addEventListener("click", () => openCardLink({ b: S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, saveItem, redraw, notify }));
+              cc.addEventListener("click", () => openCardLink({ b: S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, saveItem, redraw: redraw2, notify }));
             }
             r.append(cc);
           }
@@ -10108,7 +10553,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           const cc = info.cover, ch = el(ro ? "span" : "button", "covchip cov-" + cc.state, cc.state === "missing" ? "Not on the plan" : "Not assigned to " + info.person.split(" ")[0]);
           if (!ro) {
             ch.type = "button";
-            ch.addEventListener("click", () => openPlanPick({ b: S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, person: info.person, pool: coverPool(), saveItem, redraw, notify }));
+            ch.addEventListener("click", () => openPlanPick({ b: S.sitems[b.id] ? Object.assign({ id: b.id }, S.sitems[b.id]) : b, person: info.person, pool: coverPool(), saveItem, redraw: redraw2, notify }));
           }
           ch.title = cc.state === "missing" ? "No roadmap feature or Monthly card matches this line. Click to pick the right one from the plan, or tag it #fix or #support if it is not planned work." : "Found on the plan (" + cc.hits.slice(0, 3).map((h) => h.t + " · " + h.where).join("; ") + ") but " + info.person + " is not assigned there.";
           ch.dataset.state = cc.state;
@@ -10164,18 +10609,18 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         if (e.key === "/") {
           e.preventDefault();
           const id = make("n");
-          redraw(id);
+          redraw2(id);
           const b = Object.assign({ id }, S.sitems[id]);
           kindMenu(b, host2.querySelector('.blk[data-id="' + id + '"] .bt'));
         } else if (e.key === "@") {
           e.preventDefault();
           const id = make("p");
-          redraw(id);
+          redraw2(id);
           pickPerson(Object.assign({ id }, S.sitems[id]), host2.querySelector('.blk[data-id="' + id + '"] .bt'));
         } else if (e.key.length === 1) {
           e.preventDefault();
           const id = make(kind, e.key);
-          redraw(id);
+          redraw2(id);
         }
       });
       bt.addEventListener("paste", (e) => onPaste(e, null, bt));
@@ -10185,7 +10630,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     function draw() {
       const keepY = window.scrollY;
       host2.textContent = "";
-      const all = list();
+      const all = list2();
       let c = "var(--brand)";
       let sec = "", person = "";
       const pool = coverPool(), cv = { missing: 0, unassigned: 0 };
@@ -10229,10 +10674,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     }
     host2.addEventListener("click", (e) => {
       if (ro || e.target !== host2) return;
-      const rows2 = [...host2.querySelectorAll(".blk")];
-      if (!rows2.length) return;
+      const rows3 = [...host2.querySelectorAll(".blk")];
+      if (!rows3.length) return;
       let best = null, bd = 1e9;
-      rows2.forEach((r) => {
+      rows3.forEach((r) => {
         const b = r.getBoundingClientRect(), d = e.clientY < b.top ? b.top - e.clientY : e.clientY > b.bottom ? e.clientY - b.bottom : 0;
         if (d < bd) {
           bd = d;
@@ -10249,7 +10694,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         return;
       }
       const ids = insert("", [{ k: "n" }]);
-      redraw(ids[0]);
+      redraw2(ids[0]);
       const bt = host2.querySelector('.blk[data-id="' + ids[0] + '"] .bt');
       pickLane(Object.assign({ id: ids[0] }, S.sitems[ids[0]]), bt);
     };
@@ -10261,12 +10706,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         return;
       }
       notify(word + ": " + r.label + (r.skipped ? " (" + r.skipped + " line" + (r.skipped === 1 ? "" : "s") + " changed by someone else were kept)" : ""), r.done ? "ok" : "info");
-      redraw();
+      redraw2();
     };
     draw();
     host2.doUndo = doUndo;
     host2.addSection = addSec;
-    host2.redraw = redraw;
+    host2.redraw = redraw2;
     host2.insert = insert;
     return host2;
   }
@@ -10328,7 +10773,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     sp = Object.assign({ id: sp.id }, S.sprints[sp.id]);
     pg.append(crumbs([{ label: "Sprints", href: "#/sprints" }, { label: "Sprint " + sp.n }]));
     pg.append(pageHead("Sprint " + sp.n, "Write the plan like a document. Type / for the menu, @ for a person, # for a tag, Tab to indent. Paste a list to add many lines."));
-    const sbn = setupBanner();
+    const sbn = setupBanner2();
     if (sbn) pg.append(sbn);
     const dr = el("div", "spdates"), fa = el("input"), fb = el("input");
     fa.type = fb.type = "date";
@@ -10508,7 +10953,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     }
     return out;
   }
-  function openPoints(m, l, put2) {
+  function openPoints(m, l, put3) {
     openDlg("Points · " + cardId(l), (box2) => {
       box2.classList.add("ptsdlg");
       box2.append(el("div", "sub2", l.t));
@@ -10529,11 +10974,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         t.sec = sec;
         sec.append(el("h3", "", "2. " + x.n + ": who works on it, and how many points each?"));
         if (legacy) sec.append(el("p", "sub", "This track had " + ptsOf(l, x.k) + " points in total before. Choose the people and give each their points."));
-        const names = x.people.slice();
+        const names2 = x.people.slice();
         Object.keys(cur2).forEach((n) => {
-          if (!names.includes(n)) names.push(n);
+          if (!names2.includes(n)) names2.push(n);
         });
-        names.forEach((n) => {
+        names2.forEach((n) => {
           const row2 = el("div", "pperson");
           row2.dataset.track = x.k;
           row2.dataset.name = n;
@@ -10593,7 +11038,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       ok.type = no.type = "button";
       no.addEventListener("click", closeDlg);
       ok.addEventListener("click", () => {
-        const who2 = {}, pts = {};
+        const who3 = {}, pts = {};
         for (const k of Object.keys(tracks)) {
           const t = tracks[k];
           if (!t.on) continue;
@@ -10612,7 +11057,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
             msg.textContent = "Pick at least one person for " + t.n + ", or switch the track off.";
             return;
           }
-          who2[k] = w;
+          who3[k] = w;
           pts[k] = Object.keys(w).reduce((a, n) => a + w[n], 0);
         }
         let needs = "";
@@ -10628,7 +11073,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           }
         }
         closeDlg();
-        put2({ pts: Object.keys(pts).length ? pts : null, who: Object.keys(who2).length ? who2 : null, needs: needs || "" }, 'set the points of "' + l.t + '"');
+        put3({ pts: Object.keys(pts).length ? pts : null, who: Object.keys(who3).length ? who3 : null, needs: needs || "" }, 'set the points of "' + l.t + '"');
       });
       const row = el("div", "row ptsfoot");
       row.append(ok, no);
@@ -10759,12 +11204,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           lv.append(r);
         });
         const all = [...new Set([].concat(...Object.keys(lanes).map((k) => lanes[k])))].sort((a, b) => a.localeCompare(b));
-        const who2 = el("select");
-        who2.setAttribute("aria-label", "Person leaving");
+        const who3 = el("select");
+        who3.setAttribute("aria-label", "Person leaving");
         all.forEach((n) => {
           const o = el("option", "", n);
           o.value = n;
-          who2.append(o);
+          who3.append(o);
         });
         const dt = el("input");
         dt.type = "date";
@@ -10773,13 +11218,13 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         ad.type = "button";
         ad.id = "leaveadd";
         ad.addEventListener("click", () => {
-          if (who2.value && /^\d{4}-\d{2}-\d{2}$/.test(dt.value)) {
-            leaving[who2.value] = dt.value;
+          if (who3.value && /^\d{4}-\d{2}-\d{2}$/.test(dt.value)) {
+            leaving[who3.value] = dt.value;
             draw();
           }
         });
         const row2 = el("div", "padd");
-        row2.append(fld("Person", who2), fld("Last working day", dt));
+        row2.append(fld("Person", who3), fld("Last working day", dt));
         lv.append(row2, ad);
         body.append(lv);
       };
@@ -10812,8 +11257,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     });
     return out.sort((x, y) => x.n - y.n);
   }
-  function sprintWords(list) {
-    const ns = (list || []).map((s) => s.n);
+  function sprintWords(list2) {
+    const ns = (list2 || []).map((s) => s.n);
     if (!ns.length) return "";
     if (ns.length === 1) return "Planned in Sprint " + ns[0];
     return "Planned in Sprints " + ns.slice(0, -1).join(", ") + " and " + ns[ns.length - 1];
@@ -10873,7 +11318,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     } catch (e) {
     }
   };
-  var ui2 = { q: "", pr: "all", fl: "all", who: "all", pts: "all", past: false, prod: "", open: "" };
+  var ui3 = { q: "", pr: "all", fl: "all", who: "all", pts: "all", past: false, prod: "", open: "" };
   var canBuild2 = () => modLevel("monthly") >= 2 && canWrite();
   var canDel = () => modLevel("monthly") >= 3 && canWrite();
   var curMonth = () => todayIso().slice(0, 7);
@@ -10896,7 +11341,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     all.forEach((m) => {
       if (m > last) last = m;
     });
-    const first = ui2.past ? all.concat([c]).sort()[0] : c, out = [];
+    const first = ui3.past ? all.concat([c]).sort()[0] : c, out = [];
     for (let m = first; m <= last; m = nextMonth(m)) out.push(m);
     return out;
   }
@@ -11030,12 +11475,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       d1.value = b0 >= d0.value ? b0 : d0.value;
       d0.setAttribute("aria-label", "Start date");
       d1.setAttribute("aria-label", "End date");
-      const names = [...directory().keys()].sort((x, y) => x.localeCompare(y)), who2 = selOf([["__none", "Unassigned"]].concat(names.map((n) => [n, n])), "__none");
-      who2.setAttribute("aria-label", "Assignee");
+      const names2 = [...directory().keys()].sort((x, y) => x.localeCompare(y)), who3 = selOf([["__none", "Unassigned"]].concat(names2.map((n) => [n, n])), "__none");
+      who3.setAttribute("aria-label", "Assignee");
       const fromTag = (tag.squads || []).find((k) => LANES.some((x) => x.k === k)), sq = selOf(LANES.map((x) => [x.k, x.n]), fromTag || LANES[0].k);
       sq.setAttribute("aria-label", "Squad");
-      if (!fromTag) who2.addEventListener("change", () => {
-        if (who2.value !== "__none") sq.value = primarySq(who2.value);
+      if (!fromTag) who3.addEventListener("change", () => {
+        if (who3.value !== "__none") sq.value = primarySq(who3.value);
       });
       d0.addEventListener("change", () => {
         if (d1.value < d0.value) d1.value = d0.value;
@@ -11044,7 +11489,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       err.setAttribute("aria-live", "polite");
       const grid = el("div", "padd");
       grid.style.gridTemplateColumns = "1fr";
-      grid.append(fld("Assignee", who2), fld("Squad", sq), fld("Start", d0), fld("End", d1));
+      grid.append(fld("Assignee", who3), fld("Squad", sq), fld("Start", d0), fld("End", d1));
       const ok = el("button", "btn primary", "Add to roadmap"), no = el("button", "btn", "Cancel");
       ok.type = no.type = "button";
       no.addEventListener("click", closeDlg);
@@ -11059,8 +11504,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           return;
         }
         pushHistory();
-        const nid = "c" + Date.now().toString(36), none = who2.value === "__none", all = items().filter((x) => x.sq === sq.value);
-        S.over[nid] = { custom: true, rm: state.rm, t: l.t, n: notesOf(l).map((q) => q.t).join(" | "), sq: sq.value, pr: sq.value === "ai" ? ["tifli"] : [sq.value], d0: Math.max(0, k0), d1: Math.min(NDAYS - 1, k1), st: "planned", pc: clampPct(l.pct), res: none ? [] : [who2.value], ord: all.length ? Math.max.apply(null, all.map((x) => x.ord)) + 1 : 0, card: l.id };
+        const nid = "c" + Date.now().toString(36), none = who3.value === "__none", all = items().filter((x) => x.sq === sq.value);
+        S.over[nid] = { custom: true, rm: state.rm, t: l.t, n: notesOf(l).map((q) => q.t).join(" | "), sq: sq.value, pr: sq.value === "ai" ? ["tifli"] : [sq.value], d0: Math.max(0, k0), d1: Math.min(NDAYS - 1, k1), st: "planned", pc: clampPct(l.pct), res: none ? [] : [who3.value], ord: all.length ? Math.max.apply(null, all.map((x) => x.ord)) + 1 : 0, card: l.id };
         persist(nid);
         saveMonth(m, (d) => {
           const x = d.lines.find((z) => z.id === l.id);
@@ -11070,7 +11515,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
             x.lk = { t: x.t, pct: clampPct(x.pct) };
           }
         }, null, true);
-        logAct("roadmap", 'added "' + l.t + '" (' + cardId(l) + ") to " + r.n + " from " + d0.value + " to " + d1.value + (none ? "" : " for " + who2.value));
+        logAct("roadmap", 'added "' + l.t + '" (' + cardId(l) + ") to " + r.n + " from " + d0.value + " to " + d1.value + (none ? "" : " for " + who3.value));
         closeDlg();
         render();
         renderMonthly();
@@ -11084,9 +11529,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   function syncFromMonthly() {
     if (!canEdit()) return;
     const r = curRm();
-    const rows2 = planRows({ cards: monthCards(), rm: r, onRoad: onRoadmap, laneKeys: LANES.map((x) => x.k), sqOf: primarySq });
+    const rows3 = planRows({ cards: monthCards(), rm: r, onRoad: onRoadmap, laneKeys: LANES.map((x) => x.k), sqOf: primarySq });
     openDlg("Sync from Monthly into " + r.n, (box2) => {
-      if (!rows2.length) {
+      if (!rows3.length) {
         box2.append(el("p", "sub", "Every Monthly card in these dates is already on this roadmap (or there are no cards yet)."));
         const c = el("button", "btn", "Close");
         c.type = "button";
@@ -11095,14 +11540,14 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         return;
       }
       box2.append(el("p", "sub", "Each card becomes one bar for its people, from the first to the last day of its month. Untick what you do not want; you can edit every bar afterwards. Cards already on the roadmap are not touched."));
-      const list = el("div", "srlist"), boxes = [];
+      const list2 = el("div", "srlist"), boxes = [];
       let last = null;
-      rows2.forEach((w) => {
-        const who2 = w.people[0] || "Unassigned";
-        if (who2 !== last) {
-          last = who2;
-          const h = el("div", "srhead", who2);
-          list.append(h);
+      rows3.forEach((w) => {
+        const who3 = w.people[0] || "Unassigned";
+        if (who3 !== last) {
+          last = who3;
+          const h = el("div", "srhead", who3);
+          list2.append(h);
         }
         const row2 = el("label", "srrow"), cb = el("input");
         cb.type = "checkbox";
@@ -11112,7 +11557,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         const body = el("div", "srbody");
         body.append(el("div", "", (w.id ? w.id + " · " : "") + w.t), el("div", "sub2", (w.people.length ? w.people.join(", ") : "No people yet") + " · " + fmtIso(w.a) + " – " + fmtIso(w.b) + " · " + w.pct + "%"));
         row2.append(cb, body);
-        list.append(row2);
+        list2.append(row2);
       });
       const ok = el("button", "btn primary"), no = el("button", "btn", "Cancel"), all = el("button", "btn sm", "Tick all"), none = el("button", "btn sm", "Untick all");
       ok.type = no.type = all.type = none.type = "button";
@@ -11173,7 +11618,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       });
       const row = el("div", "row");
       row.append(ok, no, all, none);
-      box2.append(list, row);
+      box2.append(list2, row);
     });
   }
   function deleteMonth(m) {
@@ -11288,7 +11733,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       if (co) copy.co = co;
       else if (to === BL || copy.co && to <= copy.co.from) delete copy.co;
     }
-    const put2 = (d) => {
+    const put3 = (d) => {
       const i = before ? d.lines.findIndex((l) => l.id === before) : -1;
       if (i >= 0) d.lines.splice(i, 0, copy);
       else d.lines.push(copy);
@@ -11296,12 +11741,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     grouped(() => {
       if (from === to) saveMonth(from, (d) => {
         d.lines = d.lines.filter((l) => l.id !== id);
-        put2(d);
+        put3(d);
       }, null);
       else {
         saveMonth(to, (d) => {
           d.lines = d.lines.filter((l) => l.id !== id);
-          put2(d);
+          put3(d);
         }, 'moved "' + line.t + '" to the ' + lab(to) + " deliverables");
         saveMonth(from, (d) => {
           d.lines = d.lines.filter((l) => l.id !== id);
@@ -11363,10 +11808,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const cur2 = () => id ? docOf(m).lines.find((z) => z.id === id) : docOf(m), tgt = (d) => id ? d.lines.find((q) => q.id === id) : d, nm = () => id ? '"' + cur2().t + '"' : lab(m);
     if (!cur2()) return;
     openDlg("Notes · " + (id ? (cardId(cur2()) ? cardId(cur2()) + " · " : "") + cur2().t : lab(m)), (box2) => {
-      const list = el("div", "mdthread");
-      list.setAttribute("aria-label", id ? "Notes on this card" : "Notes on this month");
+      const list2 = el("div", "mdthread");
+      list2.setAttribute("aria-label", id ? "Notes on this card" : "Notes on this month");
       const ns = notesOf(cur2());
-      if (!ns.length) list.append(el("div", "hint", "No notes yet."));
+      if (!ns.length) list2.append(el("div", "hint", "No notes yet."));
       ns.forEach((n) => {
         const it = el("div", "mdnitem"), top = el("div", "mdnhead");
         top.append(el("b", "", n.by || "Earlier note"), el("span", "mdnwhen", n.at ? stamp(n.at) : ""));
@@ -11389,9 +11834,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           top.append(x);
         }
         it.append(top, el("div", "mdntext", n.t));
-        list.append(it);
+        list2.append(it);
       });
-      box2.append(list);
+      box2.append(list2);
       if (ed) {
         const ta = el("textarea");
         ta.rows = 3;
@@ -11407,11 +11852,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
             ta.focus();
             return;
           }
-          const who2 = S.me && (S.me.name || S.me.email) || "";
+          const who3 = S.me && (S.me.name || S.me.email) || "";
           saveMonth(m, (d) => {
             const z = tgt(d);
             if (z) {
-              z.notes = notesOf(z).concat([{ id: "n" + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), t: v.slice(0, 1e3), by: who2, at: (/* @__PURE__ */ new Date()).toISOString() }]);
+              z.notes = notesOf(z).concat([{ id: "n" + Date.now().toString(36) + Math.random().toString(36).slice(2, 4), t: v.slice(0, 1e3), by: who3, at: (/* @__PURE__ */ new Date()).toISOString() }]);
               delete z.note;
             }
           }, "added a note to " + nm());
@@ -11497,7 +11942,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       const ok = el("button", "btn primary", "Save"), rm = el("button", "btn", "Remove details"), no = el("button", "btn", "Cancel");
       ok.type = rm.type = no.type = "button";
       rm.hidden = !cur2().trim();
-      const put2 = (v) => {
+      const put3 = (v) => {
         saveMonth(m, (d) => {
           const x = d.lines.find((z) => z.id === l.id);
           if (x) {
@@ -11508,13 +11953,13 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         closeDlg();
         renderMonthly();
       };
-      ok.addEventListener("click", () => put2(ta.value.trim()));
-      rm.addEventListener("click", () => put2(""));
+      ok.addEventListener("click", () => put3(ta.value.trim()));
+      rm.addEventListener("click", () => put3(""));
       no.addEventListener("click", closeDlg);
       ta.addEventListener("keydown", (e) => {
         if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
           e.preventDefault();
-          put2(ta.value.trim());
+          put3(ta.value.trim());
         }
       });
       const row = el("div", "row");
@@ -11603,7 +12048,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     if (l.hp) r.append(el("div", "mdribbon", "⚑ Business priority"));
     r.style.setProperty("--c", c);
     r.dataset.id = l.id;
-    const put2 = (patch, label) => {
+    const put3 = (patch, label) => {
       saveMonth(m, (d) => {
         const x = d.lines.find((z) => z.id === l.id);
         if (x) Object.assign(x, patch);
@@ -11625,7 +12070,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           mm.append(el("div", "mlab", "Tag"));
           prods.forEach((q) => {
             const x = mi(mm, (q.k === l.k ? "✓ " : "") + q.n, () => {
-              if (q.k !== l.k) put2({ k: q.k }, 'moved "' + l.t + '" to ' + q.n);
+              if (q.k !== l.k) put3({ k: q.k }, 'moved "' + l.t + '" to ' + q.n);
             });
             x.classList.add("mdpick");
             x.style.setProperty("--c", colOf2(q));
@@ -11651,7 +12096,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         t.textContent = l.t;
         return;
       }
-      put2({ t: v.slice(0, 300) });
+      put3({ t: v.slice(0, 300) });
     }) : el("div", "mdtext", l.t);
     const foot = el("div", "mdfoot");
     if (ed) {
@@ -11661,14 +12106,14 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       st.setAttribute("aria-pressed", String(l.sz === "enh"));
       st.setAttribute("aria-label", "Small enhancement");
       st.title = l.sz === "enh" ? "Small enhancement. Click again to remove the star." : "Click to mark as a small enhancement (a small feature, not a big one)";
-      st.addEventListener("click", () => put2({ sz: l.sz === "enh" ? "" : "enh" }, l.sz === "enh" ? "removed the Small enhancement flag" : 'flagged "' + l.t + '" as Small enhancement'));
+      st.addEventListener("click", () => put3({ sz: l.sz === "enh" ? "" : "enh" }, l.sz === "enh" ? "removed the Small enhancement flag" : 'flagged "' + l.t + '" as Small enhancement'));
       head.append(st);
       const hp = el("button", "mdhp" + (l.hp ? " on" : ""), l.hp ? "⚑" : "⚐");
       hp.type = "button";
       hp.setAttribute("aria-pressed", String(!!l.hp));
       hp.setAttribute("aria-label", "Business priority");
       hp.title = l.hp ? "Business priority. Click again to remove the gold flag." : "Click to flag as business priority (gold flag)";
-      hp.addEventListener("click", () => put2({ hp: !l.hp }, l.hp ? "removed the business priority flag" : 'flagged "' + l.t + '" as business priority'));
+      hp.addEventListener("click", () => put3({ hp: !l.hp }, l.hp ? "removed the business priority flag" : 'flagged "' + l.t + '" as business priority'));
       head.append(hp);
       const more = el("button", "kebab", "⋯");
       more.type = "button";
@@ -11679,8 +12124,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         e.stopPropagation();
         const b = more.getBoundingClientRect();
         openCtx(b.right - 200, b.bottom + 4, (mm) => {
-          Object.keys(SIZES).forEach((k) => mi(mm, (l.sz === k ? "✓ " : "") + SIZES[k], () => put2({ sz: l.sz === k ? "" : k }, l.sz === k ? "removed the " + SIZES[k] + " flag" : 'flagged "' + l.t + '" as ' + SIZES[k])));
-          mi(mm, "Points and people…", () => openPoints(m, l, put2));
+          Object.keys(SIZES).forEach((k) => mi(mm, (l.sz === k ? "✓ " : "") + SIZES[k], () => put3({ sz: l.sz === k ? "" : k }, l.sz === k ? "removed the " + SIZES[k] + " flag" : 'flagged "' + l.t + '" as ' + SIZES[k])));
+          mi(mm, "Points and people…", () => openPoints(m, l, put3));
           if (m !== BL) {
             if (l.co) {
               mi(mm, "Carry-over reason…", () => askCarry(l, l.co.from, m, (c2) => setCarry(m, l, c2, 'changed the carry-over reason of "' + l.t + '"'), "Why does this card carry over?"));
@@ -11694,7 +12139,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           });
           else mi(mm, "Add to roadmap…", () => addToRoadmap(m, l, p));
           mm.append(el("div", "msep"));
-          if (l.adhoc) mi(mm, "Mark as planned (not ad hoc)", () => put2({ adhoc: false }, "marked as planned"));
+          if (l.adhoc) mi(mm, "Mark as planned (not ad hoc)", () => put3({ adhoc: false }, "marked as planned"));
           const others2 = visibleMonths().filter((x) => x !== m);
           if (others2.length) mm.append(el("div", "mlab", m === BL ? "Plan in month" : "Move to month"));
           others2.forEach((x) => mi(mm, lab(x), () => moveCard(m, l.id, x)));
@@ -11710,7 +12155,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           }
         });
       });
-      if (m !== BL) foot.append(pctSelect(pct3, "Percent complete", (v) => put2({ pct: v, pe: true }, 'changed "' + l.t + '" to ' + v + "%")));
+      if (m !== BL) foot.append(pctSelect(pct3, "Percent complete", (v) => put3({ pct: v, pe: true }, 'changed "' + l.t + '" to ' + v + "%")));
     } else if (m !== BL) foot.append(el("span", "rvp pc-" + pctBand(pct3), pct3 + "%"));
     ptsChips(l).forEach((c2) => foot.append(c2));
     if (SIZES[l.sz]) {
@@ -11801,32 +12246,32 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   }
   function composer(m, prods) {
     const wrap = el("div", "mdcomp");
-    if (ui2.open !== m) {
+    if (ui3.open !== m) {
       const b = el("button", "mdopen", "+ Add a card");
       b.type = "button";
       b.addEventListener("click", () => {
-        ui2.open = m;
-        ui2.focusComp = true;
+        ui3.open = m;
+        ui3.focusComp = true;
         renderMonthly();
       });
       wrap.append(b);
       return wrap;
     }
     const f = el("form", "mdadd"), ta = el("textarea"), chips = el("div", "mdchips"), byK = (k) => prods.find((q) => q.k === k) || prods[0];
-    ui2.prod = byK(ui2.prod).k;
-    f.style.setProperty("--c", colOf2(byK(ui2.prod)));
+    ui3.prod = byK(ui3.prod).k;
+    f.style.setProperty("--c", colOf2(byK(ui3.prod)));
     ta.rows = 2;
     ta.maxLength = 1200;
     ta.placeholder = "Enter a title for this card. One card per line if you paste a list.";
     ta.setAttribute("aria-label", "New card for " + lab(m));
     prods.forEach((q) => {
-      const c = el("button", "mdchip" + (q.k === ui2.prod ? " on" : ""), q.n);
+      const c = el("button", "mdchip" + (q.k === ui3.prod ? " on" : ""), q.n);
       c.type = "button";
       c.style.setProperty("--c", colOf2(q));
       c.dataset.k = q.k;
-      c.setAttribute("aria-pressed", String(q.k === ui2.prod));
+      c.setAttribute("aria-pressed", String(q.k === ui3.prod));
       c.addEventListener("click", () => {
-        ui2.prod = q.k;
+        ui3.prod = q.k;
         f.style.setProperty("--c", colOf2(q));
         chips.querySelectorAll(".mdchip").forEach((x) => {
           const on = x.dataset.k === q.k;
@@ -11843,7 +12288,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     no.setAttribute("aria-label", "Close");
     no.title = "Close (Esc)";
     const close = () => {
-      ui2.open = "";
+      ui3.open = "";
       renderMonthly();
     };
     no.addEventListener("click", close);
@@ -11869,12 +12314,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       saveMonth(m, (d) => {
         let n = first - 1;
         ts.forEach((t) => {
-          const x = newLine(ui2.prod, t, {});
+          const x = newLine(ui3.prod, t, {});
           x.no = ++n;
           d.lines.push(x);
         });
       }, "added " + (ts.length === 1 ? '"' + ts[0] + '"' : ts.length + " deliverables (" + ts.slice(0, 5).map((t) => '"' + t + '"').join(", ") + (ts.length > 5 ? ", …" : "") + ")") + " to " + lab(m));
-      ui2.focusComp = true;
+      ui3.focusComp = true;
       renderMonthly();
     });
     const row = el("div", "mdcrow");
@@ -11888,8 +12333,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     if (isBl) col.id = "mdbacklog";
     col.dataset.mo = m;
     col.style.setProperty("--c", isBl ? "#8a6d3b" : now ? "var(--brand)" : "#55608a");
-    const fq = ui2.q.trim().toLowerCase();
-    const lines = d.lines.filter((l) => String(l.t || "").trim()), shown = lines.filter((l) => (ui2.pr === "all" || l.k === ui2.pr) && (ui2.fl === "all" || (ui2.fl === "hp" ? l.hp : l.sz === ui2.fl)) && pointsMatch(l, ui2.who, ui2.pts) && (!fq || (String(l.t) + " " + cardId(l)).toLowerCase().includes(fq)));
+    const fq = ui3.q.trim().toLowerCase();
+    const lines = d.lines.filter((l) => String(l.t || "").trim()), shown = lines.filter((l) => (ui3.pr === "all" || l.k === ui3.pr) && (ui3.fl === "all" || (ui3.fl === "hp" ? l.hp : l.sz === ui3.fl)) && pointsMatch(l, ui3.who, ui3.pts) && (!fq || (String(l.t) + " " + cardId(l)).toLowerCase().includes(fq)));
     const h = el("h2");
     h.append(document.createTextNode(lab(m)), el("span", "badge", String(lines.length)));
     if (now) h.append(el("span", "chip mdnow", "This month"));
@@ -11943,7 +12388,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     pr.append(b0, el("b", "mdpct", pv + "%"), el("small", "", prog.pct === null ? "No planned deliverables yet" : prog.done + " of " + prog.n + " done" + (ad.n ? " · " + ad.n + " ad hoc" : "")));
     if (!isBl) col.append(pr);
     (sortOn ? sortByProduct(shown) : shown).forEach((l) => col.append(card(m, l, prods, ed)));
-    if (!shown.length && !(ed && ui2.open === m)) col.append(el("div", "hint", lines.length ? "Nothing matches the filter." : isBl ? "The backlog is empty." : "Nothing here yet."));
+    if (!shown.length && !(ed && ui3.open === m)) col.append(el("div", "hint", lines.length ? "Nothing matches the filter." : isBl ? "The backlog is empty." : "Nothing here yet."));
     if (ed) col.append(composer(m, prods));
     if (ed) {
       const ok = (e) => [...e.dataTransfer ? e.dataTransfer.types : []].includes("text/mdcard");
@@ -12017,10 +12462,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const q = el("input");
     q.type = "search";
     q.placeholder = "Search deliverables";
-    q.value = ui2.q;
+    q.value = ui3.q;
     q.setAttribute("aria-label", "Search deliverables");
     q.addEventListener("input", () => {
-      ui2.q = q.value;
+      ui3.q = q.value;
       renderMonthly();
       const s = pg.querySelector("input[type=search]");
       if (s) {
@@ -12033,11 +12478,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     [["all", "All tags"]].concat(prods.map((p) => [p.k, p.n])).forEach((x) => {
       const o = el("option", "", x[1]);
       o.value = x[0];
-      o.selected = x[0] === ui2.pr;
+      o.selected = x[0] === ui3.pr;
       fp.append(o);
     });
     fp.addEventListener("change", () => {
-      ui2.pr = fp.value;
+      ui3.pr = fp.value;
       renderMonthly();
     });
     const ff = el("select");
@@ -12045,11 +12490,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     [["all", "All cards"], ["hp", "Business priority"], ["quick", "Quick wins"], ["enh", "Small enhancements"]].forEach((x) => {
       const o = el("option", "", x[1]);
       o.value = x[0];
-      o.selected = x[0] === ui2.fl;
+      o.selected = x[0] === ui3.fl;
       ff.append(o);
     });
     ff.addEventListener("change", () => {
-      ui2.fl = ff.value;
+      ui3.fl = ff.value;
       renderMonthly();
     });
     const peopleAll = assignees([].concat(...rawDocs().map((d) => d.lines)));
@@ -12058,11 +12503,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     [["all", "Everyone"]].concat(peopleAll.map((n) => [n, n])).forEach((x) => {
       const o = el("option", "", x[1]);
       o.value = x[0];
-      o.selected = x[0] === ui2.who;
+      o.selected = x[0] === ui3.who;
       fw.append(o);
     });
     fw.addEventListener("change", () => {
-      ui2.who = fw.value;
+      ui3.who = fw.value;
       renderMonthly();
     });
     const fq2 = el("select");
@@ -12070,11 +12515,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     [["all", "Any points"], ["with", "With points"], ["none", "No points yet"]].concat([1, 2, 3, 5, 8, 13, 21].map((v) => [String(v), v + (v === 1 ? " point" : " points")])).forEach((x) => {
       const o = el("option", "", x[1]);
       o.value = x[0];
-      o.selected = x[0] === ui2.pts;
+      o.selected = x[0] === ui3.pts;
       fq2.append(o);
     });
     fq2.addEventListener("change", () => {
-      ui2.pts = fq2.value;
+      ui3.pts = fq2.value;
       renderMonthly();
     });
     tools.append(q, fp, ff);
@@ -12140,17 +12585,17 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       }
     }
     const pc = pastCount();
-    if (pc || ui2.past) {
-      const pb = el("button", "btn sm", ui2.past ? "Hide past months" : "Show past months (" + pc + ")");
+    if (pc || ui3.past) {
+      const pb = el("button", "btn sm", ui3.past ? "Hide past months" : "Show past months (" + pc + ")");
       pb.type = "button";
       pb.addEventListener("click", () => {
-        ui2.past = !ui2.past;
+        ui3.past = !ui3.past;
         renderMonthly();
       });
       tools.append(pb);
     }
     pg.append(pageHead("Monthly deliverables", null, tools));
-    const sb0 = viewer ? null : setupBanner();
+    const sb0 = viewer ? null : setupBanner2();
     if (sb0) pg.append(sb0);
     {
       const n = docOf(BL).lines.filter((l) => String(l.t || "").trim()).length, bb = el("button", "mdblbar" + (blOpen ? " on" : ""));
@@ -12183,12 +12628,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     }
     pg.append(board);
     const cta = pg.querySelector(".mdcomp textarea");
-    if (cta && draft && draft.v && ui2.open === draft.m) {
+    if (cta && draft && draft.v && ui3.open === draft.m) {
       cta.value = draft.v;
       cta.setSelectionRange(draft.s, draft.s);
       cta.focus({ preventScroll: true });
-    } else if (cta && ui2.focusComp) {
-      ui2.focusComp = false;
+    } else if (cta && ui3.focusComp) {
+      ui3.focusComp = false;
       cta.focus({ preventScroll: true });
       cta.scrollIntoView({ block: "nearest" });
     }
@@ -12279,7 +12724,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     s.innerHTML = ICONS[name] || "";
     return s;
   }
-  function withTable(id, title, sub, chart, table) {
+  function withTable(id, title, sub, chart, table2) {
     const box2 = el("div", "cpchart");
     box2.id = id;
     const head = el("div", "cpchead"), t = el("div");
@@ -12293,11 +12738,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     head.append(t, seg);
     const tb = el("table", "cptable");
     const hr = el("tr");
-    table.head.forEach((h) => hr.append(el("th", "", h)));
+    table2.head.forEach((h) => hr.append(el("th", "", h)));
     tb.append(el("thead"));
     tb.firstChild.append(hr);
     const body = el("tbody");
-    table.rows.forEach((r) => {
+    table2.rows.forEach((r) => {
       const tr = el("tr");
       r.forEach((c, i) => tr.append(el(i ? "td" : "th", "", c)));
       body.append(tr);
@@ -12337,7 +12782,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     g.style.gridTemplateColumns = "120px repeat(" + rev.length + ", minmax(84px, 1fr))";
     g.append(el("span", "cphh"));
     rev.forEach((r) => g.append(el("span", "cphh", monthLabel(r.m))));
-    const rows2 = [];
+    const rows3 = [];
     rev[0].lanes.forEach((l, i) => {
       g.append(el("span", "cprl", l.n));
       const row = [l.n];
@@ -12353,9 +12798,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         g.append(c);
         row.push(fmt2(x.used) + " / " + fmt2(x.cap) + (x.st === "over" ? " (over " + fmt2(x.over) + ")" : " (free " + fmt2(x.free) + ")"));
       });
-      rows2.push(row);
+      rows3.push(row);
     });
-    return { node: g, table: { head: ["Track"].concat(rev.map((r) => monthLabel(r.m))), rows: rows2 } };
+    return { node: g, table: { head: ["Track"].concat(rev.map((r) => monthLabel(r.m))), rows: rows3 } };
   }
   var short = (iso4) => fmtIso(iso4).replace(/ \d{4}$/, "");
   function heatPeople(rev, cfg4, vacs, today) {
@@ -12373,7 +12818,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     g.style.gridTemplateColumns = "190px repeat(" + rev.length + ", minmax(72px, 1fr))";
     g.append(el("span", "cphh"));
     rev.forEach((r) => g.append(el("span", "cphh", monthLabel(r.m))));
-    const rows2 = [];
+    const rows3 = [];
     people.forEach((p) => {
       const lab2 = el("span", "cprl");
       lab2.dataset.name = p.n;
@@ -12411,14 +12856,14 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         g.append(c);
         row.push(!cap && !pl ? "not available" : fmt2(pl) + " / " + fmt2(cap));
       });
-      rows2.push(row);
+      rows3.push(row);
     });
-    return { node: g, table: { head: ["Person"].concat(rev.map((r) => monthLabel(r.m))), rows: rows2 } };
+    return { node: g, table: { head: ["Person"].concat(rev.map((r) => monthLabel(r.m))), rows: rows3 } };
   }
   function barsTracks(r) {
     const wrap = el("div", "cpbars");
     wrap.id = "cpbars";
-    const max = Math.max(1, ...r.lanes.map((x) => Math.max(x.used, x.cap))), rows2 = [], used = {};
+    const max = Math.max(1, ...r.lanes.map((x) => Math.max(x.used, x.cap))), rows3 = [], used = {};
     const prodOf = (laneK) => {
       const out = {};
       r.lines.forEach((l) => {
@@ -12465,7 +12910,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       row.setAttribute("aria-label", lines.join(". "));
       tip2(row, lines);
       wrap.append(row);
-      rows2.push([x.n, fmt2(x.used), fmt2(x.cap), x.st === "over" ? "over by " + fmt2(x.over) : "free " + fmt2(x.free)].concat(order.map((k) => by[k] ? fmt2(by[k]) : "–")));
+      rows3.push([x.n, fmt2(x.used), fmt2(x.cap), x.st === "over" ? "over by " + fmt2(x.over) : "free " + fmt2(x.free)].concat(order.map((k) => by[k] ? fmt2(by[k]) : "–")));
     });
     const shown = order.filter((k) => used[k]), key = el("div", "cpkey");
     key.id = "cpkey";
@@ -12476,7 +12921,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       key.lastChild.append(i, document.createTextNode(nameOf2(k)));
     });
     if (shown.length) wrap.append(key);
-    return { node: wrap, table: { head: ["Track", "Planned", "Can take", "Room"].concat(order.map(nameOf2)), rows: rows2 } };
+    return { node: wrap, table: { head: ["Track", "Planned", "Can take", "Room"].concat(order.map(nameOf2)), rows: rows3 } };
   }
   function columnsTrend(rev) {
     const W = 120 + rev.length * 96, H3 = 230, pl = 44, pb = 30, pt = 18, ph = H3 - pb - pt;
@@ -12487,7 +12932,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     for (let v = 0; v <= maxY; v += step2) {
       svg.append(sv2("line", { x1: pl, x2: W - 8, y1: y(v), y2: y(v), class: v ? "cpgrid" : "cpbase" }), sv2("text", { x: pl - 6, y: y(v) + 4, "text-anchor": "end", class: "cpax" }, String(v)));
     }
-    const slot = (W - pl - 8) / rev.length, bw = Math.min(24, slot * 0.5), rows2 = [];
+    const slot = (W - pl - 8) / rev.length, bw = Math.min(24, slot * 0.5), rows3 = [];
     tot.forEach((t, i) => {
       const cx = pl + slot * i + slot / 2, over = t.used > t.cap + 1e-9, h = Math.max(0, ph - (y(t.used) - pt));
       const g = sv2("g", { class: "cpcol" + (over ? " over" : ""), "data-m": t.m });
@@ -12501,15 +12946,15 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       g.setAttribute("aria-label", lines.join(". "));
       tip2(g, lines);
       svg.append(g);
-      rows2.push([monthLabel(t.m), fmt2(t.used), fmt2(t.cap), over ? "over by " + fmt2(t.used - t.cap) : "free " + fmt2(t.cap - t.used)]);
+      rows3.push([monthLabel(t.m), fmt2(t.used), fmt2(t.cap), over ? "over by " + fmt2(t.used - t.cap) : "free " + fmt2(t.cap - t.used)]);
     });
-    return { node: svg, table: { head: ["Month", "Planned", "Can take (all tracks)", "Room"], rows: rows2 } };
+    return { node: svg, table: { head: ["Month", "Planned", "Can take (all tracks)", "Room"], rows: rows3 } };
   }
 
   // src/esm/pages/capacity.js
   var cfg3 = () => resolveDefaults(S.ideas && S.ideas.capacity || {}, resources());
   var fmt3 = (n) => String(Math.round(n * 10) / 10);
-  var ui3 = { m: "" };
+  var ui4 = { m: "" };
   var WORD = { ok: "Fits", warn: "Tight", over: "Over" };
   function capMonths() {
     const cur2 = todayIso().slice(0, 7);
@@ -12532,13 +12977,13 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const g = el("div", "cpgrid");
     rev.forEach((r) => {
       const bad = r.lanes.filter((x) => x.st === "over"), tight = r.lanes.filter((x) => x.st === "warn");
-      const t = el("button", "cptile cp-" + r.st + (r.m === ui3.m ? " sel" : ""));
+      const t = el("button", "cptile cp-" + r.st + (r.m === ui4.m ? " sel" : ""));
       t.type = "button";
       t.dataset.mo = r.m;
-      t.setAttribute("aria-pressed", String(r.m === ui3.m));
+      t.setAttribute("aria-pressed", String(r.m === ui4.m));
       t.title = "Show " + monthLabel(r.m) + " in the bars below";
       t.addEventListener("click", () => {
-        ui3.m = r.m;
+        ui4.m = r.m;
         renderCapacity();
       });
       const top = el("div", "cptop"), ic = el("span", "cpicob");
@@ -12609,7 +13054,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     return box2;
   }
   function kpis(rev) {
-    const r = rev.find((x) => x.m === ui3.m) || rev[0], g = el("div", "cpkpis");
+    const r = rev.find((x) => x.m === ui4.m) || rev[0], g = el("div", "cpkpis");
     g.id = "cpkpi";
     const st = settings(cfg3()), today = todayIso(), vac = vacList2(), seen = {};
     let away = 0;
@@ -12676,7 +13121,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     }
     root.append(pageHead("Dashboard", "Can the team deliver what each month promises? Green fits, red is over.", tools));
     tipHost(root);
-    if (!months.includes(ui3.m)) ui3.m = (rev.find((r) => r.pts > 0) || rev[0]).m;
+    if (!months.includes(ui4.m)) ui4.m = (rev.find((r) => r.pts > 0) || rev[0]).m;
     const monthPick = (id) => {
       const w = el("label", "cpmpick", "Month "), sl = el("select");
       sl.id = id;
@@ -12684,11 +13129,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       months.forEach((m) => {
         const o = el("option", "", monthLabel(m));
         o.value = m;
-        if (m === ui3.m) o.selected = true;
+        if (m === ui4.m) o.selected = true;
         sl.append(o);
       });
       sl.addEventListener("change", () => {
-        ui3.m = sl.value;
+        ui4.m = sl.value;
         renderCapacity();
       });
       w.append(sl);
@@ -12710,7 +13155,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     };
     sec("cp-glance", "The months at a glance", "Click a month to see it track by track below.").append(tiles(rev));
     {
-      const ks = sec("cp-kpi", monthLabel(ui3.m) + " in numbers");
+      const ks = sec("cp-kpi", monthLabel(ui4.m) + " in numbers");
       ks.append(monthPick("cpmonth"), kpis(rev));
     }
     const fx = sec("cp-fix", "What needs fixing", "If something is over, change the points or move a card in Monthly, then come back here.");
@@ -12723,8 +13168,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     root.append(duo);
     const barSec = el("section", "cpsec");
     barSec.id = "cp-bars";
-    barSec.append(el("h2", "", monthLabel(ui3.m) + ", track by track"), el("p", "sub", "Pale = what the track can take. Green = planned. Red = past the limit."), monthPick("cpmonth2"));
-    const h3 = barsTracks(rev[months.indexOf(ui3.m)]);
+    barSec.append(el("h2", "", monthLabel(ui4.m) + ", track by track"), el("p", "sub", "Pale = what the track can take. Green = planned. Red = past the limit."), monthPick("cpmonth2"));
+    const h3 = barsTracks(rev[months.indexOf(ui4.m)]);
     barSec.append(withTable("cp-bars-c", "", "", h3.node, h3.table));
     const colsSec = el("section", "cpsec");
     colsSec.id = "cp-cols";
@@ -13017,6 +13462,25 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           S.setup["sprint_items"] = true;
           if (state.page === "reports" || state.page === "sprints") refreshPage();
         }
+      });
+    }
+    if (modLevel("flow") >= 1) {
+      S.db.collection("flow_issues").onSnapshot((s) => {
+        const n = snapDocs("flow_issues", s, S.fissues);
+        if (same3(n, S.fissues)) return;
+        S.fissues = n;
+        if (state.page === "flow" && !document.activeElement.closest("#pg-flow") && !$("xdlg")) renderFlow({ keep: true });
+      }, (e) => {
+        if (e && e.code === "missing_table") {
+          S.setup["flow_issues"] = true;
+          if (state.page === "flow") refreshPage();
+        }
+      });
+      S.db.collection("flow_cfg").onSnapshot((s) => {
+        const n = snapDocs("flow_cfg", s, S.fcfg);
+        if (same3(n, S.fcfg)) return;
+        S.fcfg = n;
+      }, () => {
       });
     }
     S.db.collection("vacations").onSnapshot((s) => {
@@ -13861,14 +14325,14 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     });
   }
   var pendingPaths = /* @__PURE__ */ new Map();
-  function snapDocs(table, snap, local) {
+  function snapDocs(table2, snap, local) {
     const n = {};
     snap.docs.forEach((d) => {
       n[d.id] = d.data();
     });
     (/* @__PURE__ */ new Set([...pendingPaths.keys(), ...Object.keys(outLoad())])).forEach((path) => {
-      if (!path.startsWith(table + "/")) return;
-      const id = path.slice(table.length + 1);
+      if (!path.startsWith(table2 + "/")) return;
+      const id = path.slice(table2.length + 1);
       const o = outLoad()[path];
       if (o) {
         if (o.copy) n[id] = o.copy;
@@ -13918,9 +14382,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
                 outSave();
               }
             }
-            S.setup[path.split("/")[0]] = true;
-            $("save").textContent = "Database setup needed (run SQL 06)";
-            notifyFailOnce("Not saved: the database is missing a table. Run supabase/sql/06-sprints-weekly-reports.sql.");
+            const tb = path.split("/")[0], sqlF = /^flow_/.test(tb) ? "09-flow.sql" : "06-sprints-weekly-reports.sql";
+            S.setup[tb] = true;
+            $("save").textContent = "Database setup needed (run SQL " + sqlF.slice(0, 2) + ")";
+            notifyFailOnce("Not saved: the database is missing a table. Run supabase/sql/" + sqlF + ".");
             progress(false);
             break;
           }
@@ -14072,9 +14537,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   var H = 30;
   var NH = 17;
   var pct2 = (n) => (n / NDAYS * 100).toFixed(3) + "%";
-  function legend2(list) {
+  function legend2(list2) {
     const lg = el("div", "prm-legend");
-    const used = new Set(list.map((i) => i.sq));
+    const used = new Set(list2.map((i) => i.sq));
     LANES.filter((l) => used.has(l.k)).forEach((l) => {
       const s = el("span");
       const i = el("i", "prm-dot");
@@ -14112,14 +14577,14 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     return b;
   }
   function buildPrintView() {
-    const list = visible(), root = el("div");
+    const list2 = visible(), root = el("div");
     root.id = "printrm";
     const rm = curRm();
     const head = el("div", "prm-head"), ttl = el("div");
     ttl.append(el("h1", "", "Ynmo roadmap · " + rm.n), el("p", "", fmtIso(rm.a) + " to " + fmtIso(rm.b) + " · prepared " + (/* @__PURE__ */ new Date()).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })));
     head.append(ttl);
-    const cnt = (k) => list.filter((i) => i.st === k).length, tiles2 = el("div", "prm-tiles");
-    [[list.length, "features"], [cnt("planned"), "planned"], [cnt("decide"), "need a decision"], [cnt("contract"), "wait on contract"], [cnt("done"), "done"]].forEach((p) => {
+    const cnt = (k) => list2.filter((i) => i.st === k).length, tiles2 = el("div", "prm-tiles");
+    [[list2.length, "features"], [cnt("planned"), "planned"], [cnt("decide"), "need a decision"], [cnt("contract"), "wait on contract"], [cnt("done"), "done"]].forEach((p) => {
       const t = el("div", "prm-tile");
       t.append(el("b", "", String(p[0])), el("span", "", p[1]));
       tiles2.append(t);
@@ -14129,9 +14594,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const sq = LANES.filter((l) => !state.sq.has(l.k)).map((l) => l.n);
     const notes = [state.person !== "all" ? "Person: " + state.person : "", state.status !== "all" ? "Status: " + (STATUS[state.status] || state.status) : "", state.q.trim() ? "Search: " + state.q.trim() : "", sq.length ? "Hidden products: " + sq.join(", ") : ""].filter(Boolean);
     if (notes.length) root.append(el("p", "prm-filter", "Filtered view · " + notes.join(" · ")));
-    root.append(legend2(list));
+    root.append(legend2(list2));
     const dir = directory(), map = /* @__PURE__ */ new Map();
-    list.forEach((it) => {
+    list2.forEach((it) => {
       if (!it.res.length) {
         if (!map.has("__none")) map.set("__none", { name: "__none", its: [] });
         map.get("__none").its.push(it);

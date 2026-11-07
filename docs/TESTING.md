@@ -44,7 +44,8 @@ The bundle is an IIFE, so tests reach internals through `window.__ynmo` (`items,
 - `monthly_filters.py` (8 checks): the Assigned to and Points filters of Monthly.
 - Timing-sensitive scripts (`login_hang.py` waits for a sign-in gate, `monthly_page.py` drags a card with the mouse) failed now and then when the machine was busy; their waits were lengthened on 2026-11-02 (drag: slower mouse, longer pauses; gate: 25 s). A failure of only these two in a full run is re-run alone before it is treated as real.
 - `notes.py` drags a timeline note that starts at today; when today is near the right edge of the screen the mouse used to start outside the window (it failed on 2026-11-08). It now scrolls the note into view and starts inside it.
-- `flow_module.py` (6 checks): the Ynmo Flow menu icon and phase 0 page.
+- `flow_module.py` (27 checks): the Ynmo Flow menu icon, creating every ticket type and the parent rules, list and filters, status chips, My work, the ticket window (edit, sub-tickets, history), reload and delete.
+- `flow_model_unit.mjs` (22 checks): ticket rules (types, parent and epic rules, keys, history, filters, My work).
 - `jira_code_unit.mjs` (3): a line with a card code and Jira tickets (export, pull).
 - `sprint_pick.py` (9 checks): typing slips, Pick from the plan, link by card.
 - `card_details.py` (10 checks) and `card_details_unit.mjs` (3): the details card of a Monthly card.

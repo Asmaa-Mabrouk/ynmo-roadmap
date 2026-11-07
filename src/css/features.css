@@ -1080,3 +1080,24 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 .flowphases li { counter-increment: ph; display: grid; grid-template-columns: 30px 1fr; column-gap: 12px; align-items: start; }
 .flowphases li::before { content: counter(ph); grid-row: span 2; width: 28px; height: 28px; border-radius: 50%; background: #6d48a8; color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 13px; }
 .flowphases li b { font-size: 15px; } .flowphases li span { color: #626d90; font-size: 13.5px; line-height: 1.45; }
+
+/* ---- Ynmo Flow (tickets) ---- */
+.flowbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0 8px; }
+.flowbar input[type=search] { min-width: 240px; flex: 1 1 240px; }
+.flowopen { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); }
+.flowchips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.flowtabs { margin: 8px 0 4px; }
+.ftype { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.ftype::before { content: ''; width: 9px; height: 9px; border-radius: 3px; background: var(--c, var(--muted)); }
+.fkey { font-weight: 700; white-space: nowrap; color: var(--muted); }
+.flowrow { cursor: pointer; }
+.flowrow:hover td, .flowrow:focus-visible td { background: color-mix(in srgb, var(--focus) 7%, transparent); }
+.flowsec { margin: 14px 0 6px; }
+.flowsec h3, .flowkids h3, .flowhist h3 { margin: 0 0 6px; font-size: 14px; }
+.flowempty { padding: 10px 2px; }
+.flowdlg { width: min(640px, 100%); }
+.flowdlg label { display: grid; gap: 3px; margin: 0 0 10px; }
+.flowhd { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; }
+.flowkids, .flowhist { margin: 10px 0; }
+.flowkid { display: flex; align-items: center; gap: 4px; width: 100%; text-align: start; font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); margin: 0 0 4px; cursor: pointer; }
+.flowhist p { margin: 2px 0; font-size: 12.5px; }

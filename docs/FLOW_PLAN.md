@@ -78,7 +78,9 @@ MVP = needed to switch off Jira for the PM team. Later = after the cutover. Skip
 - **Your words.** Statuses, resolutions and issue types are data you edit, not code.
 - **Nothing changes in live data without you.** Imports show a preview first; database scripts are run by you in Supabase; tests only use the fake database.
 
-## 4. Data model (Supabase, relational)
+## 4. Data model (Supabase)
+
+> **Decision 2026-11-08:** phase 1 stores tickets in the app's generic `{id, data}` tables (`flow_issues`, `flow_cfg`; see `supabase/sql/09-flow.sql` and DATABASE.md) and filters in the browser, which ships in one step with the same realtime, permissions and save queue. Phase 1 is built; relational tables and views below stay the target if volume (thousands of tickets) or reporting (phase 5) needs them.
 
 The tool's current tables are generic `{id, data jsonb}` documents. Tickets need real filtering, counting, ordering and history, so Flow gets proper tables (all with row level security; one SQL file, `supabase/sql/09-flow.sql`, that you run once):
 

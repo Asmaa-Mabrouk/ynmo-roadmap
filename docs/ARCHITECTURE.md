@@ -59,6 +59,7 @@ src/esm/
 - Static seed `ITEMS` (base features) + **`over`**: an overlay object `{id: {…changed fields}}` persisted per item. Views read through
   `items()` which merges seed + overlay, so seed data never needs migrating and any field can be overridden or unset.
 - Toasts: `ui/notify.js` (`notify(msg,'ok'|'err'|'info')`). Sprints use hash sub-routes (`#/sprints/<id>`) handled inside `pages/sprints.js`.
+- Ynmo Flow (tickets): `features/flow-model.js` holds the pure rules (types, statuses, parent/epic rules, keys, history, filters, My work); `pages/flow.js` the screens; data in `flow_issues` / `flow_cfg` through the same generic `{id, data}` adapter and `write()` queue as other modules, filtered in the browser; access by the `flow` module level.
 - Sprint document: outline of blocks (`h` section, `p` person, `s` scope, `u` sub-section, `n` note) in `sprint_items`; pure logic (`derive`, `parseOutline`, `migrate`) in `features/sprint-doc.js`; popup menus `ui/menu.js`; breadcrumb `ui/crumbs.js`. `itemsOf()` flattens the outline for the report.
 - Sprints/Reports (both are a list of cards plus a `.sheet` page per item: `#/sprints/<id>`, `#/reports/<id>`): `pages/sprints.js`, `pages/reports.js`, pure logic in `features/report-model.js`; AI wording via Edge Function `weekly-draft` (Gemini).
 - Other collections (`people`, `daysoff`, `roadmaps`, `ideas`, `vacations`, `activity`, `share_links`) are

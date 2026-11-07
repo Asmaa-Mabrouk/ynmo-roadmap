@@ -34,6 +34,8 @@ export const S = {
   shares: {},
   sprints: {},
   sitems: {},
+  fissues: {},
+  fcfg: {},
   reports: {},
   hist: {},
   setup: {},

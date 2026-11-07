@@ -19,6 +19,7 @@ supabase secrets set WEBHOOK_SECRET=<long random> SMTP_USER=<mailbox> SMTP_PASS=
 Dashboard → Database → Webhooks → on `profiles` INSERT → HTTP request to the function URL with header `x-webhook-secret: <same value>`.
 
 ## 2b. Weekly report AI (Edge Function `weekly-draft`)
+Run `supabase/sql/09-flow.sql` once (after 08) to turn on Ynmo Flow tickets: until then the Flow page shows a setup banner and nothing is saved.
 Run `supabase/sql/07-reports-editor-delete.sql` after 06 (lets any editor delete a weekly report).
 Run `supabase/sql/06-sprints-weekly-reports.sql` once, then:
 ```bash
@@ -58,7 +59,7 @@ Every push to `main` deploys; Vercel rebuilds from `src/`, the committed `index.
 ## 4. Release procedure
 ```bash
 npm install && node build.mjs && node build.mjs --check && node lint.mjs
-tests/run_all.sh        # about 12 minutes: build check, lint, 50 feature scripts, 11 unit files, CSP check, 79 scenarios
+tests/run_all.sh        # about 12 minutes: build check, lint, 50 feature scripts, 12 unit files, CSP check, 79 scenarios
 git add -A && git commit -m "feat: …" && git push origin main
 ```
 Rollback: Vercel → Deployments → *Promote* a previous one, or `git revert` and push.

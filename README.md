@@ -36,7 +36,7 @@ build.mjs                 esbuild bundle + CSS -> index.html   (node build.mjs [
 lint.mjs                  module-graph lint (missing imports / undefined names)
 index.html                GENERATED deploy artifact (committed; Vercel serves it as-is)
 vendor/supabase-js.js     pinned, self-hosted client (no CDN => strict CSP, no supply-chain drift)
-supabase/sql/*.sql        numbered migrations, run in order
+supabase/sql/*.sql        numbered migrations, run in order (09 = Ynmo Flow tickets)
 supabase/functions/       Edge Functions: notify-approval (email admins), weekly-draft (Gemini report wording), jira-sync (read-only Jira Cloud search), jira-search (find a ticket to link a sprint task)
 tests/                    Playwright E2E suite + in-browser fake Supabase
 vercel.json               security headers + CSP
