@@ -1,7 +1,7 @@
 import { MODULES, LEVELS, presetPerms, permsOf, levelOf, setSwitch, presetName, accessFor } from '../src/esm/core/permissions.js';
 const ok = (n, c) => console.log((c ? 'PASS ' : 'FAIL ') + n);
 const ed = presetPerms('editor'), vw = presetPerms('viewer');
-ok('eight modules, Log is view-only', MODULES.length === 8 && MODULES.find(m => m.k === 'log').max === 1 && LEVELS.join() === 'No access,View,Edit,Delete');
+ok('nine modules, Log is view-only', MODULES.length === 9 && MODULES.find(m => m.k === 'log').max === 1 && LEVELS.join() === 'No access,View,Edit,Delete');
 ok('editor preset is the top level everywhere, viewer sees Roadmap, Reports, Monthly and Log', MODULES.every(m => ed[m.k] === m.max) && vw.roadmap === 1 && vw.reports === 1 && vw.monthly === 1 && vw.log === 1 && vw.sprints === 0 && vw.resources === 0 && vw.vacations === 0 && vw.roadmaps === 0);
 ok('a profile without perms follows its access (older accounts keep working)', levelOf({ access: 'editor' }, 'sprints') === 3 && levelOf({ access: 'viewer' }, 'sprints') === 0 && levelOf({ access: 'viewer' }, 'monthly') === 1);
 ok('an admin always has everything, whatever perms says', permsOf({ is_admin: true, perms: { roadmap: 0 }, access: 'viewer' }).roadmap === 3 && levelOf({ is_admin: true }, 'log') === 1);
@@ -14,3 +14,5 @@ ok('turning on a lower switch never lowers a higher level', setSwitch(3, 'view',
 ok('a view-only module (Log) caps at View', setSwitch(0, 'del', true, 1) === 1);
 ok('preset detection', presetName(ed) === 'editor' && presetName(vw) === 'viewer' && presetName(Object.assign({}, ed, { sprints: 0 })) === 'custom');
 ok('access follows the levels: anything editable means editor', accessFor(vw) === 'viewer' && accessFor(Object.assign({}, vw, { monthly: 2 })) === 'editor' && accessFor(ed) === 'editor');
+
+ok('Ynmo Flow: editors get it, viewers do not', ed.flow === 3 && vw.flow === 0);

@@ -1072,3 +1072,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 .xbox:has(.jklinked) .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .xbox:has(.jklinked) .row > input { flex: 1 1 220px; min-width: 0; }
 .xbox:has(.jklinked) .jklist { margin-bottom: 14px; }
+/* Ynmo Flow (phase 0 page) */
+.flowhero { max-width: 760px; margin: 18px 0; padding: 22px 26px; }
+.flowhero h2 { margin: 6px 0 4px; }
+.flowtag { display: inline-block; font-size: 12px; font-weight: 700; color: #6d48a8; background: #f0eafa; border-radius: 999px; padding: 3px 12px; }
+.flowphases { list-style: none; counter-reset: ph; margin: 16px 0 0; padding: 0; display: grid; gap: 10px; }
+.flowphases li { counter-increment: ph; display: grid; grid-template-columns: 30px 1fr; column-gap: 12px; align-items: start; }
+.flowphases li::before { content: counter(ph); grid-row: span 2; width: 28px; height: 28px; border-radius: 50%; background: #6d48a8; color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+.flowphases li b { font-size: 15px; } .flowphases li span { color: #626d90; font-size: 13.5px; line-height: 1.45; }

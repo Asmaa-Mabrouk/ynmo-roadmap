@@ -42,6 +42,20 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-11-08 - Ynmo Flow planned
+```
+🔄 YNMO LEDGER UPDATE - 2026-11-08
+Request: plan a task management module that replaces Jira (issue types, workflow designer, backlog, sprints, my work, notifications, comments/mentions, attachments, AI assistant), list Jira capabilities, add a menu icon
+Surface: Ynmo Roadmaps tool (new module)
+Outcome: docs/FLOW_PLAN.md and a Ynmo Flow menu icon and phase 0 page
+New facts / decisions locked:
+  - Working name Ynmo Flow; phases 1-6 (issues, workflow, backlog and sprints, collaboration, AI, Jira import)
+  - Relational tables for Flow; AI key only as a Supabase Edge Function secret; attachments on Supabase Storage first, R2 for video if costs grow
+Corrections to this skill: none
+Open / flagged: six decisions in section 10 of the plan (name, project key YNMO, import scope, AI provider and name masking, Pro plan, first testers)
+Changelog: Ynmo Flow module planned; menu entry added.
+```
+
 ### 2026-11-02 - Card code with Jira tickets
 ```
 🔄 YNMO LEDGER UPDATE - 2026-11-02

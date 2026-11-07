@@ -1495,6 +1495,14 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 .xbox:has(.jklinked) .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .xbox:has(.jklinked) .row > input { flex: 1 1 220px; min-width: 0; }
 .xbox:has(.jklinked) .jklist { margin-bottom: 14px; }
+/* Ynmo Flow (phase 0 page) */
+.flowhero { max-width: 760px; margin: 18px 0; padding: 22px 26px; }
+.flowhero h2 { margin: 6px 0 4px; }
+.flowtag { display: inline-block; font-size: 12px; font-weight: 700; color: #6d48a8; background: #f0eafa; border-radius: 999px; padding: 3px 12px; }
+.flowphases { list-style: none; counter-reset: ph; margin: 16px 0 0; padding: 0; display: grid; gap: 10px; }
+.flowphases li { counter-increment: ph; display: grid; grid-template-columns: 30px 1fr; column-gap: 12px; align-items: start; }
+.flowphases li::before { content: counter(ph); grid-row: span 2; width: 28px; height: 28px; border-radius: 50%; background: #6d48a8; color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+.flowphases li b { font-size: 15px; } .flowphases li span { color: #626d90; font-size: 13.5px; line-height: 1.45; }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -1566,6 +1574,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 <section class="pg page" id="pg-capacity" hidden></section>
 <section class="pg page" id="pg-resources" hidden></section>
 <section class="pg page" id="pg-vacations" hidden></section>
+<section class="pg page" id="pg-flow" hidden></section>
 <section class="pg page" id="pg-log" hidden></section>
 <section class="pg page" id="pg-admin" hidden></section>
 </main>
@@ -1621,6 +1630,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     { k: "monthly", n: "Monthly deliverables", d: "The monthly board and the backlog", max: 3 },
     { k: "resources", n: "Resources", d: "Team members and products", max: 3 },
     { k: "vacations", n: "Vacations", d: "Leave of the team", max: 3 },
+    { k: "flow", n: "Ynmo Flow", d: "Tasks and tickets: projects, backlog, sprints, workflow (being built)", max: 3 },
     { k: "log", n: "Log", d: "The activity log", max: 1 }
   ];
   var LEVELS = ["No access", "View", "Edit", "Delete"];
@@ -2948,7 +2958,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 
   // src/esm/core/shared.js
   var H2 = { id: H2_ID, n: "H2 2026", a: "2026-10-01", b: "2027-01-31", kind: "H2", builtin: true };
-  var PAGES = [["roadmap", "Roadmap"], ["roadmaps", "Roadmaps"], ["sprints", "Sprints"], ["reports", "Reports"], ["monthly", "Monthly deliverables"], ["capacity", "Dashboard"], ["resources", "Resources"], ["vacations", "Vacations"], ["log", "Log"], ["admin", "Users & permissions"]];
+  var PAGES = [["roadmap", "Roadmap"], ["roadmaps", "Roadmaps"], ["sprints", "Sprints"], ["reports", "Reports"], ["monthly", "Monthly deliverables"], ["capacity", "Dashboard"], ["resources", "Resources"], ["vacations", "Vacations"], ["flow", "Ynmo Flow"], ["log", "Log"], ["admin", "Users & permissions"]];
   var DOMAINS = ["PM", "Mobile", "Backend", "Frontend", "Full-stack", "Engineering", "QA", "UX / Design", "AI / ML", "Other"];
   var VTYPES = ["Annual leave", "Training", "Public holiday", "Other"];
   var slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "x";
@@ -6810,6 +6820,33 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       if (again === true) renderAdmin();
       else return loadMembers();
     });
+  }
+
+  // src/esm/pages/flow.js
+  var FLOW_NAME = "Ynmo Flow";
+  var FLOW_PHASES = [
+    { n: 1, t: "Issues", d: "Projects, stories, tasks, bugs, sub-tasks, epics. Filters, saved filters and My work." },
+    { n: 2, t: "Workflow", d: "Your own statuses (Open, In progress, RFQA, Blocked, Ready for deployment, Deployed, Done) and who can move a ticket where." },
+    { n: 3, t: "Backlog and sprints", d: "Backlog, create and run a sprint, board, sprint report." },
+    { n: 4, t: "Collaboration", d: "Comments, @mentions, notifications, images, PDF and video." },
+    { n: 5, t: "AI assistant", d: "Ask about workload, closure time and reported tickets, with charts." },
+    { n: 6, t: "Jira import", d: "Bring the tickets across, keep the keys, switch Jira off." }
+  ];
+  function renderFlow() {
+    const pg = $("pg-flow");
+    pg.textContent = "";
+    pg.append(pageHead(FLOW_NAME, "Tasks and tickets for the team, built to replace Jira. Planning stage: nothing to use yet."));
+    const c = el("div", "flowhero card");
+    c.id = "flowhero";
+    c.append(el("div", "flowtag", "Phase 0 · Planning"), el("h2", "", "Coming step by step"), el("p", "sub", "The full plan, with every Jira capability and what Flow will do about it, is in docs/FLOW_PLAN.md in the repository."));
+    const ol = el("ol", "flowphases");
+    FLOW_PHASES.forEach((p) => {
+      const li = el("li", "");
+      li.append(el("b", "", p.t), el("span", "", p.d));
+      ol.append(li);
+    });
+    c.append(ol);
+    pg.append(c);
   }
 
   // src/esm/features/sprint-cover.js
@@ -12774,7 +12811,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     ({ roadmap: render, roadmaps: renderRoadmaps, resources: renderResources, admin: () => {
       loadMembers();
       renderAdmin();
-    }, vacations: () => renderVacations(true), log: renderLog, sprints: renderSprints, reports: renderReports, monthly: renderMonthly, capacity: renderCapacity })[p]();
+    }, vacations: () => renderVacations(true), log: renderLog, sprints: renderSprints, reports: renderReports, monthly: renderMonthly, capacity: renderCapacity, flow: renderFlow })[p]();
   }
   var pageOk = (p) => p === "admin" ? !!(S.me && S.me.is_admin) : modLevel(p === "capacity" ? "monthly" : p) >= 1;
   function showPage(p) {
@@ -12806,6 +12843,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     capacity: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>',
     monthly: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M8 3v4M16 3v4M3.5 10h17M8 15h3M8 18h6" /></svg>',
     reports: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 13h6M9 17h6M9 9h2" /></svg>',
+    flow: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="5" height="5" rx="1.4" /><rect x="15.5" y="4" width="5" height="5" rx="1.4" /><rect x="9.5" y="15" width="5" height="5" rx="1.4" /><path d="M8.5 6.5h7M18 9v3.5a2 2 0 0 1-2 2h-1.5M6 9v3.5a2 2 0 0 0 2 2h1.5" /></svg>',
     log: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>'
   };
   function buildNav() {

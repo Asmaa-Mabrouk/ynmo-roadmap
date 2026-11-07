@@ -11,6 +11,7 @@ import { render } from '../ui/gantt-render.js';
 import { allRoadmaps, fillRm, renderRoadmaps, useRoadmap } from '../pages/roadmaps.js';
 import { loadMembers, renderAdmin, renderResources } from '../pages/resources.js';
 import { renderVacations } from '../pages/vacations.js';
+import { renderFlow } from '../pages/flow.js';
 import { renderLog } from '../pages/log.js';
 import { renderSprints } from '../pages/sprints.js';
 import { applySquadNames } from '../features/squad-names.js';
@@ -32,7 +33,7 @@ import { bootShared } from '../features/sharing.js';
 
 /* ---------- shell: navigation and start ---------- */
 export function refreshPage() { renderPage(state.page); }
-function renderPage(p) { ({ roadmap: render, roadmaps: renderRoadmaps, resources: renderResources, admin: () => { loadMembers(); renderAdmin(); }, vacations: () => renderVacations(true), log: renderLog, sprints: renderSprints, reports: renderReports, monthly: renderMonthly, capacity: renderCapacity })[p](); }
+function renderPage(p) { ({ roadmap: render, roadmaps: renderRoadmaps, resources: renderResources, admin: () => { loadMembers(); renderAdmin(); }, vacations: () => renderVacations(true), log: renderLog, sprints: renderSprints, reports: renderReports, monthly: renderMonthly, capacity: renderCapacity, flow: renderFlow })[p](); }
 /** May the person open this page? Admin page: admins only. Others: View or more for that module. */
 const pageOk = p => (p === 'admin' ? !!(S.me && S.me.is_admin) : modLevel(p === 'capacity' ? 'monthly' : p) >= 1);
 export function showPage(p) {
@@ -56,6 +57,7 @@ const NAV_ICONS = {
   capacity: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>',
   monthly: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M8 3v4M16 3v4M3.5 10h17M8 15h3M8 18h6" /></svg>',
   reports: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 13h6M9 17h6M9 9h2" /></svg>',
+  flow: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="5" height="5" rx="1.4" /><rect x="15.5" y="4" width="5" height="5" rx="1.4" /><rect x="9.5" y="15" width="5" height="5" rx="1.4" /><path d="M8.5 6.5h7M18 9v3.5a2 2 0 0 1-2 2h-1.5M6 9v3.5a2 2 0 0 0 2 2h1.5" /></svg>',
   log: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>'
 };
 function buildNav() {

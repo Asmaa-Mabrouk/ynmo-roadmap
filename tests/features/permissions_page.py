@@ -12,7 +12,7 @@ with sync_playwright() as pw:
     A.click('#nav button[data-p="admin"]'); A.wait_for_timeout(700)
     ok('the page lists the people on the side with Bea waiting', A.locator('#permissions .permuser').count()==2 and A.locator('#permissions .permuser:has-text("Bea") .badge:has-text("Waiting")').count()==1)
     A.locator('#permissions .permuser:has-text("Bea")').click(); A.wait_for_timeout(300)
-    ok('the detail shows a card per module, each with its own switches', A.locator('#permissions .permmod').count()==8 and sw(A,'View Roadmap').count()==1 and sw(A,'Edit Roadmap').count()==1 and sw(A,'Delete Roadmap').count()==1)
+    ok('the detail shows a card per module, each with its own switches', A.locator('#permissions .permmod').count()==9 and sw(A,'View Roadmap').count()==1 and sw(A,'Edit Roadmap').count()==1 and sw(A,'Delete Roadmap').count()==1)
     ok('the Log module has only a View switch', sw(A,'View Log').count()==1 and sw(A,'Edit Log').count()==0)
     sw(A,'Delete Monthly deliverables').click(); A.wait_for_timeout(200)
     ok('Delete switches Edit and View on too', on(A,'View Monthly deliverables') and on(A,'Edit Monthly deliverables') and on(A,'Delete Monthly deliverables'))
@@ -65,7 +65,7 @@ with sync_playwright() as pw:
     ok('cancel changes nothing', A.evaluate("JSON.parse(localStorage.getItem('fk3')).profiles.find(p=>p.email==='bea@x.com').is_admin")==False)
     sw(A,'Admin').click(); A.wait_for_timeout(300); A.click('#xdlg button:text-is("Make admin")'); A.wait_for_timeout(900)
     ok('Bea is now an admin', A.evaluate("JSON.parse(localStorage.getItem('fk3')).profiles.find(p=>p.email==='bea@x.com').is_admin")==True and A.locator('#permissions .permuser:has-text("Bea") .badge:has-text("Admin")').count()==1)
-    ok('an admin has Full on every module and the switches are locked', A.locator('#permissions .permmod .permbadge:text-is("Full")').count()==8 and sw(A,'View Roadmap').is_disabled())
+    ok('an admin has Full on every module and the switches are locked', A.locator('#permissions .permmod .permbadge:text-is("Full")').count()==9 and sw(A,'View Roadmap').is_disabled())
     B.reload(); B.wait_for_timeout(1500)
     ok('Bea now sees every page plus Users & permissions', B.locator('#nav button[data-p="admin"]').count()==1 and B.locator('#nav button[data-p="sprints"]').count()==1 and B.locator('#nav button[data-p="resources"]').count()==1)
     # an admin can approve and manage; the original admin can be demoted by the new admin, but the last admin cannot

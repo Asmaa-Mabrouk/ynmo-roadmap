@@ -13,6 +13,7 @@ export const MODULES = [
   { k: 'monthly', n: 'Monthly deliverables', d: 'The monthly board and the backlog', max: 3 },
   { k: 'resources', n: 'Resources', d: 'Team members and products', max: 3 },
   { k: 'vacations', n: 'Vacations', d: 'Leave of the team', max: 3 },
+  { k: 'flow', n: 'Ynmo Flow', d: 'Tasks and tickets: projects, backlog, sprints, workflow (being built)', max: 3 },
   { k: 'log', n: 'Log', d: 'The activity log', max: 1 }
 ];
 export const LEVELS = ['No access', 'View', 'Edit', 'Delete'];

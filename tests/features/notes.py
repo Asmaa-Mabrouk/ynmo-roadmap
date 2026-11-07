@@ -20,8 +20,8 @@ with sync_playwright() as pw:
     ok('bars of that person move down to make room', top1>top0+10)
     ok('saved as a meta doc in ideas (hidden from the ideas board)', A.evaluate("Object.values(JSON.parse(localStorage.getItem('fk3')).ideas).some(i=>i.tn&&i.k==='person'&&i.p===arguments[0])".replace('arguments[0]',repr(who))) )
     # drag it
-    d0=A.evaluate("()=>Object.values(__ynmo.S.ideas).find(i=>i.tn).a0"); bb=rib.bounding_box()
-    A.mouse.move(bb['x']+bb['width']/2, bb['y']+8); A.mouse.down(); A.mouse.move(bb['x']+bb['width']/2+90, bb['y']+8, steps=6); A.mouse.up(); A.wait_for_timeout(500)
+    d0=A.evaluate("()=>Object.values(__ynmo.S.ideas).find(i=>i.tn).a0"); rib.scroll_into_view_if_needed(); A.wait_for_timeout(300); bb=rib.bounding_box(); bx=bb['x']+min(40,bb['width']/2)   # the ribbon starts at today, which can be near the right edge of the screen
+    A.mouse.move(bx, bb['y']+8); A.wait_for_timeout(150); A.mouse.down(); A.wait_for_timeout(150); A.mouse.move(bx+90, bb['y']+8, steps=20); A.wait_for_timeout(150); A.mouse.up(); A.wait_for_timeout(800)
     d1=A.evaluate("()=>Object.values(__ynmo.S.ideas).find(i=>i.tn).a0"); ok('dragging moves the note', d1>d0)
     # click opens editor, edit text
     A.locator('.tribbon').first.click(); A.wait_for_timeout(300)
