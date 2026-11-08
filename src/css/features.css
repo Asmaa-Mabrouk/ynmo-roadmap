@@ -1101,3 +1101,69 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 .flowkids, .flowhist { margin: 10px 0; }
 .flowkid { display: flex; align-items: center; gap: 4px; width: 100%; text-align: start; font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); margin: 0 0 4px; cursor: pointer; }
 .flowhist p { margin: 2px 0; font-size: 12.5px; }
+
+/* ---- Ynmo Flow: Jira-style shell, summary, board ---- */
+.flowapp { display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 0; min-height: calc(100vh - 120px); border: 1px solid var(--line); border-radius: 14px; background: var(--surface); overflow: hidden; }
+.flowside { border-inline-end: 1px solid var(--line); padding: 14px 10px; background: color-mix(in srgb, var(--surface) 92%, var(--ink) 3%); display: flex; flex-direction: column; gap: 6px; }
+.flowproj { display: flex; gap: 10px; align-items: center; padding: 4px 8px 12px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+.flowproj b { display: block; font-size: 14px; }
+.flowproj span:not(.flowlogo) { font-size: 12px; color: var(--muted); }
+.flowlogo { width: 34px; height: 34px; border-radius: 9px; background: var(--focus); color: var(--on-bar); display: grid; place-items: center; font-weight: 800; font-size: 13px; flex: none; }
+.flowgrp { display: grid; gap: 2px; margin-top: 6px; }
+.flowgt { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); padding: 8px 10px 4px; }
+.flowitem { display: flex; align-items: center; gap: 10px; font: inherit; font-size: 14px; text-align: start; padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); cursor: pointer; width: 100%; }
+.flowitem svg { color: var(--muted); flex: none; }
+.flowitem:hover { background: color-mix(in srgb, var(--focus) 8%, transparent); }
+.flowitem[aria-current="page"] { background: color-mix(in srgb, var(--focus) 14%, transparent); font-weight: 700; color: var(--focus); }
+.flowitem[aria-current="page"] svg { color: var(--focus); }
+.flowsoon { margin-inline-start: auto; font-style: normal; font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--line); color: var(--muted); }
+.flowmain { padding: 14px 22px 26px; min-width: 0; }
+.flowtop { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.flowcrumb { font-size: 13px; color: var(--muted); }
+.flowcrumb b { color: var(--ink); }
+.flowh1 { margin: 8px 0 12px; font-size: 24px; }
+.fstats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 0 0 12px; }
+.fstat { padding: 12px 14px; display: grid; gap: 2px; }
+.fstat b { font-size: 26px; }
+.fstat span { font-size: 12.5px; color: var(--muted); }
+.fgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.fpanel { padding: 14px 16px; }
+.fpanel h3 { margin: 0 0 10px; font-size: 14px; }
+.fbars { display: grid; gap: 8px; }
+.fbrow { display: grid; grid-template-columns: minmax(90px, 140px) 1fr 28px; gap: 10px; align-items: center; font-size: 13px; }
+.fbrow b { text-align: end; }
+.fbar { height: 10px; background: var(--line); border-radius: 999px; overflow: hidden; }
+.fbar i { display: block; height: 100%; background: var(--focus); border-radius: 999px; }
+.frecent p { margin: 4px 0; font-size: 13px; }
+.flink { font: inherit; font-weight: 700; color: var(--focus); background: none; border: 0; padding: 0; cursor: pointer; }
+.favatar { width: 24px; height: 24px; border-radius: 50%; background: color-mix(in srgb, var(--focus) 18%, var(--surface)); color: var(--focus); display: inline-grid; place-items: center; font-size: 10.5px; font-weight: 800; flex: none; }
+.fboard { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(230px, 1fr); gap: 10px; overflow-x: auto; padding-bottom: 8px; align-items: start; }
+.fcol { background: color-mix(in srgb, var(--surface) 90%, var(--ink) 4%); border-radius: 10px; padding: 8px; min-height: 160px; border: 2px solid transparent; }
+.fcol.over { border-color: var(--focus); }
+.fcolhd { display: flex; justify-content: space-between; align-items: center; padding: 2px 4px 8px; font-size: 12px; }
+.fcount { color: var(--muted); font-weight: 700; }
+.fcolbody { display: grid; gap: 8px; min-height: 60px; align-content: start; }
+.fcard { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; cursor: grab; display: grid; gap: 8px; box-shadow: 0 1px 2px rgba(10, 12, 30, .06); }
+.fcard:hover, .fcard:focus-visible { border-color: var(--focus); }
+.fcard.drag { opacity: .45; }
+.fcardt { font-size: 13.5px; overflow-wrap: anywhere; }
+.fcardm { display: flex; align-items: center; gap: 8px; }
+.fcardm .favatar { margin-inline-start: auto; }
+.fpr { font-size: 11.5px; color: var(--muted); }
+.fepic { padding: 12px 16px; margin: 0 0 10px; cursor: pointer; display: grid; gap: 8px; }
+.fepichd { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.fsoon { padding: 24px; max-width: 620px; display: grid; gap: 8px; }
+.fsoon h2 { margin: 0; }
+.fdl { display: grid; grid-template-columns: 160px 1fr; gap: 8px 14px; margin: 0; }
+.fdl dt { color: var(--muted); font-size: 13px; }
+.fdl dd { margin: 0; }
+@media (max-width: 820px) {
+  .flowapp { grid-template-columns: 1fr; }
+  .flowside { border-inline-end: 0; border-bottom: 1px solid var(--line); flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .flowproj { border-bottom: 0; margin: 0; padding: 0 8px 0 0; }
+  .flowgrp { display: flex; flex-wrap: wrap; margin: 0; }
+  .flowgt { display: none; }
+  .flowitem { width: auto; padding: 6px 10px; }
+}
+#boardmine[aria-pressed="false"] { opacity: 1; color: var(--muted); }
+#boardmine[aria-pressed="true"] { background: color-mix(in srgb, var(--focus) 14%, var(--surface)); }

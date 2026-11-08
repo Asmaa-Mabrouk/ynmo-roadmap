@@ -1,5 +1,5 @@
 // Ynmo Flow phase 1: ticket rules (types, parents, keys, history, filters, My work).
-import { TYPES, STATUSES, parentProblem, epicProblem, nextNo, makeIssue, applyChange, list, filterIssues, myWork, childrenOf, countByStatus } from '../src/esm/features/flow-model.js';
+import { TYPES, STATUSES, parentProblem, epicProblem, nextNo, makeIssue, applyChange, list, filterIssues, myWork, childrenOf, countByStatus, initials, epicProgress, summaryStats } from '../src/esm/features/flow-model.js';
 let bad = 0; const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) bad++; };
 ok('eight ticket types, seven default statuses in order', TYPES.length === 8 && STATUSES.map(s => s.id).join() === 'open,progress,rfqa,blocked,ready,deployed,done');
 const I = {}; const add = (o) => { const i = makeIssue(o, I, o.me || 'Asmaa', '2026-11-08T10:00:00Z'); const id = 'id' + (i.n); I[id] = i; return id; };
@@ -35,4 +35,9 @@ ok('My work: tickets, sub-tasks (closed hidden), bugs, reported', w.tickets.leng
 ok('My work with all shows the closed sub-task', myWork(rows2, 'Mona', true).subtasks.length === 1);
 ok('children of a story are its sub-tickets; of an epic its tickets', childrenOf(rows2, s1).length === 2 && childrenOf(rows2, e1).length === 1);
 ok('counts per status', countByStatus(rows2).find(c => c.id === 'done').count === 1 && countByStatus(rows2).find(c => c.id === 'open').count === 3);
+ok('initials', initials('Aya Fathy') === 'AF' && initials('Mona') === 'M' && initials('') === '?');
+ok('epic progress counts closed tickets', epicProgress(rows2, e1).total === 1 && epicProgress(rows2, e1).pct === 0 && epicProgress(rows2, 'none').total === 0);
+const sm = summaryStats(rows2);
+ok('summary: totals, open (epics left out), blocked, people, newest activity first', sm.total === 5 && sm.open === 3 && sm.closed === 1 && sm.blocked === 0 && sm.people.length >= 1 && sm.recent.length === 7 && sm.recent[0].at >= sm.recent[6].at);
+ok('summary: types listed with counts', sm.types.find(t => t.id === 'epic').count === 1 && !sm.types.find(t => t.id === 'hotfix'));
 process.exit(bad ? 1 : 0);

@@ -42,6 +42,19 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-11-08 - Ynmo Flow Jira-style shell
+```
+🔄 YNMO LEDGER UPDATE - 2026-11-08
+Request: make the Flow subsystem look and work like Jira (own sidebar, sub icons, settings) so the team feels familiar
+Surface: Ynmo Roadmaps tool (Ynmo Flow)
+Outcome: project sidebar (My work; Summary, Epics, Backlog, Board, Sprints; All issues; Details, Issue types, Workflow), per-view addresses, Summary, drag Board, Epics progress, read-only settings pages
+New facts / decisions locked:
+  - Flow views live at #/flow/<view>; Backlog and Sprints are visible but marked Soon (phase 3); Issue types and Workflow are read-only until phase 2
+Corrections to this skill: none
+Open / flagged: phases 2-6; saved filters; live check by Asmaa
+Changelog: Flow gets a Jira-style sidebar, board and summary.
+```
+
 ### 2026-11-08 - Ynmo Flow phase 1 (tickets)
 ```
 🔄 YNMO LEDGER UPDATE - 2026-11-08

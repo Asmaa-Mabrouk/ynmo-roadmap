@@ -104,3 +104,24 @@ export function myWork(rows, name, all) {
 export const childrenOf = (rows, id) => rows.filter(i => i.par === id || i.ep === id).sort((a, b) => a.n - b.n);
 /** Counts per status for a set of tickets, in the status order. */
 export const countByStatus = rows => STATUSES.map(s => ({ id: s.id, n: s.n, count: rows.filter(i => i.st === s.id).length }));
+
+/** Two-letter initials of a name ("Aya Fathy" -> "AF"; "" -> "?"). */
+export const initials = n => { const w = String(n || '').trim().split(/\s+/).filter(Boolean); return w.length ? (w[0][0] + (w.length > 1 ? w[w.length - 1][0] : '')).toUpperCase() : '?'; };
+/** Epic progress: how many of its tickets are closed. {total, done, pct}. */
+export function epicProgress(rows, epicId) {
+  const k = rows.filter(i => i.ep === epicId), done = k.filter(i => i.st === 'done' || i.st === 'deployed').length;
+  return { total: k.length, done: done, pct: k.length ? Math.round(done * 100 / k.length) : 0 };
+}
+/** Numbers for the Summary page: totals, open, by status, by type, open work per person, latest changes. */
+export function summaryStats(rows) {
+  const open = rows.filter(i => !isClosed(i) && i.type !== 'epic');
+  const byAs = {}; open.forEach(i => { const k = i.as || 'Unassigned'; byAs[k] = (byAs[k] || 0) + 1; });
+  const recent = []; rows.forEach(i => (i.hist || []).forEach(h => recent.push({ at: h.at, by: h.by, key: i.key, id: i.id, f: h.f, a: h.a, b: h.b })));
+  recent.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  return {
+    total: rows.length, open: open.length, progress: rows.filter(i => i.st === 'progress').length, blocked: rows.filter(i => i.st === 'blocked').length, closed: rows.filter(isClosed).length,
+    status: countByStatus(rows), types: TYPES.map(t => ({ id: t.id, n: t.n, c: t.c, count: rows.filter(i => i.type === t.id).length })).filter(t => t.count),
+    people: Object.keys(byAs).map(n => ({ n: n, count: byAs[n] })).sort((a, b) => b.count - a.count || a.n.localeCompare(b.n)),
+    recent: recent.slice(0, 8)
+  };
+}

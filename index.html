@@ -1524,6 +1524,72 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 .flowkids, .flowhist { margin: 10px 0; }
 .flowkid { display: flex; align-items: center; gap: 4px; width: 100%; text-align: start; font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); margin: 0 0 4px; cursor: pointer; }
 .flowhist p { margin: 2px 0; font-size: 12.5px; }
+
+/* ---- Ynmo Flow: Jira-style shell, summary, board ---- */
+.flowapp { display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 0; min-height: calc(100vh - 120px); border: 1px solid var(--line); border-radius: 14px; background: var(--surface); overflow: hidden; }
+.flowside { border-inline-end: 1px solid var(--line); padding: 14px 10px; background: color-mix(in srgb, var(--surface) 92%, var(--ink) 3%); display: flex; flex-direction: column; gap: 6px; }
+.flowproj { display: flex; gap: 10px; align-items: center; padding: 4px 8px 12px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+.flowproj b { display: block; font-size: 14px; }
+.flowproj span:not(.flowlogo) { font-size: 12px; color: var(--muted); }
+.flowlogo { width: 34px; height: 34px; border-radius: 9px; background: var(--focus); color: var(--on-bar); display: grid; place-items: center; font-weight: 800; font-size: 13px; flex: none; }
+.flowgrp { display: grid; gap: 2px; margin-top: 6px; }
+.flowgt { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); padding: 8px 10px 4px; }
+.flowitem { display: flex; align-items: center; gap: 10px; font: inherit; font-size: 14px; text-align: start; padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); cursor: pointer; width: 100%; }
+.flowitem svg { color: var(--muted); flex: none; }
+.flowitem:hover { background: color-mix(in srgb, var(--focus) 8%, transparent); }
+.flowitem[aria-current="page"] { background: color-mix(in srgb, var(--focus) 14%, transparent); font-weight: 700; color: var(--focus); }
+.flowitem[aria-current="page"] svg { color: var(--focus); }
+.flowsoon { margin-inline-start: auto; font-style: normal; font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--line); color: var(--muted); }
+.flowmain { padding: 14px 22px 26px; min-width: 0; }
+.flowtop { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.flowcrumb { font-size: 13px; color: var(--muted); }
+.flowcrumb b { color: var(--ink); }
+.flowh1 { margin: 8px 0 12px; font-size: 24px; }
+.fstats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 0 0 12px; }
+.fstat { padding: 12px 14px; display: grid; gap: 2px; }
+.fstat b { font-size: 26px; }
+.fstat span { font-size: 12.5px; color: var(--muted); }
+.fgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.fpanel { padding: 14px 16px; }
+.fpanel h3 { margin: 0 0 10px; font-size: 14px; }
+.fbars { display: grid; gap: 8px; }
+.fbrow { display: grid; grid-template-columns: minmax(90px, 140px) 1fr 28px; gap: 10px; align-items: center; font-size: 13px; }
+.fbrow b { text-align: end; }
+.fbar { height: 10px; background: var(--line); border-radius: 999px; overflow: hidden; }
+.fbar i { display: block; height: 100%; background: var(--focus); border-radius: 999px; }
+.frecent p { margin: 4px 0; font-size: 13px; }
+.flink { font: inherit; font-weight: 700; color: var(--focus); background: none; border: 0; padding: 0; cursor: pointer; }
+.favatar { width: 24px; height: 24px; border-radius: 50%; background: color-mix(in srgb, var(--focus) 18%, var(--surface)); color: var(--focus); display: inline-grid; place-items: center; font-size: 10.5px; font-weight: 800; flex: none; }
+.fboard { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(230px, 1fr); gap: 10px; overflow-x: auto; padding-bottom: 8px; align-items: start; }
+.fcol { background: color-mix(in srgb, var(--surface) 90%, var(--ink) 4%); border-radius: 10px; padding: 8px; min-height: 160px; border: 2px solid transparent; }
+.fcol.over { border-color: var(--focus); }
+.fcolhd { display: flex; justify-content: space-between; align-items: center; padding: 2px 4px 8px; font-size: 12px; }
+.fcount { color: var(--muted); font-weight: 700; }
+.fcolbody { display: grid; gap: 8px; min-height: 60px; align-content: start; }
+.fcard { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; cursor: grab; display: grid; gap: 8px; box-shadow: 0 1px 2px rgba(10, 12, 30, .06); }
+.fcard:hover, .fcard:focus-visible { border-color: var(--focus); }
+.fcard.drag { opacity: .45; }
+.fcardt { font-size: 13.5px; overflow-wrap: anywhere; }
+.fcardm { display: flex; align-items: center; gap: 8px; }
+.fcardm .favatar { margin-inline-start: auto; }
+.fpr { font-size: 11.5px; color: var(--muted); }
+.fepic { padding: 12px 16px; margin: 0 0 10px; cursor: pointer; display: grid; gap: 8px; }
+.fepichd { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.fsoon { padding: 24px; max-width: 620px; display: grid; gap: 8px; }
+.fsoon h2 { margin: 0; }
+.fdl { display: grid; grid-template-columns: 160px 1fr; gap: 8px 14px; margin: 0; }
+.fdl dt { color: var(--muted); font-size: 13px; }
+.fdl dd { margin: 0; }
+@media (max-width: 820px) {
+  .flowapp { grid-template-columns: 1fr; }
+  .flowside { border-inline-end: 0; border-bottom: 1px solid var(--line); flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .flowproj { border-bottom: 0; margin: 0; padding: 0 8px 0 0; }
+  .flowgrp { display: flex; flex-wrap: wrap; margin: 0; }
+  .flowgt { display: none; }
+  .flowitem { width: auto; padding: 6px 10px; }
+}
+#boardmine[aria-pressed="false"] { opacity: 1; color: var(--muted); }
+#boardmine[aria-pressed="true"] { background: color-mix(in srgb, var(--focus) 14%, var(--surface)); }
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -1883,8 +1949,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     setTimeout(() => URL.revokeObjectURL(u), 1e3);
   } };
   var $ = (id) => document.getElementById(id);
-  function el(tag, cls, text) {
-    const e = document.createElement(tag);
+  function el(tag2, cls, text) {
+    const e = document.createElement(tag2);
     if (cls) e.className = cls;
     if (text != null) e.textContent = text;
     return e;
@@ -2941,15 +3007,15 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const tools = el("div", "formrow");
     tools.append(su, sa, ex);
     root.append(pageHead("Log", "Who changed what, and when. Newest first. Times show in your time zone." + (canEdit() ? " Undo puts an edit back the way it was." : ""), tools));
-    const card2 = el("div", "card");
+    const card3 = el("div", "card");
     let day = "";
-    if (!rows3.length) card2.append(el("div", "hint", "No changes recorded yet."));
+    if (!rows3.length) card3.append(el("div", "hint", "No changes recorded yet."));
     rows3.forEach((l) => {
       const d = l.data;
       const dd = new Date(d.at).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
       if (dd !== day) {
         day = dd;
-        card2.append(el("div", "logday", dd));
+        card3.append(el("div", "logday", dd));
       }
       const r = el("div", "logrow"), b = el("div", "lb");
       const nm = el("b", "", d.name);
@@ -2966,7 +3032,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         u.addEventListener("click", () => undoFromLog(l));
         r.append(u);
       }
-      card2.append(r);
+      card3.append(r);
     });
     if (S.logsMore) {
       const m = el("button", "btn", S.logsBusy ? "Loading…" : "Load older entries");
@@ -2974,9 +3040,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       m.id = "logmore";
       m.disabled = S.logsBusy;
       m.addEventListener("click", loadOlderLogs);
-      card2.append(m);
-    } else if (every.length > ACTIVE_LOG_PAGE) card2.append(el("div", "hint", "That is everything."));
-    root.append(card2);
+      card3.append(m);
+    } else if (every.length > ACTIVE_LOG_PAGE) card3.append(el("div", "hint", "That is everything."));
+    root.append(card3);
   }
 
   // src/esm/core/shared.js
@@ -3231,7 +3297,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         sec("Added since", d.newer, "add");
         sec("Changed since", d.changed, "mod");
         if (!d.missing.length && !d.newer.length && !d.changed.length) det.append(el("p", "hint", "Same as now."));
-        const bar4 = el("div", "vhbtns"), rb = el("button", "btn sm", "Restore this version"), bb = el("button", "btn pri sm", "Bring back only the missing cards" + (d.missing.length ? " (" + d.missing.length + ")" : ""));
+        const bar5 = el("div", "vhbtns"), rb = el("button", "btn sm", "Restore this version"), bb = el("button", "btn pri sm", "Bring back only the missing cards" + (d.missing.length ? " (" + d.missing.length + ")" : ""));
         rb.type = "button";
         rb.id = "vhrestore";
         bb.type = "button";
@@ -3265,8 +3331,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           sel = "";
           closeDlg();
         }));
-        bar4.append(rb, bb);
-        det.append(bar4);
+        bar5.append(rb, bb);
+        det.append(bar5);
       }
       draw();
     });
@@ -3432,8 +3498,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   function renderTeamLeave(root) {
     const names2 = [...new Set(Object.keys(S.vacs).map((id) => S.vacs[id]).filter((v) => v.a0).map((v) => v.p))].sort((x, y) => x.localeCompare(y));
     if (!names2.length) return;
-    const card2 = el("div", "card");
-    card2.append(el("h2", "", "Team leave"), el("div", "hint", "Select a person to see their leave stats and calendar."));
+    const card3 = el("div", "card");
+    card3.append(el("h2", "", "Team leave"), el("div", "hint", "Select a person to see their leave stats and calendar."));
     const td = todayIso();
     names2.forEach((nm) => {
       const st = personStats(nm), open = vacUI.open.has(nm), row = el("div", "tlrow");
@@ -3482,9 +3548,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         body.append(go);
         row.append(body);
       }
-      card2.append(row);
+      card3.append(row);
     });
-    root.append(card2);
+    root.append(card3);
   }
   function addVacation(p, a0, a1, type, note) {
     const id = "v" + Date.now().toString(36);
@@ -3577,10 +3643,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       root.append(c);
     }
     renderTeamLeave(root);
-    const card2 = el("div", "card");
-    card2.append(el("h2", "", "All leave"));
+    const card3 = el("div", "card");
+    card3.append(el("h2", "", "All leave"));
     const list2 = Object.keys(S.vacs).map((id) => Object.assign({ id }, S.vacs[id])).filter((v) => v.a0).sort((x, y) => x.a0 < y.a0 ? -1 : 1);
-    if (!list2.length) card2.append(el("div", "hint", "No leave added yet."));
+    if (!list2.length) card3.append(el("div", "hint", "No leave added yet."));
     else {
       const t = el("table", "tbl"), th = el("thead"), hr = el("tr");
       ["Person", "Dates", "Type", "Working days", "Affects", ""].forEach((x) => {
@@ -3616,9 +3682,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       t.append(tb);
       const sc = el("div", "tscroll");
       sc.append(t);
-      card2.append(sc);
+      card3.append(sc);
     }
-    root.append(card2);
+    root.append(card3);
   }
 
   // src/esm/features/timeline-notes.js
@@ -4521,8 +4587,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     else commit(it.id, { ms: true, d1: it.d0 });
   }
   var SVGNS = "http://www.w3.org/2000/svg";
-  function sv(tag, attrs) {
-    const n = document.createElementNS(SVGNS, tag);
+  function sv(tag2, attrs) {
+    const n = document.createElementNS(SVGNS, tag2);
     Object.keys(attrs || {}).forEach((k) => n.setAttribute(k, attrs[k]));
     return n;
   }
@@ -4707,7 +4773,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   // src/esm/features/feature-link.js
   var LINK_FIELDS = [["t", "Title"], ["pct", "Progress"]];
   var clean = (v) => typeof v === "string" ? v.replace(/\s+/g, " ").trim() : v;
-  var roadVals = (bar4) => ({ t: clean(bar4 && bar4.t), pct: bar4 && Number.isFinite(bar4.pc) ? bar4.pc : void 0 });
+  var roadVals = (bar5) => ({ t: clean(bar5 && bar5.t), pct: bar5 && Number.isFinite(bar5.pc) ? bar5.pc : void 0 });
   function compare2(cur2, base3, road) {
     const incoming2 = [], outgoing2 = [], rebase = {}, b0 = base3 || cur2;
     LINK_FIELDS.forEach(([f]) => {
@@ -4760,19 +4826,19 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const rows3 = [];
     const cards2 = allCards();
     cards2.forEach(({ did, l }) => {
-      const bar4 = barOf(l.rid);
-      if (!bar4) return;
+      const bar5 = barOf(l.rid);
+      if (!bar5) return;
       const cur2 = { t: l.t, pct: clampPct(l.pct) }, base3 = l.lk || null;
-      rows3.push({ kind: "card", did, l, id: cardId(l), label: l.t, bar: bar4, rid: l.rid, cur: cur2, base: base3, cmp: compare2(cur2, base3, roadVals(bar4)) });
+      rows3.push({ kind: "card", did, l, id: cardId(l), label: l.t, bar: bar5, rid: l.rid, cur: cur2, base: base3, cmp: compare2(cur2, base3, roadVals(bar5)) });
     });
     Object.keys(S.reports || {}).filter(isReportDoc).forEach((did) => {
       const d = S.reports[did] || {};
       Object.keys(d.prods || {}).forEach((k) => ((d.prods[k] || {}).items || []).forEach((l) => {
         if (!l.fid) return;
-        const c = cards2.find((x) => x.l.id === l.fid), bar4 = c && barOf(c.l.rid);
-        if (!bar4) return;
+        const c = cards2.find((x) => x.l.id === l.fid), bar5 = c && barOf(c.l.rid);
+        if (!bar5) return;
         const cur2 = { t: l.t, pct: linePctOf(l) }, base3 = l.lk || null;
-        rows3.push({ kind: "line", did, pk: k, l, id: cardId(c.l), label: l.t, bar: bar4, rid: c.l.rid, cur: cur2, base: base3, cmp: compare2(cur2, base3, roadVals(bar4)), week: d.a });
+        rows3.push({ kind: "line", did, pk: k, l, id: cardId(c.l), label: l.t, bar: bar5, rid: c.l.rid, cur: cur2, base: base3, cmp: compare2(cur2, base3, roadVals(bar5)), week: d.a });
       }));
     });
     return rows3;
@@ -5251,14 +5317,14 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     if (before) return before.ord - 1;
     return after.ord + 1;
   }
-  function startDrag(ev, it, bar4, mode) {
+  function startDrag(ev, it, bar5, mode) {
     if (!canEdit() || ev.button != null && ev.button !== 0) return;
     const g = $("grid"), wk = g.querySelector(".wk");
     const mw = wk ? wk.getBoundingClientRect().width : 26;
-    const owner = bar4.dataset.person || "", ch = g.closest(".chartwrap") || document.scrollingElement, sx0 = ch.scrollLeft, sy0 = ch.scrollTop;
+    const owner = bar5.dataset.person || "", ch = g.closest(".chartwrap") || document.scrollingElement, sx0 = ch.scrollLeft, sy0 = ch.scrollTop;
     let lastE = null, raf = 0;
     const st = { x: ev.clientX, y: ev.clientY, lastY: ev.clientY, mode, d0: it.d0, d1: it.d1, sq: it.sq, person: owner, moved: false, cur: { d0: it.d0, d1: it.d1, sq: it.sq, person: owner } };
-    bar4.setPointerCapture(ev.pointerId);
+    bar5.setPointerCapture(ev.pointerId);
     const move = (e) => {
       lastE = e;
       const dx = e.clientX - st.x + (ch.scrollLeft - sx0), dy = e.clientY - st.y + (ch.scrollTop - sy0);
@@ -5267,7 +5333,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       if (!st.moved) {
         st.moved = true;
         S.dragging = true;
-        bar4.classList.add("dragging");
+        bar5.classList.add("dragging");
         raf = requestAnimationFrame(tick);
       }
       const dm = Math.round(dx / mw);
@@ -5289,9 +5355,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         tip3.style.left = e.clientX + 14 + "px";
         tip3.style.top = e.clientY + 16 + "px";
       }
-      bar4.style.gridColumn = a + 2 + " / " + (b + 3);
+      bar5.style.gridColumn = a + 2 + " / " + (b + 3);
       if (mode === "move") {
-        bar4.style.transform = "translate(" + (dx - (a - st.d0) * mw) + "px," + dy + "px)";
+        bar5.style.transform = "translate(" + (dx - (a - st.d0) * mw) + "px," + dy + "px)";
         if (state.view === "person") {
           const boxes = personBoxes(g);
           let hit = st.cur.person;
@@ -5309,7 +5375,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           st.cur.sq = hit;
           setDrop(g, hit);
         }
-      } else bar4.style.transform = "";
+      } else bar5.style.transform = "";
     };
     const tick = () => {
       if (!S.dragging || !lastE) return;
@@ -5329,9 +5395,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       cancelAnimationFrame(raf);
       const dt = $("dtip");
       if (dt) dt.remove();
-      bar4.removeEventListener("pointermove", move);
-      bar4.removeEventListener("pointerup", up);
-      bar4.removeEventListener("pointercancel", up);
+      bar5.removeEventListener("pointermove", move);
+      bar5.removeEventListener("pointerup", up);
+      bar5.removeEventListener("pointercancel", up);
       setDrop(g, null);
       setDropP(g, null);
       S.dragging = false;
@@ -5361,9 +5427,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       if (Object.keys(patch).length) commit(it.id, patch);
       else render();
     };
-    bar4.addEventListener("pointermove", move);
-    bar4.addEventListener("pointerup", up);
-    bar4.addEventListener("pointercancel", up);
+    bar5.addEventListener("pointermove", move);
+    bar5.addEventListener("pointerup", up);
+    bar5.addEventListener("pointercancel", up);
   }
 
   // src/esm/features/people-rows.js
@@ -5521,17 +5587,17 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       tipEl = null;
     }
   }
-  function showBarTip(bar4) {
+  function showBarTip(bar5) {
     hideBarTip();
-    if (S.dragging || !bar4.dataset.tip) return;
+    if (S.dragging || !bar5.dataset.tip) return;
     tipTimer = setTimeout(() => {
-      if (!bar4.isConnected || S.dragging || bar4.classList.contains("editing")) return;
+      if (!bar5.isConnected || S.dragging || bar5.classList.contains("editing")) return;
       const t = el("div", "bartip");
       t.setAttribute("role", "tooltip");
-      t.append(el("b", "", bar4.dataset.tip), el("small", "", bar4.dataset.tipSub || ""));
+      t.append(el("b", "", bar5.dataset.tip), el("small", "", bar5.dataset.tipSub || ""));
       document.body.append(t);
       tipEl = t;
-      const r = bar4.getBoundingClientRect(), w = t.offsetWidth, h = t.offsetHeight;
+      const r = bar5.getBoundingClientRect(), w = t.offsetWidth, h = t.offsetHeight;
       const top = r.top - h - 8 >= 8 ? r.top - h - 8 : r.bottom + 8;
       t.style.top = top + "px";
       t.style.left = Math.max(8, Math.min(Math.max(r.left, 8), window.innerWidth - w - 8)) + "px";
@@ -5540,23 +5606,23 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   window.addEventListener("scroll", hideBarTip, true);
   function buildBar(it, owner) {
     const l = laneOf(it.sq), col = l.c;
-    const bar4 = el("div", "bar st-" + it.st + (canEdit() ? "" : " ro") + (it.ms ? " ms" : ""));
-    bar4.style.setProperty("--c", col);
-    bar4.dataset.person = owner || "";
-    bar4.dataset.id = it.id;
-    bar4.tabIndex = 0;
-    bar4.setAttribute("role", "button");
-    bar4.setAttribute("aria-label", it.t + ", " + dlabel(it.d0) + " to " + dlabel(it.d1) + ", " + STATUS[it.st]);
-    bar4.dataset.tip = it.t;
-    bar4.dataset.tipSub = l.n + " · " + dlabel(it.d0) + " to " + dlabel(it.d1) + " · " + STATUS[it.st];
+    const bar5 = el("div", "bar st-" + it.st + (canEdit() ? "" : " ro") + (it.ms ? " ms" : ""));
+    bar5.style.setProperty("--c", col);
+    bar5.dataset.person = owner || "";
+    bar5.dataset.id = it.id;
+    bar5.tabIndex = 0;
+    bar5.setAttribute("role", "button");
+    bar5.setAttribute("aria-label", it.t + ", " + dlabel(it.d0) + " to " + dlabel(it.d1) + ", " + STATUS[it.st]);
+    bar5.dataset.tip = it.t;
+    bar5.dataset.tipSub = l.n + " · " + dlabel(it.d0) + " to " + dlabel(it.d1) + " · " + STATUS[it.st];
     if (owner && afterLast(it, owner)) {
-      bar4.classList.add("ownerleft");
-      bar4.dataset.tipSub += " · ⚠ " + owner + " leaves on " + fmtIso(leavingMap()[owner]) + ": needs a new owner";
-      bar4.setAttribute("aria-label", bar4.getAttribute("aria-label") + ", owner leaves " + fmtIso(leavingMap()[owner]));
+      bar5.classList.add("ownerleft");
+      bar5.dataset.tipSub += " · ⚠ " + owner + " leaves on " + fmtIso(leavingMap()[owner]) + ": needs a new owner";
+      bar5.setAttribute("aria-label", bar5.getAttribute("aria-label") + ", owner leaves " + fmtIso(leavingMap()[owner]));
     }
     const editing = state.edit === it.id + "|" + (owner || "");
     if (editing) {
-      bar4.classList.add("editing");
+      bar5.classList.add("editing");
       const inp = el("input", "bi");
       inp.type = "text";
       inp.value = it.t;
@@ -5581,41 +5647,41 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       inp.addEventListener("blur", () => fin(true));
       inp.addEventListener("pointerdown", (e) => e.stopPropagation());
       inp.addEventListener("dblclick", (e) => e.stopPropagation());
-      bar4.append(inp);
-    } else bar4.append(el("span", "nm2", (it.st === "done" ? "✓ " : "") + it.t));
-    if (it.tag) bar4.append(el("span", "tg", it.tag === "High priority" ? "High" : it.tag === "Low priority" ? "Low" : it.tag));
+      bar5.append(inp);
+    } else bar5.append(el("span", "nm2", (it.st === "done" ? "✓ " : "") + it.t));
+    if (it.tag) bar5.append(el("span", "tg", it.tag === "High priority" ? "High" : it.tag === "Low priority" ? "Low" : it.tag));
     if (Number.isFinite(it.pc)) {
       const pf = el("i", "pgf");
       pf.style.width = it.pc + "%";
       pf.setAttribute("aria-hidden", "true");
-      bar4.prepend(pf);
-      bar4.classList.add("hasp");
-      bar4.dataset.tipSub += " · " + it.pc + "% done";
-      bar4.setAttribute("aria-label", bar4.getAttribute("aria-label") + ", " + it.pc + " percent done");
+      bar5.prepend(pf);
+      bar5.classList.add("hasp");
+      bar5.dataset.tipSub += " · " + it.pc + "% done";
+      bar5.setAttribute("aria-label", bar5.getAttribute("aria-label") + ", " + it.pc + " percent done");
     }
     const hl = el("span", "hd l"), hr = el("span", "hd r");
-    bar4.append(hl, hr);
-    bar4.addEventListener("pointerdown", (e) => {
+    bar5.append(hl, hr);
+    bar5.addEventListener("pointerdown", (e) => {
       if (e.target.tagName === "INPUT") return;
       const mode = e.target === hl ? "l" : e.target === hr ? "r" : "move";
-      if (canEdit()) startDrag(e, it, bar4, mode);
+      if (canEdit()) startDrag(e, it, bar5, mode);
     });
-    bar4.addEventListener("pointerenter", () => {
+    bar5.addEventListener("pointerenter", () => {
       if (S.dragging) return;
       const g = $("grid");
       g.classList.add("hov");
       g.querySelectorAll(".bar").forEach((b) => b.classList.toggle("same", b.dataset.id === it.id));
     });
-    bar4.addEventListener("pointerleave", () => {
+    bar5.addEventListener("pointerleave", () => {
       $("grid").classList.remove("hov");
     });
-    bar4.addEventListener("pointerenter", () => showBarTip(bar4));
-    bar4.addEventListener("pointerleave", hideBarTip);
-    bar4.addEventListener("pointerdown", hideBarTip);
-    bar4.addEventListener("focus", () => showBarTip(bar4));
-    bar4.addEventListener("blur", hideBarTip);
-    bar4.addEventListener("keydown", (e) => {
-      if (e.target !== bar4) return;
+    bar5.addEventListener("pointerenter", () => showBarTip(bar5));
+    bar5.addEventListener("pointerleave", hideBarTip);
+    bar5.addEventListener("pointerdown", hideBarTip);
+    bar5.addEventListener("focus", () => showBarTip(bar5));
+    bar5.addEventListener("blur", hideBarTip);
+    bar5.addEventListener("keydown", (e) => {
+      if (e.target !== bar5) return;
       if (e.key === "Enter" || e.key === "F2") {
         e.preventDefault();
         startEdit(it, owner);
@@ -5631,7 +5697,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       }
       state.refocusBar = it.id;
     });
-    return bar4;
+    return bar5;
   }
   var ZOOM = { day: 26, week: 12, month: 4 };
   function render() {
@@ -5939,9 +6005,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       ui.draft = Object.assign({}, stored);
       ui.draftFor = cur2.id;
     }
-    const card2 = el("div", "card permpage");
-    card2.id = "permissions";
-    card2.append(el("h2", "", "Users & permissions"), el("p", "sub", "Pick a person, then choose what they can do in each module. Delete includes Edit, and Edit includes View. Admins can approve new people and manage everyone's permissions."));
+    const card3 = el("div", "card permpage");
+    card3.id = "permissions";
+    card3.append(el("h2", "", "Users & permissions"), el("p", "sub", "Pick a person, then choose what they can do in each module. Delete includes Edit, and Edit includes View. Admins can approve new people and manage everyone's permissions."));
     const lay = el("div", "permlay"), list2 = el("div", "permusers");
     list2.setAttribute("role", "listbox");
     list2.setAttribute("aria-label", "People");
@@ -6050,8 +6116,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     foot.append(save2, undo2, el("span", "hint", dirty ? "Unsaved changes" : ""));
     det.append(foot);
     lay.append(list2, det);
-    card2.append(lay);
-    root.append(card2);
+    card3.append(lay);
+    root.append(card3);
   }
 
   // src/esm/pages/resources.js
@@ -6672,8 +6738,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       sqCard.append(nf);
     }
     root.append(sqCard);
-    const card2 = el("div", "card");
-    card2.append(el("h2", "", "Team (" + people.length + ")"), el("p", "sub", "Squads: a coloured chip with a ✓ means the person works in that squad. Click a chip to add or remove the squad (saved automatically). They decide whose rows show on each squad's roadmap and who is suggested first on the sprint page."));
+    const card3 = el("div", "card");
+    card3.append(el("h2", "", "Team (" + people.length + ")"), el("p", "sub", "Squads: a coloured chip with a ✓ means the person works in that squad. Click a chip to add or remove the squad (saved automatically). They decide whose rows show on each squad's roadmap and who is suggested first on the sprint page."));
     const t = el("table", "tbl"), th = el("thead"), hr = el("tr");
     ["Name", "Domain", "Squads", ""].forEach((x) => {
       const c = el("th", "", x);
@@ -6777,8 +6843,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     t.append(tb);
     const sc = el("div", "tscroll");
     sc.append(t);
-    card2.append(sc);
-    root.append(card2);
+    card3.append(sc);
+    root.append(card3);
     const hidden = Object.keys(S.extras).filter((i) => S.extras[i] && S.extras[i].hidden);
     if (hidden.length) {
       const hc = el("div", "card");
@@ -6951,10 +7017,257 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   }
   var childrenOf = (rows3, id) => rows3.filter((i) => i.par === id || i.ep === id).sort((a, b) => a.n - b.n);
   var countByStatus = (rows3) => STATUSES.map((s) => ({ id: s.id, n: s.n, count: rows3.filter((i) => i.st === s.id).length }));
+  var initials2 = (n) => {
+    const w = String(n || "").trim().split(/\s+/).filter(Boolean);
+    return w.length ? (w[0][0] + (w.length > 1 ? w[w.length - 1][0] : "")).toUpperCase() : "?";
+  };
+  function epicProgress(rows3, epicId) {
+    const k = rows3.filter((i) => i.ep === epicId), done2 = k.filter((i) => i.st === "done" || i.st === "deployed").length;
+    return { total: k.length, done: done2, pct: k.length ? Math.round(done2 * 100 / k.length) : 0 };
+  }
+  function summaryStats(rows3) {
+    const open = rows3.filter((i) => !isClosed(i) && i.type !== "epic");
+    const byAs = {};
+    open.forEach((i) => {
+      const k = i.as || "Unassigned";
+      byAs[k] = (byAs[k] || 0) + 1;
+    });
+    const recent = [];
+    rows3.forEach((i) => (i.hist || []).forEach((h) => recent.push({ at: h.at, by: h.by, key: i.key, id: i.id, f: h.f, a: h.a, b: h.b })));
+    recent.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+    return {
+      total: rows3.length,
+      open: open.length,
+      progress: rows3.filter((i) => i.st === "progress").length,
+      blocked: rows3.filter((i) => i.st === "blocked").length,
+      closed: rows3.filter(isClosed).length,
+      status: countByStatus(rows3),
+      types: TYPES.map((t) => ({ id: t.id, n: t.n, c: t.c, count: rows3.filter((i) => i.type === t.id).length })).filter((t) => t.count),
+      people: Object.keys(byAs).map((n) => ({ n, count: byAs[n] })).sort((a, b) => b.count - a.count || a.n.localeCompare(b.n)),
+      recent: recent.slice(0, 8)
+    };
+  }
+
+  // src/esm/features/flow-views.js
+  var bar = (pct3, c) => {
+    const b = el("div", "fbar");
+    const i = el("i");
+    i.style.width = pct3 + "%";
+    if (c) i.style.background = c;
+    b.append(i);
+    return b;
+  };
+  var avatar = (n) => {
+    const a = el("span", "favatar", initials2(n));
+    a.title = n || "Unassigned";
+    return a;
+  };
+  var tag = (c, t) => {
+    const s = el("span", "ftype", t);
+    s.style.setProperty("--c", c);
+    return s;
+  };
+  var card = (title, ...kids) => {
+    const d = el("section", "fpanel card");
+    d.append(el("h3", "", title), ...kids);
+    return d;
+  };
+  function summaryView(host2, c) {
+    const s = summaryStats(c.rows), top = el("div", "fstats");
+    [["Total tickets", s.total], ["Open", s.open], ["In progress", s.progress], ["Blocked", s.blocked], ["Deployed or done", s.closed]].forEach(([n, v]) => {
+      const t = el("div", "fstat card");
+      t.dataset.stat = n;
+      t.append(el("b", "", String(v)), el("span", "", n));
+      top.append(t);
+    });
+    host2.append(top);
+    const g = el("div", "fgrid");
+    const st = el("div", "fbars");
+    const mx = Math.max(1, ...s.status.map((x) => x.count));
+    s.status.forEach((x) => {
+      const r = el("div", "fbrow");
+      r.append(el("span", "", x.n), bar(x.count * 100 / mx, statusOf2(x.id).c), el("b", "", String(x.count)));
+      st.append(r);
+    });
+    const ty = el("div", "fbars");
+    const mt = Math.max(1, ...s.types.map((x) => x.count));
+    s.types.forEach((x) => {
+      const r = el("div", "fbrow");
+      r.append(el("span", "", x.n), bar(x.count * 100 / mt, x.c), el("b", "", String(x.count)));
+      ty.append(r);
+    });
+    const pe = el("div", "fbars");
+    const mp = Math.max(1, ...s.people.map((x) => x.count));
+    s.people.forEach((x) => {
+      const r = el("div", "fbrow");
+      r.append(el("span", "", x.n), bar(x.count * 100 / mp), el("b", "", String(x.count)));
+      pe.append(r);
+    });
+    const rc = el("div", "frecent");
+    s.recent.forEach((h) => {
+      const p = el("p", "sub");
+      const b = el("button", "flink", h.key);
+      b.type = "button";
+      b.addEventListener("click", () => c.open(h.id));
+      p.append(document.createTextNode((h.by || "Someone") + " " + (h.f === "created" ? "created " : "changed " + h.f + " on ")), b, document.createTextNode(" · " + ago(h.at)));
+      rc.append(p);
+    });
+    g.append(card("Status overview", s.total ? st : el("p", "sub", "No tickets yet.")), card("Types", s.types.length ? ty : el("p", "sub", "No tickets yet.")), card("Open work per person", s.people.length ? pe : el("p", "sub", "Nothing open.")), card("Recent activity", s.recent.length ? rc : el("p", "sub", "Nothing yet.")));
+    host2.append(g);
+  }
+  function boardView(host2, c, ui5) {
+    const bar22 = el("div", "flowbar");
+    const q = el("input");
+    q.type = "search";
+    q.id = "boardq";
+    q.placeholder = "Search the board";
+    q.value = ui5.bq || "";
+    q.setAttribute("aria-label", "Search the board");
+    const mine = el("button", "chip", "Only my tickets");
+    mine.type = "button";
+    mine.id = "boardmine";
+    mine.style.setProperty("--c", "#3b6fd4");
+    mine.setAttribute("aria-pressed", ui5.bmine ? "true" : "false");
+    bar22.append(q, mine);
+    host2.append(bar22);
+    const cols = el("div", "fboard");
+    host2.append(cols);
+    function paint() {
+      cols.textContent = "";
+      let rs = filterIssues(c.rows.filter((i) => i.type !== "epic"), { q: ui5.bq || "" });
+      if (ui5.bmine) rs = rs.filter((i) => i.as === c.who);
+      STATUSES.forEach((s) => {
+        const col = el("div", "fcol");
+        col.dataset.st = s.id;
+        const items2 = rs.filter((i) => i.st === s.id).sort((a, b) => b.n - a.n);
+        const h = el("div", "fcolhd");
+        h.append(tag(s.c, s.n.toUpperCase()), el("span", "fcount", String(items2.length)));
+        col.append(h);
+        const body = el("div", "fcolbody");
+        col.append(body);
+        items2.forEach((i) => {
+          const k = el("div", "fcard");
+          k.dataset.id = i.id;
+          k.draggable = c.canEdit;
+          k.tabIndex = 0;
+          const t = el("div", "fcardt", i.t), m = el("div", "fcardm");
+          m.append(tag(typeOf(i.type).c, i.key), (() => {
+            const p = el("span", "fpr", (PRIORITIES.find((x) => x.id === i.pr) || { n: "" }).n);
+            return p;
+          })(), avatar(i.as));
+          k.append(t, m);
+          k.addEventListener("click", () => c.open(i.id));
+          k.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") c.open(i.id);
+          });
+          k.addEventListener("dragstart", (e) => {
+            e.dataTransfer.setData("text/plain", i.id);
+            e.dataTransfer.effectAllowed = "move";
+            k.classList.add("drag");
+          });
+          k.addEventListener("dragend", () => k.classList.remove("drag"));
+          body.append(k);
+        });
+        if (c.canEdit) {
+          col.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            col.classList.add("over");
+          });
+          col.addEventListener("dragleave", () => col.classList.remove("over"));
+          col.addEventListener("drop", (e) => {
+            e.preventDefault();
+            col.classList.remove("over");
+            const id = e.dataTransfer.getData("text/plain");
+            if (id) c.move(id, s.id);
+          });
+        }
+        cols.append(col);
+      });
+    }
+    q.addEventListener("input", () => {
+      ui5.bq = q.value;
+      paint();
+    });
+    mine.addEventListener("click", () => {
+      ui5.bmine = !ui5.bmine;
+      mine.setAttribute("aria-pressed", ui5.bmine ? "true" : "false");
+      paint();
+    });
+    paint();
+  }
+  function epicsView(host2, c) {
+    const eps = c.rows.filter((i) => i.type === "epic");
+    if (!eps.length) {
+      host2.append(el("p", "sub flowempty", "No epics yet. Create a ticket of type Epic, then choose it in the Epic field of other tickets."));
+      return;
+    }
+    eps.forEach((e) => {
+      const p = epicProgress(c.rows, e.id), d = el("div", "fepic card");
+      d.dataset.id = e.id;
+      d.tabIndex = 0;
+      const h = el("div", "fepichd");
+      h.append(tag(typeOf("epic").c, e.key), el("b", "", e.t), stTag(e.st));
+      d.append(h, bar(p.pct, "#2a9d6f"), el("p", "sub", p.done + " of " + p.total + " tickets closed · " + p.pct + "%"));
+      d.addEventListener("click", () => c.open(e.id));
+      d.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") c.open(e.id);
+      });
+      host2.append(d);
+    });
+  }
+  var stTag = (id) => tag(statusOf2(id).c, statusOf2(id).n);
+  var SOON = {
+    backlog: { t: "Backlog", ph: 3, d: "All the tickets that are not in a sprint yet, in the order you want to do them. Drag to rank, select several and move them to a sprint." },
+    sprints: { t: "Sprints", ph: 3, d: "Create a sprint with dates and a goal, start it, watch the burndown and complete it. Unfinished tickets move on to the next sprint or back to the backlog." }
+  };
+  function soonView(host2, id) {
+    const s = SOON[id], d = el("div", "fsoon card");
+    d.append(tag("#8b93a7", "Coming in phase " + s.ph), el("h2", "", s.t), el("p", "", s.d), el("p", "sub", "The board and the issue list already work. See docs/FLOW_PLAN.md for the order of the phases."));
+    host2.append(d);
+  }
+  function settingsView(host2, id) {
+    if (id === "set-types") {
+      const t = el("table", "tbl"), h = el("tr");
+      ["Type", "Needs a parent", "Can sit under"].forEach((x) => h.append(el("th", "", x)));
+      const th = el("thead");
+      th.append(h);
+      t.append(th);
+      const tb = el("tbody");
+      TYPES.forEach((x) => {
+        const r = el("tr");
+        const a = el("td");
+        a.append(tag(x.c, x.n));
+        r.append(a, el("td", "", x.sub ? "Yes" : "No"), el("td", "", x.sub ? x.parents.map((p) => typeOf(p).n).join(", ") : x.id === "epic" ? "Nothing (epics hold other tickets)" : "An epic (optional)"));
+        tb.append(r);
+      });
+      t.append(tb);
+      host2.append(card("Issue types", t, el("p", "sub", "These eight types and their parent rules are fixed for now. Adding your own types comes with the workflow designer (phase 2).")));
+    } else if (id === "set-workflow") {
+      const t = el("table", "tbl"), h = el("tr");
+      ["Order", "Status", "Counts as finished"].forEach((x) => h.append(el("th", "", x)));
+      const th = el("thead");
+      th.append(h);
+      t.append(th);
+      const tb = el("tbody");
+      STATUSES.forEach((s, n) => {
+        const r = el("tr");
+        const a = el("td");
+        a.append(tag(s.c, s.n));
+        r.append(el("td", "", String(n + 1)), a, el("td", "", s.id === "done" || s.id === "deployed" ? "Yes" : "No"));
+        tb.append(r);
+      });
+      t.append(tb);
+      host2.append(card("Workflow", t, el("p", "sub", "Today a ticket can move from any status to any other. The workflow designer (phase 2) lets you add, rename and recolour statuses and choose which moves are allowed and who can make them.")));
+    } else {
+      const d = el("dl", "fdl");
+      [["Name", "Ynmo Flow"], ["Key", "YNMO (tickets are numbered YNMO-1, YNMO-2, ...)"], ["Type", "Team project"], ["Who can use it", "Set per person on the Permissions page (Ynmo Flow: View, Edit, Delete)"]].forEach(([a, b]) => d.append(el("dt", "", a), el("dd", "", b)));
+      host2.append(card("Project details", d));
+    }
+  }
 
   // src/esm/pages/flow.js
   var FLOW_NAME = "Ynmo Flow";
-  var ui2 = { tab: "issues", f: { q: "", st: "", type: "", as: "", ep: "", open: true } };
+  var ui2 = { view: "summary", f: { q: "", st: "", type: "", as: "", ep: "", open: true } };
   var who2 = () => S.me && (S.me.name || S.me.email) || "";
   var rows = () => list(S.fissues);
   var names = () => [...new Set([...directory().keys(), who2()].filter(Boolean))].sort((a, b) => a.localeCompare(b));
@@ -6964,7 +7277,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     return s;
   };
   var typeTag = (id) => dot(typeOf(id).c, typeOf(id).n);
-  var stTag = (id) => dot(statusOf2(id).c, statusOf2(id).n);
+  var stTag2 = (id) => dot(statusOf2(id).c, statusOf2(id).n);
   function put(i) {
     const d = Object.assign({}, i);
     delete d.id;
@@ -6999,7 +7312,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       const k = el("td", "fkey", i.key), ty = el("td");
       ty.append(typeTag(i.type));
       const ti = el("td", "ftitle", i.t), st = el("td");
-      st.append(stTag(i.st));
+      st.append(stTag2(i.st));
       tr.append(k, ty, ti, st, el("td", "", i.as || "Unassigned"), el("td", "", (PRIORITIES.find((p) => p.id === i.pr) || { n: "" }).n));
       const open = () => openIssue(i.id);
       tr.addEventListener("click", open);
@@ -7013,7 +7326,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   }
   function issuesTab(host2) {
     const all = rows(), f = ui2.f, epics = all.filter((i) => i.type === "epic");
-    const bar4 = el("div", "flowbar");
+    const bar5 = el("div", "flowbar");
     const q = el("input");
     q.type = "search";
     q.id = "flowq";
@@ -7044,7 +7357,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       paint();
     });
     ck.append(cb, document.createTextNode(" Hide Deployed and Done"));
-    bar4.append(
+    bar5.append(
       q,
       sel("flowst", "Status", [["", "All statuses"], ...STATUSES.map((s) => [s.id, s.n])], "st"),
       sel("flowtype", "Type", [["", "All types"], ...TYPES.map((t) => [t.id, t.n])], "type"),
@@ -7053,7 +7366,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       ck
     );
     const chips = el("div", "flowchips"), res = el("div", "flowres");
-    host2.append(bar4, chips, res);
+    host2.append(bar5, chips, res);
     function paint() {
       const rs = filterIssues(all, f);
       chips.textContent = "";
@@ -7098,34 +7411,100 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     if (w.epics.length) sec("My epics", w.epics, "mine-epics");
     sec("Reported by me, assigned to someone else", w.reported, "mine-reported");
   }
+  var IC = {
+    summary: "M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z",
+    board: "M4 4h4v16H4zM10 4h4v10h-4zM16 4h4v13h-4z",
+    backlog: "M4 6h16M4 12h16M4 18h10",
+    sprints: "M20 12a8 8 0 0 1-14 5.3M4 12a8 8 0 0 1 14-5.3M18 3v4h-4M6 21v-4h4",
+    epics: "M13 2 4 14h7l-1 8 9-12h-7z",
+    issues: "M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2",
+    mine: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0",
+    "set-details": "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v5M12 8h.01",
+    "set-types": "M4 4h8l8 8-8 8-8-8z",
+    "set-workflow": "M5 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM19 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM5 7v4a4 4 0 0 0 4 4h6a4 4 0 0 1 4 4"
+  };
+  var ico = (k) => `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${IC[k]}"/></svg>`;
+  var FLOW_MENU = [
+    ["", [["mine", "My work"]]],
+    ["Planning", [["summary", "Summary"], ["epics", "Epics"], ["backlog", "Backlog", 1], ["board", "Board"], ["sprints", "Sprints", 1]]],
+    ["Work", [["issues", "All issues"]]],
+    ["Project settings", [["set-details", "Details"], ["set-types", "Issue types"], ["set-workflow", "Workflow"]]]
+  ];
+  var VIEWS = FLOW_MENU.flatMap((g) => g[1].map((x) => x[0]));
+  var viewNow = () => {
+    const m = /^#\/flow\/([\w-]+)/.exec(location.hash);
+    return m && VIEWS.includes(m[1]) ? m[1] : "summary";
+  };
+  function goFlow(v) {
+    window.history.pushState(null, "", "#/flow/" + v);
+    renderFlow();
+  }
+  window.addEventListener("popstate", () => {
+    if (location.hash.startsWith("#/flow") && $("pg-flow") && !$("pg-flow").hidden) renderFlow();
+  });
+  var TITLES = Object.fromEntries(FLOW_MENU.flatMap((g) => g[1].map((x) => [x[0], x[1]])));
+  function moveTo(id, st) {
+    const cur2 = S.fissues[id];
+    if (!cur2 || cur2.st === st) return;
+    const n = applyChange(Object.assign({ id }, cur2), { st }, who2());
+    if (n.up !== cur2.up) put(n);
+    redraw();
+  }
   function renderFlow(o) {
     const pg = $("pg-flow");
     const sc = pg.scrollTop;
     pg.textContent = "";
+    const view = viewNow();
+    ui2.view = view;
+    const app = el("div", "flowapp"), side = el("nav", "flowside");
+    side.setAttribute("aria-label", "Ynmo Flow");
+    const ph = el("div", "flowproj");
+    const lg = el("span", "flowlogo", "YN");
+    const pt = el("div");
+    pt.append(el("b", "", FLOW_NAME), el("span", "", "Team project · YNMO"));
+    ph.append(lg, pt);
+    side.append(ph);
+    FLOW_MENU.forEach(([gt, items2]) => {
+      const g = el("div", "flowgrp");
+      if (gt) g.append(el("div", "flowgt", gt));
+      items2.forEach(([id, n, soon]) => {
+        const b2 = el("button", "flowitem");
+        b2.type = "button";
+        b2.dataset.view = id;
+        b2.insertAdjacentHTML("beforeend", ico(id));
+        b2.append(el("span", "", n));
+        if (soon) b2.append(el("em", "flowsoon", "Soon"));
+        if (id === view) b2.setAttribute("aria-current", "page");
+        b2.addEventListener("click", () => goFlow(id));
+        g.append(b2);
+      });
+      side.append(g);
+    });
+    const main = el("div", "flowmain"), top = el("div", "flowtop");
+    const crumb = el("div", "flowcrumb");
+    crumb.append(document.createTextNode("Projects / " + FLOW_NAME + " / "), el("b", "", TITLES[view]));
     const mk = el("button", "btn primary", "Create");
     mk.type = "button";
     mk.id = "flowcreate";
     mk.disabled = !canEdit();
     mk.addEventListener("click", () => openCreate());
-    pg.append(pageHead(FLOW_NAME, "Tickets for the team: stories, tasks, bugs, sub-tasks, epics and report requests.", mk));
+    top.append(crumb, mk);
+    main.append(top, el("h1", "flowh1", TITLES[view]));
     const b = setupBanner();
-    if (b) pg.append(b);
-    const seg = el("div", "seg flowtabs");
-    [["issues", "Issues"], ["mine", "My work"]].forEach(([id, n]) => {
-      const x = el("button", "", n);
-      x.type = "button";
-      x.dataset.tab = id;
-      x.setAttribute("aria-pressed", ui2.tab === id ? "true" : "false");
-      x.addEventListener("click", () => {
-        ui2.tab = id;
-        renderFlow();
-      });
-      seg.append(x);
-    });
+    if (b) main.append(b);
     const host2 = el("div", "flowbody");
     host2.id = "flowbody";
-    pg.append(seg, host2);
-    (ui2.tab === "mine" ? mineTab : issuesTab)(host2);
+    main.append(host2);
+    app.append(side, main);
+    pg.append(app);
+    const c = { rows: rows(), open: openIssue, who: who2(), move: moveTo, go: goFlow, canEdit: canEdit() };
+    if (view === "issues") issuesTab(host2);
+    else if (view === "mine") mineTab(host2);
+    else if (view === "summary") summaryView(host2, c);
+    else if (view === "board") boardView(host2, c, ui2);
+    else if (view === "epics") epicsView(host2, c);
+    else if (SOON[view]) soonView(host2, view);
+    else settingsView(host2, view);
     if (o && o.keep) pg.scrollTop = sc;
   }
   function openCreate(pre) {
@@ -7234,7 +7613,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           const b = el("button", "flowkid");
           b.type = "button";
           b.dataset.id = c.id;
-          b.append(typeTag(c.type), document.createTextNode(" " + c.key + " " + c.t + " · "), stTag(c.st));
+          b.append(typeTag(c.type), document.createTextNode(" " + c.key + " " + c.t + " · "), stTag2(c.st));
           b.addEventListener("click", () => openIssue(c.id));
           k.append(b);
         });
@@ -8215,7 +8594,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   }
 
   // src/esm/features/month-view.js
-  var bar = (pct3, big, label) => {
+  var bar2 = (pct3, big, label) => {
     const b = el("div", "mbar pc-" + pctBand(pct3) + (big ? " big" : "")), f = el("i");
     f.style.width = pct3 + "%";
     b.append(f);
@@ -8234,20 +8613,20 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const itemsOf2 = (p) => ((prods[p.k] || {}).items || []).filter((l) => !l.hide && String(l.t || "").trim());
     const all = pls.reduce((a, p) => a.concat(itemsOf2(p)), []), ov = avgPct(all) || 0, done2 = all.filter((l) => linePct(l) >= 100).length;
     const o = el("div", "rmall");
-    o.append(bar(ov, true, "Overall progress"), el("b", "rmpct pc-" + pctBand(ov), ov + "%"), el("span", "rmsub", "complete · " + done2 + " of " + all.length + " item" + (all.length === 1 ? "" : "s") + " done"));
+    o.append(bar2(ov, true, "Overall progress"), el("b", "rmpct pc-" + pctBand(ov), ov + "%"), el("span", "rmsub", "complete · " + done2 + " of " + all.length + " item" + (all.length === 1 ? "" : "s") + " done"));
     sec.append(o);
     pls.forEach((p) => {
       const its = itemsOf2(p), pp = avgPct(its) || 0, r = el("div", "rmsum");
       r.dataset.k = p.k;
       r.style.setProperty("--c", colOf3(p));
-      r.append(el("b", "", p.n), bar(pp, false, p.n + " progress"), el("span", "rmpp pc-" + pctBand(pp), pp + "%"));
+      r.append(el("b", "", p.n), bar2(pp, false, p.n + " progress"), el("span", "rmpp pc-" + pctBand(pp), pp + "%"));
       sec.append(r);
     });
     return sec;
   }
 
   // src/esm/features/report-print.js
-  var bar2 = (pct3) => {
+  var bar3 = (pct3) => {
     const b = el("span", "pr-bar pc-" + pctBand(pct3)), f = el("i");
     f.style.width = pct3 + "%";
     b.append(f);
@@ -8263,12 +8642,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     head.append(left, right);
     root.append(head);
     const sum = el("section", "pr-sum"), big = el("div", "pr-big pc-" + pctBand(ov));
-    big.append(el("b", "", ov + "%"), el("span", "", "overall progress"), bar2(ov), el("small", "", done2 + " of " + all.length + " item" + (all.length === 1 ? "" : "s") + " complete" + (risk ? " · " + risk + " at risk" : "") + (scope ? " · " + scope + " out of scope" : "")));
+    big.append(el("b", "", ov + "%"), el("span", "", "overall progress"), bar3(ov), el("small", "", done2 + " of " + all.length + " item" + (all.length === 1 ? "" : "s") + " complete" + (risk ? " · " + risk + " at risk" : "") + (scope ? " · " + scope + " out of scope" : "")));
     const cards2 = el("div", "pr-cards");
     pls.forEach((p) => {
       const its = items2(p), ap = avgPct(its) || 0, c = el("div", "pr-card pc-" + pctBand(ap));
       c.style.setProperty("--c", o.colOf(p));
-      c.append(el("b", "", p.n), el("span", "pr-pct", ap + "%"), bar2(ap), el("small", "", its.length + " item" + (its.length === 1 ? "" : "s")));
+      c.append(el("b", "", p.n), el("span", "pr-pct", ap + "%"), bar3(ap), el("small", "", its.length + " item" + (its.length === 1 ? "" : "s")));
       cards2.append(c);
     });
     sum.append(big, cards2);
@@ -8288,7 +8667,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         body.append(t);
         if (l.note) body.append(el("div", "pr-note", l.note));
         const pc = el("div", "pr-prog pc-" + pctBand(v));
-        pc.append(bar2(v), el("b", "", v + "%"));
+        pc.append(bar3(v), el("b", "", v + "%"));
         r.append(body, pc);
         sec.append(r);
       });
@@ -8965,7 +9344,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const wrap = el("div", "splist");
     l.forEach((r) => {
       const st = statsOf(r), sub = r.status === "submitted", pct3 = st.avg;
-      const card2 = el("div", "card spcard rpcard"), info = el("div");
+      const card3 = el("div", "card spcard rpcard"), info = el("div");
       const a = el("a", "splink");
       a.href = "#/reports/" + r.id;
       a.append(el("h2", "", "Week of " + fmtIso(r.a) + " – " + fmtIso(r.b)));
@@ -8998,8 +9377,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         },
         onClose: () => more.focus()
       }));
-      card2.append(info, prog, more);
-      wrap.append(card2);
+      card3.append(info, prog, more);
+      wrap.append(card3);
     });
     pg.append(wrap);
   }
@@ -9920,7 +10299,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     l.forEach((sp) => {
       const t = tree(sp.id), leaf = t.all.filter((i) => !t.kids[i.id]), done2 = leaf.filter((i) => i.st === "done").length, pct3 = leaf.length ? Math.round(100 * done2 / leaf.length) : 0;
       const secs = Object.keys(sp.secs || {}).concat(rows2(sp.id).filter((i) => i.k === "h").map((i) => i.sq), t.tops.map((i) => i.squad)).filter((k, i, a2) => k && a2.indexOf(k) === i);
-      const card2 = el("div", "card spcard"), info = el("div");
+      const card3 = el("div", "card spcard"), info = el("div");
       const a = el("a", "splink");
       a.href = "#/sprints/" + sp.id;
       a.append(el("h2", "", "Sprint " + sp.n));
@@ -9952,8 +10331,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         },
         onClose: () => more.focus()
       }));
-      card2.append(info, prog, more);
-      wrap.append(card2);
+      card3.append(info, prog, more);
+      wrap.append(card3);
     });
     pg.append(wrap);
   }
@@ -10661,11 +11040,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         host2.append(blockRow(b, c, info));
       });
       if (cv.missing || cv.unassigned) {
-        const bar4 = el("div", "covbar");
-        bar4.id = "covbar";
-        bar4.setAttribute("role", "status");
-        bar4.append(el("b", "", "Not connected to the plan:"), el("span", "", (cv.missing ? cv.missing + " not on any roadmap or Monthly card" : "") + (cv.missing && cv.unassigned ? " · " : "") + (cv.unassigned ? cv.unassigned + " on the plan but not assigned to the person who has it here" : "")));
-        host2.prepend(bar4);
+        const bar5 = el("div", "covbar");
+        bar5.id = "covbar";
+        bar5.setAttribute("role", "status");
+        bar5.append(el("b", "", "Not connected to the plan:"), el("span", "", (cv.missing ? cv.missing + " not on any roadmap or Monthly card" : "") + (cv.missing && cv.unassigned ? " · " : "") + (cv.unassigned ? cv.unassigned + " on the plan but not assigned to the person who has it here" : "")));
+        host2.prepend(bar5);
       }
       if (!ro) host2.append(ghostRow(all));
       applyPicked();
@@ -10822,8 +11201,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     if (unsubBar) unsubBar();
     unsubBar = U.subscribe(sync2);
     sync2();
-    const bar4 = el("div", "row spbar");
-    bar4.append(ab, cb, jb, ub, rb);
+    const bar5 = el("div", "row spbar");
+    bar5.append(ab, cb, jb, ub, rb);
     const gd = el("div", "spgdoc"), gi = el("input");
     gi.type = "url";
     gi.placeholder = "Paste a Google Doc link (optional)";
@@ -10897,7 +11276,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       else notify("Google Drive is not set up yet. Ask an admin to click Export to Google Docs once to set it up. You can use Copy for Docs meanwhile.", "info");
     });
     gd.append(gi, eb, cp, ob);
-    pg.append(dr, bar4, gd, ed);
+    pg.append(dr, bar5, gd, ed);
   }
   function renderSprints(o) {
     const pg = $("pg-sprints");
@@ -11116,10 +11495,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       });
       lines.forEach((l) => {
         dependencyProblems(l, m, monthOfId, labelOf, []).forEach((p) => out.push({ m, t: "dep", s: cardId(l) + " · " + l.t + ": " + p }));
-        const bar4 = l.rid && S.over[l.rid];
-        if (bar4 && !bar4.x && Number.isFinite(bar4.d0) && Number.isFinite(bar4.d1)) {
+        const bar5 = l.rid && S.over[l.rid];
+        if (bar5 && !bar5.x && Number.isFinite(bar5.d0) && Number.isFinite(bar5.d1)) {
           const a = kOfIso(rg.a), b = kOfIso(rg.b);
-          if (bar4.d1 < a || bar4.d0 > b) out.push({ m, t: "gantt", s: cardId(l) + " · " + l.t + ": its roadmap bar is outside " + monthLabel(m) + "." });
+          if (bar5.d1 < a || bar5.d0 > b) out.push({ m, t: "gantt", s: cardId(l) + " · " + l.t + ": its roadmap bar is outside " + monthLabel(m) + "." });
         }
       });
     });
@@ -11245,15 +11624,15 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   var missingInResources = () => unmatched(cfg2(), resources());
 
   // src/esm/features/card-details.js
-  function sprintsOf(card2, mo, sprints, itemsOf2) {
+  function sprintsOf(card3, mo, sprints, itemsOf2) {
     const r = mo && mo !== "backlog" ? monthRange(mo) : null, out = [];
     (sprints || []).forEach((sp) => {
       const its = itemsOf2(sp.id) || [];
-      if (its.some((i) => i.fid && i.fid === card2.id)) {
+      if (its.some((i) => i.fid && i.fid === card3.id)) {
         out.push({ id: sp.id, n: sp.n, a: sp.a, b: sp.b, auto: false });
         return;
       }
-      if (r && sp.a <= r.b && sp.b >= r.a && its.some((i) => !i.fid && i.kind === "feature" && sameTitle(i.t, card2.t))) out.push({ id: sp.id, n: sp.n, a: sp.a, b: sp.b, auto: true });
+      if (r && sp.a <= r.b && sp.b >= r.a && its.some((i) => !i.fid && i.kind === "feature" && sameTitle(i.t, card3.t))) out.push({ id: sp.id, n: sp.n, a: sp.a, b: sp.b, auto: true });
     });
     return out.sort((x, y) => x.n - y.n);
   }
@@ -11279,7 +11658,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           people.push(x[0]);
         }
       });
-      const tag = TAGS.find((t) => t.k === l.k), fromTag = tag && (tag.squads || []).find((k) => o.laneKeys.includes(k));
+      const tag2 = TAGS.find((t) => t.k === l.k), fromTag = tag2 && (tag2.squads || []).find((k) => o.laneKeys.includes(k));
       const sq = fromTag || (people.length ? o.sqOf(people[0]) : "") || o.laneKeys[0];
       const pct3 = clampPct(l.pct);
       out.push({ did: c.did, mo: c.mo, l, id: cardId(l), t: String(l.t).trim(), people, a, b, sq, pct: pct3, tick: pct3 < 100 });
@@ -11462,7 +11841,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   };
   var maxNo = () => rawDocs().reduce((a, d) => d.lines.reduce((b, l) => Math.max(b, +l.no || 0), a), 0);
   var onRoadmap = (l) => !!(l.rid && S.over[l.rid] && !S.over[l.rid].x);
-  function addToRoadmap(m, l, tag) {
+  function addToRoadmap(m, l, tag2) {
     if (!canEdit()) return;
     const r = curRm(), mr = monthRange(m);
     openDlg("Add to " + r.n, (box2) => {
@@ -11477,7 +11856,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       d1.setAttribute("aria-label", "End date");
       const names2 = [...directory().keys()].sort((x, y) => x.localeCompare(y)), who3 = selOf([["__none", "Unassigned"]].concat(names2.map((n) => [n, n])), "__none");
       who3.setAttribute("aria-label", "Assignee");
-      const fromTag = (tag.squads || []).find((k) => LANES.some((x) => x.k === k)), sq = selOf(LANES.map((x) => [x.k, x.n]), fromTag || LANES[0].k);
+      const fromTag = (tag2.squads || []).find((k) => LANES.some((x) => x.k === k)), sq = selOf(LANES.map((x) => [x.k, x.n]), fromTag || LANES[0].k);
       sq.setAttribute("aria-label", "Squad");
       if (!fromTag) who3.addEventListener("change", () => {
         if (who3.value !== "__none") sq.value = primarySq(who3.value);
@@ -12006,10 +12385,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         wv.append(t);
       });
       else wv.append(el("span", "cdnone", "Nobody assigned yet"));
-      const pct3 = clampPct(l.pct), pv = el("div", "cdv"), bar4 = el("div", "cdbar"), fill = el("div", "cdfill");
+      const pct3 = clampPct(l.pct), pv = el("div", "cdv"), bar5 = el("div", "cdbar"), fill = el("div", "cdfill");
       fill.style.width = pct3 + "%";
-      bar4.append(fill);
-      pv.append(el("div", "", pct3 >= 100 ? "Delivered" : pct3 + "% complete"), bar4);
+      bar5.append(fill);
+      pv.append(el("div", "", pct3 >= 100 ? "Delivered" : pct3 + "% complete"), bar5);
       grid.append(cell("Sprint", spv), cell("Assigned to", wv), cell("Progress", pv));
       if (onRoadmap(l)) {
         const o = S.over[l.rid];
@@ -12042,7 +12421,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       box2.append(top, ttl, desc, grid, row);
     });
   }
-  function card(m, l, prods, ed) {
+  function card2(m, l, prods, ed) {
     const p = prods.find((x) => x.k === l.k) || { k: l.k, n: l.k, squads: [] }, c = colOf2(p), pct3 = clampPct(l.pct);
     const r = el("div", "icard mdcard" + (l.adhoc ? " adhoc" : "") + (pct3 >= 100 ? " fin" : "") + (l.hp ? " hp" : ""));
     if (l.hp) r.append(el("div", "mdribbon", "⚑ Business priority"));
@@ -12387,7 +12766,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     b0.setAttribute("aria-label", "Progress of " + lab(m));
     pr.append(b0, el("b", "mdpct", pv + "%"), el("small", "", prog.pct === null ? "No planned deliverables yet" : prog.done + " of " + prog.n + " done" + (ad.n ? " · " + ad.n + " ad hoc" : "")));
     if (!isBl) col.append(pr);
-    (sortOn ? sortByProduct(shown) : shown).forEach((l) => col.append(card(m, l, prods, ed)));
+    (sortOn ? sortByProduct(shown) : shown).forEach((l) => col.append(card2(m, l, prods, ed)));
     if (!shown.length && !(ed && ui3.open === m)) col.append(el("div", "hint", lines.length ? "Nothing matches the filter." : isBl ? "The backlog is empty." : "Nothing here yet."));
     if (ed) col.append(composer(m, prods));
     if (ed) {
@@ -12663,8 +13042,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   var pct = (u) => Math.round(u * 100) + "%";
   var util = (used, cap) => cap > 0 ? used / cap : used > 0 ? Infinity : 0;
   var NS = "http://www.w3.org/2000/svg";
-  var sv2 = (tag, attrs, text) => {
-    const n = document.createElementNS(NS, tag);
+  var sv2 = (tag2, attrs, text) => {
+    const n = document.createElementNS(NS, tag2);
     Object.keys(attrs || {}).forEach((k) => n.setAttribute(k, attrs[k]));
     if (text !== void 0) n.textContent = text;
     return n;
@@ -12768,8 +13147,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const l = el("div", "cpleg");
     l.setAttribute("aria-label", "Colour scale");
     l.append(el("span", "", "Empty"));
-    const bar4 = el("i", "cpscale");
-    l.append(bar4, el("span", "", "Full (100%)"));
+    const bar5 = el("i", "cpscale");
+    l.append(bar5, el("span", "", "Full (100%)"));
     const o = el("i", "cpover");
     o.textContent = "▲";
     l.append(o, el("span", "", "Over the limit"));
@@ -13274,7 +13653,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const pt = $("ptitle");
     if (pt) pt.textContent = (PAGES.find((x) => x[0] === p) || [0, ""])[1];
     const hp = p === "capacity" ? "dashboard" : p;
-    if (location.hash !== "#/" + hp && !((p === "sprints" || p === "reports") && new RegExp("^#/" + p + "/").test(location.hash))) window.history.replaceState(null, "", "#/" + hp);
+    if (location.hash !== "#/" + hp && !((p === "sprints" || p === "reports" || p === "flow") && new RegExp("^#/" + p + "/").test(location.hash))) window.history.replaceState(null, "", "#/" + hp);
     renderPage(p);
   }
   var NAV_LABEL = { monthly: "Monthly", admin: "Users" };
@@ -14063,22 +14442,22 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   function pwMeter(input, host2) {
     const w = el("div", "pwmeter");
     w.setAttribute("aria-live", "polite");
-    const bar4 = el("div", "pwbar");
-    for (let i = 0; i < 4; i++) bar4.append(el("i"));
+    const bar5 = el("div", "pwbar");
+    for (let i = 0; i < 4; i++) bar5.append(el("i"));
     const txt = el("span", "pwtxt");
-    w.append(bar4, txt);
+    w.append(bar5, txt);
     host2.append(w);
     const upd = () => {
       const v = input.value;
       if (!v) {
         w.dataset.s = "";
         txt.textContent = "";
-        bar4.querySelectorAll("i").forEach((i) => i.className = "");
+        bar5.querySelectorAll("i").forEach((i) => i.className = "");
         return;
       }
       const r = pwScore(v), lab2 = ["Weak", "Weak", "Okay", "Good", "Strong"][r.s];
       w.dataset.s = String(r.s);
-      bar4.querySelectorAll("i").forEach((i, n) => {
+      bar5.querySelectorAll("i").forEach((i, n) => {
         i.className = n < Math.max(1, r.s) ? "on" : "";
       });
       txt.textContent = lab2 + (r.tips.length && r.s < 4 ? " · " + r.tips[0] : "");
@@ -14565,7 +14944,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     b.append(el("span", "prm-t", n.t));
     return b;
   }
-  function bar3(it, laneIdx, top0) {
+  function bar4(it, laneIdx, top0) {
     const l = LANES.find((x) => x.k === it.sq) || LANES[0], col = l.c, b = el("div", "prm-bar prm-st-" + it.st + (it.ms ? " prm-ms" : ""));
     b.style.left = pct2(it.d0);
     b.style.width = pct2(it.d1 - it.d0 + 1);
@@ -14675,7 +15054,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         cell.append(t);
       }
       pn.out.forEach((x) => cell.append(noteEl(x.n, x.lane, false)));
-      pk.out.forEach((x) => cell.append(bar3(x.it, x.lane, nh)));
+      pk.out.forEach((x) => cell.append(bar4(x.it, x.lane, nh)));
       td2.append(cell);
       tr.append(td1, td2);
       body.append(tr);
@@ -14769,12 +15148,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         periodMenu(e.clientX, e.clientY, Math.max(0, Math.min(NDAYS - 1, dayAt(e.clientX))));
         return;
       }
-      const bar4 = e.target.closest(".bar");
-      if (bar4) {
-        const it = items().find((i) => i.id === bar4.dataset.id);
+      const bar5 = e.target.closest(".bar");
+      if (bar5) {
+        const it = items().find((i) => i.id === bar5.dataset.id);
         if (it) {
           e.preventDefault();
-          barMenu(it, bar4.dataset.person, e.clientX, e.clientY);
+          barMenu(it, bar5.dataset.person, e.clientX, e.clientY);
         }
         return;
       }
@@ -14786,10 +15165,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     });
     gr.addEventListener("dblclick", (e) => {
       if (!canEdit() || e.target.tagName === "INPUT") return;
-      const bar4 = e.target.closest(".bar");
-      if (bar4) {
-        const it = items().find((i) => i.id === bar4.dataset.id);
-        if (it) startEdit(it, bar4.dataset.person);
+      const bar5 = e.target.closest(".bar");
+      if (bar5) {
+        const it = items().find((i) => i.id === bar5.dataset.id);
+        if (it) startEdit(it, bar5.dataset.person);
         return;
       }
       const row = e.target.closest(".rowbg[data-person]");

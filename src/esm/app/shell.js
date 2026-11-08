@@ -43,7 +43,7 @@ export function showPage(p) {
   document.querySelectorAll('#nav button').forEach(b => { if (b.dataset.p === p) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   const pt = $('ptitle'); if (pt) pt.textContent = (PAGES.find(x => x[0] === p) || [0, ''])[1];
   const hp = p === 'capacity' ? 'dashboard' : p;   // the Dashboard shows as #/dashboard in the address (#/capacity still opens it)
-  if (location.hash !== '#/' + hp && !((p === 'sprints' || p === 'reports') && new RegExp('^#/' + p + '/').test(location.hash))) window.history.replaceState(null, '', '#/' + hp);
+  if (location.hash !== '#/' + hp && !((p === 'sprints' || p === 'reports' || p === 'flow') && new RegExp('^#/' + p + '/').test(location.hash))) window.history.replaceState(null, '', '#/' + hp);
   renderPage(p);
 }
 const NAV_LABEL = { monthly: 'Monthly', admin: 'Users' };

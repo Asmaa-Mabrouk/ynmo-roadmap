@@ -10,10 +10,11 @@ import { S } from '../core/state.js';
 import { write } from '../core/saving.js';
 import { openDlg, closeDlg } from '../features/safety.js';
 import { confirmDlg } from '../ui/confirm.js';
+import { boardView, epicsView, settingsView, soonView, summaryView, SOON } from '../features/flow-views.js';
 import { PRIORITIES, STATUSES, TYPES, applyChange, childrenOf, countByStatus, filterIssues, list, makeIssue, myWork, newId, statusOf, typeOf } from '../features/flow-model.js';
 
 export const FLOW_NAME = 'Ynmo Flow';
-const ui = { tab: 'issues', f: { q: '', st: '', type: '', as: '', ep: '', open: true } };
+const ui = { view: 'summary', f: { q: '', st: '', type: '', as: '', ep: '', open: true } };
 const who = () => (S.me && (S.me.name || S.me.email)) || '';
 const rows = () => list(S.fissues);
 const names = () => [...new Set([...directory().keys(), who()].filter(Boolean))].sort((a, b) => a.localeCompare(b));
@@ -81,15 +82,47 @@ function mineTab(host) {
   sec('Reported by me, assigned to someone else', w.reported, 'mine-reported');
 }
 
+/* ---------- Jira-style shell: sidebar with views, settings, and the routing #/flow/<view> ---------- */
+const IC = {
+  summary: 'M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z', board: 'M4 4h4v16H4zM10 4h4v10h-4zM16 4h4v13h-4z', backlog: 'M4 6h16M4 12h16M4 18h10', sprints: 'M20 12a8 8 0 0 1-14 5.3M4 12a8 8 0 0 1 14-5.3M18 3v4h-4M6 21v-4h4',
+  epics: 'M13 2 4 14h7l-1 8 9-12h-7z', issues: 'M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2', mine: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
+  'set-details': 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v5M12 8h.01', 'set-types': 'M4 4h8l8 8-8 8-8-8z', 'set-workflow': 'M5 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM19 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM5 7v4a4 4 0 0 0 4 4h6a4 4 0 0 1 4 4'
+};
+const ico = k => `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${IC[k]}"/></svg>`;
+/** The sidebar: [group title, [[view id, label, soon?]]]. */
+export const FLOW_MENU = [
+  ['', [['mine', 'My work']]],
+  ['Planning', [['summary', 'Summary'], ['epics', 'Epics'], ['backlog', 'Backlog', 1], ['board', 'Board'], ['sprints', 'Sprints', 1]]],
+  ['Work', [['issues', 'All issues']]],
+  ['Project settings', [['set-details', 'Details'], ['set-types', 'Issue types'], ['set-workflow', 'Workflow']]]
+];
+const VIEWS = FLOW_MENU.flatMap(g => g[1].map(x => x[0]));
+const viewNow = () => { const m = /^#\/flow\/([\w-]+)/.exec(location.hash); return m && VIEWS.includes(m[1]) ? m[1] : 'summary'; };
+export function goFlow(v) { window.history.pushState(null, '', '#/flow/' + v); renderFlow(); }
+window.addEventListener('popstate', () => { if (location.hash.startsWith('#/flow') && $('pg-flow') && !$('pg-flow').hidden) renderFlow(); });
+const TITLES = Object.fromEntries(FLOW_MENU.flatMap(g => g[1].map(x => [x[0], x[1]])));
+
+function moveTo(id, st) { const cur = S.fissues[id]; if (!cur || cur.st === st) return; const n = applyChange(Object.assign({ id: id }, cur), { st: st }, who()); if (n.up !== cur.up) put(n); redraw(); }
+
 export function renderFlow(o) {
-  const pg = $('pg-flow'); const sc = pg.scrollTop; pg.textContent = '';
+  const pg = $('pg-flow'); const sc = pg.scrollTop; pg.textContent = ''; const view = viewNow(); ui.view = view;
+  const app = el('div', 'flowapp'), side = el('nav', 'flowside'); side.setAttribute('aria-label', 'Ynmo Flow');
+  const ph = el('div', 'flowproj'); const lg = el('span', 'flowlogo', 'YN'); const pt = el('div'); pt.append(el('b', '', FLOW_NAME), el('span', '', 'Team project · YNMO')); ph.append(lg, pt); side.append(ph);
+  FLOW_MENU.forEach(([gt, items]) => {
+    const g = el('div', 'flowgrp'); if (gt) g.append(el('div', 'flowgt', gt));
+    items.forEach(([id, n, soon]) => { const b = el('button', 'flowitem'); b.type = 'button'; b.dataset.view = id; b.insertAdjacentHTML('beforeend', ico(id)); b.append(el('span', '', n)); if (soon) b.append(el('em', 'flowsoon', 'Soon')); if (id === view) b.setAttribute('aria-current', 'page'); b.addEventListener('click', () => goFlow(id)); g.append(b); });
+    side.append(g);
+  });
+  const main = el('div', 'flowmain'), top = el('div', 'flowtop');
+  const crumb = el('div', 'flowcrumb'); crumb.append(document.createTextNode('Projects / ' + FLOW_NAME + ' / '), el('b', '', TITLES[view]));
   const mk = el('button', 'btn primary', 'Create'); mk.type = 'button'; mk.id = 'flowcreate'; mk.disabled = !canEdit(); mk.addEventListener('click', () => openCreate());
-  pg.append(pageHead(FLOW_NAME, 'Tickets for the team: stories, tasks, bugs, sub-tasks, epics and report requests.', mk));
-  const b = setupBanner(); if (b) pg.append(b);
-  const seg = el('div', 'seg flowtabs');
-  [['issues', 'Issues'], ['mine', 'My work']].forEach(([id, n]) => { const x = el('button', '', n); x.type = 'button'; x.dataset.tab = id; x.setAttribute('aria-pressed', ui.tab === id ? 'true' : 'false'); x.addEventListener('click', () => { ui.tab = id; renderFlow(); }); seg.append(x); });
-  const host = el('div', 'flowbody'); host.id = 'flowbody'; pg.append(seg, host);
-  (ui.tab === 'mine' ? mineTab : issuesTab)(host);
+  top.append(crumb, mk); main.append(top, el('h1', 'flowh1', TITLES[view]));
+  const b = setupBanner(); if (b) main.append(b);
+  const host = el('div', 'flowbody'); host.id = 'flowbody'; main.append(host); app.append(side, main); pg.append(app);
+  const c = { rows: rows(), open: openIssue, who: who(), move: moveTo, go: goFlow, canEdit: canEdit() };
+  if (view === 'issues') issuesTab(host); else if (view === 'mine') mineTab(host);
+  else if (view === 'summary') summaryView(host, c); else if (view === 'board') boardView(host, c, ui); else if (view === 'epics') epicsView(host, c);
+  else if (SOON[view]) soonView(host, view); else settingsView(host, view);
   if (o && o.keep) pg.scrollTop = sc;
 }
 
