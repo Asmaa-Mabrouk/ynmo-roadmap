@@ -165,8 +165,8 @@ Source: "Jira Capabilities in Use & New Tool Requirements (YNMO)": 22,512 items,
 | Capability (usage) | Flow now | Next |
 |---|---|---|
 | Types + hierarchy, workflow, sprints, backlog, Scrum + Kanban, filters, due dates, labels, priority, burndown/velocity | Done (phases 1-3 + workflow designer + per-product boards) | |
-| Comments, attachments (9,572 items) | Missing | Phase 4 first |
-| Time tracking: original estimate (7,970 items) and work logs (11,651); points only 1,002 | Missing; burndown uses points or ticket count | Phase 4: estimate + work log, burndown in hours |
+| Comments, attachments (9,572 items) | **Done 2026-11-08** (comments + @mentions, attachments, email notifications) | |
+| Time tracking: original estimate (7,970 items) and work logs (11,651); points only 1,002 | **Done 2026-11-08** (estimate, work log); burndown in hours still to do | Burndown in hours |
 | Custom fields: Platform (12,356), Severity (1,999), Acceptance Criteria (1,610), Test Cases (116) | Only Severity (bugs) | Platform, Acceptance Criteria, Test Cases |
 | Fix versions (2,706) and components (3,853) | Missing | Versions + components |
 | Issue links (Blocks, Duplicate, Relates) | Missing | After versions |

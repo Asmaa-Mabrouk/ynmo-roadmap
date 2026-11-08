@@ -1,5 +1,12 @@
 # Deployment & Operations
 
+## Ynmo Flow phase 4 (run in this order)
+1. SQL: run `supabase/sql/10-flow-activity.sql`, then `11-flow-ai-usage.sql` (or give `docs/DB_AGENT_PHASE4_TASKS.md` to the database agent: it carries all SQL and code).
+2. Edge Functions: update `flow-ai` (v2), deploy `flow-notify` (secrets `SMTP_USER`, `SMTP_PASS`, `SITE_URL` already exist). Compare the live copy with `node scripts/fn-fingerprint.mjs flow-ai flow-notify`.
+3. `jira-sync` and `jira-search` are not deployed live; deploy them (secrets `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, added by the owner in the dashboard) or leave them off.
+4. Maintenance mode: `maintenance.json` at the repo root. `"on": true` pauses the whole tool. Set `"on": false` and push to bring it back.
+5. Until Supabase backups are on (Pro plan): run `node scripts/export-backup.mjs` regularly (key from the environment only).
+
 ## Ynmo Flow assistant (flow-ai)
 
 One-time: deploy the Edge Function `supabase/functions/flow-ai` the same way as `weekly-draft` (Dashboard > Edge Functions > Deploy, name `flow-ai`, paste `index.ts`). It uses the same secrets (`GEMINI_API_KEY`, optional `GEMINI_MODEL`); never put the key in the repo or in chat. Until it is deployed, the "For you" page works and shows a clear message when you press *Suggest reply*.

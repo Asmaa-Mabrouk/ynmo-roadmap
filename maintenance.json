@@ -1,0 +1,7 @@
+{
+  "on": true,
+  "title": "Ynmo Roadmaps is under maintenance",
+  "message": "We are moving our data to Ynmo's own servers. Nothing is lost. The tool is paused so no change can be missed, and it will be back as soon as the move is checked.",
+  "until": "",
+  "note": "To switch maintenance off, set \"on\" to false and push. Optional: \"until\" (a line like \"Expected back: Thursday 12 Nov\"), \"title\", \"message\", \"title_ar\", \"message_ar\"."
+}

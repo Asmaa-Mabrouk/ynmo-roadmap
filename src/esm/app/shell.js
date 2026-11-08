@@ -11,7 +11,7 @@ import { render } from '../ui/gantt-render.js';
 import { allRoadmaps, fillRm, renderRoadmaps, useRoadmap } from '../pages/roadmaps.js';
 import { loadMembers, renderAdmin, renderResources } from '../pages/resources.js';
 import { renderVacations } from '../pages/vacations.js';
-import { renderFlow, syncFlowCfg } from '../pages/flow.js';
+import { renderFlow, syncFlowCfg, refreshFlowThread } from '../pages/flow.js';
 import { renderLog } from '../pages/log.js';
 import { renderSprints } from '../pages/sprints.js';
 import { applySquadNames } from '../features/squad-names.js';
@@ -105,6 +105,9 @@ export function start() {
   }
   if (modLevel('flow') >= 1) {
     S.db.collection('flow_issues').onSnapshot(s => { const n = snapDocs('flow_issues', s, S.fissues); if (same(n, S.fissues)) return; S.fissues = n; if (state.page === 'flow' && !document.activeElement.closest('#pg-flow') && !$('xdlg')) renderFlow({ keep: true }); }, e => { if (e && e.code === 'missing_table') { S.setup['flow_issues'] = true; if (state.page === 'flow') refreshPage(); } });
+    [['flow_comments', 'fcomments'], ['flow_logs', 'flogs'], ['flow_files', 'ffiles']].forEach(([tb, key]) => {
+      S.db.collection(tb).onSnapshot(s => { const n = snapDocs(tb, s, S[key]); if (same(n, S[key])) return; S[key] = n; refreshFlowThread(); if (state.page === 'flow' && !document.activeElement.closest('#pg-flow') && !$('xdlg')) renderFlow({ keep: true }); }, e => { if (e && e.code === 'missing_table') { S.setup[tb] = true; if (state.page === 'flow') refreshPage(); } });
+    });
     S.db.collection('flow_cfg').onSnapshot(s => { const n = snapDocs('flow_cfg', s, S.fcfg); if (same(n, S.fcfg)) return; S.fcfg = n; syncFlowCfg(); if (state.page === 'flow' && !document.activeElement.closest('#pg-flow') && !$('xdlg')) renderFlow({ keep: true }); }, () => {});
   }
   S.db.collection('vacations').onSnapshot(s => { const n = snapDocs('vacations', s, S.vacs); if (same(n, S.vacs)) return; S.vacs = n; softRender(); if (state.page === 'vacations') renderVacations(); if (state.page === 'capacity') renderCapacity(); }, () => {});

@@ -1745,6 +1745,23 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 .finreply{border:1px solid var(--line,#e4e7ee);border-radius:8px;padding:8px 10px;display:grid;gap:6px}
 .finrtext{white-space:pre-wrap;margin:0}
 .finsum{margin-bottom:12px}
+
+/* Flow activity: attachments, comments, work log */
+.fattach{margin:12px 0;padding:10px;border:1px dashed var(--line,#d5d9e4);border-radius:10px}
+.fattach.over{background:rgba(59,111,212,.08);border-color:#3b6fd4}
+.fathd{display:flex;justify-content:space-between;align-items:center;gap:8px}.fathd h3{margin:0}
+.fatrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:4px 0}
+.fthread{margin:14px 0}
+.ftabs{display:flex;gap:4px;border-bottom:1px solid var(--line,#e4e7ee);margin-bottom:10px}
+.ftab{background:none;border:0;padding:8px 12px;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted)}
+.ftab[aria-selected="true"]{color:inherit;border-bottom-color:#3b6fd4;font-weight:600}
+.fcmlist{display:grid;gap:10px;margin-bottom:10px}
+.fcm{padding:8px 10px;border:1px solid var(--line,#e4e7ee);border-radius:8px}
+.fcmhd{display:flex;gap:8px;align-items:baseline}
+.fcmtext{white-space:pre-wrap;margin:4px 0}
+.fcmedit{width:100%}
+.ftime{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:6px}.fover{color:#c0392b;font-weight:600}
+.flogform{display:flex;gap:8px;flex-wrap:wrap}.flogform input[type=text]{flex:1;min-width:140px}
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -1827,6 +1844,61 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 
 <script>
 (() => {
+  // src/esm/app/maintenance.js
+  var DEFAULTS = {
+    title: "Ynmo Roadmaps is under maintenance",
+    message: "We are moving our data to Ynmo’s own servers. Nothing is lost. The tool is paused so no change can be missed, and it will be back as soon as the move is checked.",
+    title_ar: "النظام تحت الصيانة",
+    message_ar: "نقوم بنقل البيانات إلى سيرفرات Ynmo. لا شيء مفقود. الأداة متوقفة مؤقتاً وستعود قريباً.",
+    until: ""
+  };
+  async function readMaintenance(win, fetchFn) {
+    try {
+      if (win.__maintenanceTest === void 0 && win.location.protocol === "file:") return null;
+      const t = win.__maintenanceTest;
+      const j = t !== void 0 ? t : await (async () => {
+        const ctl = typeof win.AbortController === "function" ? new win.AbortController() : null, timer = ctl ? setTimeout(() => ctl.abort(), 3e3) : 0;
+        try {
+          const r = await fetchFn(new URL("maintenance.json", win.location.href).href + "?t=" + Date.now(), { cache: "no-store", signal: ctl ? ctl.signal : void 0 });
+          return r.ok ? await r.json() : null;
+        } finally {
+          clearTimeout(timer);
+        }
+      })();
+      return j && j.on === true ? Object.assign({}, DEFAULTS, j) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+  function showMaintenance(doc2, m) {
+    const css = "html,body{margin:0;height:100%;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f4f6fb;color:#1b1f33}@media (prefers-color-scheme:dark){html,body{background:#14161f;color:#e8eaf3}.mt-card{background:#1d2030!important;border-color:#2c3048!important}}.mt{min-height:100%;display:grid;place-items:center;padding:24px;box-sizing:border-box}.mt-card{max-width:520px;width:100%;background:#fff;border:1px solid #e1e5ef;border-radius:16px;padding:32px 28px;text-align:center;box-sizing:border-box}.mt-ic{font-size:44px;line-height:1}.mt h1{font-size:22px;margin:12px 0 8px}.mt p{margin:0 0 10px;line-height:1.6;color:inherit;opacity:.85}.mt-ar{direction:rtl;margin-top:18px;padding-top:16px;border-top:1px solid #e1e5ef}.mt-until{font-weight:600;opacity:1!important}.mt button{margin-top:14px;padding:10px 20px;border-radius:999px;border:0;background:#0d8560;color:#fff;font-weight:600;font-size:15px;cursor:pointer}";
+    doc2.title = m.title;
+    const mk = (tag2, cls, txt) => {
+      const e = doc2.createElement(tag2);
+      if (cls) e.className = cls;
+      if (txt != null) e.textContent = txt;
+      return e;
+    };
+    const wrap = mk("main", "mt"), card3 = mk("div", "mt-card"), st = mk("style");
+    st.textContent = css;
+    wrap.setAttribute("role", "status");
+    card3.append(mk("div", "mt-ic", "🛠️"), mk("h1", "", m.title), mk("p", "", m.message));
+    if (m.until) card3.append(mk("p", "mt-until", m.until));
+    const ar = mk("div", "mt-ar");
+    ar.setAttribute("lang", "ar");
+    ar.append(mk("h1", "", m.title_ar), mk("p", "", m.message_ar));
+    card3.append(ar);
+    const b = mk("button", "", "Check again");
+    b.type = "button";
+    b.id = "mt-retry";
+    b.addEventListener("click", () => doc2.defaultView.location.reload());
+    card3.append(b);
+    wrap.append(card3);
+    doc2.head.append(st);
+    doc2.body.textContent = "";
+    doc2.body.append(wrap);
+  }
+
   // src/esm/core/state.js
   var S = {
     inflight: 0,
@@ -1860,6 +1932,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     sitems: {},
     fissues: {},
     fcfg: {},
+    fcomments: {},
+    flogs: {},
+    ffiles: {},
     reports: {},
     hist: {},
     setup: {}
@@ -2494,7 +2569,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     return out;
   }
   var HOURS_PER_POINT = 4;
-  var DEFAULTS = { ppp: 40, reserve: 0.2, buffer: 0.1 };
+  var DEFAULTS2 = { ppp: 40, reserve: 0.2, buffer: 0.1 };
   var SCALE = [0, 1, 2, 3, 5, 8, 13, 21];
   var addIso = (iso4, n) => {
     const d = /* @__PURE__ */ new Date(iso4 + "T00:00:00Z");
@@ -2546,7 +2621,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       const v = +c.part[n];
       if (Number.isFinite(v) && v > 0 && v < 1) part[n] = Math.round(v * 100) / 100;
     });
-    return { part, ppp: num(c.ppp, DEFAULTS.ppp, 0, 100), reserve: num(c.reserve, DEFAULTS.reserve, 0, 0.9), buffer: num(c.buffer, DEFAULTS.buffer, 0, 0.9), leaving, lanes: LANES2.map((l) => ({ k: l.k, n: l.n, people: byK[l.k] || l.people })) };
+    return { part, ppp: num(c.ppp, DEFAULTS2.ppp, 0, 100), reserve: num(c.reserve, DEFAULTS2.reserve, 0, 0.9), buffer: num(c.buffer, DEFAULTS2.buffer, 0, 0.9), leaving, lanes: LANES2.map((l) => ({ k: l.k, n: l.n, people: byK[l.k] || l.people })) };
   }
   var STD_DAYS = 20;
   function lostInfo(name, range2, vacs, cfg4) {
@@ -7066,6 +7141,38 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     });
   }
 
+  // src/esm/features/flow-time.js
+  var UNIT = { w: 2400, d: 480, h: 60, m: 1 };
+  function parseDuration(text) {
+    const s = String(text == null ? "" : text).trim().toLowerCase().replace(/,/g, ".");
+    if (!s) return null;
+    if (/^\d+(\.\d+)?$/.test(s)) return Math.round(parseFloat(s) * 60) || null;
+    const re = /(\d+(?:\.\d+)?)\s*([wdhm])/g;
+    let m, total = 0, used = 0;
+    while (m = re.exec(s)) {
+      total += parseFloat(m[1]) * UNIT[m[2]];
+      used += m[0].length;
+    }
+    if (!used) return null;
+    const rest = s.replace(re, "").replace(/\s+/g, "");
+    if (rest) return null;
+    const r = Math.round(total);
+    return r > 0 ? r : null;
+  }
+  function fmtDuration(min) {
+    let m = Math.max(0, Math.round(Number(min) || 0));
+    if (!m) return "0m";
+    const out = [];
+    [["w", 2400], ["d", 480], ["h", 60], ["m", 1]].forEach(([u, v]) => {
+      const n = Math.floor(m / v);
+      if (n) {
+        out.push(n + u);
+        m -= n * v;
+      }
+    });
+    return out.join(" ");
+  }
+
   // src/esm/features/flow-model.js
   var PREFIX = "YNMO";
   var TYPES = [
@@ -7183,17 +7290,18 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       bl: "",
       sp: o.sp || "",
       rk: n * 10,
+      oe: o.oe ? Number(o.oe) : null,
       cr: at,
       up: at,
       hist: [{ at, by: me || "", f: "created", a: "", b: key }]
     };
   }
-  var LABEL = { t: "title", d: "description", st: "status", pr: "priority", as: "assignee", ep: "epic", pts: "points", lb: "labels", type: "type", due: "due date", prod: "product", card: "card", sev: "severity", env: "environment", steps: "steps", rn: "report", req: "requester", sp: "sprint" };
+  var LABEL = { t: "title", d: "description", st: "status", pr: "priority", as: "assignee", ep: "epic", pts: "points", lb: "labels", type: "type", due: "due date", prod: "product", card: "card", sev: "severity", env: "environment", steps: "steps", rn: "report", req: "requester", sp: "sprint", oe: "original estimate" };
   var spName = (id) => id;
   var setSprintNamer = (f) => {
     spName = f || ((id) => id);
   };
-  var show = (f, v) => (f === "st" ? statusOf2(v).n : f === "sp" ? v ? spName(v) : "Backlog" : Array.isArray(v) ? v.join(", ") : String(v == null ? "" : v)).slice(0, 80);
+  var show = (f, v) => (f === "st" ? statusOf2(v).n : f === "sp" ? v ? spName(v) : "Backlog" : f === "oe" ? v ? fmtDuration(v) : "" : Array.isArray(v) ? v.join(", ") : String(v == null ? "" : v)).slice(0, 80);
   function applyChange(i, ch, by, now, why3) {
     const at = now || (/* @__PURE__ */ new Date()).toISOString(), hist = (i.hist || []).slice(), out = Object.assign({}, i);
     let changed = false;
@@ -7747,6 +7855,329 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     draw();
   }
 
+  // src/esm/features/flow-activity.js
+  var MAX_COMMENT = 4e3;
+  var MAX_FILE = 10 * 1024 * 1024;
+  var MAX_FILES_PER_TICKET = 20;
+  var BLOCKED_EXT = ["exe", "msi", "bat", "cmd", "com", "scr", "sh", "js", "mjs", "vbs", "ps1", "jar", "apk", "dll", "app", "dmg", "html", "htm", "svg"];
+  var rowsOf2 = (map, iss) => Object.keys(map || {}).filter((k) => map[k] && map[k].iss === iss).map((k) => Object.assign({ id: k }, map[k]));
+  var commentsOf = (map, iss) => rowsOf2(map, iss).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+  var logsOf = (map, iss) => rowsOf2(map, iss).sort((a, b) => String(b.day).localeCompare(String(a.day)) || String(b.at).localeCompare(String(a.at)));
+  var filesOf = (map, iss) => rowsOf2(map, iss).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+  function mentionsIn(text, names2) {
+    const t = String(text || ""), out = [];
+    [...new Set(names2.filter(Boolean))].sort((a, b) => b.length - a.length).forEach((n) => {
+      const re = new RegExp("(^|[^\\w])@" + n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?![\\w])", "i");
+      if (re.test(t) && !out.some((o) => o.toLowerCase().includes(n.toLowerCase()))) out.push(n);
+    });
+    return out;
+  }
+  function makeComment(o, names2, now) {
+    const t = String(o.t || "").trim();
+    if (!t) throw new Error("Write something first.");
+    if (t.length > MAX_COMMENT) throw new Error("A comment can have at most " + MAX_COMMENT + " characters.");
+    return { iss: o.iss, by: o.by || "", at: now || (/* @__PURE__ */ new Date()).toISOString(), t, men: mentionsIn(t, names2 || []) };
+  }
+  function editComment(c, text, names2, now) {
+    const n = makeComment({ iss: c.iss, by: c.by, t: text }, names2, c.at);
+    return Object.assign({}, c, { t: n.t, men: n.men, ed: now || (/* @__PURE__ */ new Date()).toISOString() });
+  }
+  var canChangeComment = (c, me, canDeleteAll, forDelete) => !!c && (!!me && c.by === me || !!forDelete && !!canDeleteAll);
+  function makeLog(o, now) {
+    const min = parseDuration(o.time);
+    if (!min) throw new Error("Write the time like 2h 30m, 90m or 1d.");
+    if (min > 24 * 60 * 5) throw new Error("That is more than a work week. Check the time.");
+    const day = String(o.day || "").slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw new Error("Choose the day.");
+    return { iss: o.iss, by: o.by || "", at: now || (/* @__PURE__ */ new Date()).toISOString(), day, min, t: String(o.t || "").trim().slice(0, 300) };
+  }
+  var loggedMin = (logs) => logs.reduce((s, l) => s + (Number(l.min) || 0), 0);
+  function timeSummary(oe, logs) {
+    const lg = loggedMin(logs), e = oe > 0 ? oe : 0;
+    return { oe: e || null, logged: lg, remaining: e ? Math.max(0, e - lg) : null, over: !!e && lg > e, pct: e ? Math.min(100, Math.round(lg * 100 / e)) : null };
+  }
+  function fileProblem(f, countNow) {
+    const ext = String((/\.([^.]+)$/.exec(f.name || "") || [])[1] || "").toLowerCase();
+    if (!f.name) return "The file has no name.";
+    if (f.size > MAX_FILE) return f.name + " is bigger than 10 MB.";
+    if (!f.size) return f.name + " is empty.";
+    if (BLOCKED_EXT.includes(ext)) return "." + ext + " files are not allowed (they can run code).";
+    if ((countNow || 0) >= MAX_FILES_PER_TICKET) return "A ticket can have at most " + MAX_FILES_PER_TICKET + " files.";
+    return "";
+  }
+  var safeName = (n) => String(n || "file").normalize("NFKD").replace(/[^\w.\- ]+/g, "_").replace(/\s+/g, "_").replace(/^\.+/, "_").slice(-80) || "file";
+  var fmtSize = (b) => b >= 1048576 ? Math.round(b / 104857.6) / 10 + " MB" : b >= 1024 ? Math.round(b / 1024) + " KB" : b + " B";
+
+  // src/esm/features/flow-thread.js
+  var say = (m, k) => notify(m, k || "info");
+  var btn2 = (txt, cls, fn, attrs) => {
+    const b = el("button", cls || "btn", txt);
+    b.type = "button";
+    Object.assign(b.dataset, attrs || {});
+    b.addEventListener("click", fn);
+    return b;
+  };
+  function filesPanel(ctx) {
+    const box2 = el("section", "fattach");
+    box2.id = "fi-files";
+    const paint = () => {
+      box2.textContent = "";
+      const files = ctx.files();
+      const hd = el("div", "fathd");
+      hd.append(el("h3", "", "Attachments (" + files.length + ")"));
+      if (ctx.edit) {
+        const inp = el("input");
+        inp.type = "file";
+        inp.multiple = true;
+        inp.id = "fi-file";
+        inp.hidden = true;
+        inp.addEventListener("change", async () => {
+          const fl = [...inp.files];
+          inp.value = "";
+          if (!fl.length) return;
+          try {
+            const m = await ctx.addFiles(fl);
+            if (m) say(m);
+          } catch (e) {
+            say(e.message, "err");
+          }
+        });
+        hd.append(inp, btn2("Add files", "btn", () => inp.click(), { act: "attach" }));
+      }
+      box2.append(hd);
+      if (!files.length) box2.append(el("p", "sub", ctx.edit ? "Drop files here or press Add files. Up to 10 MB each." : "No files."));
+      const ul = el("div", "fatlist");
+      files.forEach((f) => {
+        const r = el("div", "fatrow");
+        r.dataset.id = f.id;
+        const a = btn2(f.name, "flink", async () => {
+          try {
+            const u = await ctx.openFile(f);
+            window.open(u, "_blank", "noopener");
+          } catch (e) {
+            say(e.message, "err");
+          }
+        });
+        a.title = "Open";
+        r.append(a, el("span", "sub", fmtSize(f.size) + " · " + (f.by || "") + " · " + ago(f.at)));
+        if (ctx.edit && (f.by === ctx.me || ctx.canDeleteAny)) r.append(btn2("Remove", "btn", () => {
+          ctx.delFile(f.id);
+        }, { act: "rmfile" }));
+        ul.append(r);
+      });
+      box2.append(ul);
+    };
+    if (ctx.edit) {
+      box2.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        box2.classList.add("over");
+      });
+      box2.addEventListener("dragleave", () => box2.classList.remove("over"));
+      box2.addEventListener("drop", async (e) => {
+        e.preventDefault();
+        box2.classList.remove("over");
+        const fl = [...e.dataTransfer.files || []];
+        if (!fl.length) return;
+        try {
+          const m = await ctx.addFiles(fl);
+          if (m) say(m);
+        } catch (x) {
+          say(x.message, "err");
+        }
+      });
+    }
+    box2.repaint = paint;
+    paint();
+    return box2;
+  }
+  function activityPanel(ctx) {
+    const box2 = el("section", "fthread");
+    box2.id = "fi-thread";
+    const st = { tab: "comments", draft: "", editing: "", ltime: "", lnote: "", lday: ctx.today };
+    const paint = () => {
+      box2.textContent = "";
+      const cm = ctx.comments(), lg = ctx.logs();
+      const tabs = el("div", "ftabs");
+      tabs.setAttribute("role", "tablist");
+      [["comments", "Comments (" + cm.length + ")"], ["log", "Work log (" + lg.length + ")"]].forEach(([id, n]) => {
+        const t = btn2(n, "ftab", () => {
+          st.tab = id;
+          paint();
+        }, { tab: id });
+        t.setAttribute("role", "tab");
+        t.setAttribute("aria-selected", st.tab === id ? "true" : "false");
+        tabs.append(t);
+      });
+      box2.append(tabs);
+      if (st.tab === "comments") commentsTab();
+      else logTab();
+      function commentsTab() {
+        const list2 = el("div", "fcmlist");
+        if (!cm.length) list2.append(el("p", "sub", "No comments yet."));
+        cm.forEach((c) => {
+          const r = el("div", "fcm");
+          r.dataset.id = c.id;
+          const hd = el("div", "fcmhd");
+          hd.append(el("b", "", c.by || "Someone"), el("span", "sub", ago(c.at) + (c.ed ? " · edited" : "")));
+          r.append(hd);
+          if (st.editing === c.id) {
+            const ta = el("textarea");
+            ta.rows = 3;
+            ta.value = c.t;
+            ta.className = "fcmedit";
+            const err = el("p", "rerr");
+            err.hidden = true;
+            r.append(ta, err, btn2("Save", "btn primary", () => {
+              try {
+                ctx.saveComment(c.id, ta.value);
+                st.editing = "";
+                paint();
+              } catch (e) {
+                err.textContent = e.message;
+                err.hidden = false;
+              }
+            }, { act: "savecm" }), btn2("Cancel", "btn", () => {
+              st.editing = "";
+              paint();
+            }));
+          } else {
+            const p = el("p", "fcmtext");
+            p.textContent = c.t;
+            r.append(p);
+            if ((c.men || []).length) r.append(el("p", "sub", "Mentioned: " + c.men.join(", ")));
+            if (ctx.edit) {
+              const row = el("div", "row");
+              if (canChangeComment(c, ctx.me, ctx.canDeleteAny, false)) row.append(btn2("Edit", "btn", () => {
+                st.editing = c.id;
+                paint();
+              }, { act: "editcm" }));
+              if (canChangeComment(c, ctx.me, ctx.canDeleteAny, true)) row.append(btn2("Delete", "btn", () => ctx.delComment(c.id), { act: "delcm" }));
+              r.append(row);
+            }
+          }
+          list2.append(r);
+        });
+        box2.append(list2);
+        if (ctx.edit) {
+          const ta = el("textarea");
+          ta.id = "fi-cm";
+          ta.rows = 3;
+          ta.placeholder = "Add a comment. Use @ to mention a teammate.";
+          ta.value = st.draft;
+          ta.addEventListener("input", () => {
+            st.draft = ta.value;
+          });
+          const men = el("select");
+          men.id = "fi-mention";
+          men.setAttribute("aria-label", "Mention someone");
+          const o0 = el("option", "", "@ Mention");
+          o0.value = "";
+          men.append(o0);
+          ctx.names.filter((n) => n && n !== ctx.me).forEach((n) => {
+            const o = el("option", "", n);
+            o.value = n;
+            men.append(o);
+          });
+          men.addEventListener("change", () => {
+            if (!men.value) return;
+            const at = ta.selectionStart == null ? ta.value.length : ta.selectionStart;
+            ta.value = ta.value.slice(0, at) + (at && !/\s$/.test(ta.value.slice(0, at)) ? " " : "") + "@" + men.value + " " + ta.value.slice(at);
+            st.draft = ta.value;
+            men.value = "";
+            ta.focus();
+          });
+          const err = el("p", "rerr");
+          err.hidden = true;
+          err.id = "fi-cm-err";
+          const send = btn2("Comment", "btn primary", () => {
+            try {
+              ctx.addComment(ta.value);
+              st.draft = "";
+              paint();
+            } catch (e) {
+              err.textContent = e.message;
+              err.hidden = false;
+            }
+          }, { act: "addcm" });
+          send.id = "fi-cm-send";
+          const row = el("div", "row");
+          row.append(men, send);
+          box2.append(ta, err, row);
+        }
+      }
+      function logTab() {
+        const sum = timeSummary(ctx.oe(), lg), info = el("div", "ftime");
+        info.append(el("span", "", "Estimated " + (sum.oe ? fmtDuration(sum.oe) : "not set")), el("span", "", "Logged " + fmtDuration(sum.logged)), el("span", sum.over ? "fover" : "", sum.remaining == null ? "Remaining n/a" : sum.over ? "Over by " + fmtDuration(sum.logged - sum.oe) : "Remaining " + fmtDuration(sum.remaining)));
+        box2.append(info);
+        if (sum.pct != null) {
+          const b = el("div", "fbar"), i = el("i");
+          i.style.width = sum.pct + "%";
+          if (sum.over) i.style.background = "#d64545";
+          b.append(i);
+          box2.append(b);
+        }
+        if (ctx.edit) {
+          const t = el("input");
+          t.type = "text";
+          t.id = "fi-log-time";
+          t.placeholder = "Time spent, e.g. 2h 30m";
+          t.setAttribute("aria-label", "Time spent");
+          t.value = st.ltime;
+          t.addEventListener("input", () => {
+            st.ltime = t.value;
+          });
+          const d = el("input");
+          d.type = "date";
+          d.id = "fi-log-day";
+          d.value = st.lday;
+          d.setAttribute("aria-label", "Day");
+          d.addEventListener("input", () => {
+            st.lday = d.value;
+          });
+          const n = el("input");
+          n.type = "text";
+          n.id = "fi-log-note";
+          n.placeholder = "What did you do? (optional)";
+          n.value = st.lnote;
+          n.addEventListener("input", () => {
+            st.lnote = n.value;
+          });
+          const err = el("p", "rerr");
+          err.hidden = true;
+          err.id = "fi-log-err";
+          const add = btn2("Log work", "btn primary", () => {
+            try {
+              ctx.addLog({ time: t.value, day: d.value, t: n.value });
+              st.ltime = "";
+              st.lnote = "";
+              paint();
+            } catch (e) {
+              err.textContent = e.message;
+              err.hidden = false;
+            }
+          }, { act: "addlog" });
+          add.id = "fi-log-add";
+          const row = el("div", "row flogform");
+          row.append(t, d, n, add);
+          box2.append(row, err);
+        }
+        const list2 = el("div", "fcmlist");
+        if (!lg.length) list2.append(el("p", "sub", "No work logged yet."));
+        lg.forEach((l) => {
+          const r = el("div", "fcm flog");
+          r.dataset.id = l.id;
+          r.append(el("b", "", fmtDuration(l.min)), el("span", "sub", " " + (l.by || "") + " · " + l.day + (l.t ? " · " + l.t : "")));
+          if (ctx.edit && (l.by === ctx.me || ctx.canDeleteAny)) r.append(btn2("Delete", "btn", () => ctx.delLog(l.id), { act: "dellog" }));
+          list2.append(r);
+        });
+        box2.append(list2);
+      }
+    };
+    box2.repaint = paint;
+    paint();
+    return box2;
+  }
+
   // src/esm/features/flow-inbox.js
   var KINDS = [
     { id: "blocked", n: "Blocked", ask: "Unblock it or answer what it is waiting for.", c: "#d64545" },
@@ -7863,7 +8294,19 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       ui5.imask = cb.checked;
     });
     mk.append(cb, document.createTextNode(" Hide people’s names from the AI"));
-    bar5.append(dg, mk);
+    const em = selOf([["all", "Everything on my tickets"], ["mine", "Only when assigned or mentioned"], ["off", "Never"]], c.emailMode ? c.emailMode() : "all");
+    em.id = "in-email";
+    em.setAttribute("aria-label", "Email me");
+    em.addEventListener("change", () => {
+      if (c.setEmailMode) {
+        c.setEmailMode(em.value);
+        notify("Email choice saved", "info");
+      }
+    });
+    em.disabled = !c.setEmailMode;
+    const emw = el("label", "flowopen");
+    emw.append(document.createTextNode("Email me: "), em);
+    bar5.append(dg, mk, emw);
     host2.append(bar5);
     const sum = el("div", "fpanel card finsum");
     sum.id = "in-sum";
@@ -7923,7 +8366,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           out.append(el("p", "sub", "Drafts only: read, edit and send them yourself. Comments inside Flow come in a later phase."));
         } catch (e) {
           out.textContent = "";
-          out.append(el("p", "rerr", c.aiWhy ? c.aiWhy(e) : String(e.message || e)));
+          out.append(el("p", "rerr", c.aiWhy ? await c.aiWhy(e) : String(e.message || e)));
         }
         go.disabled = false;
       });
@@ -7998,7 +8441,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         }
       } catch (e) {
         sum.textContent = "";
-        sum.append(el("p", "rerr", c.aiWhy ? c.aiWhy(e) : String(e.message || e)));
+        sum.append(el("p", "rerr", c.aiWhy ? await c.aiWhy(e) : String(e.message || e)));
       }
       dg.disabled = false;
     });
@@ -8151,14 +8594,14 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   var sprintActions = (c, s) => {
     const w = el("div", "fspact");
     if (!c.canEdit) return w;
-    const btn2 = (txt, id, fn, cls) => {
+    const btn3 = (txt, id, fn, cls) => {
       const b = el("button", "btn" + (cls ? " " + cls : ""), txt);
       b.type = "button";
       b.dataset.act = id;
       b.addEventListener("click", fn);
       w.append(b);
     };
-    if (s.state === "planned") btn2("Start sprint", "start", () => {
+    if (s.state === "planned") btn3("Start sprint", "start", () => {
       const p = startProblem(c.sprints, s);
       if (p) {
         c.say(p);
@@ -8166,9 +8609,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       }
       c.saveSprints(c.sprints.map((x) => x.id === s.id ? Object.assign({}, x, { state: "active" }) : x), s.n + " started");
     }, "primary");
-    if (s.state === "active") btn2("Complete sprint", "complete", () => completeDialog(c, s), "primary");
-    if (s.state !== "done") btn2("Edit", "edit", () => sprintDialog(c, s));
-    if (s.state !== "active") btn2("Delete", "delete", () => confirmDlg("Delete " + s.n + "?", "Its tickets go back to the backlog. This cannot be undone.", "Delete", () => {
+    if (s.state === "active") btn3("Complete sprint", "complete", () => completeDialog(c, s), "primary");
+    if (s.state !== "done") btn3("Edit", "edit", () => sprintDialog(c, s));
+    if (s.state !== "active") btn3("Delete", "delete", () => confirmDlg("Delete " + s.n + "?", "Its tickets go back to the backlog. This cannot be undone.", "Delete", () => {
       c.assignSprint(ticketsIn(c.rows, s.id).map((i) => i.id), "", true);
       c.saveSprints(c.sprints.filter((x) => x.id !== s.id), s.n + " deleted");
     }), "danger");
@@ -8862,13 +9305,42 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     if (r.data.error) throw new Error(r.data.error);
     return r.data;
   }
-  function aiWhy(e) {
-    const st = e && e.context && e.context.status;
-    if (st === 404 || e && (e.name === "FunctionsFetchError" || /Failed to send a request/i.test(e.message || ""))) return "The assistant is not deployed yet. Deploy the Supabase function flow-ai (see docs/DEPLOYMENT.md), then try again.";
-    if (st === 401 || st === 403) return "Not allowed: only signed-in editors and admins can use the assistant.";
-    if (st === 500 || /GEMINI_API_KEY/i.test(e && e.message || "")) return "The assistant is not set up: add GEMINI_API_KEY in Supabase secrets.";
-    return "The assistant could not answer (" + (e && e.message || "unknown error") + "). Try again in a minute.";
+  async function aiWhy(e) {
+    const c = e && e.context, st = c && c.status;
+    let msg = "";
+    try {
+      if (c && c.json) {
+        const j = await (c.clone ? c.clone() : c).json();
+        msg = j && (j.error || j.message) || "";
+      }
+    } catch (x) {
+    }
+    if (!st && e && (e.name === "FunctionsFetchError" || /Failed to send a request|Failed to fetch/i.test(e.message || ""))) return "Could not reach the assistant. Check your connection. If it persists, the Supabase function flow-ai may not be deployed.";
+    if (st === 401) return "Your session has expired. Sign in again, then retry.";
+    if (st === 403) return "Only editors and admins can use the assistant. Ask an admin to give you edit access to Ynmo Flow.";
+    if (st === 404) return "The assistant is not deployed yet. Deploy the Supabase function flow-ai (see docs/DEPLOYMENT.md), then try again.";
+    if (st === 429) return (msg || "You reached the assistant limit.") + " Nothing is broken.";
+    if (st === 500) return /GEMINI_API_KEY/i.test(msg) ? "The assistant is not set up: add GEMINI_API_KEY in Supabase secrets." : "The assistant hit an error on the server. Try again in a minute.";
+    if (st === 502 || st === 503 || st === 504) return "The AI service (Gemini) did not answer. It is busy or down, nothing is wrong on your side. Try again in a minute.";
+    return "The assistant could not answer (" + (msg || e && e.message || "unknown error") + "). Try again in a minute.";
   }
+  function notifyFlow(body) {
+    const go = (n) => setTimeout(async () => {
+      try {
+        const r = await sb.functions.invoke("flow-notify", { body });
+        if (!r.error && r.data && r.data.skipped === "not saved yet" && n < 1) go(n + 1);
+      } catch (e) {
+      }
+    }, n ? 6e3 : 2500);
+    go(0);
+  }
+  var emailMode = () => {
+    const d = S.fcfg && S.me && S.fcfg["np_" + S.me.id];
+    return d && d.m || "all";
+  };
+  var setEmailMode = (m) => {
+    if (S.me) putCfg("np_" + S.me.id, { m });
+  };
   var sprints = () => sprintList(S.fcfg && S.fcfg.sprints);
   function saveSprints(l, msg) {
     putCfg("sprints", { sp: l });
@@ -8903,10 +9375,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     redraw();
   }
   function setupBanner() {
-    if (!S.setup.flow_issues) return null;
+    const core = S.setup.flow_issues, act = S.setup.flow_comments || S.setup.flow_logs || S.setup.flow_files;
+    if (!core && !act) return null;
     const b = el("div", "rerr");
     b.setAttribute("role", "alert");
-    b.append(el("b", "", "Database setup needed. "), document.createTextNode("Run supabase/sql/09-flow.sql in the Supabase SQL Editor. Until then tickets are NOT saved and nobody else can see them."));
+    b.append(el("b", "", "Database setup needed. "), document.createTextNode(core ? "Run supabase/sql/09-flow.sql (then 10-flow-activity.sql) in the Supabase SQL Editor. Until then tickets are NOT saved and nobody else can see them." : "Run supabase/sql/10-flow-activity.sql in the Supabase SQL Editor. Until then comments, work logs and attachments are NOT saved."));
     return b;
   }
   function askReason(i, to, done2) {
@@ -9401,7 +9874,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     main.append(host2);
     app.append(side, main);
     pg.append(app);
-    const c = { rows: rows(), open: openIssue, who: who2(), move: moveTo, go: goFlow, canEdit: canEdit(), quick: quickCreate, prods: TAGS, today: today(), prod: boardProd(view), sprints: sprints(), sp: view === "sprintboard" ? (activeSprint(sprints()) || {}).id || "@none" : "", assignSprint, rank: rankTicket, saveSprints, create: openCreate, say: (m) => toast2(m, "err"), names: names(), ai: askFlowAi, aiWhy };
+    const c = { rows: rows(), open: openIssue, who: who2(), move: moveTo, go: goFlow, canEdit: canEdit(), quick: quickCreate, prods: TAGS, today: today(), prod: boardProd(view), sprints: sprints(), sp: view === "sprintboard" ? (activeSprint(sprints()) || {}).id || "@none" : "", assignSprint, rank: rankTicket, saveSprints, create: openCreate, say: (m) => toast2(m, "err"), names: names(), ai: askFlowAi, aiWhy, emailMode, setEmailMode };
     if (view === "issues") issuesTab(host2);
     else if (view === "mine") mineTab(host2);
     else if (view === "summary") summaryView(host2, c);
@@ -9520,6 +9993,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       pts.min = 0;
       pts.step = 0.5;
       pts.id = "fc-pts";
+      const oeC = el("input");
+      oeC.type = "text";
+      oeC.id = "fc-oe";
+      oeC.placeholder = "e.g. 2d 4h";
       const epic = selOf([["", "No epic"], ...all.filter((i) => i.type === "epic").map((e) => [e.id, e.key + " " + e.t])], pre.ep || "");
       epic.id = "fc-ep";
       const par = selOf([["", "Choose the parent ticket"], ...all.filter((i) => !typeOf(i.type).sub && i.type !== "epic").map((p) => [p.id, p.key + " " + p.t])], pre.par || "");
@@ -9547,7 +10024,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       no.addEventListener("click", closeDlg);
       ok.addEventListener("click", () => {
         try {
-          const e = ex.read(), i = makeIssue(Object.assign({ type: type.value, t: title.value, d: desc.value, as: asg.value, pr: pr.value, pts: pts.value, sp: spSel.value, ep: epF.hidden ? "" : epic.value, par: parF.hidden ? "" : par.value }, e), S.fissues, who2());
+          if (oeC.value.trim() && !parseDuration(oeC.value)) throw new Error("Write the estimate like 2d 4h, 90m or 1.5h.");
+          const e = ex.read(), i = makeIssue(Object.assign({ type: type.value, t: title.value, d: desc.value, as: asg.value, pr: pr.value, pts: pts.value, sp: spSel.value, oe: oeC.value.trim() ? parseDuration(oeC.value) : null, ep: epF.hidden ? "" : epic.value, par: parF.hidden ? "" : par.value }, e), S.fissues, who2());
           put(Object.assign({ id: newId() }, i));
           closeDlg();
           redraw();
@@ -9564,13 +10042,112 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         x.classList.add("full");
         return x;
       };
-      g.append(fld("Type", type), fld("Priority", pr), parF, full(fld("Title", title)), full(fld("Description", desc)), fld("Assignee", asg), fld("Points", pts), fld("Sprint", spSel), epF, ...ex.nodes);
+      g.append(fld("Type", type), fld("Priority", pr), parF, full(fld("Title", title)), full(fld("Description", desc)), fld("Assignee", asg), fld("Points", pts), fld("Original estimate", oeC), fld("Sprint", spSel), epF, ...ex.nodes);
       parF.classList.add("full");
       epF.classList.add("full");
       row.classList.add("fbtns");
       box2.append(g, err, row);
       setTimeout(() => title.focus(), 0);
     });
+  }
+  var liveThread = null;
+  function refreshFlowThread() {
+    if (liveThread && $("fi-thread")) {
+      liveThread.files.repaint();
+      liveThread.thread.repaint();
+    } else liveThread = null;
+  }
+  var putDoc = (tb, key, id, doc2) => {
+    S[key][id] = doc2;
+    write(tb + "/" + id, doc2);
+  };
+  var dropDoc = (tb, key, id) => {
+    delete S[key][id];
+    write(tb + "/" + id, null);
+  };
+  function activityCtx(i, edit) {
+    const iss = i.id, me = who2();
+    const again = () => {
+      if (liveThread) {
+        liveThread.files.repaint();
+        liveThread.thread.repaint();
+      }
+    };
+    return {
+      edit,
+      me,
+      names: names(),
+      canDeleteAny: canDelete("flow"),
+      today: today(),
+      oe: () => S.fissues[iss] ? S.fissues[iss].oe : null,
+      comments: () => commentsOf(S.fcomments, iss),
+      logs: () => logsOf(S.flogs, iss),
+      files: () => filesOf(S.ffiles, iss),
+      addComment: (t) => {
+        const d = makeComment({ iss, by: me, t }, names()), cid = newId();
+        putDoc("flow_comments", "fcomments", cid, d);
+        again();
+        const cur2 = S.fissues[iss] || {};
+        if (d.men.length || cur2.as && cur2.as !== me || cur2.rp && cur2.rp !== me) notifyFlow({ type: "comment", issue: iss, comment: cid });
+      },
+      saveComment: (cid, t) => {
+        const c = S.fcomments[cid];
+        if (!c) return;
+        putDoc("flow_comments", "fcomments", cid, editComment(c, t, names()));
+        again();
+      },
+      delComment: (cid) => {
+        dropDoc("flow_comments", "fcomments", cid);
+        again();
+      },
+      addLog: (o) => {
+        const d = makeLog({ iss, by: me, time: o.time, day: o.day, t: o.t });
+        putDoc("flow_logs", "flogs", newId(), d);
+        again();
+      },
+      delLog: (lid) => {
+        dropDoc("flow_logs", "flogs", lid);
+        again();
+      },
+      addFiles: async (fl) => {
+        let ok = 0;
+        const bad = [];
+        for (const f of fl) {
+          const p = fileProblem(f, filesOf(S.ffiles, iss).length);
+          if (p) {
+            bad.push(p);
+            continue;
+          }
+          const fid = newId(), path = iss + "/" + fid + "-" + safeName(f.name);
+          const r = await sb.storage.from("flow-files").upload(path, f, { contentType: f.type || "application/octet-stream", upsert: false });
+          if (r.error) {
+            bad.push(f.name + ": " + (r.error.message || "upload failed") + (/not found|bucket/i.test(r.error.message || "") ? " (run 10-flow-activity.sql)" : ""));
+            continue;
+          }
+          putDoc("flow_files", "ffiles", fid, { iss, by: me, at: (/* @__PURE__ */ new Date()).toISOString(), name: f.name.slice(0, 120), size: f.size, type: f.type || "", path });
+          ok++;
+        }
+        again();
+        const msg = (ok ? ok + " file" + (ok === 1 ? "" : "s") + " attached. " : "") + bad.join(" ");
+        if (!ok && bad.length) throw new Error(bad.join(" "));
+        return msg.trim();
+      },
+      delFile: async (fid) => {
+        const f = S.ffiles[fid];
+        if (!f) return;
+        dropDoc("flow_files", "ffiles", fid);
+        try {
+          await sb.storage.from("flow-files").remove([f.path]);
+        } catch (e) {
+        }
+        again();
+      },
+      openFile: async (f) => {
+        const r = await sb.storage.from("flow-files").createSignedUrl(f.path, 300);
+        if (r.error || !r.data) throw new Error("Could not open " + f.name + ".");
+        return r.data.signedUrl;
+      }
+    };
   }
   function openIssue(id) {
     const i = S.fissues[id] && Object.assign({ id }, S.fissues[id]);
@@ -9618,6 +10195,11 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       asg.id = "fi-as";
       const pr = selOf(PRIORITIES.map((p) => [p.id, p.n]), i.pr);
       pr.id = "fi-pr";
+      const oeI = el("input");
+      oeI.type = "text";
+      oeI.id = "fi-oe";
+      oeI.placeholder = "e.g. 2d 4h";
+      oeI.value = i.oe ? fmtDuration(i.oe) : "";
       const spS = selOf([["", "Backlog"], ...sprints().filter((x) => x.state !== "done" || x.id === i.sp).map((x) => [x.id, x.n])], i.sp || "");
       spS.id = "fi-sp";
       const pts = el("input");
@@ -9627,12 +10209,12 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       pts.id = "fi-pts";
       pts.value = i.pts == null ? "" : i.pts;
       const ex = extraFields(i.type, i, true);
-      const ctl = [title, desc, st, asg, pr, pts, spS, ...Object.values(ex.els)];
+      const ctl = [title, desc, st, asg, pr, pts, spS, oeI, ...Object.values(ex.els)];
       ctl.forEach((c) => {
         c.disabled = !edit;
       });
       mainc.append(fld("Title", title), fld("Description", desc), ...["sev", "env", "steps", "rn", "req"].map((k) => ex.nodes.find((n) => n.dataset.k === k)));
-      sidec.append(el("h3", "", "Details"), fld("Status", st), fld("Assignee", asg), fld("Priority", pr), fld("Points", pts), fld("Sprint", spS), ...["prod", "card", "lb", "due"].map((k) => ex.nodes.find((n) => n.dataset.k === k)));
+      sidec.append(el("h3", "", "Details"), fld("Status", st), fld("Assignee", asg), fld("Priority", pr), fld("Points", pts), fld("Original estimate", oeI), fld("Sprint", spS), ...["prod", "card", "lb", "due"].map((k) => ex.nodes.find((n) => n.dataset.k === k)));
       if (i.bl && statusOf2(i.st) && needsReason(i.st)) sidec.append(el("p", "fblock", "Reason: " + i.bl));
       const meta = el("div", "fmeta");
       meta.append(el("p", "", "Reported by " + (i.rp || "unknown")), el("p", "", "Created " + ago(i.cr)), el("p", "", "Updated " + ago(i.up)));
@@ -9666,6 +10248,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         }
         mainc.append(k);
       }
+      const actx = activityCtx(i, edit);
+      liveThread = { files: filesPanel(actx), thread: activityPanel(actx) };
+      mainc.append(liveThread.files, liveThread.thread);
       const hist = el("div", "flowhist");
       hist.append(el("h3", "", "History"));
       (i.hist || []).slice().reverse().forEach((h) => hist.append(el("p", "sub", h.f === "created" ? h.by + " created " + h.b + " · " + ago(h.at) : h.by + " changed " + h.f + (h.a || h.b ? ": " + (h.a || "empty") + " → " + (h.b || "empty") : "") + (h.w ? " (" + h.w + ")" : "") + " · " + ago(h.at))));
@@ -9681,12 +10266,21 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
             title.focus();
             return;
           }
-          const e = ex.read(), ch = { t, d: desc.value, as: asg.value, pr: pr.value, pts: pts.value === "" ? null : Number(pts.value), sp: spS.value, prod: e.prod, card: e.card, lb: e.lb, due: e.due };
+          if (oeI.value.trim() && !parseDuration(oeI.value)) {
+            oeI.focus();
+            toast2("Write the estimate like 2d 4h, 90m or 1.5h", "err");
+            return;
+          }
+          const e = ex.read(), ch = { t, d: desc.value, as: asg.value, pr: pr.value, pts: pts.value === "" ? null : Number(pts.value), sp: spS.value, oe: oeI.value.trim() ? parseDuration(oeI.value) : null, prod: e.prod, card: e.card, lb: e.lb, due: e.due };
           if (i.type === "bug" || i.type === "subbug") Object.assign(ch, { sev: e.sev, env: e.env, steps: e.steps });
           if (isReport(i.type)) Object.assign(ch, { rn: e.rn, req: e.req });
           const finish2 = (why3) => {
             const n = applyChange(i, Object.assign({}, ch, st.value !== i.st ? { st: st.value } : {}), who2(), null, why3);
-            if (n !== i) put(n);
+            if (n !== i) {
+              put(n);
+              if (ch.as !== (i.as || "") && ch.as && ch.as !== who2()) notifyFlow({ type: "assigned", issue: i.id });
+              else if (st.value !== i.st && (n.as && n.as !== who2() || n.rp && n.rp !== who2())) notifyFlow({ type: "status", issue: i.id });
+            }
             closeDlg();
             redraw();
           };
@@ -10575,7 +11169,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     return "Could not reach the AI function (" + String(e && e.message || e || "no answer").slice(0, 100) + ").";
   }
   var countLines = (prods) => Object.keys(prods).reduce((n, k) => n + prods[k].items.filter((l) => !l.hide).length, 0);
-  var say = (rep, txt, bad) => {
+  var say2 = (rep, txt, bad) => {
     rUI.note = txt;
     rUI.noteFor = rep.id;
     rUI.err = !!bad;
@@ -10622,30 +11216,30 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     }
     save(rep, isNew ? "created the weekly report for " + fmtIso(rep.a) : "synced the weekly report for " + fmtIso(rep.a), "Sync from sprint, roadmap and Monthly");
     if (isNew && lines) {
-      say(rep, "Report built from the sprint plan, the roadmap and Monthly (" + lines + " items). Check it, then press Save.", false);
+      say2(rep, "Report built from the sprint plan, the roadmap and Monthly (" + lines + " items). Check it, then press Save.", false);
       rUI.busy = false;
       renderReports();
       return;
     }
     if (isNew) {
-      say(rep, "Report created, but no data was found for this week yet. Add items on the Sprints page or in Monthly, then press Sync.", false);
+      say2(rep, "Report created, but no data was found for this week yet. Add items on the Sprints page or in Monthly, then press Sync.", false);
       rUI.busy = false;
       renderReports();
       return;
     }
     if (!lines && !fill) {
-      say(rep, "There are no items to rewrite yet. Add items under a product first.", true);
+      say2(rep, "There are no items to rewrite yet. Add items under a product first.", true);
       rUI.busy = false;
       renderReports();
       return;
     }
     if (!lines) {
-      say(rep, "No data found for this week: Sprint " + rep.n + " has no items for these products, no roadmap bar overlaps " + fmtIso(rep.a) + " and no Monthly card has started. Add items on the Sprints page (or check Report settings), then sync again.", true);
+      say2(rep, "No data found for this week: Sprint " + rep.n + " has no items for these products, no roadmap bar overlaps " + fmtIso(rep.a) + " and no Monthly card has started. Add items on the Sprints page (or check Report settings), then sync again.", true);
       rUI.busy = false;
       renderReports();
       return;
     }
-    say(rep, fill ? "Synced from Sprint, Roadmap and Monthly" : "Report updated", false);
+    say2(rep, fill ? "Synced from Sprint, Roadmap and Monthly" : "Report updated", false);
     renderReports();
     if (ai) {
       rUI.note = "Writing with Gemini…";
@@ -10658,9 +11252,9 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
         const n = applyAi(rep.prods, r.data);
         rep.ai = { model: r.data.model || "", at: (/* @__PURE__ */ new Date()).toISOString() };
         save(rep, "", "AI wording");
-        say(rep, n ? "AI wording applied (" + n + " changes). Your own edits were kept." : "AI returned nothing new; the draft is unchanged.", false);
+        say2(rep, n ? "AI wording applied (" + n + " changes). Your own edits were kept." : "AI returned nothing new; the draft is unchanged.", false);
       } catch (e) {
-        say(rep, await aiWhy2(e) + " The rule-based draft was kept.", true);
+        say2(rep, await aiWhy2(e) + " The rule-based draft was kept.", true);
       }
       rUI.wait = false;
     }
@@ -11172,7 +11766,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     const srcTxt = rep.srcN ? " · built from " + rep.srcN.si + " sprint items + " + rep.srcN.rf + " roadmap bars" + (rep.srcN.mo !== void 0 ? " + " + rep.srcN.mo + " Monthly cards" : "") : "";
     const meta = el("p", "sub rmeta", (sub ? "Saved" + (rep.subBy ? " by " + rep.subBy : "") + (rep.subAt ? " on " + fmtIso(rep.subAt.slice(0, 10)) : "") + " · visible to the executives" : "Not saved yet · the executives cannot see it") + (viewer ? "" : " · last edit " + (rep.by || "") + srcTxt));
     const tools = el("div", "row spbar rtools");
-    const btn2 = (t, cls, fn, dis) => {
+    const btn3 = (t, cls, fn, dis) => {
       const b = el("button", "btn " + (cls || ""), t);
       b.type = "button";
       b.disabled = !!dis;
@@ -11181,10 +11775,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       return b;
     };
     if (!viewer) {
-      btn2("Sync from Sprint, Roadmap & Monthly", "", () => sync(rep, false), !canBuild() || rUI.busy);
+      btn3("Sync from Sprint, Roadmap & Monthly", "", () => sync(rep, false), !canBuild() || rUI.busy);
     }
     if (!viewer) {
-      const U = undoR(rep.id), ub = btn2("↶ Undo", "", () => reportUndo("undo"), true), rb = btn2("↷ Redo", "", () => reportUndo("redo"), true);
+      const U = undoR(rep.id), ub = btn3("↶ Undo", "", () => reportUndo("undo"), true), rb = btn3("↷ Redo", "", () => reportUndo("redo"), true);
       const upd = () => {
         ub.disabled = !U.canUndo() || !canBuild();
         rb.disabled = !U.canRedo() || !canBuild();
@@ -11198,16 +11792,16 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     if (!viewer && canBuild()) {
       const n = scan().filter((x) => x.kind === "line" && x.did === rep.id).reduce((a, x) => a + x.cmp.incoming.length, 0);
       if (n) {
-        const cb = btn2("Check updates (" + n + ")", "primary", () => openCheckUpdates("line", renderReports, rep.id));
+        const cb = btn3("Check updates (" + n + ")", "primary", () => openCheckUpdates("line", renderReports, rep.id));
         cb.id = "rpcheck";
       }
     }
-    if (!viewer) btn2("+ Product section", "", () => addSection(rep), !canBuild());
-    if (!viewer) btn2("Clear all items", "", () => clearItems(rep), !canBuild());
-    btn2("Copy text", "", () => copyReport(rep));
-    btn2("Print / PDF", "", () => printReport(rep));
+    if (!viewer) btn3("+ Product section", "", () => addSection(rep), !canBuild());
+    if (!viewer) btn3("Clear all items", "", () => clearItems(rep), !canBuild());
+    btn3("Copy text", "", () => copyReport(rep));
+    btn3("Print / PDF", "", () => printReport(rep));
     if (!viewer) tools.append(settingsBtn());
-    if (!viewer) btn2("Save", "primary", () => {
+    if (!viewer) btn3("Save", "primary", () => {
       const first = rep.status !== "submitted";
       if (first) {
         rep.status = "submitted";
@@ -15635,6 +16229,20 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           if (state.page === "flow") refreshPage();
         }
       });
+      [["flow_comments", "fcomments"], ["flow_logs", "flogs"], ["flow_files", "ffiles"]].forEach(([tb, key]) => {
+        S.db.collection(tb).onSnapshot((s) => {
+          const n = snapDocs(tb, s, S[key]);
+          if (same3(n, S[key])) return;
+          S[key] = n;
+          refreshFlowThread();
+          if (state.page === "flow" && !document.activeElement.closest("#pg-flow") && !$("xdlg")) renderFlow({ keep: true });
+        }, (e) => {
+          if (e && e.code === "missing_table") {
+            S.setup[tb] = true;
+            if (state.page === "flow") refreshPage();
+          }
+        });
+      });
       S.db.collection("flow_cfg").onSnapshot((s) => {
         const n = snapDocs("flow_cfg", s, S.fcfg);
         if (same3(n, S.fcfg)) return;
@@ -16543,7 +17151,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
                 outSave();
               }
             }
-            const tb = path.split("/")[0], sqlF = /^flow_/.test(tb) ? "09-flow.sql" : "06-sprints-weekly-reports.sql";
+            const tb = path.split("/")[0], sqlF = /^flow_(comments|logs|files)$/.test(tb) ? "10-flow-activity.sql" : /^flow_/.test(tb) ? "09-flow.sql" : "06-sprints-weekly-reports.sql";
             S.setup[tb] = true;
             $("save").textContent = "Database setup needed (run SQL " + sqlF.slice(0, 2) + ")";
             notifyFailOnce("Not saved: the database is missing a table. Run supabase/sql/" + sqlF + ".");
@@ -17059,7 +17667,10 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       return S.vacs;
     }
   };
-  init();
+  readMaintenance(window, (u, o) => fetch(u, o)).then((m) => {
+    if (m) showMaintenance(document, m);
+    else init();
+  });
 })();
 </script>
 

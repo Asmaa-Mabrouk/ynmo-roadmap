@@ -38,6 +38,11 @@ with sync_playwright() as pw:
     A.evaluate("window.__aiFail=true"); A.click('.flowitem[data-view="inbox"]'); A.wait_for_timeout(300)
     A.locator('.finrow').first.locator('button[data-act="suggest"]').click(); A.wait_for_timeout(200); A.click('#in-go'); A.wait_for_timeout(500)
     ok('I13 when the assistant fails the page says so in words and nothing breaks', 'could not answer' in A.locator('.finout').inner_text().lower() and A.locator('.finreply').count()==0)
+    A.evaluate("window.__aiFail=false")
+    for st,word,n in ((401,'session has expired','I13a'),(403,'editors and admins','I13b'),(429,'Hourly limit reached','I13c'),(502,'Gemini','I13d')):
+        A.evaluate("window.__aiStatus=%d"%st); A.click('#in-go'); A.wait_for_timeout(500)
+        ok(n+' HTTP %d gives its own plain message'%st, word in A.locator('.finout').inner_text() and A.locator('.finreply').count()==0)
+    A.evaluate("window.__aiStatus=0")
     A.locator('.finrow').first.locator('a,button.flink').first.click(); A.wait_for_timeout(300)
     ok('I14 the key opens the ticket window', A.locator('#fi-title').count()==1)
     ok('I15 no script errors', not errs)

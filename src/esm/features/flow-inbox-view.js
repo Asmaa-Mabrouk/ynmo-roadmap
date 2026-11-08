@@ -26,7 +26,10 @@ export function inboxView(host, c, ui) {
   const bar = el('div', 'flowbar finbar');
   const dg = el('button', 'btn', 'Summarize my inbox'); dg.type = 'button'; dg.id = 'in-digest'; dg.disabled = !c.canEdit || !items.length;
   const mk = el('label', 'flowopen'); const cb = el('input'); cb.type = 'checkbox'; cb.id = 'in-mask'; cb.checked = maskOn(); cb.addEventListener('change', () => { ui.imask = cb.checked; }); mk.append(cb, document.createTextNode(' Hide people’s names from the AI'));
-  bar.append(dg, mk); host.append(bar);
+  const em = selOf([['all', 'Everything on my tickets'], ['mine', 'Only when assigned or mentioned'], ['off', 'Never']], c.emailMode ? c.emailMode() : 'all'); em.id = 'in-email'; em.setAttribute('aria-label', 'Email me');
+  em.addEventListener('change', () => { if (c.setEmailMode) { c.setEmailMode(em.value); notify('Email choice saved', 'info'); } }); em.disabled = !c.setEmailMode;
+  const emw = el('label', 'flowopen'); emw.append(document.createTextNode('Email me: '), em);
+  bar.append(dg, mk, emw); host.append(bar);
   const sum = el('div', 'fpanel card finsum'); sum.id = 'in-sum'; sum.hidden = true; host.append(sum);
   const list = el('div', 'finlist'); host.append(list);
   if (!items.length) { list.append(el('p', 'sub', all.length ? 'Everything here is dismissed. Reload the page after new activity to see it again.' : 'Nothing needs your answer right now.')); }
@@ -49,7 +52,7 @@ export function inboxView(host, c, ui) {
           d.append(p, cp); out.append(d);
         });
         out.append(el('p', 'sub', 'Drafts only: read, edit and send them yourself. Comments inside Flow come in a later phase.'));
-      } catch (e) { out.textContent = ''; out.append(el('p', 'rerr', c.aiWhy ? c.aiWhy(e) : String(e.message || e))); }
+      } catch (e) { out.textContent = ''; out.append(el('p', 'rerr', c.aiWhy ? await c.aiWhy(e) : String(e.message || e))); }
       go.disabled = false;
     });
     const r = el('div', 'row'); r.append(tone, lang, ex, go); box.append(r, out);
@@ -79,7 +82,7 @@ export function inboxView(host, c, ui) {
       sum.textContent = ''; sum.append(el('h3', '', 'Today in short'), el('p', '', m.unmask((data && data.summary) || 'Nothing to add.')));
       const ord = ((data && data.order) || []).filter(k => items.some(x => x.key === k));
       if (ord.length) { const ol = el('ol'); ord.slice(0, 8).forEach(k => { const x = items.find(y => y.key === k), li = el('li'); const b = el('button', 'flink', k); b.type = 'button'; b.addEventListener('click', () => c.open(x.id)); li.append(b, document.createTextNode(' ' + x.t)); ol.append(li); }); sum.append(el('p', 'sub', 'Suggested order:'), ol); }
-    } catch (e) { sum.textContent = ''; sum.append(el('p', 'rerr', c.aiWhy ? c.aiWhy(e) : String(e.message || e))); }
+    } catch (e) { sum.textContent = ''; sum.append(el('p', 'rerr', c.aiWhy ? await c.aiWhy(e) : String(e.message || e))); }
     dg.disabled = false;
   });
   function kind(it) { return kindOf(it.kind); }

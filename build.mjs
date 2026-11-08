@@ -38,6 +38,7 @@ if (process.argv.includes('--dist')) {          // used by Vercel: publish only 
   mkdirSync(join(root, 'dist'), { recursive: true });
   writeFileSync(join(root, 'dist/index.html'), html);
   cpSync(join(root, 'vendor'), join(root, 'dist/vendor'), { recursive: true });
+  cpSync(join(root, 'maintenance.json'), join(root, 'dist/maintenance.json'));
   console.log('dist/ ready');
   process.exit(0);
 }

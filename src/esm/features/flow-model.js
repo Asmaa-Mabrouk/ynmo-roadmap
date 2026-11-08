@@ -99,15 +99,16 @@ export function makeIssue(o, issues, me, now) {
   return {
     key: key, n: n, type: o.type, t: title, d: String(o.d || ''), st: o.st || startStatus(), pr: o.pr || 'medium', as: o.as || '', rp: me || '', par: o.par || '', ep: o.ep || '',
     pts: o.pts === '' || o.pts == null ? null : Number(o.pts), lb: Array.isArray(o.lb) ? o.lb : parseLabels(o.lb), due: isoDay(o.due), prod: o.prod || '', card: o.card || '',
-    sev: o.sev || '', env: o.env || '', steps: String(o.steps || ''), rn: String(o.rn || ''), req: String(o.req || ''), bl: '', sp: o.sp || '', rk: n * 10,
+    sev: o.sev || '', env: o.env || '', steps: String(o.steps || ''), rn: String(o.rn || ''), req: String(o.req || ''), bl: '', sp: o.sp || '', rk: n * 10, oe: o.oe ? Number(o.oe) : null,
     cr: at, up: at, hist: [{ at: at, by: me || '', f: 'created', a: '', b: key }]
   };
 }
-const LABEL = { t: 'title', d: 'description', st: 'status', pr: 'priority', as: 'assignee', ep: 'epic', pts: 'points', lb: 'labels', type: 'type', due: 'due date', prod: 'product', card: 'card', sev: 'severity', env: 'environment', steps: 'steps', rn: 'report', req: 'requester', sp: 'sprint' };
+import { fmtDuration } from './flow-time.js';
+const LABEL = { t: 'title', d: 'description', st: 'status', pr: 'priority', as: 'assignee', ep: 'epic', pts: 'points', lb: 'labels', type: 'type', due: 'due date', prod: 'product', card: 'card', sev: 'severity', env: 'environment', steps: 'steps', rn: 'report', req: 'requester', sp: 'sprint', oe: 'original estimate' };
 let spName = id => id;
 /** The app tells the model how to show a sprint id in the history (its name). */
 export const setSprintNamer = f => { spName = f || (id => id); };
-const show = (f, v) => (f === 'st' ? statusOf(v).n : f === 'sp' ? (v ? spName(v) : 'Backlog') : Array.isArray(v) ? v.join(', ') : String(v == null ? '' : v)).slice(0, 80);
+const show = (f, v) => (f === 'st' ? statusOf(v).n : f === 'sp' ? (v ? spName(v) : 'Backlog') : f === 'oe' ? (v ? fmtDuration(v) : '') : Array.isArray(v) ? v.join(', ') : String(v == null ? '' : v)).slice(0, 80);
 /**
  * Apply a change to a ticket: returns the new ticket (history extended, `up` set) or the same ticket when nothing changed.
  * `why` = the reason given for a move into a status that needs one (kept in the history and as `bl`).

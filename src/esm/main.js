@@ -3,6 +3,7 @@
  * Application entry point. Imports every module for its side effects in the SAME order the app used
  * when it was one concatenated script (top-level listeners/registrations depend on it), then starts the app.
  */
+import { readMaintenance, showMaintenance } from './app/maintenance.js';
 import { S } from './core/state.js';
 import * as model from './core/model.js';
 import { commit, removeItem } from './core/saving.js';
@@ -42,4 +43,4 @@ window.__ynmo = {
   get vacs() { return S.vacs; },
 };
 
-init();
+readMaintenance(window, (u, o) => fetch(u, o)).then(m => { if (m) showMaintenance(document, m); else init(); });

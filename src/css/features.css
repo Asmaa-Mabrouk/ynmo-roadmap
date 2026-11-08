@@ -1322,3 +1322,20 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 .finreply{border:1px solid var(--line,#e4e7ee);border-radius:8px;padding:8px 10px;display:grid;gap:6px}
 .finrtext{white-space:pre-wrap;margin:0}
 .finsum{margin-bottom:12px}
+
+/* Flow activity: attachments, comments, work log */
+.fattach{margin:12px 0;padding:10px;border:1px dashed var(--line,#d5d9e4);border-radius:10px}
+.fattach.over{background:rgba(59,111,212,.08);border-color:#3b6fd4}
+.fathd{display:flex;justify-content:space-between;align-items:center;gap:8px}.fathd h3{margin:0}
+.fatrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:4px 0}
+.fthread{margin:14px 0}
+.ftabs{display:flex;gap:4px;border-bottom:1px solid var(--line,#e4e7ee);margin-bottom:10px}
+.ftab{background:none;border:0;padding:8px 12px;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted)}
+.ftab[aria-selected="true"]{color:inherit;border-bottom-color:#3b6fd4;font-weight:600}
+.fcmlist{display:grid;gap:10px;margin-bottom:10px}
+.fcm{padding:8px 10px;border:1px solid var(--line,#e4e7ee);border-radius:8px}
+.fcmhd{display:flex;gap:8px;align-items:baseline}
+.fcmtext{white-space:pre-wrap;margin:4px 0}
+.fcmedit{width:100%}
+.ftime{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:6px}.fover{color:#c0392b;font-weight:600}
+.flogform{display:flex;gap:8px;flex-wrap:wrap}.flogform input[type=text]{flex:1;min-width:140px}

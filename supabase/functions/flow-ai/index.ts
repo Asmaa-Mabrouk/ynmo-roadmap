@@ -1,9 +1,11 @@
 // Ynmo Flow assistant: drafts replies for tickets that need an answer, and summarises the PM's inbox. Uses Gemini like weekly-draft.
 // Called from the app (supabase.functions.invoke('flow-ai')) by a signed-in EDITOR only.
+// v2: rate limit per person and per team + a usage log (table flow_ai_usage, SQL 11). Answers 401 (not signed in), 403 (not an editor), 429 (limit), 500 (not set up), 502 (Gemini failed).
 //
 // Secrets (Dashboard > Edge Functions > Secrets):
 //   GEMINI_API_KEY   required (the same secret weekly-draft uses). Never put it in the repo or in chat.
 //   GEMINI_MODEL     optional. Defaults to gemini-3.5-flash.
+//   FLOW_AI_PER_HOUR / FLOW_AI_PER_DAY / FLOW_AI_TEAM_PER_DAY   optional limits (defaults 30 / 150 / 600).
 // SUPABASE_URL and SUPABASE_ANON_KEY are provided automatically by Supabase.
 //
 // Input : { mode: "reply", ticket: {...}, tone: "short|formal|detail|custom", lang: "en|ar", extra: "text" }
@@ -19,6 +21,8 @@ const CORS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+const VERSION = 2;
+const num = (k: string, d: number) => { const v = Number(Deno.env.get(k)); return Number.isFinite(v) && v > 0 ? Math.floor(v) : d; };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 const clip = (s: unknown, n: number) => String(s ?? "").replace(/[\u0000-\u001f]+/g, " ").trim().slice(0, n);
 const TONES: Record<string, string> = {
@@ -34,10 +38,27 @@ Deno.serve(async (req) => {
 
   const auth = req.headers.get("Authorization") ?? "";
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: auth } } });
+  const who = await sb.auth.getUser(auth.replace(/^Bearer\s+/i, ""));
+  const uid = who.data?.user?.id;
+  if (who.error || !uid) return json({ error: "Not signed in" }, 401);
   const ed = await sb.rpc("is_editor");
   if (ed.error || ed.data !== true) return json({ error: "Editors only" }, 403);
   const key = Deno.env.get("GEMINI_API_KEY");
   if (!key) return json({ error: "GEMINI_API_KEY is not set" }, 500);
+
+  // Rate limit and usage log. The service role writes the log so nobody can erase or forge it; it is used for nothing else.
+  const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const since = (ms: number) => new Date(Date.now() - ms).toISOString();
+  const count = async (q: any) => { const r = await q; return r.error ? 0 : (r.count ?? 0); };
+  const perHour = num("FLOW_AI_PER_HOUR", 30), perDay = num("FLOW_AI_PER_DAY", 150), teamDay = num("FLOW_AI_TEAM_PER_DAY", 600);
+  const [h, d, t] = await Promise.all([
+    count(admin.from("flow_ai_usage").select("id", { count: "exact", head: true }).in("mode", ["reply", "digest"]).eq("uid", uid).gte("at", since(3600e3))),
+    count(admin.from("flow_ai_usage").select("id", { count: "exact", head: true }).in("mode", ["reply", "digest"]).eq("uid", uid).gte("at", since(86400e3))),
+    count(admin.from("flow_ai_usage").select("id", { count: "exact", head: true }).in("mode", ["reply", "digest"]).gte("at", since(86400e3))),
+  ]);
+  if (h >= perHour) return json({ error: "Hourly limit reached (" + perHour + " requests). Try again in a while.", limit: "hour" }, 429);
+  if (d >= perDay) return json({ error: "Daily limit reached (" + perDay + " requests). Try again tomorrow.", limit: "day" }, 429);
+  if (t >= teamDay) return json({ error: "The team's daily AI limit is reached (" + teamDay + " requests).", limit: "team" }, 429);
 
   let body: any;
   try { body = await req.json(); } catch { return json({ error: "Bad JSON" }, 400); }
@@ -69,6 +90,10 @@ Deno.serve(async (req) => {
     schema = { type: "OBJECT", properties: { replies: { type: "ARRAY", items: { type: "OBJECT", properties: { label: { type: "STRING" }, text: { type: "STRING" } }, required: ["label", "text"] } } }, required: ["replies"] };
   } else return json({ error: "Unknown mode" }, 400);
 
+  const started = Date.now();
+  const logRow = await admin.from("flow_ai_usage").insert({ uid, mode: String(body.mode).slice(0, 20) }).select("id").single();
+  const logId = logRow.data?.id as number | undefined;
+  const done = async (ok: boolean, model?: string) => { if (logId) await admin.from("flow_ai_usage").update({ ok, model: model ?? null, ms: Date.now() - started }).eq("id", logId); };
   const models = [Deno.env.get("GEMINI_MODEL") || "gemini-3.5-flash", "gemini-3.5-flash-lite"];
   let lastErr = "";
   for (const model of models) {
@@ -86,10 +111,11 @@ Deno.serve(async (req) => {
     if (!r || !r.ok) { lastErr = `${model}: HTTP ${r?.status}`; continue; }
     let out: any;
     try { out = JSON.parse((await r.json())?.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}"); } catch { lastErr = model + ": unreadable answer"; continue; }
-    if (body.mode === "digest") return json({ summary: clip(out?.summary, 900), order: (Array.isArray(out?.order) ? out.order : []).map((k: unknown) => clip(k, 30)).slice(0, 60), model });
+    if (body.mode === "digest") { await done(true, model); return json({ v: VERSION, summary: clip(out?.summary, 900), order: (Array.isArray(out?.order) ? out.order : []).map((k: unknown) => clip(k, 30)).slice(0, 60), model }); }
     const replies = (Array.isArray(out?.replies) ? out.replies : []).slice(0, 3).map((x: any) => ({ label: clip(x?.label, 40), text: String(x?.text ?? "").trim().slice(0, 1500) })).filter((x: any) => x.text);
     if (!replies.length) { lastErr = model + ": empty"; continue; }
-    return json({ replies, model });
+    await done(true, model); return json({ v: VERSION, replies, model });
   }
+  await done(false);
   return json({ error: "AI request failed (" + lastErr + ")" }, 502);
 });

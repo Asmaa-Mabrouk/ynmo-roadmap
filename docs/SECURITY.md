@@ -1,5 +1,8 @@
 # Security
 
+## Ynmo Flow phase 4
+Attachments sit in a private bucket (`flow-files`) readable only through 5-minute signed links, 10 MB per file, 20 per ticket, executable and script types refused; storage policies follow the Flow permission level. `flow-notify` never accepts email text from the browser: it reads the ticket or comment from the database, checks the caller made the change in the last 10 minutes, mails only approved accounts (max 10 per call, 60 per hour per person), and respects each person's choice. `flow-ai` v2 logs every call with the service role (no one can erase or forge the log) and enforces limits. The maintenance screen stops the app from starting at all (no database connection). The backup script reads the service key only from the environment.
+
 ## Ynmo Flow assistant
 
 `flow-ai` accepts only signed-in editors (`is_editor`), clips every field, tells the model that ticket text is untrusted data, and returns drafts only (it never writes to the database). The page replaces people's names with placeholders before the call (switchable) and sends only the one ticket's own text, no ids or other tickets. The API key lives only in Supabase secrets.

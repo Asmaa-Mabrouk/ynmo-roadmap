@@ -14,6 +14,9 @@ import { openDlg, closeDlg } from '../features/safety.js';
 import { confirmDlg } from '../ui/confirm.js';
 import { boardView, epicsView, settingsView, soonView, summaryView, SOON } from '../features/flow-views.js';
 import { perfView } from '../features/flow-perf-view.js';
+import { filesPanel, activityPanel } from '../features/flow-thread.js';
+import { commentsOf, logsOf, filesOf, makeComment, editComment, makeLog, fileProblem, safeName } from '../features/flow-activity.js';
+import { parseDuration, fmtDuration } from '../features/flow-time.js';
 import { inboxView, inboxCount } from '../features/flow-inbox-view.js';
 import { sb } from '../core/supabase.js';
 import { backlogView, sprintsView } from '../features/flow-backlog.js';
@@ -55,14 +58,30 @@ async function askFlowAi(body) {
   if (r.data.error) throw new Error(r.data.error);
   return r.data;
 }
-/** A plain sentence for why the assistant did not answer. */
-function aiWhy(e) {
-  const st = e && e.context && e.context.status;
-  if (st === 404 || (e && (e.name === 'FunctionsFetchError' || /Failed to send a request/i.test(e.message || '')))) return 'The assistant is not deployed yet. Deploy the Supabase function flow-ai (see docs/DEPLOYMENT.md), then try again.';
-  if (st === 401 || st === 403) return 'Not allowed: only signed-in editors and admins can use the assistant.';
-  if (st === 500 || /GEMINI_API_KEY/i.test((e && e.message) || '')) return 'The assistant is not set up: add GEMINI_API_KEY in Supabase secrets.';
-  return 'The assistant could not answer (' + ((e && e.message) || 'unknown error') + '). Try again in a minute.';
+/** A plain sentence for why the assistant did not answer (it reads the function's own message when there is one). */
+async function aiWhy(e) {
+  const c = e && e.context, st = c && c.status; let msg = '';
+  try { if (c && c.json) { const j = await (c.clone ? c.clone() : c).json(); msg = (j && (j.error || j.message)) || ''; } } catch (x) { /* body is not JSON */ }
+  if (!st && e && (e.name === 'FunctionsFetchError' || /Failed to send a request|Failed to fetch/i.test(e.message || ''))) return 'Could not reach the assistant. Check your connection. If it persists, the Supabase function flow-ai may not be deployed.';
+  if (st === 401) return 'Your session has expired. Sign in again, then retry.';
+  if (st === 403) return 'Only editors and admins can use the assistant. Ask an admin to give you edit access to Ynmo Flow.';
+  if (st === 404) return 'The assistant is not deployed yet. Deploy the Supabase function flow-ai (see docs/DEPLOYMENT.md), then try again.';
+  if (st === 429) return (msg || 'You reached the assistant limit.') + ' Nothing is broken.';
+  if (st === 500) return /GEMINI_API_KEY/i.test(msg) ? 'The assistant is not set up: add GEMINI_API_KEY in Supabase secrets.' : 'The assistant hit an error on the server. Try again in a minute.';
+  if (st === 502 || st === 503 || st === 504) return 'The AI service (Gemini) did not answer. It is busy or down, nothing is wrong on your side. Try again in a minute.';
+  return 'The assistant could not answer (' + (msg || (e && e.message) || 'unknown error') + '). Try again in a minute.';
 }
+/** Ask flow-notify to email people about a change I just made. The function reads the change from the database itself, so only ids are sent.
+ *  Quiet by design: an email problem never gets in the way of the work. Tries again once if the change was not saved yet. */
+function notifyFlow(body) {
+  const go = n => setTimeout(async () => {
+    try { const r = await sb.functions.invoke('flow-notify', { body: body }); if (!r.error && r.data && r.data.skipped === 'not saved yet' && n < 1) go(n + 1); } catch (e) { /* no email, no problem */ }
+  }, n ? 6000 : 2500);
+  go(0);
+}
+/** My email choice (stored in flow_cfg as np_<my id>): all, mine (assigned or mentioned) or off. */
+const emailMode = () => { const d = S.fcfg && S.me && S.fcfg['np_' + S.me.id]; return (d && d.m) || 'all'; };
+const setEmailMode = m => { if (S.me) putCfg('np_' + S.me.id, { m: m }); };
 const sprints = () => sprintList(S.fcfg && S.fcfg.sprints);
 /** Save the sprint list (one document). */
 function saveSprints(l, msg) { putCfg('sprints', { sp: l }); toast(msg || 'Saved'); redraw(); }
@@ -81,9 +100,10 @@ function rankTicket(id, beforeId, spId) {
 }
 
 function setupBanner() {
-  if (!S.setup.flow_issues) return null;
+  const core = S.setup.flow_issues, act = S.setup.flow_comments || S.setup.flow_logs || S.setup.flow_files;
+  if (!core && !act) return null;
   const b = el('div', 'rerr'); b.setAttribute('role', 'alert');
-  b.append(el('b', '', 'Database setup needed. '), document.createTextNode('Run supabase/sql/09-flow.sql in the Supabase SQL Editor. Until then tickets are NOT saved and nobody else can see them.'));
+  b.append(el('b', '', 'Database setup needed. '), document.createTextNode(core ? 'Run supabase/sql/09-flow.sql (then 10-flow-activity.sql) in the Supabase SQL Editor. Until then tickets are NOT saved and nobody else can see them.' : 'Run supabase/sql/10-flow-activity.sql in the Supabase SQL Editor. Until then comments, work logs and attachments are NOT saved.'));
   return b;
 }
 
@@ -283,7 +303,7 @@ export function renderFlow(o) {
   top.append(crumb, mk); main.append(top, el('h1', 'flowh1', TITLES[view]));
   const b = setupBanner(); if (b) main.append(b);
   const host = el('div', 'flowbody'); host.id = 'flowbody'; main.append(host); app.append(side, main); pg.append(app);
-  const c = { rows: rows(), open: openIssue, who: who(), move: moveTo, go: goFlow, canEdit: canEdit(), quick: quickCreate, prods: TAGS, today: today(), prod: boardProd(view), sprints: sprints(), sp: view === 'sprintboard' ? ((activeSprint(sprints()) || {}).id || '@none') : '', assignSprint: assignSprint, rank: rankTicket, saveSprints: saveSprints, create: openCreate, say: m => toast(m, 'err'), names: names(), ai: askFlowAi, aiWhy: aiWhy };
+  const c = { rows: rows(), open: openIssue, who: who(), move: moveTo, go: goFlow, canEdit: canEdit(), quick: quickCreate, prods: TAGS, today: today(), prod: boardProd(view), sprints: sprints(), sp: view === 'sprintboard' ? ((activeSprint(sprints()) || {}).id || '@none') : '', assignSprint: assignSprint, rank: rankTicket, saveSprints: saveSprints, create: openCreate, say: m => toast(m, 'err'), names: names(), ai: askFlowAi, aiWhy: aiWhy, emailMode: emailMode, setEmailMode: setEmailMode };
   if (view === 'issues') issuesTab(host); else if (view === 'mine') mineTab(host);
   else if (view === 'summary') summaryView(host, c); else if (view.startsWith('board') || view === 'sprintboard') boardView(host, c, ui); else if (view === 'inbox') inboxView(host, c, ui); else if (view === 'perf') perfView(host, c, ui); else if (view === 'backlog') backlogView(host, c, ui); else if (view === 'sprints') sprintsView(host, c); else if (view === 'epics') epicsView(host, c);
   else if (view === 'set-workflow') workflowView(host, { rows: c.rows, canEdit: canDelete('flow') && !S.readonly, save: saveWorkflow }, needsReason);
@@ -334,6 +354,7 @@ export function openCreate(pre) {
     const asg = selOf([['', 'Unassigned'], ...names()], pre.as || ''); asg.id = 'fc-as';
     const pr = selOf(PRIORITIES.map(p => [p.id, p.n]), 'medium'); pr.id = 'fc-pr';
     const pts = el('input'); pts.type = 'number'; pts.min = 0; pts.step = 0.5; pts.id = 'fc-pts';
+    const oeC = el('input'); oeC.type = 'text'; oeC.id = 'fc-oe'; oeC.placeholder = 'e.g. 2d 4h';
     const epic = selOf([['', 'No epic'], ...all.filter(i => i.type === 'epic').map(e => [e.id, e.key + ' ' + e.t])], pre.ep || ''); epic.id = 'fc-ep';
     const par = selOf([['', 'Choose the parent ticket'], ...all.filter(i => !typeOf(i.type).sub && i.type !== 'epic').map(p => [p.id, p.key + ' ' + p.t])], pre.par || ''); par.id = 'fc-par';
     const spSel = selOf([['', 'Backlog'], ...sprints().filter(x => x.state !== 'done').map(x => [x.id, x.n])], pre.sp || ''); spSel.id = 'fc-sp';
@@ -344,20 +365,53 @@ export function openCreate(pre) {
     const ok = el('button', 'btn primary', 'Create'); ok.type = 'button'; ok.id = 'fc-ok'; const no = el('button', 'btn', 'Cancel'); no.type = 'button'; no.addEventListener('click', closeDlg);
     ok.addEventListener('click', () => {
       try {
-        const e = ex.read(), i = makeIssue(Object.assign({ type: type.value, t: title.value, d: desc.value, as: asg.value, pr: pr.value, pts: pts.value, sp: spSel.value, ep: epF.hidden ? '' : epic.value, par: parF.hidden ? '' : par.value }, e), S.fissues, who());
+        if (oeC.value.trim() && !parseDuration(oeC.value)) throw new Error('Write the estimate like 2d 4h, 90m or 1.5h.');
+        const e = ex.read(), i = makeIssue(Object.assign({ type: type.value, t: title.value, d: desc.value, as: asg.value, pr: pr.value, pts: pts.value, sp: spSel.value, oe: oeC.value.trim() ? parseDuration(oeC.value) : null, ep: epF.hidden ? '' : epic.value, par: parF.hidden ? '' : par.value }, e), S.fissues, who());
         put(Object.assign({ id: newId() }, i)); closeDlg(); redraw();
       } catch (e) { err.textContent = e.message; err.hidden = false; }
     });
     const row = el('div', 'row'); row.append(ok, no);
     box.classList.add('flowdlg', 'flowcreate');
     const g = el('div', 'fform'); const full = x => { x.classList.add('full'); return x; };
-    g.append(fld('Type', type), fld('Priority', pr), parF, full(fld('Title', title)), full(fld('Description', desc)), fld('Assignee', asg), fld('Points', pts), fld('Sprint', spSel), epF, ...ex.nodes); parF.classList.add('full'); epF.classList.add('full');
+    g.append(fld('Type', type), fld('Priority', pr), parF, full(fld('Title', title)), full(fld('Description', desc)), fld('Assignee', asg), fld('Points', pts), fld('Original estimate', oeC), fld('Sprint', spSel), epF, ...ex.nodes); parF.classList.add('full'); epF.classList.add('full');
     row.classList.add('fbtns'); box.append(g, err, row);
     setTimeout(() => title.focus(), 0);
   });
 }
 
 /** The ticket window: edit the fields, move the status, add sub-tickets, read the history, copy the link, delete. */
+let liveThread = null;
+/** Called when comments, logs or files change: repaint the open ticket window's activity part. */
+export function refreshFlowThread() { if (liveThread && $('fi-thread')) { liveThread.files.repaint(); liveThread.thread.repaint(); } else liveThread = null; }
+const putDoc = (tb, key, id, doc) => { S[key][id] = doc; write(tb + '/' + id, doc); };
+const dropDoc = (tb, key, id) => { delete S[key][id]; write(tb + '/' + id, null); };
+/** Everything the activity panels need for one ticket. */
+function activityCtx(i, edit) {
+  const iss = i.id, me = who();
+  const again = () => { if (liveThread) { liveThread.files.repaint(); liveThread.thread.repaint(); } };
+  return {
+    edit: edit, me: me, names: names(), canDeleteAny: canDelete('flow'), today: today(), oe: () => (S.fissues[iss] ? S.fissues[iss].oe : null),
+    comments: () => commentsOf(S.fcomments, iss), logs: () => logsOf(S.flogs, iss), files: () => filesOf(S.ffiles, iss),
+    addComment: t => { const d = makeComment({ iss: iss, by: me, t: t }, names()), cid = newId(); putDoc('flow_comments', 'fcomments', cid, d); again(); const cur = S.fissues[iss] || {}; if (d.men.length || (cur.as && cur.as !== me) || (cur.rp && cur.rp !== me)) notifyFlow({ type: 'comment', issue: iss, comment: cid }); },
+    saveComment: (cid, t) => { const c = S.fcomments[cid]; if (!c) return; putDoc('flow_comments', 'fcomments', cid, editComment(c, t, names())); again(); },
+    delComment: cid => { dropDoc('flow_comments', 'fcomments', cid); again(); },
+    addLog: o => { const d = makeLog({ iss: iss, by: me, time: o.time, day: o.day, t: o.t }); putDoc('flow_logs', 'flogs', newId(), d); again(); },
+    delLog: lid => { dropDoc('flow_logs', 'flogs', lid); again(); },
+    addFiles: async fl => {
+      let ok = 0; const bad = [];
+      for (const f of fl) {
+        const p = fileProblem(f, filesOf(S.ffiles, iss).length); if (p) { bad.push(p); continue; }
+        const fid = newId(), path = iss + '/' + fid + '-' + safeName(f.name);
+        const r = await sb.storage.from('flow-files').upload(path, f, { contentType: f.type || 'application/octet-stream', upsert: false });
+        if (r.error) { bad.push(f.name + ': ' + (r.error.message || 'upload failed') + (/not found|bucket/i.test(r.error.message || '') ? ' (run 10-flow-activity.sql)' : '')); continue; }
+        putDoc('flow_files', 'ffiles', fid, { iss: iss, by: me, at: new Date().toISOString(), name: f.name.slice(0, 120), size: f.size, type: f.type || '', path: path }); ok++;
+      }
+      again(); const msg = (ok ? ok + ' file' + (ok === 1 ? '' : 's') + ' attached. ' : '') + bad.join(' '); if (!ok && bad.length) throw new Error(bad.join(' ')); return msg.trim();
+    },
+    delFile: async fid => { const f = S.ffiles[fid]; if (!f) return; dropDoc('flow_files', 'ffiles', fid); try { await sb.storage.from('flow-files').remove([f.path]); } catch (e) { /* the record is gone; a stray file is harmless */ } again(); },
+    openFile: async f => { const r = await sb.storage.from('flow-files').createSignedUrl(f.path, 300); if (r.error || !r.data) throw new Error('Could not open ' + f.name + '.'); return r.data.signedUrl; }
+  };
+}
 export function openIssue(id) {
   const i = S.fissues[id] && Object.assign({ id: id }, S.fissues[id]); if (!i) return;
   const edit = canEdit(); const all = rows();
@@ -373,12 +427,13 @@ export function openIssue(id) {
     const st = selOf(targets(i.st).map(s => [s.id, s.n]), i.st); st.id = 'fi-st';
     const asg = selOf([['', 'Unassigned'], ...names(), ...(i.as && !names().includes(i.as) ? [i.as] : [])], i.as || ''); asg.id = 'fi-as';
     const pr = selOf(PRIORITIES.map(p => [p.id, p.n]), i.pr); pr.id = 'fi-pr';
+    const oeI = el('input'); oeI.type = 'text'; oeI.id = 'fi-oe'; oeI.placeholder = 'e.g. 2d 4h'; oeI.value = i.oe ? fmtDuration(i.oe) : '';
     const spS = selOf([['', 'Backlog'], ...sprints().filter(x => x.state !== 'done' || x.id === i.sp).map(x => [x.id, x.n])], i.sp || ''); spS.id = 'fi-sp';
     const pts = el('input'); pts.type = 'number'; pts.min = 0; pts.step = 0.5; pts.id = 'fi-pts'; pts.value = i.pts == null ? '' : i.pts;
     const ex = extraFields(i.type, i, true);
-    const ctl = [title, desc, st, asg, pr, pts, spS, ...Object.values(ex.els)]; ctl.forEach(c => { c.disabled = !edit; });
+    const ctl = [title, desc, st, asg, pr, pts, spS, oeI, ...Object.values(ex.els)]; ctl.forEach(c => { c.disabled = !edit; });
     mainc.append(fld('Title', title), fld('Description', desc), ...['sev', 'env', 'steps', 'rn', 'req'].map(k => ex.nodes.find(n => n.dataset.k === k)));
-    sidec.append(el('h3', '', 'Details'), fld('Status', st), fld('Assignee', asg), fld('Priority', pr), fld('Points', pts), fld('Sprint', spS), ...['prod', 'card', 'lb', 'due'].map(k => ex.nodes.find(n => n.dataset.k === k)));
+    sidec.append(el('h3', '', 'Details'), fld('Status', st), fld('Assignee', asg), fld('Priority', pr), fld('Points', pts), fld('Original estimate', oeI), fld('Sprint', spS), ...['prod', 'card', 'lb', 'due'].map(k => ex.nodes.find(n => n.dataset.k === k)));
     if (i.bl && statusOf(i.st) && needsReason(i.st)) sidec.append(el('p', 'fblock', 'Reason: ' + i.bl));
     const meta = el('div', 'fmeta'); meta.append(el('p', '', 'Reported by ' + (i.rp || 'unknown')), el('p', '', 'Created ' + ago(i.cr)), el('p', '', 'Updated ' + ago(i.up)));
     if (i.par && S.fissues[i.par]) meta.append(el('p', '', 'Parent: ' + S.fissues[i.par].key + ' ' + S.fissues[i.par].t));
@@ -394,6 +449,7 @@ export function openIssue(id) {
       }
       mainc.append(k);
     }
+    const actx = activityCtx(i, edit); liveThread = { files: filesPanel(actx), thread: activityPanel(actx) }; mainc.append(liveThread.files, liveThread.thread);
     const hist = el('div', 'flowhist'); hist.append(el('h3', '', 'History'));
     (i.hist || []).slice().reverse().forEach(h => hist.append(el('p', 'sub', h.f === 'created' ? h.by + ' created ' + h.b + ' · ' + ago(h.at) : h.by + ' changed ' + h.f + (h.a || h.b ? ': ' + (h.a || 'empty') + ' → ' + (h.b || 'empty') : '') + (h.w ? ' (' + h.w + ')' : '') + ' · ' + ago(h.at))));
     mainc.append(hist);
@@ -402,9 +458,10 @@ export function openIssue(id) {
       const sv = el('button', 'btn primary', 'Save'); sv.type = 'button'; sv.id = 'fi-save';
       sv.addEventListener('click', () => {
         const t = title.value.trim(); if (!t) { title.focus(); return; }
-        const e = ex.read(), ch = { t: t, d: desc.value, as: asg.value, pr: pr.value, pts: pts.value === '' ? null : Number(pts.value), sp: spS.value, prod: e.prod, card: e.card, lb: e.lb, due: e.due };
+        if (oeI.value.trim() && !parseDuration(oeI.value)) { oeI.focus(); toast('Write the estimate like 2d 4h, 90m or 1.5h', 'err'); return; }
+        const e = ex.read(), ch = { t: t, d: desc.value, as: asg.value, pr: pr.value, pts: pts.value === '' ? null : Number(pts.value), sp: spS.value, oe: oeI.value.trim() ? parseDuration(oeI.value) : null, prod: e.prod, card: e.card, lb: e.lb, due: e.due };
         if (i.type === 'bug' || i.type === 'subbug') Object.assign(ch, { sev: e.sev, env: e.env, steps: e.steps }); if (isReport(i.type)) Object.assign(ch, { rn: e.rn, req: e.req });
-        const finish = why => { const n = applyChange(i, Object.assign({}, ch, st.value !== i.st ? { st: st.value } : {}), who(), null, why); if (n !== i) put(n); closeDlg(); redraw(); };
+        const finish = why => { const n = applyChange(i, Object.assign({}, ch, st.value !== i.st ? { st: st.value } : {}), who(), null, why); if (n !== i) { put(n); if (ch.as !== (i.as || '') && ch.as && ch.as !== who()) notifyFlow({ type: 'assigned', issue: i.id }); else if (st.value !== i.st && ((n.as && n.as !== who()) || (n.rp && n.rp !== who()))) notifyFlow({ type: 'status', issue: i.id }); } closeDlg(); redraw(); };
         if (st.value !== i.st && needsReason(st.value)) askReason(i, st.value, finish); else finish();
       });
       row.append(sv);

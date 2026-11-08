@@ -16,6 +16,7 @@ with sync_playwright() as pw:
     b=pw.chromium.launch(); ctx=b.new_context(viewport={'width':1300,'height':900})
     ctx.route("**/vendor/supabase-js.js",lambda r:r.fulfill(body=FAKE,content_type='application/javascript'))
     ctx.route("**/fonts.g*/**",lambda r:r.abort())
+    ctx.route("**/maintenance.json*",lambda r:r.fulfill(body='{"on":false}',content_type='application/json'))
     logs=[]; P=ctx.new_page(); P.on('console',lambda m:logs.append(m.text)); P.on('pageerror',lambda e:logs.append('ERR '+str(e)))
     P.goto('http://127.0.0.1:%d/index.html'%port); P.wait_for_timeout(500)
     P.click('button:text-is("Create an account")'); P.locator('input[autocomplete=name]').fill('A'); P.locator('input[type=email]').fill('a@x.com'); P.locator('input[autocomplete=new-password]').fill('good1234'); P.click('button:text-is("Create account")'); P.wait_for_timeout(1000)

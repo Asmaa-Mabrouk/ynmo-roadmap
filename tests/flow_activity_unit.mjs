@@ -1,0 +1,36 @@
+// Ynmo Flow phase 4: comments, mentions, work logs, time summary, attachment rules.
+import { makeComment, editComment, mentionsIn, canChangeComment, commentsOf, makeLog, timeSummary, loggedByPerson, fileProblem, safeName, fmtSize, filesOf, logsOf } from '../src/esm/features/flow-activity.js';
+import { parseDuration, fmtDuration, hoursOf } from '../src/esm/features/flow-time.js';
+import { makeIssue, applyChange } from '../src/esm/features/flow-model.js';
+let bad = 0; const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) bad++; };
+ok('durations: 2h 30m, 1d, 1.5h, bare number = hours, 1w 1d', parseDuration('2h 30m') === 150 && parseDuration('1d') === 480 && parseDuration('1.5h') === 90 && parseDuration('2') === 120 && parseDuration('1w 1d') === 2880);
+ok('bad durations are refused', ['', 'abc', '2x', '2h abc', '0', '-1h'].every(x => parseDuration(x) === null));
+ok('format back: 150 -> 2h 30m, 0 -> 0m, 3000 -> 1w 1d 2h, hours 90 -> 1.5', fmtDuration(150) === '2h 30m' && fmtDuration(0) === '0m' && fmtDuration(3000) === '1w 1d 2h' && hoursOf(90) === 1.5);
+const names = ['Mona', 'Mona Ali', 'Omar'];
+ok('mentions: longest name wins, partial names and emails do not count', mentionsIn('hi @Mona Ali and @omar', names).join() === 'Mona Ali,Omar' && mentionsIn('@Mon x', names).length === 0 && mentionsIn('mail a@Omar.com', names).length === 0);
+const c = makeComment({ iss: 'i1', by: 'Asmaa', t: '  Please check @Omar  ' }, names, '2026-11-08T10:00:00Z');
+ok('a comment is trimmed and keeps its mentions', c.t === 'Please check @Omar' && c.men.join() === 'Omar' && c.by === 'Asmaa' && c.at === '2026-11-08T10:00:00Z');
+ok('empty and too long comments are refused', (() => { try { makeComment({ iss: 'x', t: '  ' }, []); return false; } catch (e) { return /Write something/.test(e.message); } })() && (() => { try { makeComment({ iss: 'x', t: 'a'.repeat(4001) }, []); return false; } catch (e) { return /4000/.test(e.message); } })());
+const e = editComment(c, 'Now @Mona', names, '2026-11-08T11:00:00Z');
+ok('edit: new text and mentions, original time kept, edited time set', e.t === 'Now @Mona' && e.men.join() === 'Mona' && e.at === c.at && e.ed === '2026-11-08T11:00:00Z');
+ok('who can change a comment: author edits and deletes; level-3 may delete, not edit others', canChangeComment(c, 'Asmaa', false, false) && canChangeComment(c, 'Asmaa', false, true) && !canChangeComment(c, 'Omar', true, false) && canChangeComment(c, 'Omar', true, true) && !canChangeComment(c, 'Omar', false, true));
+const map = { a: { iss: 'i1', at: '2026-11-08T12:00:00Z', t: 'second' }, b: { iss: 'i1', at: '2026-11-08T09:00:00Z', t: 'first' }, c: { iss: 'i2', at: '2026-11-08T08:00:00Z', t: 'other' } };
+ok('comments of a ticket, oldest first, other tickets left out', commentsOf(map, 'i1').map(x => x.t).join() === 'first,second');
+const l = makeLog({ iss: 'i1', by: 'Mona', time: '1h 30m', day: '2026-11-08', t: ' fix ' });
+ok('work log: minutes, day, note', l.min === 90 && l.day === '2026-11-08' && l.t === 'fix');
+ok('work log refuses bad time, missing day and more than a week', [{ time: 'x', day: '2026-11-08' }, { time: '1h', day: '' }, { time: '9w', day: '2026-11-08' }].every(o => { try { makeLog(Object.assign({ iss: 'i' }, o)); return false; } catch (er) { return true; } }));
+const logs = [{ min: 90, by: 'Mona', day: '2026-11-08' }, { min: 60, by: 'Omar', day: '2026-11-07' }, { min: 30, by: 'Mona', day: '2026-10-01' }];
+ok('time summary: estimate, logged, remaining, bar', JSON.stringify(timeSummary(240, logs.slice(0, 2))) === JSON.stringify({ oe: 240, logged: 150, remaining: 90, over: false, pct: 63 }));
+ok('over the estimate: remaining 0, over true, bar capped at 100', (() => { const s = timeSummary(60, logs); return s.over && s.remaining === 0 && s.pct === 100; })());
+ok('no estimate: remaining and bar are null', (() => { const s = timeSummary(null, logs); return s.oe === null && s.remaining === null && s.pct === null && s.logged === 180; })());
+ok('minutes per person in a period', JSON.stringify(loggedByPerson(logs, '2026-11-01', '2026-11-30')) === JSON.stringify({ Mona: 90, Omar: 60 }));
+ok('logs listed newest day first', logsOf({ x: { iss: 'i', day: '2026-11-01', at: 'a' }, y: { iss: 'i', day: '2026-11-05', at: 'b' } }, 'i')[0].id === 'y');
+ok('files: blocked types, size, empty, count', /not allowed/.test(fileProblem({ name: 'run.exe', size: 5 })) && /not allowed/.test(fileProblem({ name: 'x.SVG', size: 5 })) && /10 MB/.test(fileProblem({ name: 'a.pdf', size: 11 * 1048576 })) && /empty/.test(fileProblem({ name: 'a.pdf', size: 0 })) && /at most 20/.test(fileProblem({ name: 'a.pdf', size: 5 }, 20)) && fileProblem({ name: 'shot.png', size: 5000 }, 3) === '');
+ok('safe storage names: no slashes, dots first, spaces', safeName('../a b/c.pdf') === '__a_b_c.pdf' && !safeName('.hidden').startsWith('.') && safeName('') === 'file' && fmtSize(1536) === '2 KB' && fmtSize(5) === '5 B' && fmtSize(3 * 1048576) === '3 MB');
+ok('filesOf lists one ticket', filesOf({ f1: { iss: 'i1', at: '1' }, f2: { iss: 'i2', at: '2' } }, 'i1').length === 1);
+// estimate on tickets
+const I = {}; const t = makeIssue({ type: 'task', t: 'T', oe: 480 }, I, 'Asmaa', '2026-11-08T08:00:00Z');
+ok('a ticket keeps its original estimate (minutes); none = null', t.oe === 480 && makeIssue({ type: 'task', t: 'U' }, I, 'a').oe === null);
+const t2 = applyChange(t, { oe: 600 }, 'Asmaa', '2026-11-08T09:00:00Z'), h = t2.hist.slice(-1)[0];
+ok('estimate change goes to history as readable time', h.f === 'original estimate' && h.a === '1d' && h.b === '1d 2h');
+console.log(bad ? 'FAILED ' + bad : 'ALL OK'); process.exit(bad ? 1 : 0);
