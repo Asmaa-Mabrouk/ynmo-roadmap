@@ -1,5 +1,5 @@
 {
-  "on": true,
+  "on": false,
   "title": "Ynmo Roadmaps is under maintenance",
   "message": "We are moving our data to Ynmo's own servers. Nothing is lost. The tool is paused so no change can be missed, and it will be back as soon as the move is checked.",
   "until": "",
