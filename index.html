@@ -1590,6 +1590,77 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
 }
 #boardmine[aria-pressed="false"] { opacity: 1; color: var(--muted); }
 #boardmine[aria-pressed="true"] { background: color-mix(in srgb, var(--focus) 14%, var(--surface)); }
+
+/* ---- Ynmo Flow: design review fixes (forms, dialog, tables, filters, mobile) ---- */
+.flowdlg { width: min(880px, 100%); padding: 22px 24px; }
+.flowdlg.flowcreate { width: min(620px, 100%); }
+.flowdlg h2 { margin: 0 0 14px; }
+.flowdlg label span { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.flowdlg input[type=text], .flowdlg input[type=number], .flowdlg textarea, .flowdlg select { width: 100%; box-sizing: border-box; }
+.flowdlg textarea { resize: vertical; min-height: 96px; }
+.fform { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+.fform .full { grid-column: 1 / -1; }
+.fform[hidden], .fform label[hidden] { display: none; }
+.fissue { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 22px; align-items: start; }
+.fsidec { background: color-mix(in srgb, var(--surface) 92%, var(--ink) 4%); border-radius: 12px; padding: 14px 14px 4px; }
+.fsidec h3 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.fmeta { border-top: 1px solid var(--line); margin: 6px 0 10px; padding-top: 10px; }
+.fmeta p { margin: 0 0 4px; font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+.flowhd { gap: 10px; margin: 0 0 14px; }
+.fbtns { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.flowdlg .row { gap: 10px; }
+.flowkids .row { margin-top: 8px; display: flex; gap: 10px; flex-wrap: wrap; }
+.flowkids, .flowhist { margin: 18px 0 0; }
+.flowkid { gap: 8px; padding: 9px 12px; }
+.flowhist p { padding: 3px 0; }
+#fc-err { margin: 6px 0 0; }
+/* filters */
+.flowbar { display: grid; grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(130px, 1fr)); gap: 10px; align-items: center; margin: 10px 0; }
+.flowbar input[type=search] { width: 100%; min-width: 0; box-sizing: border-box; }
+.flowbar select { width: 100%; }
+.flowbar .flowopen { grid-column: 1 / -1; }
+.flowchips { gap: 8px; margin: 0 0 14px; }
+.flowchips .chip { opacity: 1 !important; color: var(--muted); font-size: 12.5px; padding: 4px 11px; }
+.flowchips .chip[aria-pressed="true"] { background: color-mix(in srgb, var(--c) 14%, var(--surface)); color: var(--ink); border-color: var(--c); font-weight: 700; }
+/* tables: same columns in every list, scroll sideways on a phone */
+.ftblwrap { overflow-x: auto; }
+.flowtbl { table-layout: fixed; min-width: 720px; }
+.flowtbl .c-key { width: 92px; } .flowtbl .c-type { width: 150px; } .flowtbl .c-st { width: 150px; } .flowtbl .c-as { width: 130px; } .flowtbl .c-pr { width: 90px; }
+.flowtbl th, .flowtbl td { padding: 10px 12px; }
+.flowtbl td.ftitle { overflow-wrap: anywhere; }
+.flowsec { margin: 22px 0 0; }
+.flowsec h3 { margin: 0 0 4px; }
+.flowopen { margin: 0 0 4px; }
+/* summary: 2 x 2 */
+.fgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.fpanel { padding: 16px 18px; }
+.fpanel h3 { margin: 0 0 14px; }
+.fbars { gap: 10px; }
+.fstats { margin-bottom: 14px; }
+.flowh1 { margin: 10px 0 16px; }
+.fepic { padding: 14px 18px; }
+@media (max-width: 820px) {
+  .flowmain { padding: 12px 14px 22px; }
+  .flowside { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; gap: 4px; padding: 8px; align-items: center; scrollbar-width: thin; }
+  .flowproj, .flowgt { display: none; }
+  .flowgrp { display: flex; flex-wrap: nowrap; margin: 0; gap: 4px; padding-inline-end: 8px; border-inline-end: 1px solid var(--line); }
+  .flowgrp:last-child { border-inline-end: 0; }
+  .flowitem { width: auto; white-space: nowrap; padding: 7px 11px; }
+  .flowbar { grid-template-columns: 1fr 1fr; }
+  .flowbar input[type=search] { grid-column: 1 / -1; }
+  .fgrid { grid-template-columns: 1fr; }
+  .fissue { grid-template-columns: 1fr; }
+  .fform { grid-template-columns: 1fr; }
+  .flowdlg { padding: 16px; }
+  .fboard { grid-auto-columns: 78vw; scroll-snap-type: x mandatory; }
+  .fcol { scroll-snap-align: start; }
+}
+@media (max-width: 820px) {
+  .flowtbl { min-width: 0; }
+  .flowtbl .c-type, .flowtbl .c-as, .flowtbl .c-pr { display: none; }
+  .flowtbl th:nth-child(2), .flowtbl td:nth-child(2), .flowtbl th:nth-child(5), .flowtbl td:nth-child(5), .flowtbl th:nth-child(6), .flowtbl td:nth-child(6) { display: none; }
+  .flowtbl .c-key { width: 76px; } .flowtbl .c-st { width: 118px; }
+}
 </style>
 
 <div class="gate" id="gate" hidden></div>
@@ -7300,10 +7371,14 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
   }
   function table(rs, empty) {
     if (!rs.length) return el("p", "sub flowempty", empty);
-    const t = el("table", "tbl flowtbl"), h = el("tr");
+    const wrap = el("div", "ftblwrap"), t = el("table", "tbl flowtbl"), h = el("tr");
+    t.insertAdjacentHTML("afterbegin", '<colgroup><col class="c-key"><col class="c-type"><col><col class="c-st"><col class="c-as"><col class="c-pr"></colgroup>');
     ["Key", "Type", "Title", "Status", "Assignee", "Priority"].forEach((x) => h.append(el("th", "", x)));
-    t.append(el("thead"));
-    t.firstChild.append(h);
+    {
+      const th = el("thead");
+      th.append(h);
+      t.append(th);
+    }
     const tb = el("tbody");
     rs.forEach((i) => {
       const tr = el("tr", "flowrow");
@@ -7322,7 +7397,8 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       tb.append(tr);
     });
     t.append(tb);
-    return t;
+    wrap.append(t);
+    return wrap;
   }
   function issuesTab(host2) {
     const all = rows(), f = ui2.f, epics = all.filter((i) => i.type === "epic");
@@ -7514,6 +7590,7 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       const type = selOf(TYPES.map((t) => [t.id, t.n]), pre.type || "story");
       type.id = "fc-type";
       const title = el("input");
+      title.type = "text";
       title.id = "fc-title";
       title.placeholder = "What needs doing?";
       const desc = el("textarea");
@@ -7563,7 +7640,17 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       });
       const row = el("div", "row");
       row.append(ok, no);
-      box2.append(fld("Type", type), parF, fld("Title", title), fld("Description", desc), fld("Assignee", asg), fld("Priority", pr), fld("Points", pts), epF, err, row);
+      box2.classList.add("flowdlg", "flowcreate");
+      const g = el("div", "fform");
+      const full = (x) => {
+        x.classList.add("full");
+        return x;
+      };
+      g.append(fld("Type", type), fld("Priority", pr), parF, full(fld("Title", title)), full(fld("Description", desc)), fld("Assignee", asg), fld("Points", pts), epF);
+      parF.classList.add("full");
+      epF.classList.add("full");
+      row.classList.add("fbtns");
+      box2.append(g, err, row);
       setTimeout(() => title.focus(), 0);
     });
   }
@@ -7575,9 +7662,14 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
     openDlg(i.key, (box2) => {
       box2.classList.add("flowdlg");
       const head = el("div", "flowhd");
-      head.append(typeTag(i.type), el("span", "fkey", i.key));
+      head.append(typeTag(i.type));
+      if (i.par && S.fissues[i.par]) head.append(el("span", "sub", "in " + S.fissues[i.par].key));
       box2.append(head);
+      const layout = el("div", "fissue"), mainc = el("div", "fmainc"), sidec = el("aside", "fsidec");
+      layout.append(mainc, sidec);
+      box2.append(layout);
       const title = el("input");
+      title.type = "text";
       title.id = "fi-title";
       title.value = i.t;
       const desc = el("textarea");
@@ -7600,11 +7692,13 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
       ctl.forEach((c) => {
         c.disabled = !edit;
       });
-      box2.append(fld("Title", title), fld("Description", desc), fld("Status", st), fld("Assignee", asg), fld("Priority", pr), fld("Points", pts));
-      const meta = el("p", "sub", "Reported by " + (i.rp || "unknown") + " · created " + ago(i.cr) + " · updated " + ago(i.up));
-      box2.append(meta);
-      if (i.par && S.fissues[i.par]) box2.append(el("p", "sub", "Parent: " + S.fissues[i.par].key + " " + S.fissues[i.par].t));
-      if (i.ep && S.fissues[i.ep]) box2.append(el("p", "sub", "Epic: " + S.fissues[i.ep].key + " " + S.fissues[i.ep].t));
+      mainc.append(fld("Title", title), fld("Description", desc));
+      sidec.append(el("h3", "", "Details"), fld("Status", st), fld("Assignee", asg), fld("Priority", pr), fld("Points", pts));
+      const meta = el("div", "fmeta");
+      meta.append(el("p", "", "Reported by " + (i.rp || "unknown")), el("p", "", "Created " + ago(i.cr)), el("p", "", "Updated " + ago(i.up)));
+      if (i.par && S.fissues[i.par]) meta.append(el("p", "", "Parent: " + S.fissues[i.par].key + " " + S.fissues[i.par].t));
+      if (i.ep && S.fissues[i.ep]) meta.append(el("p", "", "Epic: " + S.fissues[i.ep].key + " " + S.fissues[i.ep].t));
+      sidec.append(meta);
       const kids = childrenOf(all, i.id);
       if (kids.length || edit && !typeOf(i.type).sub && i.type !== "epic") {
         const k = el("div", "flowkids");
@@ -7628,13 +7722,13 @@ button.cptile:hover { background: var(--surface-2); } .cptile.sel { box-shadow: 
           });
           k.append(r);
         }
-        box2.append(k);
+        mainc.append(k);
       }
       const hist = el("div", "flowhist");
       hist.append(el("h3", "", "History"));
       (i.hist || []).slice().reverse().forEach((h) => hist.append(el("p", "sub", h.f === "created" ? h.by + " created " + h.b + " · " + ago(h.at) : h.by + " changed " + h.f + (h.a || h.b ? ": " + (h.a || "empty") + " → " + (h.b || "empty") : "") + " · " + ago(h.at))));
-      box2.append(hist);
-      const row = el("div", "row");
+      mainc.append(hist);
+      const row = el("div", "row fbtns");
       if (edit) {
         const sv3 = el("button", "btn primary", "Save");
         sv3.type = "button";

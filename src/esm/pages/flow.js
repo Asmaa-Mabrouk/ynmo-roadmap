@@ -37,8 +37,8 @@ function setupBanner() {
 /** Table of tickets; click a row to open it. */
 function table(rs, empty) {
   if (!rs.length) return el('p', 'sub flowempty', empty);
-  const t = el('table', 'tbl flowtbl'), h = el('tr');
-  ['Key', 'Type', 'Title', 'Status', 'Assignee', 'Priority'].forEach(x => h.append(el('th', '', x))); t.append(el('thead')); t.firstChild.append(h);
+  const wrap = el('div', 'ftblwrap'), t = el('table', 'tbl flowtbl'), h = el('tr'); t.insertAdjacentHTML('afterbegin', '<colgroup><col class="c-key"><col class="c-type"><col><col class="c-st"><col class="c-as"><col class="c-pr"></colgroup>');
+  ['Key', 'Type', 'Title', 'Status', 'Assignee', 'Priority'].forEach(x => h.append(el('th', '', x))); { const th = el('thead'); th.append(h); t.append(th); }
   const tb = el('tbody');
   rs.forEach(i => {
     const tr = el('tr', 'flowrow'); tr.dataset.id = i.id; tr.tabIndex = 0;
@@ -48,7 +48,7 @@ function table(rs, empty) {
     const open = () => openIssue(i.id); tr.addEventListener('click', open); tr.addEventListener('keydown', e => { if (e.key === 'Enter') open(); });
     tb.append(tr);
   });
-  t.append(tb); return t;
+  t.append(tb); wrap.append(t); return wrap;
 }
 
 function issuesTab(host) {
@@ -132,7 +132,7 @@ export function openCreate(pre) {
   openDlg('Create ticket', box => {
     const all = rows();
     const type = selOf(TYPES.map(t => [t.id, t.n]), pre.type || 'story'); type.id = 'fc-type';
-    const title = el('input'); title.id = 'fc-title'; title.placeholder = 'What needs doing?';
+    const title = el('input'); title.type = 'text'; title.id = 'fc-title'; title.placeholder = 'What needs doing?';
     const desc = el('textarea'); desc.id = 'fc-desc'; desc.rows = 4;
     const asg = selOf([['', 'Unassigned'], ...names()], pre.as || ''); asg.id = 'fc-as';
     const pr = selOf(PRIORITIES.map(p => [p.id, p.n]), 'medium'); pr.id = 'fc-pr';
@@ -150,7 +150,10 @@ export function openCreate(pre) {
       } catch (e) { err.textContent = e.message; err.hidden = false; }
     });
     const row = el('div', 'row'); row.append(ok, no);
-    box.append(fld('Type', type), parF, fld('Title', title), fld('Description', desc), fld('Assignee', asg), fld('Priority', pr), fld('Points', pts), epF, err, row);
+    box.classList.add('flowdlg', 'flowcreate');
+    const g = el('div', 'fform'); const full = x => { x.classList.add('full'); return x; };
+    g.append(fld('Type', type), fld('Priority', pr), parF, full(fld('Title', title)), full(fld('Description', desc)), fld('Assignee', asg), fld('Points', pts), epF); parF.classList.add('full'); epF.classList.add('full');
+    row.classList.add('fbtns'); box.append(g, err, row);
     setTimeout(() => title.focus(), 0);
   });
 }
@@ -161,18 +164,20 @@ export function openIssue(id) {
   const edit = canEdit(); const all = rows();
   openDlg(i.key, box => {
     box.classList.add('flowdlg');
-    const head = el('div', 'flowhd'); head.append(typeTag(i.type), el('span', 'fkey', i.key)); box.append(head);
-    const title = el('input'); title.id = 'fi-title'; title.value = i.t;
+    const head = el('div', 'flowhd'); head.append(typeTag(i.type)); if (i.par && S.fissues[i.par]) head.append(el('span', 'sub', 'in ' + S.fissues[i.par].key)); box.append(head);
+    const layout = el('div', 'fissue'), mainc = el('div', 'fmainc'), sidec = el('aside', 'fsidec'); layout.append(mainc, sidec); box.append(layout);
+    const title = el('input'); title.type = 'text'; title.id = 'fi-title'; title.value = i.t;
     const desc = el('textarea'); desc.id = 'fi-desc'; desc.rows = 5; desc.value = i.d || '';
     const st = selOf(STATUSES.map(s => [s.id, s.n]), i.st); st.id = 'fi-st';
     const asg = selOf([['', 'Unassigned'], ...names(), ...(i.as && !names().includes(i.as) ? [i.as] : [])], i.as || ''); asg.id = 'fi-as';
     const pr = selOf(PRIORITIES.map(p => [p.id, p.n]), i.pr); pr.id = 'fi-pr';
     const pts = el('input'); pts.type = 'number'; pts.min = 0; pts.step = 0.5; pts.id = 'fi-pts'; pts.value = i.pts == null ? '' : i.pts;
     const ctl = [title, desc, st, asg, pr, pts]; ctl.forEach(c => { c.disabled = !edit; });
-    box.append(fld('Title', title), fld('Description', desc), fld('Status', st), fld('Assignee', asg), fld('Priority', pr), fld('Points', pts));
-    const meta = el('p', 'sub', 'Reported by ' + (i.rp || 'unknown') + ' · created ' + ago(i.cr) + ' · updated ' + ago(i.up)); box.append(meta);
-    if (i.par && S.fissues[i.par]) box.append(el('p', 'sub', 'Parent: ' + S.fissues[i.par].key + ' ' + S.fissues[i.par].t));
-    if (i.ep && S.fissues[i.ep]) box.append(el('p', 'sub', 'Epic: ' + S.fissues[i.ep].key + ' ' + S.fissues[i.ep].t));
+    mainc.append(fld('Title', title), fld('Description', desc)); sidec.append(el('h3', '', 'Details'), fld('Status', st), fld('Assignee', asg), fld('Priority', pr), fld('Points', pts));
+    const meta = el('div', 'fmeta'); meta.append(el('p', '', 'Reported by ' + (i.rp || 'unknown')), el('p', '', 'Created ' + ago(i.cr)), el('p', '', 'Updated ' + ago(i.up)));
+    if (i.par && S.fissues[i.par]) meta.append(el('p', '', 'Parent: ' + S.fissues[i.par].key + ' ' + S.fissues[i.par].t));
+    if (i.ep && S.fissues[i.ep]) meta.append(el('p', '', 'Epic: ' + S.fissues[i.ep].key + ' ' + S.fissues[i.ep].t));
+    sidec.append(meta);
     const kids = childrenOf(all, i.id);
     if (kids.length || (edit && !typeOf(i.type).sub && i.type !== 'epic')) {
       const k = el('div', 'flowkids'); k.append(el('h3', '', (i.type === 'epic' ? 'Tickets in this epic' : 'Sub-tickets') + ' (' + kids.length + ')'));
@@ -180,12 +185,12 @@ export function openIssue(id) {
       if (edit && i.type !== 'epic' && !typeOf(i.type).sub) {
         const r = el('div', 'row'); [['subtask', 'Add sub-task'], ...(i.type === 'story' ? [['subbug', 'Add sub-bug']] : [])].forEach(([t, n]) => { const b = el('button', 'btn', n); b.type = 'button'; b.dataset.add = t; b.addEventListener('click', () => openCreate({ type: t, par: i.id })); r.append(b); }); k.append(r);
       }
-      box.append(k);
+      mainc.append(k);
     }
     const hist = el('div', 'flowhist'); hist.append(el('h3', '', 'History'));
     (i.hist || []).slice().reverse().forEach(h => hist.append(el('p', 'sub', h.f === 'created' ? h.by + ' created ' + h.b + ' · ' + ago(h.at) : h.by + ' changed ' + h.f + (h.a || h.b ? ': ' + (h.a || 'empty') + ' → ' + (h.b || 'empty') : '') + ' · ' + ago(h.at))));
-    box.append(hist);
-    const row = el('div', 'row');
+    mainc.append(hist);
+    const row = el('div', 'row fbtns');
     if (edit) {
       const sv = el('button', 'btn primary', 'Save'); sv.type = 'button'; sv.id = 'fi-save';
       sv.addEventListener('click', () => {
