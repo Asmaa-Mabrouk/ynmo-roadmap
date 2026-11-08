@@ -42,6 +42,24 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-11-08 - DB agent report: flow-ai deployed, live checks
+```
+🔄 YNMO LEDGER UPDATE - 2026-11-08
+Request: review the database agent report for the Flow tasks
+Surface: cross-cutting (Ynmo Roadmaps tool, Ynmo Flow)
+Outcome: flow-ai deployed (JWT on, 401 without login, GEMINI_API_KEY present); Flow tables healthy (RLS, 4 policies each with thresholds 1/2/2/3, realtime on); 0 tickets so far
+New facts / decisions locked:
+  • Supabase is on the Free plan: no automatic backups, no PITR; the backup_* tables are the only safety net
+  • Edge Function secrets already include SMTP_USER, SMTP_PASS, SITE_URL (notify-approval sends mail by SMTP): email notifications can reuse them, no new mail provider needed
+  • jira-sync and jira-search are NOT deployed live (code is in the repo); the Jira pull screens fail until deployed or hidden
+  • 21 users, all approved, 5 admins (7 PM, 7 Engineer, 4 QA, 2 UX, 1 CTO): base for mapping ticket names to accounts
+Corrections to this skill:
+  • email notifications plan: reuse existing SMTP secrets instead of Resend
+Open / flagged:
+  • Upgrade to Pro before real Flow data; deploy or hide jira-sync/jira-search; drop backup_20261028_* and 20261028b_* after the team confirms (keep 20261108_*)
+Changelog: DB report reviewed; Free plan has no backups; SMTP exists for notifications.
+```
+
 ### 2026-11-08 - Ynmo Flow phase 3 + Performance dashboard
 ```
 🔄 YNMO LEDGER UPDATE - 2026-11-08
