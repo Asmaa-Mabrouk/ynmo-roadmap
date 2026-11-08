@@ -1,5 +1,9 @@
 # Deployment & Operations
 
+## Ynmo Flow assistant (flow-ai)
+
+One-time: deploy the Edge Function `supabase/functions/flow-ai` the same way as `weekly-draft` (Dashboard > Edge Functions > Deploy, name `flow-ai`, paste `index.ts`). It uses the same secrets (`GEMINI_API_KEY`, optional `GEMINI_MODEL`); never put the key in the repo or in chat. Until it is deployed, the "For you" page works and shows a clear message when you press *Suggest reply*.
+
 ## Environments
 Single environment: Supabase project **YNMO_PM** + Vercel project **ynmo-roadmap** (branch `main` → production).
 

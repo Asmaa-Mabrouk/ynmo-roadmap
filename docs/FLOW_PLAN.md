@@ -134,7 +134,7 @@ Each phase ends with working screens, tests and docs, and can be used on its own
 | 0 (done) | Name, menu icon, empty page, this plan, Flow permission module | S |
 | 1 Core | Projects, issue types, create / edit issue, key numbering, list with filters and saved filters, **My work**, issue page with history | L |
 | 2 Workflow designer | Statuses, transitions, roles, required fields, resolutions; moving a ticket follows the rules | M |
-| 3 Backlog and sprints | Backlog with drag order, epics panel, create / start / complete sprint, board with swimlanes, sprint report | L |
+| 3 Backlog and sprints | Backlog with drag order, epics panel, create / start / complete sprint, board with swimlanes, sprint report | L | **Done 2026-11-08** (swimlanes and the epics panel on the backlog are left for later) |
 | 4 Collaboration | Comments, @mentions, watchers, notification bell, images and PDF, then video | M |
 | 5 AI assistant | Edge Function, tools, chat panel, charts, limits | M |
 | 6 Jira import and cutover | Preview and import, key continuity, links from Sprints / Monthly / Reports, the switch-over checklist | M |
@@ -156,3 +156,22 @@ Rough guide: phases 1 and 3 are each several working days of build and test; the
 4. AI: Claude or Gemini, and should people's names be replaced with codes before a question leaves for the model?
 5. Hosting: confirm Supabase Pro (for backups and storage), with R2 held back for video?
 6. Who tests first (suggestion: PM squad for one sprint, in parallel with Jira)?
+
+
+## Gap analysis from the Jira usage report (2026-11-08)
+
+Source: "Jira Capabilities in Use & New Tool Requirements (YNMO)": 22,512 items, 224 sprints, 62% sub-tasks, 12 issue types, 13 statuses.
+
+| Capability (usage) | Flow now | Next |
+|---|---|---|
+| Types + hierarchy, workflow, sprints, backlog, Scrum + Kanban, filters, due dates, labels, priority, burndown/velocity | Done (phases 1-3 + workflow designer + per-product boards) | |
+| Comments, attachments (9,572 items) | Missing | Phase 4 first |
+| Time tracking: original estimate (7,970 items) and work logs (11,651); points only 1,002 | Missing; burndown uses points or ticket count | Phase 4: estimate + work log, burndown in hours |
+| Custom fields: Platform (12,356), Severity (1,999), Acceptance Criteria (1,610), Test Cases (116) | Only Severity (bugs) | Platform, Acceptance Criteria, Test Cases |
+| Fix versions (2,706) and components (3,853) | Missing | Versions + components |
+| Issue links (Blocks, Duplicate, Relates) | Missing | After versions |
+| Roles per project (QC, Developers, Scrum Master) | Module level only | Roles |
+| Gantt/roadmap, automation, git link (2,969 items), flags | Missing | Nice to have; Bitbucket webhook design is in the Ledger |
+
+Decisions proposed: drop the unused Story point estimate field; merge "Bug - Subtask" and "Enhancements - Subtask" into Sub-bug / Sub-task; simplify 13 statuses to 9 (Reopened becomes a transition, Waiting for support/customer become labels or a Blocked reason).
+**Scale warning:** Flow loads every ticket in the browser; 22 thousand tickets with history is too heavy. The import (phase 6) must bring open tickets and the last 6 months, and keep the rest as an archive read on demand.

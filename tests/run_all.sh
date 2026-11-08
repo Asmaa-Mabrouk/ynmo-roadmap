@@ -21,6 +21,8 @@ node tests/jira_code_unit.mjs | grep -q '^FAIL' && { echo 'jira_code_unit.mjs: F
 node tests/card_details_unit.mjs | grep -q '^FAIL' && { echo 'card_details_unit.mjs: FAIL'; fail=1; }
 node tests/roadmap_from_monthly_unit.mjs | grep -q '^FAIL' && { echo 'roadmap_from_monthly_unit.mjs: FAIL'; fail=1; }
 node tests/flow_model_unit.mjs | grep -q '^FAIL' && { echo 'flow_model_unit.mjs: FAIL'; fail=1; }
+node tests/flow_sprints_unit.mjs | grep -q '^FAIL' && { echo 'flow_sprints_unit.mjs: FAIL'; fail=1; }
+node tests/flow_inbox_unit.mjs | grep -q '^FAIL' && { echo 'flow_inbox_unit.mjs: FAIL'; fail=1; }
 node build.mjs --dist >/dev/null && python3 tests/csp_check.py || fail=1
 python3 tests/e2e_qa.py | tee tests/out/qa.log | tail -1
 exit $fail

@@ -1,5 +1,9 @@
 # Security
 
+## Ynmo Flow assistant
+
+`flow-ai` accepts only signed-in editors (`is_editor`), clips every field, tells the model that ticket text is untrusted data, and returns drafts only (it never writes to the database). The page replaces people's names with placeholders before the call (switchable) and sends only the one ticket's own text, no ids or other tickets. The API key lives only in Supabase secrets.
+
 ## Model
 The browser is untrusted. **Authorization is enforced in Postgres (RLS + triggers)**; UI checks (`canWrite()`, hidden buttons) are
 only usability. The only key in the client is the *publishable* key. Never commit a service-role / secret key or the Gmail App password.

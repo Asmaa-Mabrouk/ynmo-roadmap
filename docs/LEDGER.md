@@ -42,6 +42,37 @@ Product-wide facts (Plans, Daycare, Tifli, Wasl, design system) live in the skil
 
 ## Ledger updates
 
+### 2026-11-08 - Ynmo Flow phase 3 + Performance dashboard
+```
+🔄 YNMO LEDGER UPDATE - 2026-11-08
+Request: build phase 3 (Backlog and Sprints) and a team performance dashboard based on Jira data; asked how to link Bitbucket branches
+Surface: cross-cutting (Ynmo Roadmaps tool, Ynmo Flow)
+Outcome: Backlog (drag rank, per-sprint lists), Sprints (create/start/complete, burndown, report, velocity), Active sprint board, Sprint field/filter, Performance dashboard; all tested
+New facts / decisions locked:
+  • Sprints stored in flow_cfg/sprints (one doc); tickets carry sp and rk; no new SQL
+  • Performance numbers are computed from ticket history, nothing stored; epics excluded
+  • Bitbucket link design: webhook -> Edge Function bitbucket-hook (secret in Supabase), match YNMO-n in branch/PR/commit, show Development section; proposed as phase 3.5
+Corrections to this skill:
+  • none
+Open / flagged:
+  • Inbox/AI assistant screen not built yet (module and flow-ai function written); Bitbucket link not built; names still not linked to accounts
+Changelog: Flow phase 3 sprints/backlog and performance dashboard shipped.
+```
+
+### 2026-11-08 - Ynmo Flow Jira-expert round
+```
+🔄 YNMO LEDGER UPDATE - 2026-11-08
+Request: do all the fixes recommended after the Jira-expert test, plus one board per product (AI, Tifli, SCHS, Warif, Plan, Daycare)
+Surface: Ynmo Roadmaps tool (Ynmo Flow)
+Outcome: cascade delete, key repair, ticket links, sorting, labels, due dates, product and Monthly card, bug and report fields, quick and saved filters, bulk edit, quick create, shortcuts, workflow designer with rules and reasons, six product boards
+New facts / decisions locked:
+  - Boards are fixed to the six products plus All products; a ticket's product is the Monthly tag key
+  - The workflow lives in flow_cfg/main; only the Delete level edits it; saved filters live in flow_cfg/f_<user id>
+Corrections to this skill: none
+Open / flagged: Backlog and Sprints, comments, mentions, notifications, attachments, names linked to accounts, fix versions, ticket links, watchers, AI, Jira import; no live check yet
+Changelog: Flow gets workflow designer, product boards and the Jira-expert fixes.
+```
+
 ### 2026-11-08 - Ynmo Flow Jira-style shell
 ```
 🔄 YNMO LEDGER UPDATE - 2026-11-08

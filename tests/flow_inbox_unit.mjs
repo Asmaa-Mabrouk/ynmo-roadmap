@@ -1,0 +1,40 @@
+// Ynmo Flow assistant: inbox rules, name masking, what is sent to the AI.
+import { makeIssue, applyChange } from '../src/esm/features/flow-model.js';
+import { inboxItems, makeMasker, replyContext, digestItems, kindOf } from '../src/esm/features/flow-inbox.js';
+let bad = 0; const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) bad++; };
+const NOW = new Date('2026-11-08T12:00:00Z').getTime(), DAY = '2026-11-08';
+const I = {}; const mk = (o, by, cr) => { const i = makeIssue(o, I, by || 'Omar', cr || '2026-11-01T08:00:00Z'); I[i.key] = i; return i.key; };
+const R = () => Object.keys(I).map(k => Object.assign({ id: k }, I[k]));
+const blocked = mk({ type: 'task', t: 'Blocked one', as: 'Asmaa' });
+I[blocked] = applyChange(I[blocked], { st: 'blocked' }, 'Asmaa', '2026-11-05T08:00:00Z', 'Waiting for the bank API pack');
+const late = mk({ type: 'task', t: 'Late one', as: 'Asmaa', due: '2026-11-03' });
+const conf = mk({ type: 'task', t: 'Please confirm', as: 'Mona' }, 'Asmaa'); I[conf] = applyChange(I[conf], { st: 'rfqa' }, 'Mona', '2026-11-07T08:00:00Z');
+const fresh = mk({ type: 'task', t: 'Not started', as: 'Asmaa' }, 'Omar', '2026-11-04T08:00:00Z');
+const stale = mk({ type: 'task', t: 'Quiet one', as: 'Asmaa' }, 'Omar', '2026-10-01T08:00:00Z'); I[stale] = applyChange(I[stale], { st: 'progress' }, 'Asmaa', '2026-10-20T08:00:00Z');
+const orphan = mk({ type: 'task', t: 'Nobody owns it' }, 'Omar', '2026-11-01T08:00:00Z');
+const justNow = mk({ type: 'task', t: 'Brand new', as: 'Asmaa' }, 'Omar', '2026-11-08T08:00:00Z');
+const mine = mk({ type: 'task', t: 'My own unowned', rp: 'x' }, 'Asmaa', '2026-11-01T08:00:00Z');
+const items = inboxItems(R(), 'Asmaa', NOW, DAY), kinds = Object.fromEntries(items.map(x => [x.key, x.kind]));
+ok('blocked ticket with its reason', kinds[blocked] === 'blocked' && items.find(x => x.key === blocked).why.includes('bank API'));
+ok('overdue ticket assigned to me', kinds[late] === 'overdue');
+ok('reported by me and moved to RFQA by someone else is "confirm"', kinds[conf] === 'confirm');
+ok('assigned, untouched for 2+ days is "new"; brand new is not listed', kinds[fresh] === 'new' && kinds[justNow] === undefined);
+ok('in progress with no news for 7+ days is "stale"', kinds[stale] === 'stale');
+ok('unassigned ticket reported by someone else is "triage"; one I reported is not', kinds[orphan] === 'triage' && kinds[mine] === undefined);
+ok('order: blocked, overdue, confirm, new, stale, triage', items.map(x => x.kind).join() === 'blocked,overdue,confirm,new,stale,triage');
+ok('each ticket appears once', new Set(items.map(x => x.key)).size === items.length);
+ok('someone else sees none of mine', !inboxItems(R(), 'Zed', NOW, DAY).some(x => x.key === blocked || x.key === late));
+ok('kindOf has a question to answer', kindOf('blocked').ask.length > 5);
+// masking
+const m = makeMasker(['Asmaa', 'Asmaa Mabrouk', 'Mona']);
+const masked = m.mask('Asmaa Mabrouk asked Mona and Asmaa');
+ok('longest names are replaced first, none leaks', !/Asmaa|Mona/.test(masked) && /Person/.test(masked));
+ok('unmask restores the names', m.unmask(masked) === 'Asmaa Mabrouk asked Mona and Asmaa');
+ok('names with regex characters and short names are safe', makeMasker(['A.B (x)', 'J']).mask('A.B (x) and J') === 'Person A and J');
+ok('Person A vs Person AA do not clash on unmask', (() => { const mm = makeMasker(Array.from({ length: 27 }, (_, k) => 'Name' + String(k).padStart(2, '0'))); const t = mm.mask('Name00 Name26'); return mm.unmask(t) === 'Name00 Name26'; })());
+// context
+const ctx = replyContext(Object.assign({ id: blocked }, I[blocked]), items.find(x => x.key === blocked), s => m.mask(s));
+ok('context has the ticket facts, masked, and no ids', ctx.key === blocked && ctx.assignee.startsWith('Person') && !('id' in ctx) && ctx.blockedReason.includes('bank') && ctx.ask.length > 5 && Array.isArray(ctx.history));
+const dg = digestItems(items, m.mask);
+ok('digest items carry key, kind, title, why only', dg.length === items.length && Object.keys(dg[0]).sort().join() === 'key,kind,title,why');
+console.log(bad ? 'FAILED ' + bad : 'ALL OK'); process.exit(bad ? 1 : 0);

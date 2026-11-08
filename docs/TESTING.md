@@ -44,8 +44,11 @@ The bundle is an IIFE, so tests reach internals through `window.__ynmo` (`items,
 - `monthly_filters.py` (8 checks): the Assigned to and Points filters of Monthly.
 - Timing-sensitive scripts (`login_hang.py` waits for a sign-in gate, `monthly_page.py` drags a card with the mouse) failed now and then when the machine was busy; their waits were lengthened on 2026-11-02 (drag: slower mouse, longer pauses; gate: 25 s). A failure of only these two in a full run is re-run alone before it is treated as real.
 - `notes.py` drags a timeline note that starts at today; when today is near the right edge of the screen the mouse used to start outside the window (it failed on 2026-11-08). It now scrolls the note into view and starts inside it.
+- `flow_inbox.py` (15 checks: inbox groups and badge, reply drafts, masking on/off, digest, dismiss, errors) and `flow_inbox_unit.mjs` (inbox rules, masking).
+- `flow_phase3.py` (26 checks: backlog, drag rank, sprints, burndown, report, Performance) and `flow_sprints_unit.mjs` (sprint rules and team numbers).
 - `flow_module.py` (45 checks, including layout: stacked labels, aligned columns, two-column ticket window, phone width): the Ynmo Flow menu icon and Jira-style sidebar, creating every ticket type and the parent rules, list and filters, status chips, My work, the ticket window (edit, sub-tickets, history), Summary, Epics, Board (drag to move), Backlog soon page, settings pages, Back button, reload and delete.
-- `flow_model_unit.mjs` (26 checks): ticket rules (types, parent and epic rules, keys, history, filters, My work).
+- `flow_round2.py` (45 checks): cascade delete, ticket links, sorting, labels and due dates, product and Monthly card, bug and report fields, quick create, shortcuts, saved filters, bulk edit, workflow designer (rules and reasons), per-product boards, key repair.
+- `flow_model_unit.mjs` (41 checks): ticket rules (types, parent and epic rules, keys, history, filters, My work).
 - `jira_code_unit.mjs` (3): a line with a card code and Jira tickets (export, pull).
 - `sprint_pick.py` (9 checks): typing slips, Pick from the plan, link by card.
 - `card_details.py` (10 checks) and `card_details_unit.mjs` (3): the details card of a Monthly card.
