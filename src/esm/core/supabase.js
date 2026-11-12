@@ -15,6 +15,9 @@ export function logoEl() { const i = document.createElement('img'); i.className 
 /** Every live collection registers its reload here, so a replayed offline edit can pull the fresh server copy right after it lands. */
 const runners = [];
 export function refreshAll() { runners.forEach(f => { try { f(); } catch (e) { /* ignore */ } }); }
+const refreshVisible = () => { if (document.visibilityState === 'visible') refreshAll(); };
+document.addEventListener('visibilitychange', refreshVisible);
+window.addEventListener('online', refreshVisible);
 export function makeDb() {
   const err = e => { const x = new Error((e && e.message) || 'error'); x.code = (e && (e.code === 'PGRST002' || e.status === 503 || /Could not query the database for the schema cache|Retrying/i.test(e.message || ''))) ? 'temporary' : (e && (e.code === 'PGRST205' || e.code === '42P01' || /Could not find the table|relation .* does not exist/i.test(e.message || ''))) ? 'missing_table' : (e && (e.code === '42501' || /row-level/i.test(e.message || ''))) ? 'invalid_argument' : ((e && e.code) || 'error'); return x; };
   const load = async t => {
@@ -43,9 +46,10 @@ export function makeDb() {
         get: () => load(t),
         onSnapshot(cb, ecb) {
           const run = () => load(t).then(cb).catch(e => { if (ecb) ecb(e); });
+          const runIfVisible = () => { if (document.visibilityState === 'visible') run(); };
           run(); runners.push(run);
-          sb.channel('rt-' + t).on('postgres_changes', { event: '*', schema: 'public', table: t }, run).subscribe();
-          setInterval(run, 30000);
+          sb.channel('rt-' + t).on('postgres_changes', { event: '*', schema: 'public', table: t }, runIfVisible).subscribe();
+          setInterval(runIfVisible, 300000);
         }
       };
     }

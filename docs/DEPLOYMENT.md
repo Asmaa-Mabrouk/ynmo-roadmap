@@ -125,3 +125,4 @@ If the select shows no row for that email, sign in once more (the app creates it
 3. **Upgrade from the free Nano plan** (Pro) before the executive demos: free projects have little compute and no support SLA, and a stuck API connection is the failure seen here.
 4. **Restart the project on a calm day** (Settings > General) after large changes such as running a SQL file, so the schema cache is rebuilt cleanly.
 5. **Pre-demo check:** open the live site in a private window and sign in 15 minutes before any executive session.
+6. **Keep client polling light:** the app uses Realtime for updates, with a five-minute refresh fallback only in visible tabs; profile checks run every two minutes, and non-admins fetch only their own profile. This reduces unnecessary reads but does not prevent a Supabase-side API outage.
