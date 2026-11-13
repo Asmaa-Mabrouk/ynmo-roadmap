@@ -119,7 +119,10 @@ export function showPending(profile) {
   b1.addEventListener('click', async () => { b1.disabled = true; const ok = await check(); b1.disabled = false; if (!ok) b1.textContent = 'Not approved yet. Check again'; });
   const b2 = el('button', 'btn', 'Log out'); b2.type = 'button'; b2.addEventListener('click', doLogout);
   c.append(b1, b2);
-  clearInterval(pendTimer); pendTimer = setInterval(check, 15000);
+  clearInterval(pendTimer);
+  pendTimer = setInterval(() => {
+    if (document.visibilityState === 'visible') check();
+  }, 30000);
 }
 export function showSetPw() {
   const c = gateCard('Set your password');

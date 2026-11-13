@@ -221,16 +221,36 @@ function addMember(name, domain, sqs, picked, tracks) {
   logAct('resource', 'added ' + name + ' (' + domain + ', ' + sqs.map(k => laneOf(k).n).join(' + ') + ')' + (shown.length ? ' on ' + shown.join(' + ') : ' (no roadmap row yet)'));
   fillPersons(); render(); renderResources(); return '';
 }
-export async function loadMembers() {
+let lastMembersLoad = 0;
+let inFlightMembers = null;
+export async function loadMembers(force = false) {
   if (!S.me) return;
-  const r = await sb.from('profiles').select('*').order('created_at', { ascending: true });
-  if (!r.error && r.data) S.members = r.data;
-  const mine = S.members.find(m => m.id === S.me.id);
-  if (S.denied) S.denied = null; /* a save refused earlier must not keep blocking edits once an admin has changed access; a new refusal sets it again */
-  if (mine && (mine.access !== S.me.access || !!mine.is_admin !== !!S.me.is_admin || JSON.stringify(mine.perms || null) !== JSON.stringify(S.me.perms || null))) { Object.assign(S.me, { access: mine.access, is_admin: mine.is_admin, perms: mine.perms }); applyAccessChange(); }
-  const pend = S.members.filter(m => !m.approved).length;
-  const reqs = S.me.is_admin ? pendingCount() : 0, b = document.querySelector('#nav [data-p="admin"] .dot'); if (b) { b.hidden = !(S.me.is_admin && (pend + reqs)); b.textContent = pend + reqs; }
-  if (state.page === 'admin') renderAdmin();
+  const now = Date.now();
+  if (!force && (now - lastMembersLoad < 30000) && S.members && S.members.length) return;
+  if (inFlightMembers) return inFlightMembers;
+  lastMembersLoad = now;
+  inFlightMembers = (async () => {
+    try {
+      let q = sb.from('profiles').select('*');
+      if (!S.me.is_admin) q = q.eq('id', S.me.id).limit(1);
+      else q = q.order('created_at', { ascending: true });
+      const r = await q;
+      if (!r.error && r.data) S.members = r.data;
+      const mine = S.members.find(m => m.id === S.me.id);
+      if (S.denied) S.denied = null; /* a save refused earlier must not keep blocking edits once an admin has changed access; a new refusal sets it again */
+      if (mine && (mine.access !== S.me.access || !!mine.is_admin !== !!S.me.is_admin || JSON.stringify(mine.perms || null) !== JSON.stringify(S.me.perms || null))) {
+        const wasAdmin = S.me.is_admin;
+        Object.assign(S.me, { access: mine.access, is_admin: mine.is_admin, perms: mine.perms }); applyAccessChange();
+        if (!wasAdmin && S.me.is_admin) return loadMembers(true);
+      }
+      const pend = S.members.filter(m => !m.approved).length;
+      const reqs = S.me.is_admin ? pendingCount() : 0, b = document.querySelector('#nav [data-p="admin"] .dot'); if (b) { b.hidden = !(S.me.is_admin && (pend + reqs)); b.textContent = pend + reqs; }
+      if (state.page === 'admin') renderAdmin();
+    } finally {
+      inFlightMembers = null;
+    }
+  })();
+  return inFlightMembers;
 }
 export function renderResources() {
   const root = $('pg-resources'), ae = document.activeElement;
@@ -326,12 +346,12 @@ export function renderAdmin() {
       ok.addEventListener('click', async () => {
         ok.disabled = true; const patch = acc.value === 'viewer' ? { approved: true, access: 'viewer' } : { approved: true }; const r = await sb.from('profiles').update(patch).eq('id', m.id);
         if (r.error) { ok.disabled = false; toast('Could not approve: ' + r.error.message); return; }
-        logAct('access', 'approved ' + (m.name || m.email) + (acc.value === 'viewer' ? ' as a viewer' : '')); toast('Approved. ' + (m.name || m.email) + ' can now open the tool.'); await loadMembers();
+        logAct('access', 'approved ' + (m.name || m.email) + (acc.value === 'viewer' ? ' as a viewer' : '')); toast('Approved. ' + (m.name || m.email) + ' can now open the tool.'); await loadMembers(true);
       });
       row.append(avatarEl(m.avatar, 36, m.name), who, acc, ok); ac.append(row);
     });
   root.append(ac);
   root.append(requestsCard(renderAdmin));
-  renderPermissions(root, again => { if (again === true) renderAdmin(); else return loadMembers(); });
+  renderPermissions(root, again => { if (again === true) renderAdmin(); else return loadMembers(true); });
 }
 

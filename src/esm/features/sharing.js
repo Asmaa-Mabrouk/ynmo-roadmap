@@ -67,6 +67,13 @@ export async function bootShared(token) {
   const b = netBar(); b.classList.add('sharebar'); b.hidden = false; b.textContent = 'You are looking at a read-only shared roadmap. It updates by itself every minute.';
   applyShared(r.data); setSave('readonly'); $('save').textContent = 'View only.';
   let last = JSON.stringify(r.data);
-  setInterval(async () => { try { const n = await sb.rpc('shared_snapshot', { t: token }); if (n.data && JSON.stringify(n.data) !== last) { last = JSON.stringify(n.data); applyShared(n.data); } else if (!n.data && !n.error) { location.reload(); } } catch (e) { /* keep showing what we have */ } }, window.__sharePoll || 60000);
+  setInterval(async () => {
+    if (document.visibilityState !== 'visible') return;
+    try {
+      const n = await sb.rpc('shared_snapshot', { t: token });
+      if (n.data && JSON.stringify(n.data) !== last) { last = JSON.stringify(n.data); applyShared(n.data); }
+      else if (!n.data && !n.error) { location.reload(); }
+    } catch (e) { /* keep showing what we have */ }
+  }, window.__sharePoll || 60000);
 }
 
