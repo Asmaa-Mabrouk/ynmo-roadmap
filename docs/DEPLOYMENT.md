@@ -125,4 +125,11 @@ If the select shows no row for that email, sign in once more (the app creates it
 3. **Upgrade from the free Nano plan** (Pro) before the executive demos: free projects have little compute and no support SLA, and a stuck API connection is the failure seen here.
 4. **Restart the project on a calm day** (Settings > General) after large changes such as running a SQL file, so the schema cache is rebuilt cleanly.
 5. **Pre-demo check:** open the live site in a private window and sign in 15 minutes before any executive session.
-6. **Keep client polling light:** the app uses Realtime for updates, with a five-minute refresh fallback only in visible tabs; profile checks run every two minutes, and non-admins fetch only their own profile. This reduces unnecessary reads but does not prevent a Supabase-side API outage.
+6. **Keep client polling light and connection-pooled:**
+   - Realtime uses a single multiplexed channel (`rt-all`) rather than creating a separate WebSocket channel per collection, cutting client WebSocket connections by ~90%.
+   - Realtime table changes are debounced by 350ms to collapse rapid writes into single fetches.
+   - Concurrent table fetches are deduplicated in-flight to prevent duplicate simultaneous HTTP requests.
+   - Visibility changes and `refreshAll()` queries are debounced (1.5s delay) and staggered across collections (50ms interval) to avoid PostgREST thundering herd spikes on tab switches.
+   - Profile checks are throttled (30s cache) with in-flight deduplication.
+   - Network probe uses exponential backoff (10s to 60s) when the service is unreachable.
+   - Polling only runs in visible tabs.

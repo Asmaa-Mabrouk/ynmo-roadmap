@@ -37,7 +37,7 @@ export function openDlg(title, build, opts) {
 }
 
 /* ---------- 8. offline banner ---------- */
-let netBad = false, netTimer = 0;
+let netBad = false, netTimer = 0, netProbeDelay = 10000;
 export function netBar() {
   let b = $('offbar');
   if (!b) {
@@ -51,12 +51,20 @@ export function netShow() {
   b.hidden = !bad; document.body.classList.toggle('offline', bad);
   if (bad) b.textContent = 'You are offline. Changes stay on this device and save by themselves when the connection is back. Others will not see them until then.';
   clearTimeout(netTimer);
-  if (bad) netTimer = setTimeout(netProbe, 6000);
+  if (bad) netTimer = setTimeout(netProbe, netProbeDelay);
 }
 export function netMark(ok) { const was = netBad; netBad = !ok; if (was !== netBad) netShow(); }
 async function netProbe() {
   if (!sb || S.SHARE) return;
-  try { const r = await sb.from('profiles').select('id').limit(1); if (r && r.error && !r.data) throw new Error('x'); netBad = false; } catch (e) { netBad = true; }
+  try {
+    const r = await sb.from('profiles').select('id').limit(1);
+    if (r && r.error && !r.data) throw new Error('x');
+    netBad = false;
+    netProbeDelay = 10000;
+  } catch (e) {
+    netBad = true;
+    netProbeDelay = Math.min(60000, Math.round(netProbeDelay * 1.5));
+  }
   netShow();
 }
 window.addEventListener('offline', () => netShow());
